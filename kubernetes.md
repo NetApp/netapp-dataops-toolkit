@@ -18,7 +18,7 @@ Data volumes that are created using the NetApp Data Science Toolkit will not aut
 
 ### Mount Operation within Container
 
-It is not possible to mount a volume using the NetApp Data Science Toolkit while operating within a container. Mount operations are generally not permitted wtihin containers. Kubernetes handles the mounting of volume(s) at the time that a container is provisioned. Any volume mounts that are needed for a specific Kubernetes pod must be specified within the pod definition. Refer to the [Trident](https://netapp.io/persistent-storage-provisioner-for-kubernetes/) documentation for more details and examples.
+It is not possible to mount a volume using the NetApp Data Science Toolkit while operating within a container. Mount operations are generally not permitted wtihin containers. Kubernetes handles the mounting of volume(s) at the time that a container is provisioned. Any volume mounts that are needed for a specific Kubernetes pod must be specified within the pod definition. Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/) for more details and examples.
 
 ### Trident Volume Names
 
