@@ -704,3 +704,7 @@ APIConnectionError              # The storage system/service API returned an err
 InvalidSnapshotParameterError   # An invalid parameter was specified.
 InvalidVolumeParameterError     # An invalid parameter was specified.
 ```
+
+## Support
+
+Report any issues via GitHub: https://github.com/NetApp/netapp-data-science-toolkit/issues.
