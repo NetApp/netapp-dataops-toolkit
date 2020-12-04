@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 ## NetApp Data Science Toolkit
-version = "0.1-sprint2-dev"
+version = "1.0"
 
 
 import base64, json, os, subprocess, re
@@ -759,7 +759,7 @@ def deleteVolume(volumeName: str, printOutput: bool = False) :
                     print("Error: Invalid volume name.")
                 raise InvalidVolumeParameterError("name")
 
-            # Delete snapshot
+            # Delete volume
             volume.delete(poll=True)
 
             if printOutput :
