@@ -395,7 +395,7 @@ The NetApp Data Science Toolkit can also be utilized as a library of functions t
 To import the NetApp Data Science Toolkit library functions into a Python program, ensure that the `ntap_dsutil.py` file is in the same directory as the program, and include the following line of code in the program:
 
 ```py
-from ntap_dsutil import createVolume, listVolumes, mountVolume, createSnapshot, listSnapshots, deleteSnapshot
+from ntap_dsutil import createVolume, listVolumes, mountVolume, createSnapshot, listSnapshots, deleteSnapshot, deleteVolume, restoreSnapshot, cloneVolume
 ```
 
 Note: The prerequisite steps outlined in the [Getting Started](#getting-started) section still appy when the toolkit is being utilized as an importable library of functions.
