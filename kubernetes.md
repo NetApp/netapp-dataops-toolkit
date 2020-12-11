@@ -14,7 +14,7 @@ There are a few caveats to be aware of when using the NetApp Data Science Toolki
 
 ### Creating and Cloning Data Volumes in a Kubernetes Environment
 
-Data volumes that are created using the NetApp Data Science Toolkit will not automatically be represented by PVCs (PersistentVolumeClaims) in the Kubernetes cluster. In order to create a PVC for a volume that was created using the NetApp Data Science Toolkit, you will need to import the volume using Trident's volume import functionality. To avoid this extra step, NetApp recommends using Trident's native volume provisioning and volume cloning capabilities when operating in a Kubernetes environment. Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/) for more details and examples.
+Data volumes that are created using the NetApp Data Science Toolkit will not automatically be represented by PVCs (PersistentVolumeClaims) in the Kubernetes cluster. In order to create a PVC for a volume that was created using the NetApp Data Science Toolkit, you will need to import the volume using Trident's volume import functionality. To avoid this extra step, NetApp recommends using Trident's native volume provisioning and volume cloning capabilities in place of the Netapp Data Science Toolkit's "create volume" and "clone volume" functions when operating in a Kubernetes environment. Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/) for more details and examples.
 
 ### Mount Operation within Container
 
