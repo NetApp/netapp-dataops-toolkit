@@ -686,7 +686,7 @@ InvalidVolumeParameterError     # An invalid parameter was specified.
 
 The NetApp Data Science Toolkit can be used to near-instantaneously restore a specific snapshot for a data volume as part of any Python program or workflow. This action will restore the volume to its exact state at the time that the snapshot was created.
 
-Warning: When you restore a snapshot, all snapshots that were created after the snapshot that you are restoring will be deleted.
+Warning: A snapshot restore operation will delete all snapshots that were created after the snapshot that you are restoring.
 
 ##### Function Definition
 
