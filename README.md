@@ -79,9 +79,11 @@ Snapshot management operations:
 - [List all snapshots for a data volume.](#cli-list-snapshots)
 - [Restore a snapshot for a data volume.](#cli-restore-snapshot)
 
+### Data Volume Management Operations
+
 <a name="cli-clone-volume"></a>
 
-### Clone a Data Volume
+#### Clone a Data Volume
 
 The NetApp Data Science Toolkit can be used to near-instantaneously create a new data volume that is an exact copy of an existing volume. This functionality utilizes NetApp FlexClone technology. This means that any clones created will be extremely storage-space-efficient. Aside from metadata, a clone will not consume additional storage space until its contents starts to deviate from the source volume. The command for cloning a data volume is `./ntap_dsutil.py clone volume`.
 
@@ -102,7 +104,7 @@ The following options/arguments are optional:
     -u, --uid=              Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
 ```
 
-#### Example Usage
+##### Example Usage
 
 Create a volume named 'project2' that is an exact copy of the volume 'project1'.
 
@@ -124,48 +126,11 @@ Mounting volume 'project2' at '~/project2'.
 Volume mounted successfully.
 ```
 
-For additional examples, run `./ntap_dsutil.py create volume -h`.
-
-<a name="cli-create-snapshot"></a>
-
-### Create a New Snapshot for a Data Volume
-
-The NetApp Data Science Toolkit can be used to near-instantaneously save a space-efficient, read-only copy of an existing data volume. These read-only copies are called snapshots. This functionality can be used to version datasets and/or implement dataset-to-model traceability. The command for creating a new snapshot for a specific data volume is `./ntap_dsutil.py create snapshot`.
-
-The following options/arguments are required:
-
-```
-    -v, --volume=   Name of volume.
-```
-
-The following options/arguments are optional:
-
-```
-    -h, --help      Print help text.
-    -n, --name=     Name of new snapshot. If not specified, will be set to 'ntap_dsutil_<timestamp>'.
-```
-
-#### Example Usage
-
-Create a snapshot named 'final_dataset' for the volume named 'test1'.
-
-```sh
-./ntap_dsutil.py create snapshot --volume=test1 --name=final_dataset
-Creating snapshot 'final_dataset'.
-Snapshot created successfully.
-```
-
-Create a snapshot for the volume named 'test1'.
-
-```sh
-./ntap_dsutil.py create snapshot -v test1
-Creating snapshot 'ntap_dsutil_20201113_125210'.
-Snapshot created successfully.
-```
+For additional examples, run `./ntap_dsutil.py clone volume -h`.
 
 <a name="cli-create-volume"></a>
 
-### Create a New Data Volume
+#### Create a New Data Volume
 
 The NetApp Data Science Toolkit can be used to rapidly provision a new data volume. The command for creating a new data volume is `./ntap_dsutil.py create volume`.
 
@@ -190,7 +155,7 @@ The following options/arguments are optional:
     -u, --uid=              Unix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
 ```
 
-#### Example Usage
+##### Example Usage
 
 Create a volume named 'project1' of size 10TB.
 
@@ -213,38 +178,9 @@ Volume mounted successfully.
 
 For additional examples, run `./ntap_dsutil.py create volume -h`.
 
-<a name="cli-delete-snapshot"></a>
-
-### Delete an Existing Snapshot for a Data Volume
-
-The NetApp Data Science Toolkit can be used to near-instantaneously delete an existing snapshot for a specific data volume. The command for deleting an existing snapshot for a specific data volume is `./ntap_dsutil.py delete snapshot`.
-
-The following options/arguments are required:
-
-```
-    -n, --name=     Name of snapshot to be deleted.
-    -v, --volume=   Name of volume.
-```
-
-The following options/arguments are optional:
-
-```
-    -h, --help      Print help text.
-```
-
-#### Example Usage
-
-Delete the snapshot named 'snap1' for the volume named 'test1'.
-
-```sh
-./ntap_dsutil.py delete snapshot --volume=test1 --name=snap1
-Deleting snapshot 'snap1'.
-Snapshot deleted successfully.
-```
-
 <a name="cli-delete-volume"></a>
 
-### Delete an Existing Data Volume
+#### Delete an Existing Data Volume
 
 The NetApp Data Science Toolkit can be used to near-instantaneously delete an existing data volume. The command for deleting an existing data volume is `./ntap_dsutil.py delete volume`.
 
@@ -261,7 +197,7 @@ The following options/arguments are optional:
     -h, --help      Print help text.
 ```
 
-#### Example Usage
+##### Example Usage
 
 Delete the volume named 'test1'.
 
@@ -273,42 +209,15 @@ Deleting volume 'test1'.
 Volume deleted successfully.
 ```
 
-<a name="cli-list-snapshots"></a>
-
-### List All Snapshots for a Data Volume
-
-The NetApp Data Science Toolkit can be used to print a list of all existing snapshots for a specific data volume. The command for printing a list of all snapshots for a specific data volume is `./ntap_dsutil.py list snapshots`.
-
-The following options/arguments are required:
-
-```
-    -v, --volume=   Name of volume.
-```
-
-#### Example Usage
-
-List all snapshots for the volume named 'test1'.
-
-```sh
-./ntap_dsutil.py list snapshots --volume=test1
-Snapshot Name                Create Time
----------------------------  -------------------------
-snap1                        2020-11-13 20:17:48+00:00
-ntap_dsutil_20201113_151807  2020-11-13 20:18:07+00:00
-snap3                        2020-11-13 21:43:48+00:00
-ntap_dsutil_20201113_164402  2020-11-13 21:44:02+00:00
-final_dataset                2020-11-13 21:45:16+00:00
-```
-
 <a name="cli-list-volumes"></a>
 
-### List All Data Volumes
+#### List All Data Volumes
 
 The NetApp Data Science Toolkit can be used to print a list of all existing data volumes. The command for printing a list of all existing data volumes is `./ntap_dsutil.py list volumes`.
 
 No options/arguments are required for this command.
 
-#### Example Usage
+##### Example Usage
 
 ```sh
 ./ntap_dsutil.py list volumes
@@ -328,7 +237,7 @@ test1_clone    10.0TB  flexvol    10.61.188.49:/test1_clone   /home/ai/test1_clo
 
 <a name="cli-mount-volume"></a>
 
-### Mount an Existing Data Volume Locally
+#### Mount an Existing Data Volume Locally
 
 The NetApp Data Science Toolkit can be used to mount an existing data volume on your local host. The command for mounting an existing volume locally is `./ntap_dsutil.py mount volume`. If executed on a Linux host, this command must be run as root. It is usually not necessary to run this command as root on macOS hosts.
 
@@ -339,7 +248,7 @@ The following options/arguments are required:
     -n, --name=             Name of volume.
 ```
 
-#### Example Usage
+##### Example Usage
 
 Locally mount the volume named 'project1' at '~/project1'.
 
@@ -350,9 +259,104 @@ Mounting volume 'project1' at '~/project1'.
 Volume mounted successfully.
 ```
 
+### Snapshot Management Operations
+
+<a name="cli-create-snapshot"></a>
+
+#### Create a New Snapshot for a Data Volume
+
+The NetApp Data Science Toolkit can be used to near-instantaneously save a space-efficient, read-only copy of an existing data volume. These read-only copies are called snapshots. This functionality can be used to version datasets and/or implement dataset-to-model traceability. The command for creating a new snapshot for a specific data volume is `./ntap_dsutil.py create snapshot`.
+
+The following options/arguments are required:
+
+```
+    -v, --volume=   Name of volume.
+```
+
+The following options/arguments are optional:
+
+```
+    -h, --help      Print help text.
+    -n, --name=     Name of new snapshot. If not specified, will be set to 'ntap_dsutil_<timestamp>'.
+```
+
+##### Example Usage
+
+Create a snapshot named 'final_dataset' for the volume named 'test1'.
+
+```sh
+./ntap_dsutil.py create snapshot --volume=test1 --name=final_dataset
+Creating snapshot 'final_dataset'.
+Snapshot created successfully.
+```
+
+Create a snapshot for the volume named 'test1'.
+
+```sh
+./ntap_dsutil.py create snapshot -v test1
+Creating snapshot 'ntap_dsutil_20201113_125210'.
+Snapshot created successfully.
+```
+
+<a name="cli-delete-snapshot"></a>
+
+#### Delete an Existing Snapshot for a Data Volume
+
+The NetApp Data Science Toolkit can be used to near-instantaneously delete an existing snapshot for a specific data volume. The command for deleting an existing snapshot for a specific data volume is `./ntap_dsutil.py delete snapshot`.
+
+The following options/arguments are required:
+
+```
+    -n, --name=     Name of snapshot to be deleted.
+    -v, --volume=   Name of volume.
+```
+
+The following options/arguments are optional:
+
+```
+    -h, --help      Print help text.
+```
+
+##### Example Usage
+
+Delete the snapshot named 'snap1' for the volume named 'test1'.
+
+```sh
+./ntap_dsutil.py delete snapshot --volume=test1 --name=snap1
+Deleting snapshot 'snap1'.
+Snapshot deleted successfully.
+```
+
+<a name="cli-list-snapshots"></a>
+
+#### List All Snapshots for a Data Volume
+
+The NetApp Data Science Toolkit can be used to print a list of all existing snapshots for a specific data volume. The command for printing a list of all snapshots for a specific data volume is `./ntap_dsutil.py list snapshots`.
+
+The following options/arguments are required:
+
+```
+    -v, --volume=   Name of volume.
+```
+
+##### Example Usage
+
+List all snapshots for the volume named 'test1'.
+
+```sh
+./ntap_dsutil.py list snapshots --volume=test1
+Snapshot Name                Create Time
+---------------------------  -------------------------
+snap1                        2020-11-13 20:17:48+00:00
+ntap_dsutil_20201113_151807  2020-11-13 20:18:07+00:00
+snap3                        2020-11-13 21:43:48+00:00
+ntap_dsutil_20201113_164402  2020-11-13 21:44:02+00:00
+final_dataset                2020-11-13 21:45:16+00:00
+```
+
 <a name="cli-restore-snapshot"></a>
 
-### Restore a Snapshot for a Data Volume
+#### Restore a Snapshot for a Data Volume
 
 The NetApp Data Science Toolkit can be used to near-instantaneously restore a specific snapshot for a data volume. This action will restore the volume to its exact state at the time that the snapshot was created. The command for restoring a specific snapshot for a data volume is `./ntap_dsutil.py restore snapshot`.
 
@@ -372,7 +376,7 @@ The following options/arguments are optional:
     -h, --help      Print help text.
 ```
 
-#### Example Usage
+##### Example Usage
 
 Restore the volume 'project2' to its exact state at the time that the snapshot named 'initial_dataset' was created.
 
@@ -415,17 +419,19 @@ Snapshot management operations:
 - [List all snapshots for a data volume.](#lib-list-snapshots)
 - [Restore a snapshot for a data volume.](#lib-restore-snapshot)
 
-#### Examples
+### Examples
 
 [Examples.ipynb](Examples.ipynb) is a Jupyter Notebook that contains examples that demonstrate how the NetApp Data Science Toolkit can be utilized as an importable library of functions.
 
+### Data Volume Management Operations
+
 <a name="lib-clone-volume"></a>
 
-### Clone a Data Volume
+#### Clone a Data Volume
 
 The NetApp Data Science Toolkit can be used to near-instantaneously create a new data volume that is an exact copy of an existing volume as part of any Python program or workflow. This functionality utilizes NetApp FlexClone technology. This means that any clones created will be extremely storage-space-efficient. Aside from metadata, a clone will not consume additional storage space until its contents starts to deviate from the source volume.
 
-#### Function Definition
+##### Function Definition
 
 ```py
 def cloneVolume(
@@ -439,11 +445,11 @@ def cloneVolume(
 ) :
 ```
 
-#### Return Value
+##### Return Value
 
 None
 
-#### Error Handling
+##### Error Handling
 
 If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
 
@@ -455,43 +461,13 @@ InvalidSnapshotParameterError   # An invalid parameter was specified.
 MountOperationError             # The volume was not succesfully mounted locally.
 ```
 
-<a name="lib-create-snapshot"></a>
-
-### Create a New Snapshot for a Data Volume
-
-The NetApp Data Science Toolkit can be used to near-instantaneously save a space-efficient, read-only copy of an existing data volume as part of any Python program or workflow. These read-only copies are called snapshots. This functionality can be used to version datasets and/or implement dataset-to-model traceability.
-
-#### Function Definition
-
-```py
-def createSnapshot(
-    volumeName: str,                    # Name of volume (required).
-    snapshotName: str = None,           # Name of new snapshot. If not specified, will be set to 'ntap_dsutil_<timestamp>'.
-    printOutput: bool = False           # Denotes whether or not to print messages to the console during execution.
-) :
-```
-
-#### Return Value
-
-None
-
-#### Error Handling
-
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
-
-```py
-InvalidConfigError              # Config file is missing or contains an invalid value.
-APIConnectionError              # The storage system/service API returned an error.
-InvalidVolumeParameterError     # An invalid parameter was specified.
-```
-
 <a name="lib-create-volume"></a>
 
-### Create a New Data Volume
+#### Create a New Data Volume
 
 The NetApp Data Science Toolkit can be used to rapidly provision a new data volume as part of any Python program or workflow.
 
-#### Function Definition
+##### Function Definition
 
 ```py
 def createVolume(
@@ -509,11 +485,11 @@ def createVolume(
 ) :
 ```
 
-#### Return Value
+##### Return Value
 
 None
 
-#### Error Handling
+##### Error Handling
 
 If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
 
@@ -524,86 +500,26 @@ InvalidVolumeParameterError     # An invalid parameter was specified.
 MountOperationError             # The volume was not succesfully mounted locally.
 ```
 
-<a name="lib-delete-snapshot"></a>
-
-### Delete an Existing Snapshot for a Data Volume
-
-The NetApp Data Science Toolkit can be used to near-instantaneously delete an existing snapshot for a specific data volume as part of any Python program or workflow. 
-
-#### Function Definition
-
-```py
-def deleteSnapshot(
-    volumeName: str,            # Name of volume (required).
-    snapshotName: str,          # Name of snapshot to be deleted (required).
-    printOutput: bool = False   # Denotes whether or not to print messages to the console during execution.
-) :
-```
-
-#### Return Value
-
-None
-
-#### Error Handling
-
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
-
-```py
-InvalidConfigError              # Config file is missing or contains an invalid value.
-APIConnectionError              # The storage system/service API returned an error.
-InvalidSnapshotParameterError   # An invalid parameter was specified.
-InvalidVolumeParameterError     # An invalid parameter was specified.
-```
-
 <a name="lib-delete-volume"></a>
 
-### Delete an Existing Data Volume
+#### Delete an Existing Data Volume
 
 The NetApp Data Science Toolkit can be used to near-instantaneously delete an existing data volume as part of any Python program or workflow. 
 
-#### Function Definition
+##### Function Definition
 
 ```py
-def deleteSnapshot(
+def deleteVolume(
     volumeName: str,            # Name of volume (required).
     printOutput: bool = False   # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
-#### Return Value
+##### Return Value
 
 None
 
-#### Error Handling
-
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
-
-```py
-InvalidConfigError              # Config file is missing or contains an invalid value.
-APIConnectionError              # The storage system/service API returned an error.
-InvalidVolumeParameterError     # An invalid parameter was specified.
-```
-
-<a name="lib-list-snapshots"></a>
-
-### List All Existing Snapshots for a Data Volume
-
-The NetApp Data Science Toolkit can be used to retrieve a list of all existing snapshots for a specific data volume as part of any Python program or workflow.
-
-#### Function Definition
-
-```py
-def listSnapshots(
-    volumeName: str,            # Name of volume.
-    printOutput: bool = False   # Denotes whether or not to print messages to the console during execution.
-) -> list() :
-```
-
-#### Return Value
-
-The function returns a list of all existing snapshots for the specific data volume. Each item in the list will be a dictionary containing details regarding a specific snapshot. The keys for the values in this dictionary are "Snapshot Name", "Create Time".
-
-#### Error Handling
+##### Error Handling
 
 If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
 
@@ -615,11 +531,11 @@ InvalidVolumeParameterError     # An invalid parameter was specified.
 
 <a name="lib-list-volumes"></a>
 
-### List All Data Volumes
+#### List All Data Volumes
 
 The NetApp Data Science Toolkit can be used to retrieve a list of all existing data volumes as part of any Python program or workflow.
 
-#### Function Definition
+##### Function Definition
 
 ```py
 def listVolumes(
@@ -628,11 +544,11 @@ def listVolumes(
 ) -> list() :
 ```
 
-#### Return Value
+##### Return Value
 
 The function returns a list of all existing volumes. Each item in the list will be a dictionary containing details regarding a specific volume. The keys for the values in this dictionary are "Volume Name", "Size", "Type", "NFS Mount Target". If `checkLocalMounts` is set to `True`, then "Local Mountpoint" will also be included as a key in the dictionary.
 
-#### Error Handling
+##### Error Handling
 
 If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
 
@@ -643,11 +559,11 @@ APIConnectionError              # The storage system/service API returned an err
 
 <a name="lib-mount-volume"></a>
 
-### Mount an Existing Data Volume Locally
+#### Mount an Existing Data Volume Locally
 
 The NetApp Data Science Toolkit can be used to mount an existing data volume on your local host as part of any Python program or workflow. On Linux hosts, mounting requires root privileges, so any Python program that invokes this function must be run as root. It is usually not necessary to invoke this function as root on macOS hosts.
 
-#### Function Definition
+##### Function Definition
 
 ```py
 def mountVolume(
@@ -657,11 +573,11 @@ def mountVolume(
 ) :
 ```
 
-#### Return Value
+##### Return Value
 
 None
 
-#### Error Handling
+##### Error Handling
 
 If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
 
@@ -672,15 +588,107 @@ InvalidVolumeParameterError     # An invalid parameter was specified.
 MountOperationError             # The volume was not succesfully mounted locally.
 ```
 
+### Snapshot Management Operations
+
+<a name="lib-create-snapshot"></a>
+
+#### Create a New Snapshot for a Data Volume
+
+The NetApp Data Science Toolkit can be used to near-instantaneously save a space-efficient, read-only copy of an existing data volume as part of any Python program or workflow. These read-only copies are called snapshots. This functionality can be used to version datasets and/or implement dataset-to-model traceability.
+
+##### Function Definition
+
+```py
+def createSnapshot(
+    volumeName: str,                    # Name of volume (required).
+    snapshotName: str = None,           # Name of new snapshot. If not specified, will be set to 'ntap_dsutil_<timestamp>'.
+    printOutput: bool = False           # Denotes whether or not to print messages to the console during execution.
+) :
+```
+
+##### Return Value
+
+None
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
+
+```py
+InvalidConfigError              # Config file is missing or contains an invalid value.
+APIConnectionError              # The storage system/service API returned an error.
+InvalidVolumeParameterError     # An invalid parameter was specified.
+```
+
+<a name="lib-delete-snapshot"></a>
+
+#### Delete an Existing Snapshot for a Data Volume
+
+The NetApp Data Science Toolkit can be used to near-instantaneously delete an existing snapshot for a specific data volume as part of any Python program or workflow. 
+
+##### Function Definition
+
+```py
+def deleteSnapshot(
+    volumeName: str,            # Name of volume (required).
+    snapshotName: str,          # Name of snapshot to be deleted (required).
+    printOutput: bool = False   # Denotes whether or not to print messages to the console during execution.
+) :
+```
+
+##### Return Value
+
+None
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
+
+```py
+InvalidConfigError              # Config file is missing or contains an invalid value.
+APIConnectionError              # The storage system/service API returned an error.
+InvalidSnapshotParameterError   # An invalid parameter was specified.
+InvalidVolumeParameterError     # An invalid parameter was specified.
+```
+
+<a name="lib-list-snapshots"></a>
+
+#### List All Existing Snapshots for a Data Volume
+
+The NetApp Data Science Toolkit can be used to retrieve a list of all existing snapshots for a specific data volume as part of any Python program or workflow.
+
+##### Function Definition
+
+```py
+def listSnapshots(
+    volumeName: str,            # Name of volume.
+    printOutput: bool = False   # Denotes whether or not to print messages to the console during execution.
+) -> list() :
+```
+
+##### Return Value
+
+The function returns a list of all existing snapshots for the specific data volume. Each item in the list will be a dictionary containing details regarding a specific snapshot. The keys for the values in this dictionary are "Snapshot Name", "Create Time".
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
+
+```py
+InvalidConfigError              # Config file is missing or contains an invalid value.
+APIConnectionError              # The storage system/service API returned an error.
+InvalidVolumeParameterError     # An invalid parameter was specified.
+```
+
 <a name="lib-restore-snapshot"></a>
 
-### Restore a Snapshot for a Data Volume
+#### Restore a Snapshot for a Data Volume
 
 The NetApp Data Science Toolkit can be used to near-instantaneously restore a specific snapshot for a data volume as part of any Python program or workflow. This action will restore the volume to its exact state at the time that the snapshot was created.
 
 Warning: When you restore a snapshot, all subsequent snapshots are deleted.
 
-#### Function Definition
+##### Function Definition
 
 ```py
 def restoreSnapshot(
@@ -690,11 +698,11 @@ def restoreSnapshot(
 ) :
 ```
 
-#### Return Value
+##### Return Value
 
 None
 
-#### Error Handling
+##### Error Handling
 
 If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
 
