@@ -59,6 +59,7 @@ If you experience an error and do not know how to resolve it, visit the [Trouble
 ## Tips and Tricks
 
 - [Using the NetApp Data Science Toolkit with Kubernetes.](kubernetes.md)
+- [Accelerating the AI training workflow with the NetApp Data Science Toolkit](https://netapp.io/2020/12/14/accelerating-the-ai-training-workflow-with-the-netapp-data-science-toolkit/)
 
 <a name="command-line-functionality"></a>
 
