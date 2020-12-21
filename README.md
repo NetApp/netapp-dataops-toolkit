@@ -438,7 +438,7 @@ The NetApp Data Science Toolkit can be used to near-instantaneously create a new
 def cloneVolume(
     newVolumeName: str,             # Name of new volume (required).
     sourceVolumeName: str,          # Name of volume to be cloned (required).
-    sourceSnapshotName: str,        # Name of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
+    sourceSnapshotName: str = None, # Name of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
     unixUID: str = None,            # Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
     unixGID: str = None,            # Unix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
     mountpoint: str = None,         # Local mountpoint to mount new volume at. If not specified, volume will not be mounted locally. On Linux hosts - if specified, calling program must be run as root.
