@@ -90,11 +90,11 @@ vserver modify -vserver ai_data -aggr-list ai_vsim97_01_FC_1
 AttributeError: The 'nas' field has not been set on the Volume. Try refreshing the object by calling get().
 ```
 
-You may encounter this error if there is a volume within the SVM that you are using that has not been exported as an NFS share (i.e. that has not been mounted to a junction path on the storage system). 
+You may encounter this error when using v1.0 of the toolkit if there is a volume within the SVM that you are using that has not been exported as an NFS share (i.e. that has not been mounted to a junction path on the storage system). 
 
 #### Resolution
 
-To resolve this error, you or your storage admin must export the offending volume as an NFS share. This can be performed using the ONTAP CLI as demonstrated in the following example for a volume named 'project1'.
+The easiest solution is to upgrade to v1.1. If you must continue using v1.0, then you or your storage admin must export the offending volume as an NFS share. This can be performed using the ONTAP CLI as demonstrated in the following example for a volume named 'project1'.
 
 ```sh
 volume mount -volume project1 -junction-path /project1
