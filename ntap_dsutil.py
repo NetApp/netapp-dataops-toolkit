@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 
 ## NetApp Data Science Toolkit
-version = "1.0"
+version = "1.1"
 
 
-import base64, json, os, subprocess, re
+import base64, json, os, subprocess, re, requests, yaml, time, boto3, boto3.session
 from getpass import getpass
 import pandas as pd
 from tabulate import tabulate
 from datetime import datetime
 from netapp_ontap.resources import Volume as NetAppVolume
 from netapp_ontap.resources import Snapshot as NetAppSnapshot
+from netapp_ontap.resources import SnapmirrorRelationship as NetAppSnapmirrorRelationship
+from netapp_ontap.resources import SnapmirrorTransfer as NetAppSnapmirrorTransfer
 from netapp_ontap.error import NetAppRestError
 from netapp_ontap import config as netappConfig
 from netapp_ontap.host_connection import HostConnection as NetAppHostConnection
+from concurrent.futures import ThreadPoolExecutor
 
 
 ## API connection error class; objects of this class will be raised when an API connection cannot be established
@@ -52,27 +55,55 @@ class MountOperationError(Exception) :
     pass
 
 
+## Cloud Sync sync operation error class; objects of this class will be raised when a Cloud Sync sync operation fails
+class CloudSyncSyncOperationError(Exception) :
+    '''Error that will be raised when a Cloud Sync sync operation fails'''
+    pass
+
+
+## Invalid SnapMirror parameter error class; objects of this class will be raised when an invalid SnapMirror parameter is given
+class InvalidSnapMirrorParameterError(Exception) :
+    '''Error that will be raised when an invalid SnapMirror parameter is given'''
+    pass
+
+
+## SnapMirror sync operation error class; objects of this class will be raised when a SnapMirror sync operation fails
+class SnapMirrorSyncOperationError(Exception) :
+    '''Error that will be raised when a SnapMirror sync operation fails'''
+    pass
+
+
+## Generic function for printing an API response
+def printAPIResponse(response: requests.Response) :
+    print("API Response:")
+    print("Status Code: ", response.status_code)
+    print("Header: ", response.headers)
+    if response.text :
+        print("Body: ", response.text)
+
+
 ## Function for creating config file
 def createConfig(configDirPath: str = "~/.ntap_dsutil", configFilename: str = "config.json", connectionType: str = "ONTAP") :
-    if connectionType == "ONTAP" :
-        # Check to see if user has an existing config file
-        configDirPath = os.path.expanduser(configDirPath)
-        configFilePath = os.path.join(configDirPath, configFilename)
-        if os.path.isfile(configFilePath) :
-            print("You already have an existing config file. Creating a new config file will overwrite this existing config.")
-            # If existing config file is present, ask user if they want to proceed
-            # Verify value entered; prompt user to re-enter if invalid
-            while True :
-                proceed = input("Are you sure that you want to proceed? (yes/no): ")
-                if proceed in ("yes", "Yes", "YES") :
-                    break
-                elif proceed in ("no", "No", "NO") :
-                    sys.exit(0)
-                else :
-                    print("Invalid value. Must enter 'yes' or 'no'.")
+    # Check to see if user has an existing config file
+    configDirPath = os.path.expanduser(configDirPath)
+    configFilePath = os.path.join(configDirPath, configFilename)
+    if os.path.isfile(configFilePath) :
+        print("You already have an existing config file. Creating a new config file will overwrite this existing config.")
+        # If existing config file is present, ask user if they want to proceed
+        # Verify value entered; prompt user to re-enter if invalid
+        while True :
+            proceed = input("Are you sure that you want to proceed? (yes/no): ")
+            if proceed in ("yes", "Yes", "YES") :
+                break
+            elif proceed in ("no", "No", "NO") :
+                sys.exit(0)
+            else :
+                print("Invalid value. Must enter 'yes' or 'no'.")
         
-        # Instantiate dict for storing connection details
-        config = dict()
+    # Instantiate dict for storing connection details
+    config = dict()
+
+    if connectionType == "ONTAP" :
         config["connectionType"] = connectionType
 
         # Prompt user to enter config details
@@ -161,20 +192,85 @@ def createConfig(configDirPath: str = "~/.ntap_dsutil", configFilename: str = "c
             else :
                 print("Invalid value. Must enter 'true' or 'false'.")
 
-        # Create config dir if it doesn't already exist
-        try :
-            os.mkdir(configDirPath)
-        except FileExistsError :
-            pass
-        
-        # Create config file in config dir
-        with open(configFilePath, 'w') as configFile:
-            # Write connection details to config file
-            json.dump(config, configFile)
-
-        print("Created config file: '" + configFilePath + "'.")
     else :
         raise ConnectionTypeError()
+
+    # Ask user if they want to use cloud sync functionality
+    # Verify value entered; prompt user to re-enter if invalid
+    while True :
+        useCloudSync = input("Do you intend to use this toolkit to trigger Cloud Sync operations? (yes/no): ")
+
+        if useCloudSync in ("yes", "Yes", "YES") :
+            # Prompt user to enter cloud central refresh token
+            print("Note: If you do not have a Cloud Central refresh token, visit https://services.cloud.netapp.com/refresh-token to create one.")
+            refreshTokenString = getpass("Enter Cloud Central refresh token: ")
+
+            # Convert refresh token to base64 enconding
+            refreshTokenBytes = refreshTokenString.encode("ascii") 
+            refreshTokenBase64Bytes = base64.b64encode(refreshTokenBytes)
+            config["cloudCentralRefreshToken"] = refreshTokenBase64Bytes.decode("ascii")
+
+            break
+
+        elif useCloudSync in ("no", "No", "NO") :
+            break
+
+        else :
+            print("Invalid value. Must enter 'yes' or 'no'.")
+
+    # Ask user if they want to use S3 functionality
+    # Verify value entered; prompt user to re-enter if invalid
+    while True :
+        useS3 = input("Do you intend to use this toolkit to push/pull from S3? (yes/no): ")
+
+        if useS3 in ("yes", "Yes", "YES") :
+            # Promt user to enter S3 endpoint details
+            config["s3Endpoint"] = input("Enter S3 endpoint: ")
+
+            # Prompt user to enter S3 credentials
+            config["s3AccessKeyId"] = input("Enter S3 Access Key ID: ")
+            s3SecretAccessKeyString = getpass("Enter S3 Secret Access Key: ")
+
+            # Convert refresh token to base64 enconding
+            s3SecretAccessKeyBytes = s3SecretAccessKeyString.encode("ascii") 
+            s3SecretAccessKeyBase64Bytes = base64.b64encode(s3SecretAccessKeyBytes)
+            config["s3SecretAccessKey"] = s3SecretAccessKeyBase64Bytes.decode("ascii")
+
+            # Prompt user to enter value denoting whether or not to verify SSL cert when calling S3 API
+            # Verify value entered; prompt user to re-enter if invalid
+            while True :
+                s3VerifySSLCert = input("Verify SSL certificate when calling S3 API (true/false): ")
+                if s3VerifySSLCert in ("true", "True") :
+                    config["s3VerifySSLCert"] = True
+                    config["s3CACertBundle"] = input("Enter CA cert bundle to use when calling S3 API (optional) []: ")
+                    break
+                elif s3VerifySSLCert in ("false", "False") :
+                    config["s3VerifySSLCert"] = False
+                    config["s3CACertBundle"] = ""
+                    break
+                else :
+                    print("Invalid value. Must enter 'true' or 'false'.")
+
+            break
+
+        elif useS3 in ("no", "No", "NO") :
+            break
+
+        else :
+            print("Invalid value. Must enter 'yes' or 'no'.")
+
+    # Create config dir if it doesn't already exist
+    try :
+        os.mkdir(configDirPath)
+    except FileExistsError :
+        pass
+    
+    # Create config file in config dir
+    with open(configFilePath, 'w') as configFile:
+        # Write connection details to config file
+        json.dump(config, configFile)
+
+    print("Created config file: '" + configFilePath + "'.")
 
 
 ## Function for printing appropriate error message when config file is missing or invalid
@@ -195,6 +291,100 @@ def retrieveConfig(configDirPath: str = "~/.ntap_dsutil", configFilename: str = 
             printInvalidConfigError()
         raise InvalidConfigError()
     return config
+
+
+# Function for retrieving Cloud Central refresh token from existing config file
+def retrieveCloudCentralRefreshToken(printOutput: bool = False) -> str :
+    # Retrieve refresh token from config file
+    try :
+        config = retrieveConfig(printOutput=printOutput)
+    except InvalidConfigError :
+        raise
+    try :
+        refreshTokenBase64 = config["cloudCentralRefreshToken"]
+    except :
+        if printOutput :
+            printInvalidConfigError()
+        raise InvalidConfigError()
+
+    # Decode base64-encoded refresh token
+    refreshTokenBase64Bytes = refreshTokenBase64.encode("ascii")
+    refreshTokenBytes = base64.b64decode(refreshTokenBase64Bytes)
+    refreshToken = refreshTokenBytes.decode("ascii")
+
+    return refreshToken
+
+
+# Function for retrieving S3 access details from existing config file
+def retrieveS3AccessDetails(printOutput: bool = False) -> (str, str, str, bool, str) :
+    # Retrieve refresh token from config file
+    try :
+        config = retrieveConfig(printOutput=printOutput)
+    except InvalidConfigError :
+        raise
+    try :
+        s3Endpoint = config["s3Endpoint"]
+        s3AccessKeyId = config["s3AccessKeyId"]
+        s3SecretAccessKeyBase64 = config["s3SecretAccessKey"]
+        s3VerifySSLCert = config["s3VerifySSLCert"]
+        s3CACertBundle = config["s3CACertBundle"]
+    except :
+        if printOutput :
+            printInvalidConfigError()
+        raise InvalidConfigError()
+
+    # Decode base64-encoded refresh token
+    s3SecretAccessKeyBase64Bytes = s3SecretAccessKeyBase64.encode("ascii")
+    s3SecretAccessKeyBytes = base64.b64decode(s3SecretAccessKeyBase64Bytes)
+    s3SecretAccessKey = s3SecretAccessKeyBytes.decode("ascii")
+
+    return s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle
+
+
+## Function for obtaining access token for calling Cloud Central API
+def getCloudCentralAccessToken(refreshToken: str, printOutput: bool = False) -> str :
+    # Define parameters for API call
+    url = "https://netapp-cloud-account.auth0.com/oauth/token"
+    headers = {
+        "Content-Type": "application/json"
+    }
+    data = {
+        "grant_type": "refresh_token",
+        "refresh_token": refreshToken,
+        "client_id": "Mu0V1ywgYteI6w1MbD15fKfVIUrNXGWC"
+    }
+
+    # Call API to optain access token
+    response = requests.post(url=url, headers=headers, data=json.dumps(data))
+
+    # Parse response to retrieve access token
+    try :
+        responseBody = json.loads(response.text)
+        accessToken = responseBody["access_token"]
+    except :
+        errorMessage = "Error obtaining access token from Cloud Sync API"
+        if printOutput :
+            print("Error:", errorMessage)
+            printAPIResponse(response)
+        raise APIConnectionError(errorMessage, response)
+
+    return accessToken
+
+
+##  Function for instantiating an S3 session
+def instantiateS3Session(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s3VerifySSLCert: bool, s3CACertBundle: str, printOutput: bool = False) :
+    # Instantiate session
+    session = boto3.session.Session(aws_access_key_id=s3AccessKeyId, aws_secret_access_key=s3SecretAccessKey)
+
+    if s3VerifySSLCert :
+        if s3CACertBundle :
+            s3 = session.resource(service_name='s3', endpoint_url=s3Endpoint, verify=s3CACertBundle)
+        else :
+            s3 = session.resource(service_name='s3', endpoint_url=s3Endpoint)
+    else :
+        s3 = session.resource(service_name='s3', endpoint_url=s3Endpoint, verify=False)
+
+    return s3
 
 
 ## Function for instantiating connection to NetApp storage instance
@@ -260,9 +450,19 @@ def listVolumes(checkLocalMounts: bool = False, printOutput: bool = False) -> li
             # Construct list of volumes; do not include SVM root volume
             volumesList = list()
             for volume in volumes :
-                if volume.nas.path != "/" :
+                # Retrieve volume export path; handle case where volume is not exported
+                if hasattr(volume, "nas") :
+                    volumeExportPath = volume.nas.path
+                else :
+                    volumeExportPath = None
+                
+                # Include all vols except for SVM root vol
+                if volumeExportPath != "/" :
                     # Construct NFS mount target
-                    nfsMountTarget = config["dataLif"]+":"+volume.nas.path
+                    if not volumeExportPath :
+                        nfsMountTarget = None
+                    else :
+                        nfsMountTarget = config["dataLif"]+":"+volume.nas.path
 
                     # Construct clone source
                     clone = "no"
@@ -394,7 +594,7 @@ def mountVolume(volumeName: str, mountpoint: str, printOutput: bool = False) :
 
 
 ## Function for creating a new volume
-def createVolume(volumeName: str, volumeSize: str, volumeType: str = "flexvol", unixPermissions: str = "0777", unixUID: str = "0", unixGID: str = "0", exportPolicy: str = "default", snapshotPolicy: str = "none", aggregate: str = None, mountpoint: str = None, printOutput: bool = False) :
+def createVolume(volumeName: str, volumeSize: str, guaranteeSpace: bool = False, volumeType: str = "flexvol", unixPermissions: str = "0777", unixUID: str = "0", unixGID: str = "0", exportPolicy: str = "default", snapshotPolicy: str = "none", aggregate: str = None, mountpoint: str = None, printOutput: bool = False) :
     # Retrieve config details from config file
     try :
         config = retrieveConfig(printOutput=printOutput)
@@ -495,6 +695,12 @@ def createVolume(volumeName: str, volumeSize: str, volumeType: str = "flexvol", 
             },
             "snapshot_policy": {"name": snapshotPolicy}
         }
+
+        # Set space guarantee field
+        if guaranteeSpace :
+            volumeDict["guarantee"] = {"type": "volume"}
+        else :
+            volumeDict["guarantee"] = {"type": "none"}
 
         # If flexvol -> set aggregate field
         if volumeType == "flexvol" :
@@ -943,7 +1149,7 @@ def cloneVolume(newVolumeName: str, sourceVolumeName: str, sourceSnapshotName: s
 
             # Create new volume
             newVolume = NetAppVolume.from_dict(newVolumeDict)
-            newVolume.post(poll=True)
+            newVolume.post(poll=True, poll_timeout=120)
             if printOutput :
                 print("Clone volume created successfully.")
 
@@ -965,32 +1171,578 @@ def cloneVolume(newVolumeName: str, sourceVolumeName: str, sourceSnapshotName: s
         raise ConnectionTypeError()
 
 
+## Function for obtaining access paremeters for calling Cloud Sync API
+def getCloudSyncAccessParameters(refreshToken: str, printOutput: bool = False) -> (str, str) :
+    try :
+        accessToken = getCloudCentralAccessToken(refreshToken=refreshToken, printOutput=printOutput)
+    except APIConnectionError :
+        raise
+
+    # Define parameters for API call
+    url = "https://cloudsync.netapp.com/api/accounts"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + accessToken
+    }
+
+    # Call API to obtain account ID
+    response = requests.get(url=url, headers=headers)
+
+    # Parse response to retrieve account ID
+    try :
+        responseBody = json.loads(response.text)
+        accountId = responseBody[0]["accountId"]
+    except :
+        errorMessage = "Error obtaining account ID from Cloud Sync API"
+        if printOutput :
+            print("Error:", errorMessage)
+            printAPIResponse(response)
+        raise APIConnectionError(errorMessage, response)
+
+    # Return access token and account ID
+    return accessToken, accountId
+
+
+## Function for listing cloud sync relationships
+def listCloudSyncRelationships(printOutput: bool = False) -> list() :
+    # Step 1: Obtain access token and account ID for accessing Cloud Sync API
+
+    # Retrieve refresh token
+    try :
+        refreshToken = retrieveCloudCentralRefreshToken(printOutput=printOutput)
+    except InvalidConfigError :
+        raise
+
+    # Obtain access token and account ID
+    try :
+        accessToken, accountId = getCloudSyncAccessParameters(refreshToken=refreshToken, printOutput=printOutput)
+    except APIConnectionError :
+        raise
+
+    # Step 2: Retrieve list of relationships
+
+    # Define parameters for API call
+    url = "https://cloudsync.netapp.com/api/relationships-v2"
+    headers = {
+        "Accept": "application/json",
+        "x-account-id": accountId,
+        "Authorization": "Bearer " + accessToken
+    }
+
+    # Call API to retrieve list of relationships
+    response = requests.get(url = url, headers = headers)
+
+    # Check for API response status code of 200; if not 200, raise error
+    if response.status_code != 200 :
+        errorMessage = "Error calling Cloud Sync API to retrieve list of relationships."
+        if printOutput :
+            print("Error:", errorMessage)
+            printAPIResponse(response)
+        raise APIConnectionError(errorMessage, response)
+
+    # Constrict list of relationships
+    relationships = json.loads(response.text)
+    relationshipsList = list()
+    for relationship in relationships :
+        relationshipDetails = dict()
+        relationshipDetails["id"] = relationship["id"]
+        relationshipDetails["source"] = relationship["source"]
+        relationshipDetails["target"] = relationship["target"]
+        relationshipsList.append(relationshipDetails)
+
+    # Print list of relationships
+    if printOutput :
+        print(yaml.dump(relationshipsList))
+
+    return relationshipsList
+
+
+## Function for triggering a sync operation for an existing cloud sync relationships
+def syncCloudSyncRelationship(relationshipID: str, waitUntilComplete: bool = False, printOutput: bool = False) :
+    # Step 1: Obtain access token and account ID for accessing Cloud Sync API
+
+    # Retrieve refresh token
+    try :
+        refreshToken = retrieveCloudCentralRefreshToken(printOutput=printOutput)
+    except InvalidConfigError :
+        raise
+
+    # Obtain access token and account ID
+    try :
+        accessToken, accountId = getCloudSyncAccessParameters(refreshToken=refreshToken, printOutput=printOutput)
+    except APIConnectionError :
+        raise
+
+    # Step 2: Trigger Cloud Sync sync
+
+    # Define parameters for API call
+    url = "https://cloudsync.netapp.com/api/relationships/%s/sync" % (relationshipID)
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "x-account-id": accountId,
+        "Authorization": "Bearer " + accessToken
+    }
+
+    # Call API to trigger sync
+    if printOutput :
+        print("Triggering sync operation for Cloud Sync relationship (ID = " + relationshipID + ").")
+    response = requests.put(url = url, headers = headers)
+
+    # Check for API response status code of 202; if not 202, raise error
+    if response.status_code != 202 :
+        errorMessage = "Error calling Cloud Sync API to trigger sync operation."
+        if printOutput :
+            print("Error:", errorMessage)
+            printAPIResponse(response)
+        raise APIConnectionError(errorMessage, response)
+    
+    if printOutput :
+        print("Sync operation successfully triggered.")
+
+    # Step 3: Obtain status of the sync operation; keep checking until the sync operation has completed
+
+    if waitUntilComplete :
+        while True :
+            # Define parameters for API call
+            url = "https://cloudsync.netapp.com/api/relationships-v2/%s" % (relationshipID)
+            headers = {
+                "Accept": "application/json",
+                "x-account-id": accountId,
+                "Authorization": "Bearer " + accessToken
+            }
+
+            # Call API to obtain status of sync operation
+            response = requests.get(url = url, headers = headers)
+
+            # Parse response to retrieve status of sync operation
+            try :
+                responseBody = json.loads(response.text)
+                latestActivityType = responseBody["activity"]["type"]
+                latestActivityStatus = responseBody["activity"]["status"]
+            except :
+                errorMessage = "Error obtaining status of sync operation from Cloud Sync API."
+                if printOutput :
+                    print("Error:", errorMessage)
+                    printAPIResponse(response)
+                raise APIConnectionError(errorMessage, response)
+            
+            # End execution if the latest update is complete
+            if latestActivityType == "Sync" :
+                if latestActivityStatus == "DONE" :
+                    if printOutput :
+                        print("Success: Sync operation is complete.")
+                    break
+                elif latestActivityStatus == "FAILED" :
+                    if printOutput :
+                        failureMessage = responseBody["activity"]["failureMessage"]
+                        print("Error: Sync operation failed.")
+                        print("Message:", failureMessage)
+                    raise CloudSyncSyncOperationError(latestActivityStatus, failureMessage)
+                elif latestActivityStatus == "RUNNING" :
+                    # Print message re: progress
+                    if printOutput : 
+                        print("Sync operation is not yet complete. Status:", latestActivityStatus)
+                        print("Checking again in 60 seconds...")
+                else :
+                    if printOutput :
+                        print ("Error: Unknown sync operation status (" + latestActivityStatus + ") returned by Cloud Sync API.")
+                    raise CloudSyncSyncOperationError(latestActivityStatus)
+
+            # Sleep for 60 seconds before checking progress again
+            time.sleep(60)
+
+
+## Function for listing all SnapMirror relationships
+def listSnapMirrorRelationships(printOutput: bool = False) -> list() :
+    # Retrieve config details from config file
+    try :
+        config = retrieveConfig(printOutput=printOutput)
+    except InvalidConfigError :
+        raise
+    try :
+        connectionType = config["connectionType"]
+    except :
+        if printOutput :
+            printInvalidConfigError()
+        raise InvalidConfigError()
+
+    if connectionType == "ONTAP" :
+        # Instantiate connection to ONTAP cluster
+        try :
+            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+        except InvalidConfigError :
+            raise
+
+        try :
+            # Retrieve all relationships for which destination is on current cluster
+            destinationRelationships = NetAppSnapmirrorRelationship.get_collection()
+
+            # Do not retrieve relationships for which source is on current cluster
+            # Note: Uncomment below line to retrieve all relationships for which source is on current cluster, then add sourceRelationships to for loop
+            #sourceRelationships = NetAppSnapmirrorRelationship.get_collection(list_destinations_only=True)
+
+            # Construct list of relationships
+            relationshipsList = list()
+            for relationship in destinationRelationships :
+                # Retrieve relationship details
+                try :
+                    relationship.get()
+                except NetAppRestError as err :
+                    relationship.get(list_destinations_only=True)
+
+                # Set cluster value
+                if hasattr(relationship.source, "cluster") :
+                    sourceCluster = relationship.source.cluster.name
+                else :
+                    sourceCluster = "user's cluster"
+                if hasattr(relationship.destination, "cluster") :
+                    destinationCluster = relationship.destination.cluster.name
+                else :
+                    destinationCluster = "user's cluster"
+
+                # Set transfer state value
+                if hasattr(relationship, "transfer") :
+                    transferState = relationship.transfer.state
+                else :
+                    transferState = None
+
+                # Set healthy value
+                if hasattr(relationship, "healthy") :
+                    healthy = relationship.healthy
+                else :
+                    healthy = "unknown"
+
+                # Construct dict containing relationship details
+                relationshipDict = {
+                    "UUID": relationship.uuid, 
+                    "Type": relationship.policy.type,
+                    "Healthy": healthy,
+                    "Current Transfer Status": transferState,
+                    "Source Cluster": sourceCluster,
+                    "Source SVM": relationship.source.svm.name,
+                    "Source Volume": relationship.source.path.split(":")[1],
+                    "Dest Cluster": destinationCluster,
+                    "Dest SVM": relationship.destination.svm.name,
+                    "Dest Volume": relationship.destination.path.split(":")[1]
+                }
+
+                # Append dict to list of relationships
+                relationshipsList.append(relationshipDict)
+
+        except NetAppRestError as err :
+            if printOutput :
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+        
+        # Print list of relationships
+        if printOutput :
+            # Convert relationships array to Pandas DataFrame
+            relationshipsDF = pd.DataFrame.from_dict(relationshipsList, dtype="string")
+            print(tabulate(relationshipsDF, showindex=False, headers=relationshipsDF.columns))
+
+        return relationshipsList
+
+    else :
+        raise ConnectionTypeError()
+
+
+## Function for triggering a sync operation for a SnapMirror relationship
+def syncSnapMirrorRelationship(uuid: str, waitUntilComplete: bool = False, printOutput: bool = False) :
+    # Retrieve config details from config file
+    try :
+        config = retrieveConfig(printOutput=printOutput)
+    except InvalidConfigError :
+        raise
+    try :
+        connectionType = config["connectionType"]
+    except :
+        if printOutput :
+            printInvalidConfigError()
+        raise InvalidConfigError()
+
+    if connectionType == "ONTAP" :
+        # Instantiate connection to ONTAP cluster
+        try :
+            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+        except InvalidConfigError :
+            raise
+    
+        if printOutput :
+            print("Triggering sync operation for SnapMirror relationship (UUID = " + uuid + ").")
+
+        try :
+            # Trigger sync operation for SnapMirror relationship
+            transfer = NetAppSnapmirrorTransfer(uuid)
+            transfer.post(poll=True)
+        except NetAppRestError as err :
+            if printOutput :
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+
+        if printOutput :
+            print("Sync operation successfully triggered.")
+
+        if waitUntilComplete :
+            # Wait to perform initial check
+            print("Waiting for sync operation to complete.")
+            print("Status check will be performed in 10 seconds...")
+            time.sleep(10)
+
+            while True :
+                # Retrieve relationship
+                relationship = NetAppSnapmirrorRelationship.find(uuid=uuid)
+                relationship.get()
+
+                # Check status of sync operation
+                if hasattr(relationship, "transfer") :
+                    transferState = relationship.transfer.state
+                else :
+                    transferState = None
+
+                # if transfer is complete, end execution
+                if not transferState :
+                    healthy = relationship.healthy
+                    if healthy :
+                        if printOutput :
+                            print("Success: Sync operation is complete.")
+                        break
+                    else :
+                        if printOutput :
+                            print("Error: Relationship is not healthy. Access ONTAP System Manager for details.")
+                        raise SnapMirrorSyncOperationError("not healthy")
+                elif transferState != "transferring" :
+                    if printOutput :
+                        print ("Error: Unknown sync operation status (" + transferState + ") returned by ONTAP API.")
+                    raise SnapMirrorSyncOperationError(transferState)
+                else :
+                    # Print message re: progress
+                    if printOutput : 
+                        print("Sync operation is not yet complete. Status:", transferState)
+                        print("Checking again in 60 seconds...")
+
+                # Sleep for 60 seconds before checking progress again
+                time.sleep(60)
+
+    else :
+        raise ConnectionTypeError()
+
+
+## Function for uploading a file to S3
+def uploadToS3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s3VerifySSLCert: bool, s3CACertBundle: str, s3Bucket: str, localFile: str, s3ObjectKey: str, s3ExtraArgs: str = None, printOutput: bool = False) :
+    # Instantiate S3 session
+    try :
+        s3 = instantiateS3Session(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, printOutput=printOutput)
+    except Exception as err :
+        if printOutput :
+            print("Error: S3 API error: ", err)
+        raise APIConnectionError(err)
+
+    # Upload file
+    if printOutput :
+        print("Uploading file '" + localFile + "' to bucket '" + s3Bucket + "' and applying key '" + s3ObjectKey + "'.")
+    
+    try :
+        if s3ExtraArgs :
+            s3.Object(s3Bucket, s3ObjectKey).upload_file(localFile, ExtraArgs=json.loads(s3ExtraArgs))
+        else :
+            s3.Object(s3Bucket, s3ObjectKey).upload_file(localFile)
+    except Exception as err :
+        if printOutput :
+            print("Error: S3 API error: ", err)
+        raise APIConnectionError(err)
+
+
+## Function for downloading a file from S3
+def downloadFromS3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s3VerifySSLCert: bool, s3CACertBundle: str, s3Bucket: str, s3ObjectKey: str, localFile: str, printOutput: bool = False) :
+    # Instantiate S3 session
+    try :
+        s3 = instantiateS3Session(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, printOutput=printOutput)
+    except Exception as err :
+        if printOutput :
+            print("Error: S3 API error: ", err)
+        raise APIConnectionError(err)
+
+    if printOutput :
+        print("Downloading object '" + s3ObjectKey + "' from bucket '" + s3Bucket + "' and saving as '" + localFile + "'.")
+
+    # Create directories that don't exist
+    if localFile.find(os.sep) != -1 :
+        dirs = localFile.split(os.sep)
+        dirpath = os.sep.join(dirs[:len(dirs)-1])
+        if not os.path.exists(dirpath):
+            os.makedirs(dirpath)
+    
+    # Download the file
+    try :
+        s3.Object(s3Bucket, s3ObjectKey).download_file(localFile)
+    except Exception as err :
+        if printOutput :
+            print("Error: S3 API error: ", err)
+        raise APIConnectionError(err)
+
+
+##  Function for pushing a file to S3
+def pushFileToS3(s3Bucket: str, localFile: str, s3ObjectKey: str = None, s3ExtraArgs: str = None, printOutput: bool = False) :
+    # Retrieve S3 access details from existing config file
+    try :
+        s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = retrieveS3AccessDetails(printOutput=printOutput)
+    except InvalidConfigError :
+        raise
+    
+    # Set S3 object key
+    if not s3ObjectKey :
+        s3ObjectKey = localFile
+
+    # Upload file
+    try :
+        uploadToS3(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, s3Bucket=s3Bucket, localFile=localFile, s3ObjectKey=s3ObjectKey, s3ExtraArgs=s3ExtraArgs, printOutput=printOutput)
+    except APIConnectionError :
+        raise
+
+    print("Upload complete.")
+
+
+##  Function for pushing a directory to S3
+def pushDirectoryToS3(s3Bucket: str, localDirectory: str, s3ObjectKeyPrefix: str = "", s3ExtraArgs: str = None, printOutput: bool = False) :
+    # Retrieve S3 access details from existing config file
+    try :
+        s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = retrieveS3AccessDetails(printOutput=printOutput)
+    except InvalidConfigError :
+        raise
+    
+    # Multithread the upload operation
+    with ThreadPoolExecutor() as executor :
+        # Loop through all files in directory
+        for dirpath, dirnames, filenames in os.walk(localDirectory) :
+            # Exclude hidden files and directories
+            filenames = [filename for filename in filenames if not filename[0] == '.']
+            dirnames[:] = [dirname for dirname in dirnames if not dirname[0] == '.']
+
+            for filename in filenames:
+                # Build filepath
+                if localDirectory.endswith(os.sep) :
+                    dirpathBeginIndex = len(localDirectory)
+                else :
+                    dirpathBeginIndex = len(localDirectory) + 1
+
+                subdirpath = dirpath[dirpathBeginIndex:] 
+
+                if subdirpath :
+                    filepath = subdirpath + os.sep + filename
+                else :
+                    filepath = filename
+
+                # Set S3 object details
+                s3ObjectKey = s3ObjectKeyPrefix + filepath
+                localFile = dirpath + os.sep + filename
+
+                # Upload file
+                try :
+                    executor.submit(uploadToS3, s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, s3Bucket=s3Bucket, localFile=localFile, s3ObjectKey=s3ObjectKey, s3ExtraArgs=s3ExtraArgs, printOutput=printOutput)
+                except APIConnectionError :
+                    raise
+    
+    print("Upload complete.")
+
+
+##  Function for pull an object from S3
+def pullObjectFromS3(s3Bucket: str, s3ObjectKey: str, localFile: str = None, printOutput: bool = False) :
+    # Retrieve S3 access details from existing config file
+    try :
+        s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = retrieveS3AccessDetails(printOutput=printOutput)
+    except InvalidConfigError :
+        raise
+    
+    # Set S3 object key
+    if not localFile :
+        localFile = s3ObjectKey
+
+    # Upload file
+    try :
+        downloadFromS3(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, s3Bucket=s3Bucket, s3ObjectKey=s3ObjectKey, localFile=localFile, printOutput=printOutput)
+    except APIConnectionError :
+        raise
+
+    print("Download complete.")
+
+
+##  Function for pushing a directory to S3
+def pullBucketFromS3(s3Bucket: str, localDirectory: str, s3ObjectKeyPrefix: str = "", printOutput: bool = False) :
+    # Retrieve S3 access details from existing config file
+    try :
+        s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = retrieveS3AccessDetails(printOutput=printOutput)
+    except InvalidConfigError :
+        raise
+
+    # Add slash to end of local directory path if not present
+    if not localDirectory.endswith(os.sep) :
+        localDirectory+=os.sep
+    
+    # Multithread the download operation
+    with ThreadPoolExecutor() as executor :
+        try :
+            # Instantiate S3 session
+            s3 = instantiateS3Session(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, printOutput=printOutput)
+        
+            # Loop through all objects with prefix in bucket and download
+            bucket = s3.Bucket(s3Bucket)
+            for obj in bucket.objects.filter(Prefix=s3ObjectKeyPrefix) :
+                executor.submit(downloadFromS3, s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, s3Bucket=s3Bucket, s3ObjectKey=obj.key, localFile=localDirectory+obj.key, printOutput=printOutput)
+
+        except APIConnectionError :
+            raise
+
+        except Exception as err :
+            if printOutput :
+                print("Error: S3 API error: ", err)
+            raise APIConnectionError(err)
+    
+    print("Download complete.")
+
+
 ## Define contents of help text
 helpTextStandard = '''
 The NetApp Data Science Toolkit is a Python library that makes it simple for data scientists and data engineers to perform various data management tasks, such as provisioning a new data volume, near-instantaneously cloning a data volume, and near-instantaneously snapshotting a data volume for traceability/baselining.
 
 Basic Commands:
 
-\tconfig\t\t\tCreate a new config file (a config file is required to perform other commands).
-\thelp\t\t\tPrint help text.
-\tversion\t\t\tPrint version details.
+\tconfig\t\t\t\tCreate a new config file (a config file is required to perform other commands).
+\thelp\t\t\t\tPrint help text.
+\tversion\t\t\t\tPrint version details.
 
 Data Volume Management Commands:
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
 
-\tclone volume\t\tCreate a new data volume that is an exact copy of an existing volume.
-\tcreate volume\t\tCreate a new data volume.
-\tdelete volume\t\tDelete an existing data volume.
-\tlist volumes\t\tList all data volumes.
-\tmount volume\t\tMount an existing data volume locally. Note: on Linux hosts - must be run as root.
+\tclone volume\t\t\tCreate a new data volume that is an exact copy of an existing volume.
+\tcreate volume\t\t\tCreate a new data volume.
+\tdelete volume\t\t\tDelete an existing data volume.
+\tlist volumes\t\t\tList all data volumes.
+\tmount volume\t\t\tMount an existing data volume locally. Note: on Linux hosts - must be run as root.
 
 Snapshot Management Commands:
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
 
-\tcreate snapshot\t\tCreate a new snapshot for a data volume.
-\tdelete snapshot\t\tDelete an existing snapshot for a data volume.
-\tlist snapshots\t\tList all snapshots for a data volume.
-\trestore snapshot\tRestore a snapshot for a data volume (restore the volume to its exact state at the time that the snapshot was created).
+\tcreate snapshot\t\t\tCreate a new snapshot for a data volume.
+\tdelete snapshot\t\t\tDelete an existing snapshot for a data volume.
+\tlist snapshots\t\t\tList all snapshots for a data volume.
+\trestore snapshot\t\tRestore a snapshot for a data volume (restore the volume to its exact state at the time that the snapshot was created).
+
+Data Fabric Commands:
+Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
+
+\tlist cloud-sync-relationships\tList all existing Cloud Sync relationships.
+\tsync cloud-sync-relationship\tTrigger a sync operation for an existing Cloud Sync relationship.
+\tpull-from-s3 bucket\t\tPull the contents of a bucket from S3.
+\tpull-from-s3 object\t\tPull an object from S3.
+\tpush-to-s3 directory\t\tPush the contents of a directory to S3 (multithreaded).
+\tpush-to-s3 file\t\t\tPush a file to S3.
+
+Advanced Data Fabric Commands:
+Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
+
+\tlist snapmirror-relationships\tList all existing SnapMirror relationships.
+\tsync snapmirror-relationship\tTrigger a sync operation for an existing SnapMirror relationship.
 '''
 helpTextCloneVolume = '''
 Command: clone volume
@@ -1057,6 +1809,7 @@ Optional Options/Arguments:
 \t-h, --help\t\tPrint help text.
 \t-m, --mountpoint=\tLocal mountpoint to mount new volume at after creating. If not specified, new volume will not be mounted locally. On Linux hosts - if specified, must be run as root.
 \t-p, --permissions=\tUnix filesystem permissions to apply when creating new volume (ex. '0777' for full read/write permissions for all users and groups).
+\t-r, --guarantee-space\tGuarantee sufficient storage space for full capacity of the volume (i.e. do not use thin provisioning).
 \t-t, --type=\t\tVolume type to use when creating new volume (flexgroup/flexvol).
 \t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
 
@@ -1105,6 +1858,20 @@ Examples:
 \t./ntap_dsutil.py delete volume --name=project1
 \t./ntap_dsutil.py delete volume -n project2
 '''
+helpTextListCloudSyncRelationships = '''
+Command: list cloud-sync-relationships
+
+List all existing Cloud Sync relationships.
+
+No additional options/arguments required.
+'''
+helpTextListSnapMirrorRelationships = '''
+Command: list snapmirror-relationships
+
+List all SnapMirror relationships.
+
+No additional options/arguments required.
+'''
 helpTextListSnapshots = '''
 Command: list snapshots
 
@@ -1145,6 +1912,88 @@ Examples:
 \tsudo -E ./ntap_dsutil.py mount volume --name=project1 --mountpoint=/mnt/project1
 \tsudo -E ./ntap_dsutil.py mount volume -m ~/testvol -n testvol
 '''
+helpTextPullFromS3Bucket = '''
+Command: pull-from-s3 bucket
+
+Pull the contents of a bucket from S3 (multithreaded).
+
+Note: To pull to a data volume, the volume must be mounted locally.
+
+Warning: This operation has not been tested at scale and may not be appropriate for extremely large datasets.
+
+Required Options/Arguments:
+\t-b, --bucket=\t\tS3 bucket to pull from.
+\t-d, --directory=\tLocal directory to save contents of bucket to.
+
+Optional Options/Arguments:
+\t-h, --help\t\tPrint help text.
+\t-p, --key-prefix=\tObject key prefix (pull will be limited to objects with key that starts with this prefix).
+
+Examples:
+\t./ntap_dsutil.py pull-from-s3 bucket --bucket=project1 --directory=/mnt/project1
+\t./ntap_dsutil.py pull-from-s3 bucket -b project1 -p project1/ -d ./project1/
+'''
+helpTextPullFromS3Object = '''
+Command: pull-from-s3 object
+
+Pull an object from S3.
+
+Note: To pull to a data volume, the volume must be mounted locally.
+
+Required Options/Arguments:
+\t-b, --bucket=\t\tS3 bucket to pull from.
+\t-k, --key=\t\tKey of S3 object to pull.
+
+Optional Options/Arguments:
+\t-f, --file=\t\tLocal filepath (including filename) to save object to (if not specified, value of -k/--key argument will be used)
+\t-h, --help\t\tPrint help text.
+
+Examples:
+\t./ntap_dsutil.py pull-from-s3 object --bucket=project1 --key=data.csv --file=./project1/data.csv
+\t./ntap_dsutil.py pull-from-s3 object -b project1 -k data.csv
+'''
+helpTextPushToS3Directory = '''
+Command: push-to-s3 directory
+
+Push the contents of a directory to S3 (multithreaded).
+
+Note: To push from a data volume, the volume must be mounted locally.
+
+Warning: This operation has not been tested at scale and may not be appropriate for extremely large datasets.
+
+Required Options/Arguments:
+\t-b, --bucket=\t\tS3 bucket to push to.
+\t-d, --directory=\tLocal directory to push contents of.
+
+Optional Options/Arguments:
+\t-e, --extra-args\tExtra args to apply to newly-pushed S3 objects (For details on this field, refer to https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-uploading-files.html#the-extraargs-parameter).
+\t-h, --help\t\tPrint help text.
+\t-p, --key-prefix=\tPrefix to add to key for newly-pushed S3 objects (Note: by default, key will be local filepath relative to directory being pushed).
+
+Examples:
+\t./ntap_dsutil.py push-to-s3 directory --bucket=project1 --directory=/mnt/project1
+\t./ntap_dsutil.py push-to-s3 directory -b project1 -d /mnt/project1 -p project1/ -e '{"Metadata": {"mykey": "myvalue"}}'
+'''
+helpTextPushToS3File = '''
+Command: push-to-s3 file
+
+Push a file to S3.
+
+Note: To push from a data volume, the volume must be mounted locally.
+
+Required Options/Arguments:
+\t-b, --bucket=\t\tS3 bucket to push to.
+\t-f, --file=\t\tLocal file to push.
+
+Optional Options/Arguments:
+\t-e, --extra-args\tExtra args to apply to newly-pushed S3 object (For details on this field, refer to https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-uploading-files.html#the-extraargs-parameter).
+\t-h, --help\t\tPrint help text.
+\t-k, --key=\t\tKey to assign to newly-pushed S3 object (if not specified, key will be set to value of -f/--file argument).
+
+Examples:
+\t./ntap_dsutil.py push-to-s3 file --bucket=project1 --file=data.csv
+\t./ntap_dsutil.py push-to-s3 file -b project1 -k data.csv -f /mnt/project1/data.csv -e '{"Metadata": {"mykey": "myvalue"}}'
+'''
 helpTextRestoreSnapshot = '''
 Command: restore snapshot
 
@@ -1161,6 +2010,42 @@ Optional Options/Arguments:
 Examples:
 \t./ntap_dsutil.py restore snapshot --volume=project1 --name=snap1
 \t./ntap_dsutil.py restore snapshot -v project2 -n ntap_dsutil_20201113_221917
+'''
+helpTextSyncCloudSyncRelationship = '''
+Command: sync cloud-sync-relationship
+
+Trigger a sync operation for an existing Cloud Sync relationship.
+
+Tip: Run `./ntap_dsutil.py list cloud-sync-relationships` to obtain relationship ID.
+
+Required Options/Arguments:
+\t-i, --id=\tID of the relationship for which the sync operation is to be triggered.
+
+Optional Options/Arguments:
+\t-h, --help\tPrint help text.
+\t-w, --wait\tWait for sync operation to complete before exiting.
+
+Examples:
+\t./ntap_dsutil.py sync cloud-sync-relationship --id=5ed00996ca85650009a83db2
+\t./ntap_dsutil.py sync cloud-sync-relationship -i 5ed00996ca85650009a83db2 -w
+'''
+helpTextSyncSnapMirrorRelationship = '''
+Command: sync snapmirror-relationship
+
+Trigger a sync operation for an existing SnapMirror relationship.
+
+Tip: Run `./ntap_dsutil.py list snapmirror-relationships` to obtain relationship UUID.
+
+Required Options/Arguments:
+\t-i, --uuid=\tUUID of the relationship for which the sync operation is to be triggered.
+
+Optional Options/Arguments:
+\t-h, --help\tPrint help text.
+\t-w, --wait\tWait for sync operation to complete before exiting.
+
+Examples:
+\t./ntap_dsutil.py sync snapmirror-relationship --uuid=132aab2c-4557-11eb-b542-005056932373
+\t./ntap_dsutil.py sync snapmirror-relationship -i 132aab2c-4557-11eb-b542-005056932373 -w
 '''
 
 
@@ -1300,6 +2185,7 @@ if __name__ == '__main__' :
         elif target in ("volume", "vol") :
             volumeName = None
             volumeSize = None
+            guaranteeSpace = False
             volumeType = None
             unixPermissions = None
             unixUID = None
@@ -1311,7 +2197,7 @@ if __name__ == '__main__' :
 
             # Get command line options
             try :
-                opts, args = getopt.getopt(sys.argv[3:], "hn:s:t:p:u:g:e:d:m:a:", ["help", "name=", "size=", "type=", "permissions=", "uid=", "gid=", "export-policy=", "snapshot-policy=", "mountpoint=", "aggregate="])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:s:rt:p:u:g:e:d:m:a:", ["help", "name=", "size=", "guarantee-space", "type=", "permissions=", "uid=", "gid=", "export-policy=", "snapshot-policy=", "mountpoint=", "aggregate="])
             except :
                 handleInvalidCommand(helpText=helpTextCreateVolume, invalidOptArg=True)
 
@@ -1324,6 +2210,8 @@ if __name__ == '__main__' :
                     volumeName = arg
                 elif opt in ("-s", "--size") :
                     volumeSize = arg
+                elif opt in ("-r", "--guarantee-space") :
+                    guaranteeSpace = True
                 elif opt in ("-t", "--type") :
                     volumeType = arg
                 elif opt in ("-p", "--permissions") :
@@ -1350,8 +2238,8 @@ if __name__ == '__main__' :
 
             # Create volume
             try :
-                createVolume(volumeName=volumeName, volumeSize=volumeSize, volumeType=volumeType, unixPermissions=unixPermissions, unixUID=unixUID, unixGID=unixGID, 
-                    exportPolicy=exportPolicy, snapshotPolicy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, printOutput=True)
+                createVolume(volumeName=volumeName, volumeSize=volumeSize, guaranteeSpace=guaranteeSpace, volumeType=volumeType, unixPermissions=unixPermissions, unixUID=unixUID, 
+                    unixGID=unixGID, exportPolicy=exportPolicy, snapshotPolicy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, printOutput=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError) :
                 sys.exit(1)
 
@@ -1446,7 +2334,37 @@ if __name__ == '__main__' :
         target = getTarget(sys.argv)
         
         # Invoke desired action based on target
-        if target in ("snapshot", "snap", "snapshots", "snaps") :
+        if target in ("cloud-sync-relationship", "cloud-sync", "cloud-sync-relationships", "cloud-syncs") :
+            # Check command line options
+            if len(sys.argv) > 3 :
+                if sys.argv[3] in ("-h", "--help") :
+                    print(helpTextListCloudSyncRelationships)
+                    sys.exit(0)
+                else :
+                    handleInvalidCommand(helpTextListCloudSyncRelationships, invalidOptArg=True)
+
+            # List cloud sync relationships
+            try :
+                listCloudSyncRelationships(printOutput=True)
+            except (InvalidConfigError, APIConnectionError) :
+                sys.exit(1)
+        
+        elif target in ("snapmirror-relationship", "snapmirror", "snapmirror-relationships", "snapmirrors") :
+            # Check command line options
+            if len(sys.argv) > 3 :
+                if sys.argv[3] in ("-h", "--help") :
+                    print(helpTextListSnapMirrorRelationships)
+                    sys.exit(0)
+                else :
+                    handleInvalidCommand(helpTextListSnapMirrorRelationships, invalidOptArg=True)
+
+            # List cloud sync relationships
+            try :
+                listSnapMirrorRelationships(printOutput=True)
+            except (InvalidConfigError, APIConnectionError) :
+                sys.exit(1)
+        
+        elif target in ("snapshot", "snap", "snapshots", "snaps") :
             volumeName = None
 
             # Get command line options
@@ -1473,7 +2391,6 @@ if __name__ == '__main__' :
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError) :
                 sys.exit(1)
         
-        # Invoke desired action based on target
         elif target in ("volume", "vol", "volumes", "vols") :
             # Check command line options
             if len(sys.argv) > 3 :
@@ -1521,6 +2438,160 @@ if __name__ == '__main__' :
             try :
                 mountVolume(volumeName=volumeName, mountpoint=mountpoint, printOutput=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError) :
+                sys.exit(1)
+
+        else :
+            handleInvalidCommand()
+
+    elif action in ("pull-from-s3", "pull-s3", "s3-pull") :
+        # Get desired target from command line args
+        target = getTarget(sys.argv)
+        
+        # Invoke desired action based on target
+        if target in ("bucket") :
+            s3Bucket = None
+            s3ObjectKeyPrefix = ""
+            localDirectory = None
+
+            # Get command line options
+            try :
+                opts, args = getopt.getopt(sys.argv[3:], "hb:p:d:e:", ["help", "bucket=", "key-prefix=", "directory="])
+            except :
+                handleInvalidCommand(helpText=helpTextPullFromS3Bucket, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts :
+                if opt in ("-h", "--help") :
+                    print(helpTextPullFromS3Bucket)
+                    sys.exit(0)
+                elif opt in ("-b", "--bucket") :
+                    s3Bucket = arg
+                elif opt in ("-p", "--key-prefix") :
+                    s3ObjectKeyPrefix = arg
+                elif opt in ("-d", "--directory") :
+                    localDirectory = arg
+            
+            # Check for required options
+            if not s3Bucket or not localDirectory  :
+                handleInvalidCommand(helpText=helpTextPullFromS3Bucket, invalidOptArg=True)
+
+            # Push file to S3
+            try :
+                pullBucketFromS3(s3Bucket=s3Bucket, localDirectory=localDirectory, s3ObjectKeyPrefix=s3ObjectKeyPrefix, printOutput=True)
+            except (InvalidConfigError, APIConnectionError) :
+                sys.exit(1)
+
+        elif target in ("object", "file") :
+            s3Bucket = None
+            s3ObjectKey = None
+            localFile = None
+
+            # Get command line options
+            try :
+                opts, args = getopt.getopt(sys.argv[3:], "hb:k:f:", ["help", "bucket=", "key=", "file=", "extra-args="])
+            except :
+                handleInvalidCommand(helpText=helpTextPullFromS3Object, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts :
+                if opt in ("-h", "--help") :
+                    print(helpTextPullFromS3Object)
+                    sys.exit(0)
+                elif opt in ("-b", "--bucket") :
+                    s3Bucket = arg
+                elif opt in ("-k", "--key") :
+                    s3ObjectKey = arg
+                elif opt in ("-f", "--file") :
+                    localFile = arg
+            
+            # Check for required options
+            if not s3Bucket or not s3ObjectKey  :
+                handleInvalidCommand(helpText=helpTextPullFromS3Object, invalidOptArg=True)
+
+            # Push file to S3
+            try :
+                pullObjectFromS3(s3Bucket=s3Bucket, s3ObjectKey=s3ObjectKey, localFile=localFile, printOutput=True)
+            except (InvalidConfigError, APIConnectionError) :
+                sys.exit(1)
+
+        else :
+            handleInvalidCommand()
+
+    elif action in ("push-to-s3", "push-s3", "s3-push") :
+        # Get desired target from command line args
+        target = getTarget(sys.argv)
+        
+        # Invoke desired action based on target
+        if target in ("directory", "dir") :
+            s3Bucket = None
+            s3ObjectKeyPrefix = ""
+            localDirectory = None
+            s3ExtraArgs = None
+
+            # Get command line options
+            try :
+                opts, args = getopt.getopt(sys.argv[3:], "hb:p:d:e:", ["help", "bucket=", "key-prefix=", "directory=", "extra-args="])
+            except :
+                handleInvalidCommand(helpText=helpTextPushToS3Directory, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts :
+                if opt in ("-h", "--help") :
+                    print(helpTextPushToS3Directory)
+                    sys.exit(0)
+                elif opt in ("-b", "--bucket") :
+                    s3Bucket = arg
+                elif opt in ("-p", "--key-prefix") :
+                    s3ObjectKeyPrefix = arg
+                elif opt in ("-d", "--directory") :
+                    localDirectory = arg
+                elif opt in ("-e", "--extra-args") :
+                    s3ExtraArgs = arg
+            
+            # Check for required options
+            if not s3Bucket or not localDirectory  :
+                handleInvalidCommand(helpText=helpTextPushToS3Directory, invalidOptArg=True)
+
+            # Push file to S3
+            try :
+                pushDirectoryToS3(s3Bucket=s3Bucket, localDirectory=localDirectory, s3ObjectKeyPrefix=s3ObjectKeyPrefix, s3ExtraArgs=s3ExtraArgs, printOutput=True)
+            except (InvalidConfigError, APIConnectionError) :
+                sys.exit(1)
+
+        elif target in ("file") :
+            s3Bucket = None
+            s3ObjectKey = None
+            localFile = None
+            s3ExtraArgs = None
+
+            # Get command line options
+            try :
+                opts, args = getopt.getopt(sys.argv[3:], "hb:k:f:e:", ["help", "bucket=", "key=", "file=", "extra-args="])
+            except :
+                handleInvalidCommand(helpText=helpTextPushToS3File, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts :
+                if opt in ("-h", "--help") :
+                    print(helpTextPushToS3File)
+                    sys.exit(0)
+                elif opt in ("-b", "--bucket") :
+                    s3Bucket = arg
+                elif opt in ("-k", "--key") :
+                    s3ObjectKey = arg
+                elif opt in ("-f", "--file") :
+                    localFile = arg
+                elif opt in ("-e", "--extra-args") :
+                    s3ExtraArgs = arg
+            
+            # Check for required options
+            if not s3Bucket or not localFile  :
+                handleInvalidCommand(helpText=helpTextPushToS3File, invalidOptArg=True)
+
+            # Push file to S3
+            try :
+                pushFileToS3(s3Bucket=s3Bucket, s3ObjectKey=s3ObjectKey, localFile=localFile, s3ExtraArgs=s3ExtraArgs, printOutput=True)
+            except (InvalidConfigError, APIConnectionError) :
                 sys.exit(1)
 
         else :
@@ -1574,6 +2645,74 @@ if __name__ == '__main__' :
             try :
                 restoreSnapshot(volumeName=volumeName, snapshotName=snapshotName, printOutput=True)
             except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError) :
+                sys.exit(1)
+
+        else :
+            handleInvalidCommand()
+
+    elif action == "sync" :
+        # Get desired target from command line args
+        target = getTarget(sys.argv)
+        
+        # Invoke desired action based on target
+        if target in ("cloud-sync-relationship", "cloud-sync") :
+            relationshipID = None
+            waitUntilComplete = False
+
+            # Get command line options
+            try :
+                opts, args = getopt.getopt(sys.argv[3:], "hi:w", ["help", "id=", "wait"])
+            except :
+                handleInvalidCommand(helpText=helpTextSyncCloudSyncRelationship, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts :
+                if opt in ("-h", "--help") :
+                    print(helpTextSyncCloudSyncRelationship)
+                    sys.exit(0)
+                elif opt in ("-i", "--id") :
+                    relationshipID = arg
+                elif opt in ("-w", "--wait") :
+                    waitUntilComplete = True
+
+            # Check for required options
+            if not relationshipID :
+                handleInvalidCommand(helpText=helpTextSyncCloudSyncRelationship, invalidOptArg=True)
+
+            # Update cloud sync relationship
+            try :
+                syncCloudSyncRelationship(relationshipID=relationshipID, waitUntilComplete=waitUntilComplete, printOutput=True)
+            except (InvalidConfigError, APIConnectionError, CloudSyncSyncOperationError) :
+                sys.exit(1)
+
+        elif target in ("snapmirror-relationship", "snapmirror") :
+            uuid = None
+            waitUntilComplete = False
+
+            # Get command line options
+            try :
+                opts, args = getopt.getopt(sys.argv[3:], "hi:w", ["help", "uuid=", "wait"])
+            except :
+                handleInvalidCommand(helpText=helpTextSyncSnapMirrorRelationship, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts :
+                if opt in ("-h", "--help") :
+                    print(helpTextSyncSnapMirrorRelationship)
+                    sys.exit(0)
+                elif opt in ("-i", "--uuid") :
+                    uuid = arg
+                elif opt in ("-w", "--wait") :
+                    waitUntilComplete = True
+
+            # Check for required options
+            if not uuid :
+                handleInvalidCommand(helpText=helpTextSyncSnapMirrorRelationship, invalidOptArg=True)
+
+            # Update SnapMirror relationship
+            try :
+                syncSnapMirrorRelationship(uuid=uuid, waitUntilComplete=waitUntilComplete, printOutput=True)
+            except (InvalidConfigError, APIConnectionError, InvalidSnapMirrorParameterError, SnapMirrorSyncOperationError) :
                 sys.exit(1)
 
         else :
