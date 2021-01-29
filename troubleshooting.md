@@ -94,7 +94,7 @@ You may encounter this error when using v1.0 of the toolkit if there is a volume
 
 #### Resolution
 
-The easiest solution is to upgrade to v1.1. If you must continue using v1.0, then you or your storage admin must export the offending volume as an NFS share. This can be performed using the ONTAP CLI as demonstrated in the following example for a volume named 'project1'.
+The easiest solution is to upgrade to v1.1. If you must continue using v1.0, then you or your storage admin must export the offending volume as an NFS share. This can be done using the ONTAP CLI as demonstrated in the following example for a volume named 'project1'.
 
 ```sh
 volume mount -volume project1 -junction-path /project1
