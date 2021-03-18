@@ -304,13 +304,18 @@ The following options/arguments are optional:
 
 ```sh
 ./ntap_dsutil_k8s.py list jupyterlabs --namespace=dst-test
-Workspace Name    Status    Size    StorageClass     Access URL
-----------------  --------  ------  ---------------  --------------------------
-aj                Ready     1Ti     ontap-flexgroup  http://10.61.188.112:30590
-dave              Ready     2Ti     ontap-flexgroup  http://10.61.188.112:30792
-mike              Ready     1Ti     ontap-flexgroup  http://10.61.188.112:31047
-rick              Ready     2Ti     ontap-flexgroup  http://10.61.188.112:31939
-sathish           Ready     2Ti     ontap-flexgroup  http://10.61.188.112:31820
+Workspace Name        Status    Size    StorageClass    Access URL                  Clone    Source Workspace    Source VolumeSnapshot
+--------------------  --------  ------  --------------  --------------------------  -------  ------------------  ------------------------------------
+aj                    Ready     1Ti     ontap-flexvol   http://10.61.188.112:30590  No
+dave                  Ready     2Ti     ontap-flexvol   http://10.61.188.112:30792  No
+mike                  Ready     1Ti     ontap-flexvol   http://10.61.188.112:31047  No
+mike-clone1           Ready     1Ti     ontap-flexvol   http://10.61.188.112:30430  Yes      mike                ntap-dsutil.20210318204637
+project1              Ready     10Gi    ontap-flexvol   http://10.61.188.112:31555  No
+project1-experiment1  Ready     10Gi    ontap-flexvol   http://10.61.188.112:32363  Yes      project1            ntap-dsutil.for-clone.20210315184514
+project1-experiment2  Ready     10Gi    ontap-flexvol   http://10.61.188.112:30677  Yes      project1            project1-snap1
+project1-experiment3  Ready     10Gi    ontap-flexvol   http://10.61.188.112:30993  Yes      project1            ntap-dsutil.for-clone.20210315185504
+rick                  Ready     2Ti     ontap-flexvol   http://10.61.188.112:31939  No
+sathish               Ready     2Ti     ontap-flexvol   http://10.61.188.112:31820  No
 ```
 
 <a name="cli-create-jupyterlab-snapshot"></a>
