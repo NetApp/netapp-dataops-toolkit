@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 ## NetApp Data Science Toolkit
-version = "1.1"
+version = "1.2"
 
 
 import base64, json, os, subprocess, re, requests, yaml, time, boto3, boto3.session
@@ -13,6 +13,7 @@ from netapp_ontap.resources import Volume as NetAppVolume
 from netapp_ontap.resources import Snapshot as NetAppSnapshot
 from netapp_ontap.resources import SnapmirrorRelationship as NetAppSnapmirrorRelationship
 from netapp_ontap.resources import SnapmirrorTransfer as NetAppSnapmirrorTransfer
+from netapp_ontap.resources import Flexcache as NetAppFlexCache
 from netapp_ontap.error import NetAppRestError
 from netapp_ontap import config as netappConfig
 from netapp_ontap.host_connection import HostConnection as NetAppHostConnection
@@ -441,7 +442,7 @@ def listVolumes(checkLocalMounts: bool = False, printOutput: bool = False) -> li
 
         try :
             # Retrieve all volumes for SVM
-            volumes = NetAppVolume.get_collection(svm=config["svm"], fields="nas.path,size,style,clone.parent_volume.name,clone.parent_snapshot.name")
+            volumes = NetAppVolume.get_collection(svm=config["svm"])
 
             # Retrieve local mounts if desired
             if checkLocalMounts :
@@ -450,6 +451,8 @@ def listVolumes(checkLocalMounts: bool = False, printOutput: bool = False) -> li
             # Construct list of volumes; do not include SVM root volume
             volumesList = list()
             for volume in volumes :
+                volume.get(fields="nas.path,size,style,clone,flexcache_endpoint_type")
+                
                 # Retrieve volume export path; handle case where volume is not exported
                 if hasattr(volume, "nas") :
                     volumeExportPath = volume.nas.path
@@ -474,6 +477,12 @@ def listVolumes(checkLocalMounts: bool = False, printOutput: bool = False) -> li
                         clone = "yes"
                     except :
                         pass
+
+                    # Determine if FlexCache
+                    if volume.flexcache_endpoint_type == "cache" :
+                        flexcache = "yes"
+                    else :
+                        flexcache = "no"
 
                     # Convert size in bytes to "pretty" size (size in KB, MB, GB, or TB)
                     prettySize = float(volume.size) / 1024
@@ -505,6 +514,7 @@ def listVolumes(checkLocalMounts: bool = False, printOutput: bool = False) -> li
                             if mountDetails[0] == nfsMountTarget :
                                 localMountpoint = mountDetails[2]
                         volumeDict["Local Mountpoint"] = localMountpoint
+                    volumeDict["FlexCache"] = flexcache
                     volumeDict["Clone"] = clone
                     volumeDict["Source Volume"] = cloneParentVolume
                     volumeDict["Source Snapshot"] = cloneParentSnapshot
@@ -1528,6 +1538,62 @@ def syncSnapMirrorRelationship(uuid: str, waitUntilComplete: bool = False, print
         raise ConnectionTypeError()
 
 
+# Function for prepopulating a FlexCache
+def prepopulateFlexCache(volumeName: str, paths: list, printOutput: bool = False) :
+    # Retrieve config details from config file
+    try :
+        config = retrieveConfig(printOutput=printOutput)
+    except InvalidConfigError :
+        raise
+    try :
+        connectionType = config["connectionType"]
+    except :
+        if printOutput :
+            printInvalidConfigError()
+        raise InvalidConfigError()
+
+    if connectionType == "ONTAP" :
+        # Instantiate connection to ONTAP cluster
+        try :
+            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+        except InvalidConfigError :
+            raise
+
+        # Retrieve svm from config file
+        try :
+            svm = config["svm"]
+        except :
+            if printOutput :
+                printInvalidConfigError()
+            raise InvalidConfigError()
+
+        if printOutput :
+            print("FlexCache '" + volumeName + "' - Prepopulating paths: ", paths)
+
+        try :
+            # Retrieve FlexCache
+            flexcache = NetAppFlexCache.find(name=volumeName, svm=svm)
+            if not flexcache :
+                if printOutput :
+                    print("Error: Invalid volume name.")
+                raise InvalidVolumeParameterError("name")
+
+            # Prepopulate FlexCache
+            flexcache.prepopulate = {"dir_paths": paths}
+            flexcache.patch()
+
+            if printOutput :
+                print("FlexCache prepopulated successfully.")
+
+        except NetAppRestError as err :
+            if printOutput :
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+
+    else :
+        raise ConnectionTypeError()
+
+
 ## Function for uploading a file to S3
 def uploadToS3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s3VerifySSLCert: bool, s3CACertBundle: str, s3Bucket: str, localFile: str, s3ObjectKey: str, s3ExtraArgs: str = None, printOutput: bool = False) :
     # Instantiate S3 session
@@ -1741,6 +1807,7 @@ Note: To view details regarding options/arguments for a specific command, run th
 Advanced Data Fabric Commands:
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
 
+\tprepopulate flexcache\t\tPrepopulate specific files/directories on a FlexCache volume (ONTAP 9.8 and above ONLY).
 \tlist snapmirror-relationships\tList all existing SnapMirror relationships.
 \tsync snapmirror-relationship\tTrigger a sync operation for an existing SnapMirror relationship.
 '''
@@ -1966,7 +2033,7 @@ Required Options/Arguments:
 \t-d, --directory=\tLocal directory to push contents of.
 
 Optional Options/Arguments:
-\t-e, --extra-args\tExtra args to apply to newly-pushed S3 objects (For details on this field, refer to https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-uploading-files.html#the-extraargs-parameter).
+\t-e, --extra-args=\tExtra args to apply to newly-pushed S3 objects (For details on this field, refer to https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-uploading-files.html#the-extraargs-parameter).
 \t-h, --help\t\tPrint help text.
 \t-p, --key-prefix=\tPrefix to add to key for newly-pushed S3 objects (Note: by default, key will be local filepath relative to directory being pushed).
 
@@ -1986,13 +2053,31 @@ Required Options/Arguments:
 \t-f, --file=\t\tLocal file to push.
 
 Optional Options/Arguments:
-\t-e, --extra-args\tExtra args to apply to newly-pushed S3 object (For details on this field, refer to https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-uploading-files.html#the-extraargs-parameter).
+\t-e, --extra-args=\tExtra args to apply to newly-pushed S3 object (For details on this field, refer to https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-uploading-files.html#the-extraargs-parameter).
 \t-h, --help\t\tPrint help text.
 \t-k, --key=\t\tKey to assign to newly-pushed S3 object (if not specified, key will be set to value of -f/--file argument).
 
 Examples:
 \t./ntap_dsutil.py push-to-s3 file --bucket=project1 --file=data.csv
 \t./ntap_dsutil.py push-to-s3 file -b project1 -k data.csv -f /mnt/project1/data.csv -e '{"Metadata": {"mykey": "myvalue"}}'
+'''
+helpTextPrepopulateFlexCache = '''
+Command: prepopulate flexcache
+
+Prepopulate specific files/directories on a FlexCache volume.
+
+Compatibility: ONTAP 9.8 and above ONLY
+
+Required Options/Arguments:
+\t-n, --name=\tName of FlexCache volume.
+\t-p, --paths=\tComma-separated list of dirpaths/filepaths to prepopulate.
+
+Optional Options/Arguments:
+\t-h, --help\tPrint help text.
+
+Examples:
+\t./ntap_dsutil.py prepopulate flexcache --name=project1 --paths=/datasets/project1,/datasets/project2
+\t./ntap_dsutil.py prepopulate flexcache -n test1 -p /datasets/project1,/datasets/project2
 '''
 helpTextRestoreSnapshot = '''
 Command: restore snapshot
@@ -2442,6 +2527,47 @@ if __name__ == '__main__' :
 
         else :
             handleInvalidCommand()
+        
+    elif action in ("prepopulate") :
+        # Get desired target from command line args
+        target = getTarget(sys.argv)
+        
+        # Invoke desired action based on target
+        if target in ("flexcache", "cache") :
+            volumeName = None
+            paths = None
+
+            # Get command line options
+            try :
+                opts, args = getopt.getopt(sys.argv[3:], "hn:p:", ["help", "name=", "paths="])
+            except :
+                handleInvalidCommand(helpText=helpTextPrepopulateFlexCache, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts :
+                if opt in ("-h", "--help") :
+                    print(helpTextPrepopulateFlexCache)
+                    sys.exit(0)
+                elif opt in ("-n", "--name") :
+                    volumeName = arg
+                elif opt in ("-p", "--paths") :
+                    paths = arg
+
+            # Check for required options
+            if not volumeName or not paths :
+                handleInvalidCommand(helpText=helpTextPrepopulateFlexCache, invalidOptArg=True)
+
+            # Convert paths string to list
+            pathsList = paths.split(",")
+
+            # Prepopulate FlexCache
+            try :
+                prepopulateFlexCache(volumeName=volumeName, paths=pathsList, printOutput=True)
+            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError) :
+                sys.exit(1)
+        
+        else :
+            handleInvalidCommand()
 
     elif action in ("pull-from-s3", "pull-s3", "s3-pull") :
         # Get desired target from command line args
@@ -2719,7 +2845,7 @@ if __name__ == '__main__' :
             handleInvalidCommand()
 
     elif action in ("version", "v", "-v", "--version") :
-        print("NetApp Data Science Toolkit - version " + version)
+        print("NetApp Data Science Toolkit for Traditional Environments - version " + version)
         
     else :
         handleInvalidCommand()

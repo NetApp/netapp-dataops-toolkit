@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ntap-dsutil
+  namespace: default # Replace with desired namespace
+spec:
+  containers:
+  - name: ntap-dsutil
+    image: python:3
+    lifecycle:
+      postStart:
+        exec:
+          command:
+          - "/bin/bash"
+          - "-c"
+          - "python3 -m pip install ipython kubernetes pandas tabulate && git clone https://github.com/NetApp/netapp-data-science-toolkit && mv /netapp-data-science-toolkit/Kubernetes/ntap_dsutil_k8s.py /"
+    command:
+    - "/bin/bash"
+    - "-c"
+    - "/ntap_dsutil_k8s.py list jupyterlabs" # Replace with desired command
+    imagePullPolicy: IfNotPresent
+  serviceAccountName: ntap-dsutil
