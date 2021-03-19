@@ -598,7 +598,7 @@ def jupyterLabDeployment(workspaceName: str) -> str :
 ## Functions relating to JupyterLab workspaces
 
 # Function for retrieving JupyterLab access url
-def retrieveJupyterLabURL(workspaceName: str, printOutput: bool = False) -> str :
+def retrieveJupyterLabURL(workspaceName: str, namespace: str = "default", printOutput: bool = False) -> str :
     # Retrieve kubeconfig
     try :
         loadKubeConfig()
@@ -707,7 +707,7 @@ def retrieveImageForJupyterLabDeployment(workspaceName: str, namespace: str = "d
 
 
 ## Function for creating a new JupyterLab workspace
-def createJupyterLab(workspaceName: str, workspaceSize: str, storageClass: str = None, namespace: str = "default", workspacePassword: str = None, workspaceImage: str = "jupyter/tensorflow-notebook", printOutput: bool = False, pvcAlreadyExists: bool = False, labels: dict = None) -> str :
+def createJupyterLab(workspaceName: str, workspaceSize: str, storageClass: str = None, namespace: str = "default", workspacePassword: str = None, workspaceImage: str = "jupyter/tensorflow-notebook", requestCpu: str = None, requestMemory: str = None, requestNvidiaGpu: str = None, printOutput: bool = False, pvcAlreadyExists: bool = False, labels: dict = None) -> str :
     # Retrieve kubeconfig
     try :
         loadKubeConfig()
@@ -838,13 +838,26 @@ def createJupyterLab(workspaceName: str, workspaceSize: str, storageClass: str =
                                     name = "workspace",
                                     mount_path = "/home/jovyan"
                                 )
-                            ]
+                            ],
+                            resources = {
+                                "limits": dict(),
+                                "requests": dict()
+                            }
                         )
                     ]
                 )
             )
         )
     )
+
+    # Apply resource requests
+    if requestCpu :
+        deployment.spec.template.spec.containers[0].resources["requests"]["cpu"] = requestCpu
+    if requestMemory :
+        deployment.spec.template.spec.containers[0].resources["requests"]["memory"] = requestMemory
+    if requestNvidiaGpu :
+        deployment.spec.template.spec.containers[0].resources["requests"]["nvidia.com/gpu"] = requestNvidiaGpu
+        deployment.spec.template.spec.containers[0].resources["limits"]["nvidia.com/gpu"] = requestNvidiaGpu
 
     # Create deployment
     if printOutput :
@@ -868,7 +881,7 @@ def createJupyterLab(workspaceName: str, workspaceSize: str, storageClass: str =
 
     # Step 4 - Retrieve access URL
     try :
-        url = retrieveJupyterLabURL(workspaceName=workspaceName, printOutput=printOutput)
+        url = retrieveJupyterLabURL(workspaceName=workspaceName, namespace=namespace, printOutput=printOutput)
     except APIConnectionError as err :
         if printOutput :
             print("Aborting workspace creation...")
@@ -967,7 +980,7 @@ def listJupyterLabs(namespace: str = "default", printOutput: bool = False) -> li
             workspaceDict["StorageClass"] = ""
 
         # Retrieve access URL
-        workspaceDict["Access URL"] = retrieveJupyterLabURL(workspaceName=workspaceName, printOutput=printOutput)
+        workspaceDict["Access URL"] = retrieveJupyterLabURL(workspaceName=workspaceName, namespace=namespace, printOutput=printOutput)
         
         # Retrieve clone details
         try :
@@ -1062,7 +1075,7 @@ def restoreJupyterLabSnapshot(snapshotName: str = None, namespace: str = "defaul
 
 
 ## Function for cloning a JupyterLab workspace
-def cloneJupyterLab(newWorkspaceName: str, sourceWorkspaceName: str, sourceSnapshotName: str = None, newWorkspacePassword: str = None, volumeSnapshotClass: str = "csi-snapclass", namespace: str = "default", printOutput: bool = False) :
+def cloneJupyterLab(newWorkspaceName: str, sourceWorkspaceName: str, sourceSnapshotName: str = None, newWorkspacePassword: str = None, volumeSnapshotClass: str = "csi-snapclass", namespace: str = "default", requestCpu: str = None, requestMemory: str = None, requestNvidiaGpu: str = None, printOutput: bool = False) :
     # Determine source PVC details
     if sourceSnapshotName :
         sourcePvcName, workspaceSize = retrieveSourceVolumeDetailsForVolumeSnapshot(snapshotName=sourceSnapshotName, namespace=namespace, printOutput=printOutput)
@@ -1093,7 +1106,7 @@ def cloneJupyterLab(newWorkspaceName: str, sourceWorkspaceName: str, sourceSnaps
 
     # Create new workspace
     print()
-    createJupyterLab(workspaceName=newWorkspaceName, workspaceSize=workspaceSize, namespace=namespace, workspacePassword=newWorkspacePassword, workspaceImage=sourceWorkspaceImage, printOutput=printOutput, pvcAlreadyExists=True, labels=labels)
+    createJupyterLab(workspaceName=newWorkspaceName, workspaceSize=workspaceSize, namespace=namespace, workspacePassword=newWorkspacePassword, workspaceImage=sourceWorkspaceImage, requestCpu=requestCpu, requestMemory=requestMemory, requestNvidiaGpu=requestNvidiaGpu, printOutput=printOutput, pvcAlreadyExists=True, labels=labels)
 
     if printOutput :
         print("JupyterLab workspace successfully cloned.")
@@ -1143,14 +1156,17 @@ Required Options/Arguments:
 
 Optional Options/Arguments:
 \t-c, --volume-snapshot-class=\tKubernetes VolumeSnapshotClass to use when creating clone. If not specified, "csi-snapclass" will be used. Note: VolumeSnapshotClass must be configured to use Trident.
+\t-g, --nvidia-gpu=\t\tNumber of NVIDIA GPUs to allocate to new JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
 \t-h, --help\t\t\tPrint help text.
-\t-n, --namespace=\t\tKubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
-\t-s, --source-snapshot-name=\tName of Kubernetes VolumeSnapshot to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
 \t-j, --source-workspace-name=\tName of JupyterLab workspace to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
+\t-m, --memory=\t\t\tAmount of memory to reserve for new JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
+\t-n, --namespace=\t\tKubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
+\t-p, --cpu=\t\t\tNumber of CPUs to reserve for new JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+\t-s, --source-snapshot-name=\tName of Kubernetes VolumeSnapshot to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
 
 Examples:
-\t./ntap_dsutil.py clone jupyterlab --new-workspace-name=project1-experiment1 --source-workspace-name=project1
-\t./ntap_dsutil.py clone jupyterlab -w project2-mike -s project2-snap1 -n team1
+\t./ntap_dsutil.py clone jupyterlab --new-workspace-name=project1-experiment1 --source-workspace-name=project1 --nvidia-gpu=1
+\t./ntap_dsutil.py clone jupyterlab -w project2-mike -s project2-snap1 -n team1 -g 1 -p 0.5 -m 1Gi
 '''
 helpTextCloneVolume = '''
 Command: clone volume
@@ -1184,13 +1200,16 @@ Required Options/Arguments:
 
 Optional Options/Arguments:
 \t-c, --storage-class=\tKubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, default StorageClass will be used. Note: StorageClass must be configured to use Trident.
+\t-g, --nvidia-gpu=\tNumber of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
 \t-h, --help\t\tPrint help text.
 \t-i, --image=\t\tContainer image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.
+\t-m, --memory=\t\tAmount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
 \t-n, --namespace=\tKubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
+\t-p, --cpu=\t\tNumber of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
 
 Examples:
-\t./ntap_dsutil_k8s.py create jupyterlab --workspace-name=mike --size=10Gi
-\t./ntap_dsutil_k8s.py create jupyterlab -n dst-test -w dave -i jupyter/scipy-notebook:latest -s 2Ti -c ontap-flexgroup
+\t./ntap_dsutil_k8s.py create jupyterlab --workspace-name=mike --size=10Gi --nvidia-gpu=2
+\t./ntap_dsutil_k8s.py create jupyterlab -n dst-test -w dave -i jupyter/scipy-notebook:latest -s 2Ti -c ontap-flexgroup -g 1 -p 0.5 -m 1Gi
 '''
 helpTextCreateJupyterLabSnapshot = '''
 Command: create jupyterlab-snapshot
@@ -1500,10 +1519,13 @@ if __name__ == '__main__' :
             sourceSnapshotName = None
             volumeSnapshotClass = "csi-snapclass"
             namespace = "default"
+            requestNvidiaGpu = None
+            requestMemory = None
+            requestCpu = None
 
             # Get command line options
             try :
-                opts, args = getopt.getopt(sys.argv[3:], "hw:c:n:s:j:", ["help", "new-workspace-name=", "volume-snapshot-class=", "namespace=", "source-snapshot-name=", "source-workspace-name="])
+                opts, args = getopt.getopt(sys.argv[3:], "hw:c:n:s:j:g:m:p:", ["help", "new-workspace-name=", "volume-snapshot-class=", "namespace=", "source-snapshot-name=", "source-workspace-name=", "nvidia-gpu=", "memory=", "cpu="])
             except :
                 handleInvalidCommand(helpText=helpTextCloneJupyterLab, invalidOptArg=True)
 
@@ -1522,6 +1544,12 @@ if __name__ == '__main__' :
                     sourceSnapshotName = arg
                 elif opt in ("-j", "--source-workspace-name") :
                     sourceWorkspaceName = arg
+                elif opt in ("-g", "--nvidia-gpu") :
+                    requestNvidiaGpu = arg
+                elif opt in ("-m", "--memory") :
+                    requestMemory = arg
+                elif opt in ("-p", "--cpu") :
+                    requestCpu = arg
             
             # Check for required options
             if not newWorkspaceName or (not sourceSnapshotName and not sourceWorkspaceName) :
@@ -1532,7 +1560,7 @@ if __name__ == '__main__' :
 
             # Clone volume
             try :
-                cloneJupyterLab(newWorkspaceName=newWorkspaceName, sourceWorkspaceName=sourceWorkspaceName, sourceSnapshotName=sourceSnapshotName, volumeSnapshotClass=volumeSnapshotClass, namespace=namespace, printOutput=True)
+                cloneJupyterLab(newWorkspaceName=newWorkspaceName, sourceWorkspaceName=sourceWorkspaceName, sourceSnapshotName=sourceSnapshotName, volumeSnapshotClass=volumeSnapshotClass, namespace=namespace, requestCpu=requestCpu, requestMemory=requestMemory, requestNvidiaGpu=requestNvidiaGpu, printOutput=True)
             except (InvalidConfigError, APIConnectionError) :
                 sys.exit(1)
 
@@ -1622,10 +1650,13 @@ if __name__ == '__main__' :
             namespace = "default"
             storageClass = None
             workspaceImage = "jupyter/scipy-notebook:latest"
+            requestNvidiaGpu = None
+            requestMemory = None
+            requestCpu = None
 
             # Get command line options
             try :
-                opts, args = getopt.getopt(sys.argv[3:], "hw:s:n:c:i:", ["help", "workspace-name=", "size=", "namespace=", "storage-class=", "image="])
+                opts, args = getopt.getopt(sys.argv[3:], "hw:s:n:c:i:g:m:p:", ["help", "workspace-name=", "size=", "namespace=", "storage-class=", "image=", "nvidia-gpu=", "memory=", "cpu="])
             except :
                 handleInvalidCommand(helpText=helpTextCreateJupyterLab, invalidOptArg=True)
 
@@ -1644,6 +1675,12 @@ if __name__ == '__main__' :
                     storageClass = arg
                 elif opt in ("-i", "--image") :
                     workspaceImage = arg
+                elif opt in ("-g", "--nvidia-gpu") :
+                    requestNvidiaGpu = arg
+                elif opt in ("-m", "--memory") :
+                    requestMemory = arg
+                elif opt in ("-p", "--cpu") :
+                    requestCpu = arg
             
             # Check for required options
             if not workspaceName or not workspaceSize :
@@ -1651,7 +1688,7 @@ if __name__ == '__main__' :
 
             # Create JupyterLab workspace
             try :
-                createJupyterLab(workspaceName=workspaceName, workspaceSize=workspaceSize, storageClass=storageClass, namespace=namespace, workspaceImage=workspaceImage, printOutput=True)
+                createJupyterLab(workspaceName=workspaceName, workspaceSize=workspaceSize, storageClass=storageClass, namespace=namespace, workspaceImage=workspaceImage, requestCpu=requestCpu, requestMemory=requestMemory, requestNvidiaGpu=requestNvidiaGpu, printOutput=True)
             except (InvalidConfigError, APIConnectionError) :
                 sys.exit(1)
 

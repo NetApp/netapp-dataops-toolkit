@@ -109,18 +109,21 @@ The following options/arguments are optional:
 
 ```
     -c, --volume-snapshot-class=    Kubernetes VolumeSnapshotClass to use when creating clone. If not specified, "csi-snapclass" will be used. Note: VolumeSnapshotClass must be configured to use Trident.
+    -g, --nvidia-gpu=               Number of NVIDIA GPUs to allocate to new JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
     -h, --help                      Print help text.
-    -n, --namespace=                Kubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
-    -s, --source-snapshot-name=     Name of Kubernetes VolumeSnapshot to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
     -j, --source-workspace-name=    Name of JupyterLab workspace to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
+    -m, --memory=                   Amount of memory to reserve for new JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
+    -n, --namespace=                Kubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
+    -p, --cpu=                      Number of CPUs to reserve for new JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+    -s, --source-snapshot-name=     Name of Kubernetes VolumeSnapshot to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
 ```
 
 ##### Example Usage
 
-Near-instantaneously create a new JupyterLab workspace, named 'project1-experiment3', that is an exact copy of the current contents of existing JupyterLab workspace 'project1' in namespace 'default'.
+Near-instantaneously create a new JupyterLab workspace, named 'project1-experiment3', that is an exact copy of the current contents of existing JupyterLab workspace 'project1' in namespace 'default'. Allocate 2 NVIDIA GPUs to the new workspace.
 
 ```sh
-./ntap_dsutil_k8s.py clone jupyterlab --new-workspace-name=project1-experiment3 --source-workspace-name=project1
+./ntap_dsutil_k8s.py clone jupyterlab --new-workspace-name=project1-experiment3 --source-workspace-name=project1 --nvidia-gpu=2
 Creating new JupyterLab workspace 'project1-experiment3' from source workspace 'project1' in namespace 'default'...
 
 Creating new VolumeSnapshot 'ntap-dsutil.for-clone.20210315185504' for source PVC 'ntap-dsutil-jupyterlab-project1' in namespace 'default' to use as source for clone...
@@ -196,17 +199,20 @@ The following options/arguments are optional:
 
 ```
     -c, --storage-class=    Kubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, default StorageClass will be used. Note: StorageClass must be configured to use Trident.
+    -g, --nvidia-gpu=       Number of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
     -h, --help              Print help text.
     -i, --image=            Container image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.
+    -m, --memory=           Amount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
     -n, --namespace=        Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
+    -p, --cpu=              Number of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
 ```
 
 ##### Example Usage
 
-Provision a new JupyterLab workspace named 'mike' of size 10GB in namespace 'default'.
+Provision a new JupyterLab workspace named 'mike' of size 10GB in namespace 'default'. Allocate 1 NVIDIA GPU to the new workspace.
 
 ```sh
-./ntap_dsutil_k8s.py create jupyterlab --workspace-name=mike --size=10Gi
+./ntap_dsutil_k8s.py create jupyterlab --workspace-name=mike --size=10Gi --nvidia-gpu=1
 Set workspace password (this password will be required in order to access the workspace): 
 Re-enter password: 
 
@@ -813,6 +819,9 @@ def cloneJupyterLab(
     newWorkspacePassword: str = None,               # Workspace password (this password will be required in order to access the workspace). If not specified, you will be prompted to enter a password via the console.
     volumeSnapshotClass: str = "csi-snapclass",     # Kubernetes VolumeSnapshotClass to use when creating clone. If not specified, "csi-snapclass" will be used. Note: VolumeSnapshotClass must be configured to use Trident.
     namespace: str = "default",                     # Kubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
+    requestCpu: str = None,                         # Number of CPUs to reserve for new JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+    requestMemory: str = None,                      # Amount of memory to reserve for newe JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
+    requestNvidiaGpu: str = None,                   # Number of NVIDIA GPUs to allocate to new JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
     printOutput: bool = False                       # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
@@ -848,6 +857,9 @@ def createJupyterLab(
     namespace: str = "default",                             # Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
     workspacePassword: str = None,                          # Workspace password (this password will be required in order to access the workspace). If not specified, you will be prompted to enter a password via the console.
     workspaceImage: str = "jupyter/tensorflow-notebook",    # Container image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.
+    requestCpu: str = None,                                 # Number of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+    requestMemory: str = None,                              # Amount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
+    requestNvidiaGpu: str = None,                           # Number of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
     printOutput: bool = False                               # Denotes whether or not to print messages to the console during execution.
 ) -> str :
 ```
