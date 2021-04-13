@@ -7,18 +7,20 @@ The NetApp Data Science Toolkit for Kubernetes is a Python library that makes it
 
 The NetApp Data Science Toolkit for Kubernetes supports Linux and macOS hosts.
 
-The toolkit must be used in conjunction with a Kubernetes cluster in order to be useful. Additionally, [Trident](https://netapp.io/persistent-storage-provisioner-for-kubernetes/), NetApp's dynamic storage orchestrator for Kubernetes, must be installed within the Kubernetes cluster. The toolkit simplifies the performing of various data management tasks that are actually executed by Trident. In order to facilitate this, the toolkit communicates with Trident via API. 
+The toolkit must be used in conjunction with a Kubernetes cluster in order to be useful. Additionally, [Trident](https://netapp.io/persistent-storage-provisioner-for-kubernetes/), NetApp's dynamic storage orchestrator for Kubernetes, and/or the [BeeGFS CSI driver](https://github.com/NetApp/beegfs-csi-driver/) must be installed within the Kubernetes cluster. The toolkit simplifies performing of various data management tasks that are actually executed by a NetApp maintained CSI driver. In order to facilitate this, the toolkit communicates with the appropriate driver via the Kubernetes API. 
 
 The toolkit is currently compatible with Kubernetes versions 1.17* and above.
 
 \* The toolkit has been fully validated with Kubernetes versions 1.17 and 1.18.
 
-The toolkit is currently compatible with Trident versions 20.07 and above. Additionaly, the toolkit is compatible with the following Trident backend types:
+The toolkit is currently compatible with Trident versions 20.07 and above. Additionally, the toolkit is compatible with the following Trident backend types:
 
 - ontap-nas
 - aws-cvs
 - gcp-cvs
 - azure-netapp-files
+
+The toolkit is also compatible with all versions of the BeeGFS CSI driver, though not all functionality is supported by BeeGFS. See the table under [Command Line Functionality](#command-line-functionality) for details.
 
 <a name="getting-started"></a>
 
@@ -67,25 +69,27 @@ Refer to the [Kubernetes documentation](https://kubernetes.io/docs/tasks/run-app
 
 The simplest way to use the NetApp Data Science Toolkit for Kubernetes is as a command line utility. When functioning as a command line utility, the toolkit supports the following operations.
 
-JupyterLab workspace management operations:
-- [Clone a JupyterLab workspace.](#cli-clone-jupyterlab)
-- [Create a new JupyterLab workspace.](#cli-create-jupyterlab)
-- [Delete an existing JupyterLab workspace.](#cli-delete-jupyterlab)
-- [List all JupyterLab workspaces.](#cli-list-jupyterlabs)
-- [Create a new snapshot for a JupyterLab workspace.](#cli-create-jupyterlab-snapshot)
-- [Delete an existing snapshot.](#cli-delete-jupyterlab-snapshot)
-- [List all snapshots.](#cli-list-jupyterlab-snapshots)
-- [Restore a snapshot.](#cli-restore-jupyterlab-snapshot)
+| JupyterLab workspace management operations                                           | Supported by BeeGFS | Supported by Trident |
+| ------------------------------------------------------------------------------------ | ------------------- | -------------------- |
+| [Clone a JupyterLab workspace.](#cli-clone-jupyterlab)                               | No                  | Yes                  |
+| [Create a new JupyterLab workspace.](#cli-create-jupyterlab)                         | Yes                 | Yes                  |
+| [Delete an existing JupyterLab workspace.](#cli-delete-jupyterlab)                   | Yes                 | Yes                  |
+| [List all JupyterLab workspaces.](#cli-list-jupyterlabs)                             | Yes                 | Yes                  |
+| [Create a new snapshot for a JupyterLab workspace.](#cli-create-jupyterlab-snapshot) | No                  | Yes                  |
+| [Delete an existing snapshot.](#cli-delete-jupyterlab-snapshot)                      | No                  | Yes                  |
+| [List all snapshots.](#cli-list-jupyterlab-snapshots)                                | No                  | Yes                  |
+| [Restore a snapshot.](#cli-restore-jupyterlab-snapshot)                              | No                  | Yes                  |
 
-Kubernetes persistent volume management operations (for advanced Kubernetes users):
-- [Clone a persistent volume.](#cli-clone-volume)
-- [Create a new persistent volume.](#cli-create-volume)
-- [Delete an existing persistent volume.](#cli-delete-volume)
-- [List all persistent volumes.](#cli-list-volumes)
-- [Create a new snapshot for a persistent volume.](#cli-create-volume-snapshot)
-- [Delete an existing snapshot.](#cli-delete-volume-snapshot)
-- [List all snapshots.](#cli-list-volume-snapshots)
-- [Restore a snapshot.](#cli-restore-volume-snapshot)
+| Kubernetes persistent volume management operations (for advanced Kubernetes users)   | Supported by BeeGFS | Supported by Trident |
+| ------------------------------------------------------------------------------------ | ------------------- | -------------------- |
+| [Clone a persistent volume.](#cli-clone-volume)                                      | No                  | Yes                  |
+| [Create a new persistent volume.](#cli-create-volume)                                | Yes                 | Yes                  |
+| [Delete an existing persistent volume.](#cli-delete-volume)                          | Yes                 | Yes                  |
+| [List all persistent volumes.](#cli-list-volumes)                                    | Yes                 | Yes                  |
+| [Create a new snapshot for a persistent volume.](#cli-create-volume-snapshot)        | No                  | Yes                  |
+| [Delete an existing snapshot.](#cli-delete-volume-snapshot)                          | No                  | Yes                  |
+| [List all snapshots.](#cli-list-volume-snapshots)                                    | No                  | Yes                  |
+| [Restore a snapshot.](#cli-restore-volume-snapshot)                                  | No                  | Yes                  |
 
 ### JupyterLab Workspace Management Operations
 
@@ -132,7 +136,7 @@ VolumeSnapshot 'ntap-dsutil.for-clone.20210315185504' created. Waiting for Tride
 Snapshot successfully created.
 Creating new PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment3' from VolumeSnapshot 'ntap-dsutil.for-clone.20210315185504' in namespace 'default'...
 Creating PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment3' in namespace 'default'.
-PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment3' created. Waiting for Trident to bind volume to PVC.
+PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment3' created. Waiting for Kubernetes to bind volume to PVC.
 Volume successfully created and bound to PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment3' in namespace 'default'.
 Volume successfully cloned.
 
@@ -152,7 +156,7 @@ To access workspace, navigate to http://10.61.188.112:30993
 JupyterLab workspace successfully cloned.
 ```
 
-Near-instantaneously create a new JupyterLab workspace, named 'project1-experiment2', that is an exact copy of the contents of JupyterLab workspace VolumeSnapshot 'project1-snap1' in namespace 'defauult'.
+Near-instantaneously create a new JupyterLab workspace, named 'project1-experiment2', that is an exact copy of the contents of JupyterLab workspace VolumeSnapshot 'project1-snap1' in namespace 'default'.
 
 ```sh
 ./ntap_dsutil_k8s.py clone jupyterlab -s project1-snap1 -w project1-experiment2
@@ -160,7 +164,7 @@ Creating new JupyterLab workspace 'project1-experiment2' from VolumeSnapshot 'pr
 
 Creating new PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment2' from VolumeSnapshot 'project1-snap1' in namespace 'default'...
 Creating PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment2' in namespace 'default'.
-PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment2' created. Waiting for Trident to bind volume to PVC.
+PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment2' created. Waiting for Kubernetes to bind volume to PVC.
 Volume successfully created and bound to PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment2' in namespace 'default'.
 Volume successfully cloned.
 
@@ -186,7 +190,7 @@ JupyterLab workspace successfully cloned.
 
 The NetApp Data Science Toolkit can be used to rapidly provision a new JupyterLab workspace within a Kubernetes cluster. Workspaces provisioned using the NetApp Data Science Toolkit will be backed by NetApp persistent storage and, thus, will persist across any shutdowns or outages in the Kubernetes environment. The command for creating a new JupyterLab workspace is `./ntap_dsutil_k8s.py create jupyterlab`.
 
-Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/) for more information on StorageClasses.
+Tip: Refer to the [Trident](https://netapp-trident.readthedocs.io/) or [BeeGFS CSI driver](https://github.com/NetApp/beegfs-csi-driver/blob/master/docs/usage.md#dynamic-provisioning-workflow) documentation for more information on StorageClasses.
 
 The following options/arguments are required:
 
@@ -198,7 +202,7 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
-    -c, --storage-class=    Kubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, default StorageClass will be used. Note: StorageClass must be configured to use Trident.
+    -c, --storage-class=    Kubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
     -g, --nvidia-gpu=       Number of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
     -h, --help              Print help text.
     -i, --image=            Container image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.
@@ -218,7 +222,7 @@ Re-enter password:
 
 Creating persistent volume for workspace...
 Creating PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-mike' in namespace 'default'.
-PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-mike' created. Waiting for Trident to bind volume to PVC.
+PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-mike' created. Waiting for Kubernetes to bind volume to PVC.
 Volume successfully created and bound to PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-mike' in namespace 'default'.
 
 Creating Service 'ntap-dsutil-jupyterlab-mike' in namespace 'default'.
@@ -241,7 +245,7 @@ Re-enter password:
 
 Creating persistent volume for workspace...
 Creating PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-dave' in namespace 'dst-test'.
-PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-dave' created. Waiting for Trident to bind volume to PVC.
+PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-dave' created. Waiting for Kubernetes to bind volume to PVC.
 Volume successfully created and bound to PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-dave' in namespace 'dst-test'.
 
 Creating Service 'ntap-dsutil-jupyterlab-dave' in namespace 'dst-test'.
@@ -310,18 +314,19 @@ The following options/arguments are optional:
 
 ```sh
 ./ntap_dsutil_k8s.py list jupyterlabs --namespace=dst-test
-Workspace Name        Status    Size    StorageClass    Access URL                  Clone    Source Workspace    Source VolumeSnapshot
---------------------  --------  ------  --------------  --------------------------  -------  ------------------  ------------------------------------
-aj                    Ready     1Ti     ontap-flexvol   http://10.61.188.112:30590  No
-dave                  Ready     2Ti     ontap-flexvol   http://10.61.188.112:30792  No
-mike                  Ready     1Ti     ontap-flexvol   http://10.61.188.112:31047  No
-mike-clone1           Ready     1Ti     ontap-flexvol   http://10.61.188.112:30430  Yes      mike                ntap-dsutil.20210318204637
-project1              Ready     10Gi    ontap-flexvol   http://10.61.188.112:31555  No
-project1-experiment1  Ready     10Gi    ontap-flexvol   http://10.61.188.112:32363  Yes      project1            ntap-dsutil.for-clone.20210315184514
-project1-experiment2  Ready     10Gi    ontap-flexvol   http://10.61.188.112:30677  Yes      project1            project1-snap1
-project1-experiment3  Ready     10Gi    ontap-flexvol   http://10.61.188.112:30993  Yes      project1            ntap-dsutil.for-clone.20210315185504
-rick                  Ready     2Ti     ontap-flexvol   http://10.61.188.112:31939  No
-sathish               Ready     2Ti     ontap-flexvol   http://10.61.188.112:31820  No
+Workspace Name        Status    Size    StorageClass     Access URL                  Clone    Source Workspace    Source VolumeSnapshot
+--------------------  --------  ------  ---------------  --------------------------  -------  ------------------  ------------------------------------
+aj                    Ready     1Ti     ontap-flexvol    http://10.61.188.112:30590  No
+dave                  Ready     2Ti     ontap-flexvol    http://10.61.188.112:30792  No
+joe                   Ready     1Ti     beegfs-scratch   http://10.61.188.112:30006  No
+mike                  Ready     1Ti     ontap-flexvol    http://10.61.188.112:31047  No
+mike-clone1           Ready     1Ti     ontap-flexvol    http://10.61.188.112:30430  Yes      mike                ntap-dsutil.20210318204637
+project1              Ready     10Gi    ontap-flexvol    http://10.61.188.112:31555  No
+project1-experiment1  Ready     10Gi    ontap-flexvol    http://10.61.188.112:32363  Yes      project1            ntap-dsutil.for-clone.20210315184514
+project1-experiment2  Ready     10Gi    ontap-flexvol    http://10.61.188.112:30677  Yes      project1            project1-snap1
+project1-experiment3  Ready     10Gi    ontap-flexvol    http://10.61.188.112:30993  Yes      project1            ntap-dsutil.for-clone.20210315185504
+rick                  Ready     2Ti     ontap-flexvol    http://10.61.188.112:31939  No
+sathish               Ready     2Ti     ontap-flexvol    http://10.61.188.112:31820  No
 ```
 
 <a name="cli-create-jupyterlab-snapshot"></a>
@@ -502,7 +507,7 @@ Near-instantaneously create a new persistent volume that is an exact copy of the
 ./ntap_dsutil_k8s.py clone volume --new-pvc-name=test2-clone1 --source-pvc-name=test2
 Creating new PersistentVolumeClaim (PVC) 'test2-clone1' from source PVC 'test2' in namespace 'default'...
 Creating PersistentVolumeClaim (PVC) 'test2-clone1' in namespace 'default'.
-PersistentVolumeClaim (PVC) 'test2-clone1' created. Waiting for Trident to bind volume to PVC.
+PersistentVolumeClaim (PVC) 'test2-clone1' created. Waiting for Kubernetes to bind volume to PVC.
 Volume successfully created and bound to PersistentVolumeClaim (PVC) 'test2-clone1' in namespace 'default'.
 Volume successfully cloned.
 ```
@@ -513,7 +518,7 @@ Near-instantaneously create a new persistent volume that is an exact copy of the
 ./ntap_dsutil_k8s.py clone volume --new-pvc-name=test1-clone1 --source-snapshot-name=ntap-dsutil.20210304170930 --namespace=dst-test
 Creating new PersistentVolumeClaim (PVC) 'test1-clone1' from VolumeSnapshot 'ntap-dsutil.20210304170930' in namespace 'dst-test'...
 Creating PersistentVolumeClaim (PVC) 'test1-clone1' in namespace 'dst-test'.
-PersistentVolumeClaim (PVC) 'test1-clone1' created. Waiting for Trident to bind volume to PVC.
+PersistentVolumeClaim (PVC) 'test1-clone1' created. Waiting for Kubernetes to bind volume to PVC.
 Volume successfully created and bound to PersistentVolumeClaim (PVC) 'test1-clone1' in namespace 'dst-test'.
 Volume successfully cloned.
 ```
@@ -548,7 +553,7 @@ Provision a new persistent volume of size 1GB and attach it to a Kubernetes Pers
 ```sh
 ./ntap_dsutil_k8s.py create volume --pvc-name=project1 --size=1Gi
 Creating PersistentVolumeClaim (PVC) 'project1' in namespace 'default'.
-PersistentVolumeClaim (PVC) 'project1' created. Waiting for Trident to bind volume to PVC.
+PersistentVolumeClaim (PVC) 'project1' created. Waiting for Kubernetes to bind volume to PVC.
 Volume successfully created and bound to PersistentVolumeClaim (PVC) 'project1' in namespace 'default'.
 ```
 
@@ -557,7 +562,7 @@ Provision a new persistent volume of size 2TB, using the Kubernetes StorageClass
 ```sh
 ./ntap_dsutil_k8s.py create volume --pvc-name=test1 --size=2Ti --storage-class=ontap-flexgroup --namespace=dst-test
 Creating volume 'test1' in namespace 'dst-test'.
-PersistentVolumeClaim (PVC) 'test1' created. Waiting for Trident to bind volume to PVC.
+PersistentVolumeClaim (PVC) 'test1' created. Waiting for Kubernetes to bind volume to PVC.
 Volume successfully created and bound to PersistentVolumeClaim (PVC) 'test1' in namespace 'dst-test'.
 ```
 
@@ -613,13 +618,14 @@ The following options/arguments are optional:
 
 ```sh
 ./ntap_dsutil_k8s.py list volumes --namespace=dst-test
-PersistentVolumeClaim (PVC) Name    Status    Size    StorageClass    Clone    Source PVC    Source VolumeSnapshot
-----------------------------------  --------  ------  --------------  -------  ------------  -----------------------
-test                                Bound     10Gi    ontap-flexvol   No
-test-clone1                         Bound     10Gi    ontap-flexvol   Yes      test          snap1
-test-clone2                         Bound     10Gi    ontap-flexvol   Yes      test          snap2
-test2                               Bound     10Gi    ontap-flexvol   No
-test2-clone1                        Bound     10Gi    ontap-flexvol   Yes      test2         n/a
+PersistentVolumeClaim (PVC) Name    Status    Size    StorageClass     Clone    Source PVC    Source VolumeSnapshot
+----------------------------------  --------  ------  ---------------  -------  ------------  -----------------------
+test                                Bound     10Gi    ontap-flexvol    No
+test-beegfs                         bound     10Gi    beegfs-scratch   No
+test-clone1                         Bound     10Gi    ontap-flexvol    Yes      test          snap1
+test-clone2                         Bound     10Gi    ontap-flexvol    Yes      test          snap2
+test2                               Bound     10Gi    ontap-flexvol    No
+test2-clone1                        Bound     10Gi    ontap-flexvol    Yes      test2         n/a
 ```
 
 <a name="cli-create-volume-snapshot"></a>
@@ -775,29 +781,31 @@ To import the NetApp Data Science Toolkit for Kubernetes library functions into 
 from ntap_dsutil_k8s import cloneJupyterLab, createJupyterLab, deleteJupyterLab, listJupyterLab, createJupyterLabSnapshot, listJupyterLabSnapshot, restoreJupyterLabSnapshot, cloneVolume, createVolume, deleteVolume, listVolumes, createVolumeSnapshot, deleteVolumeSnapshot, listVolumeSnapshot, restoreVolumeSnapshot
 ```
 
-Note: The prerequisite steps outlined in the [Getting Started](#getting-started) section still appy when the toolkit is being utilized as an importable library of functions.
+Note: The prerequisite steps outlined in the [Getting Started](#getting-started) section still apply when the toolkit is being utilized as an importable library of functions.
 
 When being utilized as an importable library of functions, the toolkit supports the following operations.
 
-JupyterLab workspace management operations:
-- [Clone a JupyterLab workspace.](#lib-clone-jupyterlab)
-- [Create a new JupyterLab workspace.](#lib-create-jupyterlab)
-- [Delete an existing JupyterLab workspace.](#lib-delete-jupyterlab)
-- [List all JupyterLab workspaces.](#lib-list-jupyterlabs)
-- [Create a new snapshot for a JupyterLab workspace.](#lib-create-jupyterlab-snapshot)
-- [Delete an existing snapshot.](#lib-delete-jupyterlab-snapshot)
-- [List all snapshots.](#lib-list-jupyterlab-snapshots)
-- [Restore a snapshot.](#lib-restore-jupyterlab-snapshot)
+| JupyterLab workspace management operations                                           | Supported by BeeGFS | Supported by Trident |
+| ------------------------------------------------------------------------------------ | ------------------- | -------------------- |
+| [Clone a JupyterLab workspace.](#lib-clone-jupyterlab)                               | No                  | Yes                  |
+| [Create a new JupyterLab workspace.](#lib-create-jupyterlab)                         | Yes                 | Yes                  |
+| [Delete an existing JupyterLab workspace.](#lib-delete-jupyterlab)                   | Yes                 | Yes                  |
+| [List all JupyterLab workspaces.](#lib-list-jupyterlabs)                             | Yes                 | Yes                  |
+| [Create a new snapshot for a JupyterLab workspace.](#lib-create-jupyterlab-snapshot) | No                  | Yes                  |
+| [Delete an existing snapshot.](#lib-delete-jupyterlab-snapshot)                      | No                  | Yes                  |
+| [List all snapshots.](#lib-list-jupyterlab-snapshots)                                | No                  | Yes                  |
+| [Restore a snapshot.](#lib-restore-jupyterlab-snapshot)                              | No                  | Yes                  |
 
-Kubernetes persistent volume management operations (for advanced Kubernetes users):
-- [Clone a persistent volume.](#lib-clone-volume)
-- [Create a new persistent volume.](#lib-create-volume)
-- [Delete an existing persistent volume.](#lib-delete-volume)
-- [List all persistent volumes.](#lib-list-volumes)
-- [Create a new snapshot for a persistent volume.](#lib-create-volume-snapshot)
-- [Delete an existing snapshot.](#lib-delete-volume-snapshot)
-- [List all snapshots.](#lib-list-volume-snapshots)
-- [Restore a snapshot.](#lib-restore-volume-snapshot)
+| Kubernetes persistent volume management operations (for advanced Kubernetes users)   | Supported by BeeGFS | Supported by Trident |
+| ------------------------------------------------------------------------------------ | ------------------- | -------------------- |
+| [Clone a persistent volume.](#lib-clone-volume)                                      | No                  | Yes                  |
+| [Create a new persistent volume.](#lib-create-volume)                                | Yes                 | Yes                  |
+| [Delete an existing persistent volume.](#lib-delete-volume)                          | Yes                 | Yes                  |
+| [List all persistent volumes.](#lib-list-volumes)                                    | Yes                 | Yes                  |
+| [Create a new snapshot for a persistent volume.](#lib-create-volume-snapshot)        | No                  | Yes                  |
+| [Delete an existing snapshot.](#lib-delete-volume-snapshot)                          | No                  | Yes                  |
+| [List all snapshots.](#lib-list-volume-snapshots)                                    | No                  | Yes                  |
+| [Restore a snapshot.](#lib-restore-volume-snapshot)                                  | No                  | Yes                  |
 
 ### JupyterLab Workspace Management Operations
 
@@ -853,7 +861,7 @@ Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/
 def createJupyterLab(
     workspaceName: str,                                     # Name of new JupyterLab workspace (required).
     workspaceSize: str,                                     # Size new workspace (i.e. size of backing persistent volume to be created) (required). Format: '1024Mi', '100Gi', '10Ti', etc.
-    storageClass: str = None,                               # Kubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, default StorageClass will be used. Note: StorageClass must be configured to use Trident.
+    storageClass: str = None,                               # Kubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
     namespace: str = "default",                             # Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
     workspacePassword: str = None,                          # Workspace password (this password will be required in order to access the workspace). If not specified, you will be prompted to enter a password via the console.
     workspaceImage: str = "jupyter/tensorflow-notebook",    # Container image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.
@@ -1080,7 +1088,7 @@ APIConnectionError              # The Kubernetes API returned an error.
 
 The NetApp Data Science Toolkit can be used to rapidly provision a new persistent volume within a Kubernetes cluster as part of any Python program or workflow.
 
-Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/) for more information on StorageClasses.
+Tip: Refer to the [Trident](https://netapp-trident.readthedocs.io/) or [BeeGFS CSI driver](https://github.com/NetApp/beegfs-csi-driver/blob/master/docs/usage.md#dynamic-provisioning-workflow) documentation for more information on StorageClasses.
 
 ##### Function Definition
 
@@ -1088,7 +1096,7 @@ Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/
 def createVolume(
     pvcName: str,               # Name of new volume (name to be applied to new Kubernetes PersistentVolumeClaim/PVC) (required).
     volumeSize: str,            # Size of new volume. Format: '1024Mi', '100Gi', '10Ti', etc (required).
-    storageClass: str = None,   # Kubernetes StorageClass to use when provisioning new volume. If not specified, default StorageClass will be used. Note: StorageClass must be configured to use Trident.
+    storageClass: str = None,   # Kubernetes StorageClass to use when provisioning new volume. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
     namespace: str = "default", # Kubernetes namespace to create new PersistentVolumeClaim (PVC) in. If not specified, PVC will be created in namespace "default".
     printOutput: bool = False   # Denotes whether or not to print messages to the console during execution.
 ) :

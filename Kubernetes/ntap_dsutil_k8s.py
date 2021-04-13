@@ -337,7 +337,7 @@ def createVolume(pvcName: str, volumeSize: str, storageClass: str = None, namesp
 
     # Wait for PVC to bind to volume
     if printOutput :
-        print("PersistentVolumeClaim (PVC) '" + pvcName + "' created. Waiting for Trident to bind volume to PVC.")
+        print("PersistentVolumeClaim (PVC) '" + pvcName + "' created. Waiting for Kubernetes to bind volume to PVC.")
     while True :
         try :
             api = client.CoreV1Api()
@@ -1121,13 +1121,13 @@ Basic Commands:
 \thelp\t\t\t\tPrint help text.
 \tversion\t\t\t\tPrint version details.
 
-JuupyterLab Management Commands:
+JupyterLab Management Commands:
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
 
 \tclone jupyterlab\t\tCreate a new JupyterLab workspace that is an exact copy of an existing workspace.
 \tcreate jupyterlab\t\tProvision a JupyterLab workspace.
 \tdelete jupyterlab\t\tDelete an existing JupyterLab workspace.
-\tlist jupyterlabs\t\tList all JuupyterLab workspaces.
+\tlist jupyterlabs\t\tList all JupyterLab workspaces.
 \tcreate jupyterlab-snapshot\tCreate a new snapshot for a JupyterLab workspace.
 \tlist jupyterlab-snapshots\tList all snapshots.
 \trestore jupyterlab-snapshot\tRestore a snapshot.
@@ -1199,7 +1199,7 @@ Required Options/Arguments:
 \t-s, --size=\t\tSize new workspace (i.e. size of backing persistent volume to be created). Format: '1024Mi', '100Gi', '10Ti', etc.
 
 Optional Options/Arguments:
-\t-c, --storage-class=\tKubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, default StorageClass will be used. Note: StorageClass must be configured to use Trident.
+\t-c, --storage-class=\tKubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
 \t-g, --nvidia-gpu=\tNumber of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
 \t-h, --help\t\tPrint help text.
 \t-i, --image=\t\tContainer image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.
@@ -1257,7 +1257,7 @@ Required Options/Arguments:
 \t-s, --size=\t\tSize of new volume. Format: '1024Mi', '100Gi', '10Ti', etc.
 
 Optional Options/Arguments:
-\t-c, --storage-class=\tKubernetes StorageClass to use when provisioning new volume. If not specified, default StorageClass will be used. Note: StorageClass must be configured to use Trident.
+\t-c, --storage-class=\tKubernetes StorageClass to use when provisioning new volume. If not specified, default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
 \t-h, --help\t\tPrint help text.
 \t-n, --namespace=\tKubernetes namespace to create new PersistentVolumeClaim (PVC) in. If not specified, PVC will be created in namespace "default".
 
