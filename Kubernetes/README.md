@@ -58,8 +58,8 @@ The NetApp Data Science Toolkit for Kubernetes can also be utilized from within 
 ```
 
 In the [Examples](Examples/) directory, you will find the following examples pertaining to utilizing the toolkit within a pod in the Kubernetes cluster:
-- [service-account-ntap-dsutil.yaml](Examples/service-account-ntap-dsutil.yaml): Manifest for a ServiceAccount named 'ntap-dsutil' that has all of the required permissions for executing toolkit operations.
-- [pod-ntap-dsutil.yaml](Examples/pod-ntap-dsutil.yaml): Manifest for a Pod named 'ntap-dsutil' in which toolkit operations can be executed.
+- [service-account-ntap-dsutil.yaml](Examples/service-account-ntap-dsutil.yaml): Manifest for a Kubernetes ServiceAccount named 'ntap-dsutil' that has all of the required permissions for executing toolkit operations.
+- [job-ntap-dsutil.yaml](Examples/job-ntap-dsutil.yaml): Manifest for a Kubernetes Job named 'ntap-dsutil' that can be used as a template for executing toolkit operations.
 
 Refer to the [Kubernetes documentation](https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/) for more information on accessing the Kubernetes API from within a pod.
 
