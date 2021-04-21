@@ -778,7 +778,7 @@ The NetApp Data Science Toolkit for Kubernetes can also be utilized as a library
 To import the NetApp Data Science Toolkit for Kubernetes library functions into a Python program, ensure that the `ntap_dsutil_k8s.py` file is in the same directory as the program, and include the following line of code in the program:
 
 ```py
-from ntap_dsutil_k8s import cloneJupyterLab, createJupyterLab, deleteJupyterLab, listJupyterLab, createJupyterLabSnapshot, listJupyterLabSnapshot, restoreJupyterLabSnapshot, cloneVolume, createVolume, deleteVolume, listVolumes, createVolumeSnapshot, deleteVolumeSnapshot, listVolumeSnapshot, restoreVolumeSnapshot
+from ntap_dsutil_k8s import cloneJupyterLab, createJupyterLab, deleteJupyterLab, listJupyterLabs, createJupyterLabSnapshot, listJupyterLabSnapshots, restoreJupyterLabSnapshot, cloneVolume, createVolume, deleteVolume, listVolumes, createVolumeSnapshot, deleteVolumeSnapshot, listVolumeSnapshots, restoreVolumeSnapshot
 ```
 
 Note: The prerequisite steps outlined in the [Getting Started](#getting-started) section still apply when the toolkit is being utilized as an importable library of functions.
