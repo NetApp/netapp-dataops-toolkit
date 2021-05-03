@@ -4,7 +4,7 @@
 from netapp_dstk.traditional import handleInvalidCommand, helpTextStandard, getTarget, cloneVolume, retrieveConfig, \
     InvalidConfigError, printInvalidConfigError, instantiateConnection, InvalidVolumeParameterError, \
     InvalidSnapshotParameterError, APIConnectionError, mountVolume, MountOperationError, ConnectionTypeError, \
-    listVolumes
+    listVolumes, createSnapshot, createVolume
 
 version = "1.2"
 
@@ -13,7 +13,6 @@ import base64, json, os, re, requests, yaml, time, boto3, boto3.session
 from getpass import getpass
 import pandas as pd
 from tabulate import tabulate
-from datetime import datetime
 from netapp_ontap.resources import Volume as NetAppVolume
 from netapp_ontap.resources import Snapshot as NetAppSnapshot
 from netapp_ontap.resources import SnapmirrorRelationship as NetAppSnapmirrorRelationship
@@ -369,206 +368,9 @@ def instantiateS3Session(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey:
 
 
 ## Function for creating a new volume
-def createVolume(volumeName: str, volumeSize: str, guaranteeSpace: bool = False, volumeType: str = "flexvol", unixPermissions: str = "0777", unixUID: str = "0", unixGID: str = "0", exportPolicy: str = "default", snapshotPolicy: str = "none", aggregate: str = None, mountpoint: str = None, printOutput: bool = False) :
-    # Retrieve config details from config file
-    try :
-        config = retrieveConfig(printOutput=printOutput)
-    except InvalidConfigError:
-        raise
-    try :
-        connectionType = config["connectionType"]
-    except :
-        if printOutput :
-            printInvalidConfigError()
-        raise InvalidConfigError()
-
-    if connectionType == "ONTAP" :
-        # Instantiate connection to ONTAP cluster
-        try :
-            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
-        except InvalidConfigError:
-            raise
-
-        # Retrieve values from config file if not passed into function
-        try :
-            svm = config["svm"]
-            if not volumeType :
-                volumeType = config["defaultVolumeType"]
-            if not unixPermissions :
-                unixPermissions = config["defaultUnixPermissions"]
-            if not unixUID :
-                unixUID = config["defaultUnixUID"]
-            if not unixGID :
-                unixGID = config["defaultUnixGID"]
-            if not exportPolicy :
-                exportPolicy = config["defaultExportPolicy"]
-            if not snapshotPolicy :
-                snapshotPolicy = config["defaultSnapshotPolicy"]
-            if not aggregate :
-                aggregate = config["defaultAggregate"]
-        except :
-            if printOutput :
-                printInvalidConfigError()
-            raise InvalidConfigError()
-
-        # Check volume type for validity
-        if volumeType not in ("flexvol", "flexgroup") :
-            if printOutput :
-                print("Error: Invalid volume type specified. Acceptable values are 'flexvol' and 'flexgroup'.")
-            raise InvalidVolumeParameterError("size")
-
-        # Check unix permissions for validity
-        if not re.search("^0[0-7]{3}", unixPermissions) :
-            if printOutput :
-                print("Error: Invalid unix permissions specified. Acceptable values are '0777', '0755', '0744', etc.")
-            raise InvalidVolumeParameterError("unixPermissions")
-
-        # Check unix uid for validity
-        try :
-            unixUID = int(unixUID)
-        except :
-            if printOutput :
-                print("Error: Invalid unix uid specified. Value be an integer. Example: '0' for root user.")
-            raise InvalidVolumeParameterError("unixUID")
-
-        # Check unix gid for validity
-        try :
-            unixGID = int(unixGID)
-        except :
-            if printOutput :
-                print("Error: Invalid unix gid specified. Value must be an integer. Example: '0' for root group.")
-            raise InvalidVolumeParameterError("unixGID")
-
-        # Convert volume size to Bytes
-        if re.search("^[0-9]+MB$", volumeSize) :
-            # Convert from MB to Bytes
-            volumeSizeBytes = int(volumeSize[:len(volumeSize)-2]) * 1024**2
-        elif re.search("^[0-9]+GB$", volumeSize) :
-            # Convert from GB to Bytes
-            volumeSizeBytes = int(volumeSize[:len(volumeSize)-2]) * 1024**3
-        elif re.search("^[0-9]+TB$", volumeSize) :
-            # Convert from TB to Bytes
-            volumeSizeBytes = int(volumeSize[:len(volumeSize)-2]) * 1024**4
-        else :
-            if printOutput :
-                print("Error: Invalid volume size specified. Acceptable values are '1024MB', '100GB', '10TB', etc.")
-            raise InvalidVolumeParameterError("size")
-
-        # Create dict representing volume
-        volumeDict = {
-            "name": volumeName,
-            "svm": {"name": svm},
-            "size": volumeSizeBytes,
-            "style": volumeType,
-            "nas": {
-                "path": "/" + volumeName,
-                "export_policy": {"name": exportPolicy},
-                "security_style": "unix",
-                "unix_permissions": unixPermissions,
-                "uid": unixUID,
-                "gid": unixGID
-            },
-            "snapshot_policy": {"name": snapshotPolicy}
-        }
-
-        # Set space guarantee field
-        if guaranteeSpace :
-            volumeDict["guarantee"] = {"type": "volume"}
-        else :
-            volumeDict["guarantee"] = {"type": "none"}
-
-        # If flexvol -> set aggregate field
-        if volumeType == "flexvol" :
-            volumeDict["aggregates"] = [{'name': aggregate}]
-
-        # Create volume
-        if printOutput :
-            print("Creating volume '" + volumeName + "'.")
-        try :
-            volume = NetAppVolume.from_dict(volumeDict)
-            volume.post(poll=True)
-            if printOutput :
-                print("Volume created successfully.")
-        except NetAppRestError as err :
-            if printOutput :
-                print("Error: ONTAP Rest API Error: ", err)
-            raise APIConnectionError(err)
-
-        # Optionally mount newly created volume
-        if mountpoint :
-            try :
-                mountVolume(volumeName=volumeName, mountpoint=mountpoint, printOutput=True)
-            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError) :
-                if printOutput :
-                    print("Error: Error mounting volume.")
-                raise
-
-    else :
-        raise ConnectionTypeError()
 
 
 # Function for creating a snapshot
-def createSnapshot(volumeName: str, snapshotName: str = None, printOutput: bool = False) :
-    # Retrieve config details from config file
-    try :
-        config = retrieveConfig(printOutput=printOutput)
-    except InvalidConfigError:
-        raise
-    try :
-        connectionType = config["connectionType"]
-    except :
-        if printOutput :
-            printInvalidConfigError()
-        raise InvalidConfigError()
-
-    if connectionType == "ONTAP" :
-        # Instantiate connection to ONTAP cluster
-        try :
-            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
-        except InvalidConfigError:
-            raise
-
-        # Retrieve svm from config file
-        try :
-            svm = config["svm"]
-        except :
-            if printOutput :
-                printInvalidConfigError()
-            raise InvalidConfigError()
-
-        # Set snapshot name if not passed into function
-        if not snapshotName :
-            timestamp = datetime.today().strftime("%Y%m%d_%H%M%S")
-            snapshotName = "ntap_dsutil_" + timestamp
-
-        if printOutput :
-            print("Creating snapshot '" + snapshotName + "'.")
-
-        try :
-            # Retrieve volume
-            volume = NetAppVolume.find(name=volumeName, svm=svm)
-            if not volume :
-                if printOutput :
-                    print("Error: Invalid volume name.")
-                raise InvalidVolumeParameterError("name")
-
-            # Create snapshot
-            snapshot = NetAppSnapshot.from_dict({
-                'name': snapshotName,
-                'volume': volume.to_dict()
-            })
-            snapshot.post(poll=True)
-
-            if printOutput :
-                print("Snapshot created successfully.")
-
-        except NetAppRestError as err :
-            if printOutput :
-                print("Error: ONTAP Rest API Error: ", err)
-            raise APIConnectionError(err)
-
-    else :
-        raise ConnectionTypeError()
 
 
 # Function for listing all snapshots
@@ -1815,19 +1617,19 @@ if __name__ == '__main__' :
         # Create config file
         createConfig(connectionType=connectionType)
 
-    elif action == "create" :
+    elif action == "create":
         # Get desired target from command line args
         target = getTarget(sys.argv)
         
         # Invoke desired action based on target
-        if target in ("snapshot", "snap") :
+        if target in ("snapshot", "snap"):
             volumeName = None
             snapshotName = None
 
             # Get command line options
-            try :
+            try:
                 opts, args = getopt.getopt(sys.argv[3:], "hn:v:", ["help", "name=", "volume="])
-            except :
+            except:
                 handleInvalidCommand(helpText=helpTextCreateSnapshot, invalidOptArg=True)
 
             # Parse command line options
@@ -1841,16 +1643,16 @@ if __name__ == '__main__' :
                     volumeName = arg
             
             # Check for required options
-            if not volumeName  :
+            if not volumeName:
                 handleInvalidCommand(helpText=helpTextCreateSnapshot, invalidOptArg=True)
 
             # Create snapshot
-            try :
+            try:
                 createSnapshot(volumeName=volumeName, snapshotName=snapshotName, printOutput=True)
-            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError) :
+            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
                 sys.exit(1)
 
-        elif target in ("volume", "vol") :
+        elif target in ("volume", "vol"):
             volumeName = None
             volumeSize = None
             guaranteeSpace = False
@@ -1864,13 +1666,13 @@ if __name__ == '__main__' :
             aggregate = None
 
             # Get command line options
-            try :
+            try:
                 opts, args = getopt.getopt(sys.argv[3:], "hn:s:rt:p:u:g:e:d:m:a:", ["help", "name=", "size=", "guarantee-space", "type=", "permissions=", "uid=", "gid=", "export-policy=", "snapshot-policy=", "mountpoint=", "aggregate="])
-            except :
+            except:
                 handleInvalidCommand(helpText=helpTextCreateVolume, invalidOptArg=True)
 
             # Parse command line options
-            for opt, arg in opts :
+            for opt, arg in opts:
                 if opt in ("-h", "--help") :
                     print(helpTextCreateVolume)
                     sys.exit(0)
@@ -1905,13 +1707,13 @@ if __name__ == '__main__' :
                 handleInvalidCommand(helpText=helpTextCreateVolume, invalidOptArg=True)
 
             # Create volume
-            try :
-                createVolume(volumeName=volumeName, volumeSize=volumeSize, guaranteeSpace=guaranteeSpace, volumeType=volumeType, unixPermissions=unixPermissions, unixUID=unixUID, 
-                    unixGID=unixGID, exportPolicy=exportPolicy, snapshotPolicy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, printOutput=True)
-            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError) :
+            try:
+                createVolume(volumeName=volumeName, volumeSize=volumeSize, guaranteeSpace=guaranteeSpace, volumeType=volumeType, unixPermissions=unixPermissions, unixUID=unixUID,
+                             unixGID=unixGID, exportPolicy=exportPolicy, snapshotPolicy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, printOutput=True)
+            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
 
-        else :
+        else:
             handleInvalidCommand()
 
     elif action in ("delete", "del", "rm") :

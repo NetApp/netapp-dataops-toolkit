@@ -6,13 +6,16 @@ by applications using the import method of utilizing the toolkit.
 import base64
 import json
 import os
+import re
 import subprocess
 import sys
+from datetime import datetime
 
 from netapp_ontap import config as netappConfig
 from netapp_ontap.error import NetAppRestError
 from netapp_ontap.resources import Snapshot as NetAppSnapshot
 from netapp_ontap.resources import Volume as NetAppVolume
+import pandas as pd
 
 
 __version__ = "0.0.1a1"
@@ -123,6 +126,63 @@ def handleInvalidCommand(helpText: str = helpTextStandard, invalidOptArg: bool =
 #
 # The following attributes and functions are unique to the traditional package
 #
+
+# TODO: make this function private
+def instantiateConnection(config: dict, connectionType: str = "ONTAP", printOutput: bool = False):
+    if connectionType == "ONTAP":
+        ## Connection details for ONTAP cluster
+        try:
+            ontapClusterMgmtHostname = config["hostname"]
+            ontapClusterAdminUsername = config["username"]
+            ontapClusterAdminPasswordBase64 = config["password"]
+            verifySSLCert = config["verifySSLCert"]
+        except:
+            if printOutput:
+                printInvalidConfigError()
+            raise InvalidConfigError()
+
+        # Decode base64-encoded password
+        ontapClusterAdminPasswordBase64Bytes = ontapClusterAdminPasswordBase64.encode("ascii")
+        ontapClusterAdminPasswordBytes = base64.b64decode(ontapClusterAdminPasswordBase64Bytes)
+        ontapClusterAdminPassword = ontapClusterAdminPasswordBytes.decode("ascii")
+
+        # Instantiate connection to ONTAP cluster
+        netappConfig.CONNECTION = NetAppHostConnection(
+            host=ontapClusterMgmtHostname,
+            username=ontapClusterAdminUsername,
+            password=ontapClusterAdminPassword,
+            verify=verifySSLCert
+        )
+
+    else:
+        raise ConnectionTypeError()
+
+
+# TODO: Make this function private
+def printInvalidConfigError() :
+    print("Error: Missing or invalid config file. Run `./ntap_dsutil.py config` to create config file.")
+
+
+# TODO: Check if this should be made private after all functions moved.
+def retrieveConfig(configDirPath: str = "~/.ntap_dsutil", configFilename: str = "config.json",
+                   printOutput: bool = False) -> dict:
+    configDirPath = os.path.expanduser(configDirPath)
+    configFilePath = os.path.join(configDirPath, configFilename)
+    try:
+        with open(configFilePath, 'r') as configFile:
+            # Read connection details from config file; read into dict
+            config = json.load(configFile)
+    except:
+        if printOutput:
+            printInvalidConfigError()
+        raise InvalidConfigError()
+    return config
+
+
+#
+# Public importable functions specific to the traditional package
+#
+
 
 def cloneVolume(newVolumeName: str, sourceVolumeName: str, sourceSnapshotName: str = None,
                 unixUID: str = None, unixGID: str = None, mountpoint: str = None,
@@ -255,63 +315,212 @@ def cloneVolume(newVolumeName: str, sourceVolumeName: str, sourceSnapshotName: s
         raise ConnectionTypeError()
 
 
-# TODO: make this function private
-def instantiateConnection(config: dict, connectionType: str = "ONTAP", printOutput: bool = False):
+def createSnapshot(volumeName: str, snapshotName: str = None, printOutput: bool = False):
+    # Retrieve config details from config file
+    try:
+        config = retrieveConfig(printOutput=printOutput)
+    except InvalidConfigError:
+        raise
+    try:
+        connectionType = config["connectionType"]
+    except:
+        if printOutput:
+            printInvalidConfigError()
+        raise InvalidConfigError()
+
     if connectionType == "ONTAP":
-        ## Connection details for ONTAP cluster
+        # Instantiate connection to ONTAP cluster
         try:
-            ontapClusterMgmtHostname = config["hostname"]
-            ontapClusterAdminUsername = config["username"]
-            ontapClusterAdminPasswordBase64 = config["password"]
-            verifySSLCert = config["verifySSLCert"]
+            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+        except InvalidConfigError:
+            raise
+
+        # Retrieve svm from config file
+        try:
+            svm = config["svm"]
         except:
             if printOutput:
                 printInvalidConfigError()
             raise InvalidConfigError()
 
-        # Decode base64-encoded password
-        ontapClusterAdminPasswordBase64Bytes = ontapClusterAdminPasswordBase64.encode("ascii")
-        ontapClusterAdminPasswordBytes = base64.b64decode(ontapClusterAdminPasswordBase64Bytes)
-        ontapClusterAdminPassword = ontapClusterAdminPasswordBytes.decode("ascii")
+        # Set snapshot name if not passed into function
+        if not snapshotName:
+            timestamp = datetime.today().strftime("%Y%m%d_%H%M%S")
+            snapshotName = "ntap_dsutil_" + timestamp
 
-        # Instantiate connection to ONTAP cluster
-        netappConfig.CONNECTION = NetAppHostConnection(
-            host=ontapClusterMgmtHostname,
-            username=ontapClusterAdminUsername,
-            password=ontapClusterAdminPassword,
-            verify=verifySSLCert
-        )
+        if printOutput:
+            print("Creating snapshot '" + snapshotName + "'.")
+
+        try:
+            # Retrieve volume
+            volume = NetAppVolume.find(name=volumeName, svm=svm)
+            if not volume:
+                if printOutput:
+                    print("Error: Invalid volume name.")
+                raise InvalidVolumeParameterError("name")
+
+            # Create snapshot
+            snapshot = NetAppSnapshot.from_dict({
+                'name': snapshotName,
+                'volume': volume.to_dict()
+            })
+            snapshot.post(poll=True)
+
+            if printOutput:
+                print("Snapshot created successfully.")
+
+        except NetAppRestError as err:
+            if printOutput:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
 
     else:
         raise ConnectionTypeError()
 
 
-# TODO: Make this function private
-def printInvalidConfigError() :
-    print("Error: Missing or invalid config file. Run `./ntap_dsutil.py config` to create config file.")
-
-
-# TODO: Check if this should be made private after all functions moved.
-def retrieveConfig(configDirPath: str = "~/.ntap_dsutil", configFilename: str = "config.json",
-                   printOutput: bool = False) -> dict:
-    configDirPath = os.path.expanduser(configDirPath)
-    configFilePath = os.path.join(configDirPath, configFilename)
+def createVolume(volumeName: str, volumeSize: str, guaranteeSpace: bool = False,
+                 volumeType: str = "flexvol", unixPermissions: str = "0777",
+                 unixUID: str = "0", unixGID: str = "0", exportPolicy: str = "default",
+                 snapshotPolicy: str = "none", aggregate: str = None, mountpoint: str = None,
+                 printOutput: bool = False):
+    # Retrieve config details from config file
     try:
-        with open(configFilePath, 'r') as configFile:
-            # Read connection details from config file; read into dict
-            config = json.load(configFile)
+        config = retrieveConfig(printOutput=printOutput)
+    except InvalidConfigError:
+        raise
+    try:
+        connectionType = config["connectionType"]
     except:
         if printOutput:
             printInvalidConfigError()
         raise InvalidConfigError()
-    return config
+
+    if connectionType == "ONTAP":
+        # Instantiate connection to ONTAP cluster
+        try:
+            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+        except InvalidConfigError:
+            raise
+
+        # Retrieve values from config file if not passed into function
+        try:
+            svm = config["svm"]
+            if not volumeType :
+                volumeType = config["defaultVolumeType"]
+            if not unixPermissions :
+                unixPermissions = config["defaultUnixPermissions"]
+            if not unixUID :
+                unixUID = config["defaultUnixUID"]
+            if not unixGID :
+                unixGID = config["defaultUnixGID"]
+            if not exportPolicy :
+                exportPolicy = config["defaultExportPolicy"]
+            if not snapshotPolicy :
+                snapshotPolicy = config["defaultSnapshotPolicy"]
+            if not aggregate :
+                aggregate = config["defaultAggregate"]
+        except:
+            if printOutput :
+                printInvalidConfigError()
+            raise InvalidConfigError()
+
+        # Check volume type for validity
+        if volumeType not in ("flexvol", "flexgroup"):
+            if printOutput:
+                print("Error: Invalid volume type specified. Acceptable values are 'flexvol' and 'flexgroup'.")
+            raise InvalidVolumeParameterError("size")
+
+        # Check unix permissions for validity
+        if not re.search("^0[0-7]{3}", unixPermissions):
+            if printOutput:
+                print("Error: Invalid unix permissions specified. Acceptable values are '0777', '0755', '0744', etc.")
+            raise InvalidVolumeParameterError("unixPermissions")
+
+        # Check unix uid for validity
+        try:
+            unixUID = int(unixUID)
+        except:
+            if printOutput :
+                print("Error: Invalid unix uid specified. Value be an integer. Example: '0' for root user.")
+            raise InvalidVolumeParameterError("unixUID")
+
+        # Check unix gid for validity
+        try:
+            unixGID = int(unixGID)
+        except:
+            if printOutput:
+                print("Error: Invalid unix gid specified. Value must be an integer. Example: '0' for root group.")
+            raise InvalidVolumeParameterError("unixGID")
+
+        # Convert volume size to Bytes
+        if re.search("^[0-9]+MB$", volumeSize):
+            # Convert from MB to Bytes
+            volumeSizeBytes = int(volumeSize[:len(volumeSize)-2]) * 1024**2
+        elif re.search("^[0-9]+GB$", volumeSize):
+            # Convert from GB to Bytes
+            volumeSizeBytes = int(volumeSize[:len(volumeSize)-2]) * 1024**3
+        elif re.search("^[0-9]+TB$", volumeSize):
+            # Convert from TB to Bytes
+            volumeSizeBytes = int(volumeSize[:len(volumeSize)-2]) * 1024**4
+        else :
+            if printOutput:
+                print("Error: Invalid volume size specified. Acceptable values are '1024MB', '100GB', '10TB', etc.")
+            raise InvalidVolumeParameterError("size")
+
+        # Create dict representing volume
+        volumeDict = {
+            "name": volumeName,
+            "svm": {"name": svm},
+            "size": volumeSizeBytes,
+            "style": volumeType,
+            "nas": {
+                "path": "/" + volumeName,
+                "export_policy": {"name": exportPolicy},
+                "security_style": "unix",
+                "unix_permissions": unixPermissions,
+                "uid": unixUID,
+                "gid": unixGID
+            },
+            "snapshot_policy": {"name": snapshotPolicy}
+        }
+
+        # Set space guarantee field
+        if guaranteeSpace:
+            volumeDict["guarantee"] = {"type": "volume"}
+        else:
+            volumeDict["guarantee"] = {"type": "none"}
+
+        # If flexvol -> set aggregate field
+        if volumeType == "flexvol":
+            volumeDict["aggregates"] = [{'name': aggregate}]
+
+        # Create volume
+        if printOutput:
+            print("Creating volume '" + volumeName + "'.")
+        try:
+            volume = NetAppVolume.from_dict(volumeDict)
+            volume.post(poll=True)
+            if printOutput:
+                print("Volume created successfully.")
+        except NetAppRestError as err:
+            if printOutput:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+
+        # Optionally mount newly created volume
+        if mountpoint:
+            try:
+                mountVolume(volumeName=volumeName, mountpoint=mountpoint, printOutput=True)
+            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
+                if printOutput:
+                    print("Error: Error mounting volume.")
+                raise
+
+    else:
+        raise ConnectionTypeError()
 
 
-#
-# Public importable functions specific to the traditional package
-#
-
-def mountVolume(volumeName: str, mountpoint: str, printOutput: bool = False) :
+def mountVolume(volumeName: str, mountpoint: str, printOutput: bool = False):
     # Confirm that mountpoint value was passed in
     if not mountpoint:
         if printOutput:
@@ -491,3 +700,5 @@ def listVolumes(checkLocalMounts: bool = False, printOutput: bool = False) -> li
 
     else:
         raise ConnectionTypeError()
+
+
