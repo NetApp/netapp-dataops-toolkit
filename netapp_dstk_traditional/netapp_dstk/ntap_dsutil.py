@@ -5,18 +5,18 @@ from netapp_dstk.traditional import handleInvalidCommand, helpTextStandard, getT
     InvalidConfigError, printInvalidConfigError, instantiateConnection, InvalidVolumeParameterError, \
     InvalidSnapshotParameterError, APIConnectionError, mountVolume, MountOperationError, ConnectionTypeError, \
     listVolumes, createSnapshot, createVolume, deleteSnapshot, deleteVolume, listCloudSyncRelationships, \
-    listSnapMirrorRelationships, listSnapshots
+    listSnapMirrorRelationships, listSnapshots, prepopulateFlexCache, pullBucketFromS3, instantiateS3Session, \
+    pullObjectFromS3
 
 version = "1.2"
 
 
-import base64, json, os, re, requests, time, boto3, boto3.session
+import base64, json, os, re, requests, time
 from getpass import getpass
 from netapp_ontap.resources import Volume as NetAppVolume
 from netapp_ontap.resources import Snapshot as NetAppSnapshot
 from netapp_ontap.resources import SnapmirrorRelationship as NetAppSnapmirrorRelationship
 from netapp_ontap.resources import SnapmirrorTransfer as NetAppSnapmirrorTransfer
-from netapp_ontap.resources import Flexcache as NetAppFlexCache
 from netapp_ontap.error import NetAppRestError
 from concurrent.futures import ThreadPoolExecutor
 
@@ -342,19 +342,6 @@ def getCloudCentralAccessToken(refreshToken: str, printOutput: bool = False) -> 
 
 
 ##  Function for instantiating an S3 session
-def instantiateS3Session(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s3VerifySSLCert: bool, s3CACertBundle: str, printOutput: bool = False) :
-    # Instantiate session
-    session = boto3.session.Session(aws_access_key_id=s3AccessKeyId, aws_secret_access_key=s3SecretAccessKey)
-
-    if s3VerifySSLCert :
-        if s3CACertBundle :
-            s3 = session.resource(service_name='s3', endpoint_url=s3Endpoint, verify=s3CACertBundle)
-        else :
-            s3 = session.resource(service_name='s3', endpoint_url=s3Endpoint)
-    else :
-        s3 = session.resource(service_name='s3', endpoint_url=s3Endpoint, verify=False)
-
-    return s3
 
 
 ## Function for instantiating connection to NetApp storage instance
@@ -661,59 +648,6 @@ def syncSnapMirrorRelationship(uuid: str, waitUntilComplete: bool = False, print
 
 
 # Function for prepopulating a FlexCache
-def prepopulateFlexCache(volumeName: str, paths: list, printOutput: bool = False) :
-    # Retrieve config details from config file
-    try :
-        config = retrieveConfig(printOutput=printOutput)
-    except InvalidConfigError:
-        raise
-    try :
-        connectionType = config["connectionType"]
-    except :
-        if printOutput :
-            printInvalidConfigError()
-        raise InvalidConfigError()
-
-    if connectionType == "ONTAP" :
-        # Instantiate connection to ONTAP cluster
-        try :
-            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
-        except InvalidConfigError:
-            raise
-
-        # Retrieve svm from config file
-        try :
-            svm = config["svm"]
-        except :
-            if printOutput :
-                printInvalidConfigError()
-            raise InvalidConfigError()
-
-        if printOutput :
-            print("FlexCache '" + volumeName + "' - Prepopulating paths: ", paths)
-
-        try :
-            # Retrieve FlexCache
-            flexcache = NetAppFlexCache.find(name=volumeName, svm=svm)
-            if not flexcache :
-                if printOutput :
-                    print("Error: Invalid volume name.")
-                raise InvalidVolumeParameterError("name")
-
-            # Prepopulate FlexCache
-            flexcache.prepopulate = {"dir_paths": paths}
-            flexcache.patch()
-
-            if printOutput :
-                print("FlexCache prepopulated successfully.")
-
-        except NetAppRestError as err :
-            if printOutput :
-                print("Error: ONTAP Rest API Error: ", err)
-            raise APIConnectionError(err)
-
-    else :
-        raise ConnectionTypeError()
 
 
 ## Function for uploading a file to S3
@@ -742,32 +676,6 @@ def uploadToS3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s3Ve
 
 
 ## Function for downloading a file from S3
-def downloadFromS3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s3VerifySSLCert: bool, s3CACertBundle: str, s3Bucket: str, s3ObjectKey: str, localFile: str, printOutput: bool = False) :
-    # Instantiate S3 session
-    try :
-        s3 = instantiateS3Session(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, printOutput=printOutput)
-    except Exception as err :
-        if printOutput :
-            print("Error: S3 API error: ", err)
-        raise APIConnectionError(err)
-
-    if printOutput :
-        print("Downloading object '" + s3ObjectKey + "' from bucket '" + s3Bucket + "' and saving as '" + localFile + "'.")
-
-    # Create directories that don't exist
-    if localFile.find(os.sep) != -1 :
-        dirs = localFile.split(os.sep)
-        dirpath = os.sep.join(dirs[:len(dirs)-1])
-        if not os.path.exists(dirpath):
-            os.makedirs(dirpath)
-    
-    # Download the file
-    try :
-        s3.Object(s3Bucket, s3ObjectKey).download_file(localFile)
-    except Exception as err :
-        if printOutput :
-            print("Error: S3 API error: ", err)
-        raise APIConnectionError(err)
 
 
 ##  Function for pushing a file to S3
@@ -835,58 +743,9 @@ def pushDirectoryToS3(s3Bucket: str, localDirectory: str, s3ObjectKeyPrefix: str
 
 
 ##  Function for pull an object from S3
-def pullObjectFromS3(s3Bucket: str, s3ObjectKey: str, localFile: str = None, printOutput: bool = False) :
-    # Retrieve S3 access details from existing config file
-    try :
-        s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = retrieveS3AccessDetails(printOutput=printOutput)
-    except InvalidConfigError:
-        raise
-    
-    # Set S3 object key
-    if not localFile :
-        localFile = s3ObjectKey
-
-    # Upload file
-    try :
-        downloadFromS3(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, s3Bucket=s3Bucket, s3ObjectKey=s3ObjectKey, localFile=localFile, printOutput=printOutput)
-    except APIConnectionError:
-        raise
-
-    print("Download complete.")
 
 
 ##  Function for pushing a directory to S3
-def pullBucketFromS3(s3Bucket: str, localDirectory: str, s3ObjectKeyPrefix: str = "", printOutput: bool = False) :
-    # Retrieve S3 access details from existing config file
-    try :
-        s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = retrieveS3AccessDetails(printOutput=printOutput)
-    except InvalidConfigError:
-        raise
-
-    # Add slash to end of local directory path if not present
-    if not localDirectory.endswith(os.sep) :
-        localDirectory+=os.sep
-    
-    # Multithread the download operation
-    with ThreadPoolExecutor() as executor :
-        try :
-            # Instantiate S3 session
-            s3 = instantiateS3Session(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, printOutput=printOutput)
-        
-            # Loop through all objects with prefix in bucket and download
-            bucket = s3.Bucket(s3Bucket)
-            for obj in bucket.objects.filter(Prefix=s3ObjectKeyPrefix) :
-                executor.submit(downloadFromS3, s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, s3Bucket=s3Bucket, s3ObjectKey=obj.key, localFile=localDirectory+obj.key, printOutput=printOutput)
-
-        except APIConnectionError:
-            raise
-
-        except Exception as err :
-            if printOutput :
-                print("Error: S3 API error: ", err)
-            raise APIConnectionError(err)
-    
-    print("Download complete.")
 
 
 ## Define contents of help text
@@ -1595,29 +1454,29 @@ if __name__ == '__main__' :
         else:
             handleInvalidCommand()
         
-    elif action in ("prepopulate") :
+    elif action in ("prepopulate"):
         # Get desired target from command line args
         target = getTarget(sys.argv)
         
         # Invoke desired action based on target
-        if target in ("flexcache", "cache") :
+        if target in ("flexcache", "cache"):
             volumeName = None
             paths = None
 
             # Get command line options
-            try :
+            try:
                 opts, args = getopt.getopt(sys.argv[3:], "hn:p:", ["help", "name=", "paths="])
-            except :
+            except:
                 handleInvalidCommand(helpText=helpTextPrepopulateFlexCache, invalidOptArg=True)
 
             # Parse command line options
-            for opt, arg in opts :
-                if opt in ("-h", "--help") :
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
                     print(helpTextPrepopulateFlexCache)
                     sys.exit(0)
-                elif opt in ("-n", "--name") :
+                elif opt in ("-n", "--name"):
                     volumeName = arg
-                elif opt in ("-p", "--paths") :
+                elif opt in ("-p", "--paths"):
                     paths = arg
 
             # Check for required options
@@ -1628,86 +1487,86 @@ if __name__ == '__main__' :
             pathsList = paths.split(",")
 
             # Prepopulate FlexCache
-            try :
+            try:
                 prepopulateFlexCache(volumeName=volumeName, paths=pathsList, printOutput=True)
-            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError) :
+            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
                 sys.exit(1)
         
-        else :
+        else:
             handleInvalidCommand()
 
-    elif action in ("pull-from-s3", "pull-s3", "s3-pull") :
+    elif action in ("pull-from-s3", "pull-s3", "s3-pull"):
         # Get desired target from command line args
         target = getTarget(sys.argv)
         
         # Invoke desired action based on target
-        if target in ("bucket") :
+        if target in ("bucket"):
             s3Bucket = None
             s3ObjectKeyPrefix = ""
             localDirectory = None
 
             # Get command line options
-            try :
+            try:
                 opts, args = getopt.getopt(sys.argv[3:], "hb:p:d:e:", ["help", "bucket=", "key-prefix=", "directory="])
-            except :
+            except:
                 handleInvalidCommand(helpText=helpTextPullFromS3Bucket, invalidOptArg=True)
 
             # Parse command line options
-            for opt, arg in opts :
+            for opt, arg in opts:
                 if opt in ("-h", "--help") :
                     print(helpTextPullFromS3Bucket)
                     sys.exit(0)
-                elif opt in ("-b", "--bucket") :
+                elif opt in ("-b", "--bucket"):
                     s3Bucket = arg
-                elif opt in ("-p", "--key-prefix") :
+                elif opt in ("-p", "--key-prefix"):
                     s3ObjectKeyPrefix = arg
-                elif opt in ("-d", "--directory") :
+                elif opt in ("-d", "--directory"):
                     localDirectory = arg
             
             # Check for required options
-            if not s3Bucket or not localDirectory  :
+            if not s3Bucket or not localDirectory:
                 handleInvalidCommand(helpText=helpTextPullFromS3Bucket, invalidOptArg=True)
 
             # Push file to S3
-            try :
+            try:
                 pullBucketFromS3(s3Bucket=s3Bucket, localDirectory=localDirectory, s3ObjectKeyPrefix=s3ObjectKeyPrefix, printOutput=True)
-            except (InvalidConfigError, APIConnectionError) :
+            except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
-        elif target in ("object", "file") :
+        elif target in ("object", "file"):
             s3Bucket = None
             s3ObjectKey = None
             localFile = None
 
             # Get command line options
-            try :
+            try:
                 opts, args = getopt.getopt(sys.argv[3:], "hb:k:f:", ["help", "bucket=", "key=", "file=", "extra-args="])
-            except :
+            except:
                 handleInvalidCommand(helpText=helpTextPullFromS3Object, invalidOptArg=True)
 
             # Parse command line options
-            for opt, arg in opts :
-                if opt in ("-h", "--help") :
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
                     print(helpTextPullFromS3Object)
                     sys.exit(0)
-                elif opt in ("-b", "--bucket") :
+                elif opt in ("-b", "--bucket"):
                     s3Bucket = arg
-                elif opt in ("-k", "--key") :
+                elif opt in ("-k", "--key"):
                     s3ObjectKey = arg
-                elif opt in ("-f", "--file") :
+                elif opt in ("-f", "--file"):
                     localFile = arg
             
             # Check for required options
-            if not s3Bucket or not s3ObjectKey  :
+            if not s3Bucket or not s3ObjectKey:
                 handleInvalidCommand(helpText=helpTextPullFromS3Object, invalidOptArg=True)
 
             # Push file to S3
-            try :
+            try:
                 pullObjectFromS3(s3Bucket=s3Bucket, s3ObjectKey=s3ObjectKey, localFile=localFile, printOutput=True)
-            except (InvalidConfigError, APIConnectionError) :
+            except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
-        else :
+        else:
             handleInvalidCommand()
 
     elif action in ("push-to-s3", "push-s3", "s3-push") :

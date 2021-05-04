@@ -9,10 +9,13 @@ import os
 import re
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
+import boto3
 from netapp_ontap import config as netappConfig
 from netapp_ontap.error import NetAppRestError
+from netapp_ontap.resources import Flexcache as NetAppFlexCache
 from netapp_ontap.resources import SnapmirrorRelationship as NetAppSnapmirrorRelationship
 from netapp_ontap.resources import Snapshot as NetAppSnapshot
 from netapp_ontap.resources import Volume as NetAppVolume
@@ -27,7 +30,8 @@ __version__ = "0.0.1a1"
 #
 # The following attributes are unique to the traditional package.
 #
-from netapp_dstk.ntap_dsutil import retrieveCloudCentralRefreshToken, getCloudSyncAccessParameters, printAPIResponse
+from netapp_dstk.ntap_dsutil import retrieveCloudCentralRefreshToken, getCloudSyncAccessParameters, printAPIResponse, \
+    retrieveS3AccessDetails
 
 helpTextStandard = '''
 The NetApp Data Science Toolkit is a Python library that makes it simple for data scientists and data engineers to perform various data management tasks, such as provisioning a new data volume, near-instantaneously cloning a data volume, and near-instantaneously snapshotting a data volume for traceability/baselining.
@@ -132,6 +136,39 @@ def handleInvalidCommand(helpText: str = helpTextStandard, invalidOptArg: bool =
 # The following attributes and functions are unique to the traditional package
 #
 
+# TODO: make this private. Is this common with cloud?
+def downloadFromS3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s3VerifySSLCert: bool,
+                   s3CACertBundle: str, s3Bucket: str, s3ObjectKey: str, localFile: str, printOutput: bool = False):
+    # Instantiate S3 session
+    try:
+        s3 = instantiateS3Session(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId,
+                                  s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert,
+                                  s3CACertBundle=s3CACertBundle, printOutput=printOutput)
+    except Exception as err:
+        if printOutput:
+            print("Error: S3 API error: ", err)
+        raise APIConnectionError(err)
+
+    if printOutput:
+        print(
+            "Downloading object '" + s3ObjectKey + "' from bucket '" + s3Bucket + "' and saving as '" + localFile + "'.")
+
+    # Create directories that don't exist
+    if localFile.find(os.sep) != -1:
+        dirs = localFile.split(os.sep)
+        dirpath = os.sep.join(dirs[:len(dirs) - 1])
+        if not os.path.exists(dirpath):
+            os.makedirs(dirpath)
+
+    # Download the file
+    try:
+        s3.Object(s3Bucket, s3ObjectKey).download_file(localFile)
+    except Exception as err:
+        if printOutput:
+            print("Error: S3 API error: ", err)
+        raise APIConnectionError(err)
+
+
 # TODO: make this function private
 def instantiateConnection(config: dict, connectionType: str = "ONTAP", printOutput: bool = False):
     if connectionType == "ONTAP":
@@ -161,6 +198,22 @@ def instantiateConnection(config: dict, connectionType: str = "ONTAP", printOutp
 
     else:
         raise ConnectionTypeError()
+
+
+# TODO: Make private. Is this common with cloud?
+def instantiateS3Session(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s3VerifySSLCert: bool, s3CACertBundle: str, printOutput: bool = False):
+    # Instantiate session
+    session = boto3.session.Session(aws_access_key_id=s3AccessKeyId, aws_secret_access_key=s3SecretAccessKey)
+
+    if s3VerifySSLCert:
+        if s3CACertBundle:
+            s3 = session.resource(service_name='s3', endpoint_url=s3Endpoint, verify=s3CACertBundle)
+        else:
+            s3 = session.resource(service_name='s3', endpoint_url=s3Endpoint)
+    else:
+        s3 = session.resource(service_name='s3', endpoint_url=s3Endpoint, verify=False)
+
+    return s3
 
 
 # TODO: Make this function private
@@ -1034,3 +1087,109 @@ def mountVolume(volumeName: str, mountpoint: str, printOutput: bool = False):
         raise MountOperationError(err)
 
 
+def prepopulateFlexCache(volumeName: str, paths: list, printOutput: bool = False):
+    # Retrieve config details from config file
+    try:
+        config = retrieveConfig(printOutput=printOutput)
+    except InvalidConfigError:
+        raise
+    try:
+        connectionType = config["connectionType"]
+    except:
+        if printOutput:
+            printInvalidConfigError()
+        raise InvalidConfigError()
+
+    if connectionType == "ONTAP":
+        # Instantiate connection to ONTAP cluster
+        try:
+            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+        except InvalidConfigError:
+            raise
+
+        # Retrieve svm from config file
+        try:
+            svm = config["svm"]
+        except:
+            if printOutput:
+                printInvalidConfigError()
+            raise InvalidConfigError()
+
+        if printOutput:
+            print("FlexCache '" + volumeName + "' - Prepopulating paths: ", paths)
+
+        try:
+            # Retrieve FlexCache
+            flexcache = NetAppFlexCache.find(name=volumeName, svm=svm)
+            if not flexcache:
+                if printOutput:
+                    print("Error: Invalid volume name.")
+                raise InvalidVolumeParameterError("name")
+
+            # Prepopulate FlexCache
+            flexcache.prepopulate = {"dir_paths": paths}
+            flexcache.patch()
+
+            if printOutput:
+                print("FlexCache prepopulated successfully.")
+
+        except NetAppRestError as err:
+            if printOutput:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+
+    else:
+        raise ConnectionTypeError()
+
+
+def pullBucketFromS3(s3Bucket: str, localDirectory: str, s3ObjectKeyPrefix: str = "", printOutput: bool = False):
+    # Retrieve S3 access details from existing config file
+    try:
+        s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = retrieveS3AccessDetails(printOutput=printOutput)
+    except InvalidConfigError:
+        raise
+
+    # Add slash to end of local directory path if not present
+    if not localDirectory.endswith(os.sep):
+        localDirectory += os.sep
+
+    # Multithread the download operation
+    with ThreadPoolExecutor() as executor:
+        try:
+            # Instantiate S3 session
+            s3 = instantiateS3Session(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, printOutput=printOutput)
+
+            # Loop through all objects with prefix in bucket and download
+            bucket = s3.Bucket(s3Bucket)
+            for obj in bucket.objects.filter(Prefix=s3ObjectKeyPrefix):
+                executor.submit(downloadFromS3, s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, s3Bucket=s3Bucket, s3ObjectKey=obj.key, localFile=localDirectory+obj.key, printOutput=printOutput)
+
+        except APIConnectionError:
+            raise
+
+        except Exception as err:
+            if printOutput:
+                print("Error: S3 API error: ", err)
+            raise APIConnectionError(err)
+
+    print("Download complete.")
+
+
+def pullObjectFromS3(s3Bucket: str, s3ObjectKey: str, localFile: str = None, printOutput: bool = False):
+    # Retrieve S3 access details from existing config file
+    try:
+        s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = retrieveS3AccessDetails(printOutput=printOutput)
+    except InvalidConfigError:
+        raise
+
+    # Set S3 object key
+    if not localFile:
+        localFile = s3ObjectKey
+
+    # Upload file
+    try:
+        downloadFromS3(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, s3Bucket=s3Bucket, s3ObjectKey=s3ObjectKey, localFile=localFile, printOutput=printOutput)
+    except APIConnectionError:
+        raise
+
+    print("Download complete.")
