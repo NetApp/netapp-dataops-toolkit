@@ -30,8 +30,7 @@ __version__ = "0.0.1a1"
 #
 # The following attributes are unique to the traditional package.
 #
-from netapp_dstk.ntap_dsutil import retrieveCloudCentralRefreshToken, getCloudSyncAccessParameters, printAPIResponse, \
-    retrieveS3AccessDetails
+from netapp_dstk.ntap_dsutil import retrieveCloudCentralRefreshToken, getCloudSyncAccessParameters, printAPIResponse
 
 helpTextStandard = '''
 The NetApp Data Science Toolkit is a Python library that makes it simple for data scientists and data engineers to perform various data management tasks, such as provisioning a new data volume, near-instantaneously cloning a data volume, and near-instantaneously snapshotting a data volume for traceability/baselining.
@@ -236,6 +235,59 @@ def retrieveConfig(configDirPath: str = "~/.ntap_dsutil", configFilename: str = 
         raise InvalidConfigError()
     return config
 
+
+# TODO: Make this function private.
+def retrieveS3AccessDetails(printOutput: bool = False) -> (str, str, str, bool, str):
+    # Retrieve refresh token from config file
+    try:
+        config = retrieveConfig(printOutput=printOutput)
+    except InvalidConfigError:
+        raise
+    try:
+        s3Endpoint = config["s3Endpoint"]
+        s3AccessKeyId = config["s3AccessKeyId"]
+        s3SecretAccessKeyBase64 = config["s3SecretAccessKey"]
+        s3VerifySSLCert = config["s3VerifySSLCert"]
+        s3CACertBundle = config["s3CACertBundle"]
+    except:
+        if printOutput:
+            printInvalidConfigError()
+        raise InvalidConfigError()
+
+    # Decode base64-encoded refresh token
+    s3SecretAccessKeyBase64Bytes = s3SecretAccessKeyBase64.encode("ascii")
+    s3SecretAccessKeyBytes = base64.b64decode(s3SecretAccessKeyBase64Bytes)
+    s3SecretAccessKey = s3SecretAccessKeyBytes.decode("ascii")
+
+    return s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle
+
+
+# TODO: make this private. Is this common with cloud?
+def uploadToS3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s3VerifySSLCert: bool, s3CACertBundle: str,
+               s3Bucket: str, localFile: str, s3ObjectKey: str, s3ExtraArgs: str = None, printOutput: bool = False):
+    # Instantiate S3 session
+    try:
+        s3 = instantiateS3Session(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId,
+                                  s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert,
+                                  s3CACertBundle=s3CACertBundle, printOutput=printOutput)
+    except Exception as err:
+        if printOutput:
+            print("Error: S3 API error: ", err)
+        raise APIConnectionError(err)
+
+    # Upload file
+    if printOutput:
+        print("Uploading file '" + localFile + "' to bucket '" + s3Bucket + "' and applying key '" + s3ObjectKey + "'.")
+
+    try:
+        if s3ExtraArgs:
+            s3.Object(s3Bucket, s3ObjectKey).upload_file(localFile, ExtraArgs=json.loads(s3ExtraArgs))
+        else:
+            s3.Object(s3Bucket, s3ObjectKey).upload_file(localFile)
+    except Exception as err:
+        if printOutput:
+            print("Error: S3 API error: ", err)
+        raise APIConnectionError(err)
 
 #
 # Public importable functions specific to the traditional package
@@ -1193,3 +1245,126 @@ def pullObjectFromS3(s3Bucket: str, s3ObjectKey: str, localFile: str = None, pri
         raise
 
     print("Download complete.")
+
+
+def pushDirectoryToS3(s3Bucket: str, localDirectory: str, s3ObjectKeyPrefix: str = "",
+                      s3ExtraArgs: str = None, printOutput: bool = False):
+    # Retrieve S3 access details from existing config file
+    try:
+        s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = retrieveS3AccessDetails(printOutput=printOutput)
+    except InvalidConfigError:
+        raise
+
+    # Multithread the upload operation
+    with ThreadPoolExecutor() as executor:
+        # Loop through all files in directory
+        for dirpath, dirnames, filenames in os.walk(localDirectory):
+            # Exclude hidden files and directories
+            filenames = [filename for filename in filenames if not filename[0] == '.']
+            dirnames[:] = [dirname for dirname in dirnames if not dirname[0] == '.']
+
+            for filename in filenames:
+                # Build filepath
+                if localDirectory.endswith(os.sep):
+                    dirpathBeginIndex = len(localDirectory)
+                else:
+                    dirpathBeginIndex = len(localDirectory) + 1
+
+                subdirpath = dirpath[dirpathBeginIndex:]
+
+                if subdirpath:
+                    filepath = subdirpath + os.sep + filename
+                else:
+                    filepath = filename
+
+                # Set S3 object details
+                s3ObjectKey = s3ObjectKeyPrefix + filepath
+                localFile = dirpath + os.sep + filename
+
+                # Upload file
+                try:
+                    executor.submit(uploadToS3, s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, s3Bucket=s3Bucket, localFile=localFile, s3ObjectKey=s3ObjectKey, s3ExtraArgs=s3ExtraArgs, printOutput=printOutput)
+                except APIConnectionError:
+                    raise
+
+    print("Upload complete.")
+
+
+def pushFileToS3(s3Bucket: str, localFile: str, s3ObjectKey: str = None, s3ExtraArgs: str = None, printOutput: bool = False):
+    # Retrieve S3 access details from existing config file
+    try:
+        s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = retrieveS3AccessDetails(printOutput=printOutput)
+    except InvalidConfigError:
+        raise
+
+    # Set S3 object key
+    if not s3ObjectKey:
+        s3ObjectKey = localFile
+
+    # Upload file
+    try:
+        uploadToS3(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, s3Bucket=s3Bucket, localFile=localFile, s3ObjectKey=s3ObjectKey, s3ExtraArgs=s3ExtraArgs, printOutput=printOutput)
+    except APIConnectionError:
+        raise
+
+    print("Upload complete.")
+
+
+def restoreSnapshot(volumeName: str, snapshotName: str, printOutput: bool = False):
+    # Retrieve config details from config file
+    try:
+        config = retrieveConfig(printOutput=printOutput)
+    except InvalidConfigError:
+        raise
+    try:
+        connectionType = config["connectionType"]
+    except:
+        if printOutput:
+            printInvalidConfigError()
+        raise InvalidConfigError()
+
+    if connectionType == "ONTAP":
+        # Instantiate connection to ONTAP cluster
+        try:
+            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+        except InvalidConfigError:
+            raise
+
+        # Retrieve svm from config file
+        try:
+            svm = config["svm"]
+        except:
+            if printOutput:
+                printInvalidConfigError()
+            raise InvalidConfigError()
+
+        if printOutput:
+            print("Restoring snapshot '" + snapshotName + "'.")
+
+        try:
+            # Retrieve volume
+            volume = NetAppVolume.find(name=volumeName, svm=svm)
+            if not volume:
+                if printOutput:
+                    print("Error: Invalid volume name.")
+                raise InvalidVolumeParameterError("name")
+
+            # Retrieve snapshot
+            snapshot = NetAppSnapshot.find(volume.uuid, name=snapshotName)
+            if not snapshot:
+                if printOutput:
+                    print("Error: Invalid snapshot name.")
+                raise InvalidSnapshotParameterError("name")
+
+            # Restore snapshot
+            volume.patch(volume.uuid, **{"restore_to.snapshot.name": snapshot.name, "restore_to.snapshot.uuid": snapshot.uuid}, poll=True)
+            if printOutput:
+                print("Snapshot restored successfully.")
+
+        except NetAppRestError as err:
+            if printOutput:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+
+    else:
+        raise ConnectionTypeError()

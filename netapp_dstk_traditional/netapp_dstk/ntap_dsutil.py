@@ -5,20 +5,17 @@ from netapp_dstk.traditional import handleInvalidCommand, helpTextStandard, getT
     InvalidConfigError, printInvalidConfigError, instantiateConnection, InvalidVolumeParameterError, \
     InvalidSnapshotParameterError, APIConnectionError, mountVolume, MountOperationError, ConnectionTypeError, \
     listVolumes, createSnapshot, createVolume, deleteSnapshot, deleteVolume, listCloudSyncRelationships, \
-    listSnapMirrorRelationships, listSnapshots, prepopulateFlexCache, pullBucketFromS3, instantiateS3Session, \
-    pullObjectFromS3
+    listSnapMirrorRelationships, listSnapshots, prepopulateFlexCache, pullBucketFromS3, pullObjectFromS3, \
+    pushDirectoryToS3, pushFileToS3, restoreSnapshot
 
 version = "1.2"
 
 
 import base64, json, os, re, requests, time
 from getpass import getpass
-from netapp_ontap.resources import Volume as NetAppVolume
-from netapp_ontap.resources import Snapshot as NetAppSnapshot
 from netapp_ontap.resources import SnapmirrorRelationship as NetAppSnapmirrorRelationship
 from netapp_ontap.resources import SnapmirrorTransfer as NetAppSnapmirrorTransfer
 from netapp_ontap.error import NetAppRestError
-from concurrent.futures import ThreadPoolExecutor
 
 
 ## API connection error class; objects of this class will be raised when an API connection cannot be established
@@ -286,29 +283,6 @@ def retrieveCloudCentralRefreshToken(printOutput: bool = False) -> str :
 
 
 # Function for retrieving S3 access details from existing config file
-def retrieveS3AccessDetails(printOutput: bool = False) -> (str, str, str, bool, str) :
-    # Retrieve refresh token from config file
-    try :
-        config = retrieveConfig(printOutput=printOutput)
-    except InvalidConfigError:
-        raise
-    try :
-        s3Endpoint = config["s3Endpoint"]
-        s3AccessKeyId = config["s3AccessKeyId"]
-        s3SecretAccessKeyBase64 = config["s3SecretAccessKey"]
-        s3VerifySSLCert = config["s3VerifySSLCert"]
-        s3CACertBundle = config["s3CACertBundle"]
-    except :
-        if printOutput :
-            printInvalidConfigError()
-        raise InvalidConfigError()
-
-    # Decode base64-encoded refresh token
-    s3SecretAccessKeyBase64Bytes = s3SecretAccessKeyBase64.encode("ascii")
-    s3SecretAccessKeyBytes = base64.b64decode(s3SecretAccessKeyBase64Bytes)
-    s3SecretAccessKey = s3SecretAccessKeyBytes.decode("ascii")
-
-    return s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle
 
 
 ## Function for obtaining access token for calling Cloud Central API
@@ -369,64 +343,6 @@ def getCloudCentralAccessToken(refreshToken: str, printOutput: bool = False) -> 
 
 
 # Function for restoring a snapshot
-def restoreSnapshot(volumeName: str, snapshotName: str, printOutput: bool = False) :
-    # Retrieve config details from config file
-    try :
-        config = retrieveConfig(printOutput=printOutput)
-    except InvalidConfigError:
-        raise
-    try :
-        connectionType = config["connectionType"]
-    except :
-        if printOutput :
-            printInvalidConfigError()
-        raise InvalidConfigError()
-
-    if connectionType == "ONTAP" :
-        # Instantiate connection to ONTAP cluster
-        try :
-            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
-        except InvalidConfigError:
-            raise
-
-        # Retrieve svm from config file
-        try :
-            svm = config["svm"]
-        except :
-            if printOutput :
-                printInvalidConfigError()
-            raise InvalidConfigError()
-
-        if printOutput :
-            print("Restoring snapshot '" + snapshotName + "'.")
-
-        try :
-            # Retrieve volume
-            volume = NetAppVolume.find(name=volumeName, svm=svm)
-            if not volume :
-                if printOutput :
-                    print("Error: Invalid volume name.")
-                raise InvalidVolumeParameterError("name")
-
-            # Retrieve snapshot
-            snapshot = NetAppSnapshot.find(volume.uuid, name=snapshotName)
-            if not snapshot :
-                if printOutput :
-                    print("Error: Invalid snapshot name.")
-                raise InvalidSnapshotParameterError("name")
-
-            # Restore snapshot
-            volume.patch(volume.uuid, **{"restore_to.snapshot.name": snapshot.name, "restore_to.snapshot.uuid": snapshot.uuid}, poll=True)
-            if printOutput :
-                print("Snapshot restored successfully.")
-
-        except NetAppRestError as err :
-            if printOutput :
-                print("Error: ONTAP Rest API Error: ", err)
-            raise APIConnectionError(err)
-
-    else :
-        raise ConnectionTypeError()
 
 
 ## Function for cloning a volume
@@ -651,95 +567,15 @@ def syncSnapMirrorRelationship(uuid: str, waitUntilComplete: bool = False, print
 
 
 ## Function for uploading a file to S3
-def uploadToS3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s3VerifySSLCert: bool, s3CACertBundle: str, s3Bucket: str, localFile: str, s3ObjectKey: str, s3ExtraArgs: str = None, printOutput: bool = False) :
-    # Instantiate S3 session
-    try :
-        s3 = instantiateS3Session(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, printOutput=printOutput)
-    except Exception as err :
-        if printOutput :
-            print("Error: S3 API error: ", err)
-        raise APIConnectionError(err)
-
-    # Upload file
-    if printOutput :
-        print("Uploading file '" + localFile + "' to bucket '" + s3Bucket + "' and applying key '" + s3ObjectKey + "'.")
-    
-    try :
-        if s3ExtraArgs :
-            s3.Object(s3Bucket, s3ObjectKey).upload_file(localFile, ExtraArgs=json.loads(s3ExtraArgs))
-        else :
-            s3.Object(s3Bucket, s3ObjectKey).upload_file(localFile)
-    except Exception as err :
-        if printOutput :
-            print("Error: S3 API error: ", err)
-        raise APIConnectionError(err)
 
 
 ## Function for downloading a file from S3
 
 
 ##  Function for pushing a file to S3
-def pushFileToS3(s3Bucket: str, localFile: str, s3ObjectKey: str = None, s3ExtraArgs: str = None, printOutput: bool = False) :
-    # Retrieve S3 access details from existing config file
-    try :
-        s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = retrieveS3AccessDetails(printOutput=printOutput)
-    except InvalidConfigError:
-        raise
-    
-    # Set S3 object key
-    if not s3ObjectKey :
-        s3ObjectKey = localFile
-
-    # Upload file
-    try :
-        uploadToS3(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, s3Bucket=s3Bucket, localFile=localFile, s3ObjectKey=s3ObjectKey, s3ExtraArgs=s3ExtraArgs, printOutput=printOutput)
-    except APIConnectionError:
-        raise
-
-    print("Upload complete.")
 
 
 ##  Function for pushing a directory to S3
-def pushDirectoryToS3(s3Bucket: str, localDirectory: str, s3ObjectKeyPrefix: str = "", s3ExtraArgs: str = None, printOutput: bool = False) :
-    # Retrieve S3 access details from existing config file
-    try :
-        s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = retrieveS3AccessDetails(printOutput=printOutput)
-    except InvalidConfigError:
-        raise
-    
-    # Multithread the upload operation
-    with ThreadPoolExecutor() as executor :
-        # Loop through all files in directory
-        for dirpath, dirnames, filenames in os.walk(localDirectory) :
-            # Exclude hidden files and directories
-            filenames = [filename for filename in filenames if not filename[0] == '.']
-            dirnames[:] = [dirname for dirname in dirnames if not dirname[0] == '.']
-
-            for filename in filenames:
-                # Build filepath
-                if localDirectory.endswith(os.sep) :
-                    dirpathBeginIndex = len(localDirectory)
-                else :
-                    dirpathBeginIndex = len(localDirectory) + 1
-
-                subdirpath = dirpath[dirpathBeginIndex:] 
-
-                if subdirpath :
-                    filepath = subdirpath + os.sep + filename
-                else :
-                    filepath = filename
-
-                # Set S3 object details
-                s3ObjectKey = s3ObjectKeyPrefix + filepath
-                localFile = dirpath + os.sep + filename
-
-                # Upload file
-                try :
-                    executor.submit(uploadToS3, s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, s3Bucket=s3Bucket, localFile=localFile, s3ObjectKey=s3ObjectKey, s3ExtraArgs=s3ExtraArgs, printOutput=printOutput)
-                except APIConnectionError:
-                    raise
-    
-    print("Upload complete.")
 
 
 ##  Function for pull an object from S3
@@ -1569,137 +1405,137 @@ if __name__ == '__main__' :
         else:
             handleInvalidCommand()
 
-    elif action in ("push-to-s3", "push-s3", "s3-push") :
+    elif action in ("push-to-s3", "push-s3", "s3-push"):
         # Get desired target from command line args
         target = getTarget(sys.argv)
         
         # Invoke desired action based on target
-        if target in ("directory", "dir") :
+        if target in ("directory", "dir"):
             s3Bucket = None
             s3ObjectKeyPrefix = ""
             localDirectory = None
             s3ExtraArgs = None
 
             # Get command line options
-            try :
+            try:
                 opts, args = getopt.getopt(sys.argv[3:], "hb:p:d:e:", ["help", "bucket=", "key-prefix=", "directory=", "extra-args="])
-            except :
+            except:
                 handleInvalidCommand(helpText=helpTextPushToS3Directory, invalidOptArg=True)
 
             # Parse command line options
-            for opt, arg in opts :
+            for opt, arg in opts:
                 if opt in ("-h", "--help") :
                     print(helpTextPushToS3Directory)
                     sys.exit(0)
-                elif opt in ("-b", "--bucket") :
+                elif opt in ("-b", "--bucket"):
                     s3Bucket = arg
-                elif opt in ("-p", "--key-prefix") :
+                elif opt in ("-p", "--key-prefix"):
                     s3ObjectKeyPrefix = arg
-                elif opt in ("-d", "--directory") :
+                elif opt in ("-d", "--directory"):
                     localDirectory = arg
-                elif opt in ("-e", "--extra-args") :
+                elif opt in ("-e", "--extra-args"):
                     s3ExtraArgs = arg
             
             # Check for required options
-            if not s3Bucket or not localDirectory  :
+            if not s3Bucket or not localDirectory:
                 handleInvalidCommand(helpText=helpTextPushToS3Directory, invalidOptArg=True)
 
             # Push file to S3
-            try :
+            try:
                 pushDirectoryToS3(s3Bucket=s3Bucket, localDirectory=localDirectory, s3ObjectKeyPrefix=s3ObjectKeyPrefix, s3ExtraArgs=s3ExtraArgs, printOutput=True)
-            except (InvalidConfigError, APIConnectionError) :
+            except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
-        elif target in ("file") :
+        elif target in ("file"):
             s3Bucket = None
             s3ObjectKey = None
             localFile = None
             s3ExtraArgs = None
 
             # Get command line options
-            try :
+            try:
                 opts, args = getopt.getopt(sys.argv[3:], "hb:k:f:e:", ["help", "bucket=", "key=", "file=", "extra-args="])
-            except :
+            except:
                 handleInvalidCommand(helpText=helpTextPushToS3File, invalidOptArg=True)
 
             # Parse command line options
-            for opt, arg in opts :
-                if opt in ("-h", "--help") :
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
                     print(helpTextPushToS3File)
                     sys.exit(0)
-                elif opt in ("-b", "--bucket") :
+                elif opt in ("-b", "--bucket"):
                     s3Bucket = arg
-                elif opt in ("-k", "--key") :
+                elif opt in ("-k", "--key"):
                     s3ObjectKey = arg
-                elif opt in ("-f", "--file") :
+                elif opt in ("-f", "--file"):
                     localFile = arg
-                elif opt in ("-e", "--extra-args") :
+                elif opt in ("-e", "--extra-args"):
                     s3ExtraArgs = arg
             
             # Check for required options
-            if not s3Bucket or not localFile  :
+            if not s3Bucket or not localFile:
                 handleInvalidCommand(helpText=helpTextPushToS3File, invalidOptArg=True)
 
             # Push file to S3
-            try :
+            try:
                 pushFileToS3(s3Bucket=s3Bucket, s3ObjectKey=s3ObjectKey, localFile=localFile, s3ExtraArgs=s3ExtraArgs, printOutput=True)
-            except (InvalidConfigError, APIConnectionError) :
+            except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
-        else :
+        else:
             handleInvalidCommand()
 
-    elif action in ("restore") :
+    elif action in ("restore"):
         # Get desired target from command line args
         target = getTarget(sys.argv)
         
         # Invoke desired action based on target
-        if target in ("snapshot", "snap") :
+        if target in ("snapshot", "snap"):
             volumeName = None
             snapshotName = None
             force = False
 
             # Get command line options
-            try :
+            try:
                 opts, args = getopt.getopt(sys.argv[3:], "hn:v:f", ["help", "name=", "volume=", "force"])
-            except :
+            except:
                 handleInvalidCommand(helpText=helpTextRestoreSnapshot, invalidOptArg=True)
 
             # Parse command line options
-            for opt, arg in opts :
-                if opt in ("-h", "--help") :
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
                     print(helpTextRestoreSnapshot)
                     sys.exit(0)
-                elif opt in ("-n", "--name") :
+                elif opt in ("-n", "--name"):
                     snapshotName = arg
-                elif opt in ("-v", "--volume") :
+                elif opt in ("-v", "--volume"):
                     volumeName = arg
-                elif opt in ("-f", "--force") :
+                elif opt in ("-f", "--force"):
                     force = True
             
             # Check for required options
-            if not volumeName or not snapshotName  :
+            if not volumeName or not snapshotName:
                 handleInvalidCommand(helpText=helpTextRestoreSnapshot, invalidOptArg=True)
 
             # Confirm restore operation
-            if not force :
+            if not force:
                 print("Warning: When you restore a snapshot, all subsequent snapshots are deleted.")
-                while True :
+                while True:
                     proceed = input("Are you sure that you want to proceed? (yes/no): ")
-                    if proceed in ("yes", "Yes", "YES") :
+                    if proceed in ("yes", "Yes", "YES"):
                         break
-                    elif proceed in ("no", "No", "NO") :
+                    elif proceed in ("no", "No", "NO"):
                         sys.exit(0)
-                    else :
+                    else:
                         print("Invalid value. Must enter 'yes' or 'no'.")
 
             # Restore snapshot
-            try :
+            try:
                 restoreSnapshot(volumeName=volumeName, snapshotName=snapshotName, printOutput=True)
-            except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError) :
+            except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError):
                 sys.exit(1)
 
-        else :
+        else:
             handleInvalidCommand()
 
     elif action == "sync" :
