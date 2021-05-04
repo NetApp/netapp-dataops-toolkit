@@ -6,6 +6,7 @@ import os
 import re
 from getpass import getpass
 
+from netapp_dstk import traditional
 from netapp_dstk.traditional import (
     handleInvalidCommand,
     helpTextStandard,
@@ -1256,8 +1257,9 @@ if __name__ == '__main__':
         else:
             handleInvalidCommand()
 
-    elif action in ("version", "v", "-v", "--version") :
-        print("NetApp Data Science Toolkit for Traditional Environments - version " + version)
+    elif action in ("version", "v", "-v", "--version"):
+        print("NetApp Data Science Toolkit for Traditional Environments - version "
+              + traditional.__version__)
         
     else:
         handleInvalidCommand()
