@@ -1,90 +1,74 @@
 #!/usr/bin/env python3
 
-## NetApp Data Science Toolkit
-from netapp_dstk.traditional import handleInvalidCommand, helpTextStandard, getTarget, cloneVolume, retrieveConfig, \
-    InvalidConfigError, printInvalidConfigError, instantiateConnection, InvalidVolumeParameterError, \
-    InvalidSnapshotParameterError, APIConnectionError, mountVolume, MountOperationError, ConnectionTypeError, \
-    listVolumes, createSnapshot, createVolume, deleteSnapshot, deleteVolume, listCloudSyncRelationships, \
-    listSnapMirrorRelationships, listSnapshots, prepopulateFlexCache, pullBucketFromS3, pullObjectFromS3, \
-    pushDirectoryToS3, pushFileToS3, restoreSnapshot
+import base64
+import json
+import os
+import re
+from getpass import getpass
+
+from netapp_dstk.traditional import (
+    handleInvalidCommand,
+    helpTextStandard,
+    getTarget,
+    cloneVolume,
+    InvalidConfigError,
+    InvalidVolumeParameterError,
+    InvalidSnapshotParameterError,
+    APIConnectionError,
+    mountVolume,
+    MountOperationError,
+    ConnectionTypeError,
+    listVolumes,
+    createSnapshot,
+    createVolume,
+    deleteSnapshot,
+    deleteVolume,
+    listCloudSyncRelationships,
+    listSnapMirrorRelationships,
+    listSnapshots,
+    prepopulateFlexCache,
+    pullBucketFromS3,
+    pullObjectFromS3,
+    pushDirectoryToS3,
+    pushFileToS3,
+    restoreSnapshot,
+    CloudSyncSyncOperationError,
+    syncCloudSyncRelationship,
+    syncSnapMirrorRelationship,
+    SnapMirrorSyncOperationError
+)
 
 version = "1.2"
 
 
-import base64, json, os, re, requests, time
-from getpass import getpass
-from netapp_ontap.resources import SnapmirrorRelationship as NetAppSnapmirrorRelationship
-from netapp_ontap.resources import SnapmirrorTransfer as NetAppSnapmirrorTransfer
-from netapp_ontap.error import NetAppRestError
-
-
-## API connection error class; objects of this class will be raised when an API connection cannot be established
-
-
-## Connection type error class; objects of this class will be raised when an invalid connection type is given
-
-
-## Invalid config error class; objects of this class will be raised when the config file is invalid or missing
-
-
-## Invalid snapshot parameter error class; objects of this class will be raised when an invalid snapshot parameter is given
-
-
-## Invalid volume parameter error class; objects of this class will be raised when an invalid volume parameter is given
-
-
-## Mount operation error class; objects of this class will be raised when a mount operation fails
-
-
-## Cloud Sync sync operation error class; objects of this class will be raised when a Cloud Sync sync operation fails
-class CloudSyncSyncOperationError(Exception) :
-    '''Error that will be raised when a Cloud Sync sync operation fails'''
-    pass
-
-
 ## Invalid SnapMirror parameter error class; objects of this class will be raised when an invalid SnapMirror parameter is given
 class InvalidSnapMirrorParameterError(Exception) :
-    '''Error that will be raised when an invalid SnapMirror parameter is given'''
+    """Error that will be raised when an invalid SnapMirror parameter is give"""
     pass
-
-
-## SnapMirror sync operation error class; objects of this class will be raised when a SnapMirror sync operation fails
-class SnapMirrorSyncOperationError(Exception) :
-    '''Error that will be raised when a SnapMirror sync operation fails'''
-    pass
-
-
-## Generic function for printing an API response
-def printAPIResponse(response: requests.Response) :
-    print("API Response:")
-    print("Status Code: ", response.status_code)
-    print("Header: ", response.headers)
-    if response.text :
-        print("Body: ", response.text)
 
 
 ## Function for creating config file
-def createConfig(configDirPath: str = "~/.ntap_dsutil", configFilename: str = "config.json", connectionType: str = "ONTAP") :
+def createConfig(configDirPath: str = "~/.ntap_dsutil", configFilename: str = "config.json", connectionType: str = "ONTAP"):
     # Check to see if user has an existing config file
     configDirPath = os.path.expanduser(configDirPath)
     configFilePath = os.path.join(configDirPath, configFilename)
-    if os.path.isfile(configFilePath) :
+    if os.path.isfile(configFilePath):
         print("You already have an existing config file. Creating a new config file will overwrite this existing config.")
         # If existing config file is present, ask user if they want to proceed
         # Verify value entered; prompt user to re-enter if invalid
-        while True :
+        while True:
             proceed = input("Are you sure that you want to proceed? (yes/no): ")
-            if proceed in ("yes", "Yes", "YES") :
+            if proceed in ("yes", "Yes", "YES"):
                 break
-            elif proceed in ("no", "No", "NO") :
+            elif proceed in ("no", "No", "NO"):
                 sys.exit(0)
-            else :
+            else:
                 print("Invalid value. Must enter 'yes' or 'no'.")
         
     # Instantiate dict for storing connection details
     config = dict()
 
-    if connectionType == "ONTAP" :
+    if connectionType == "ONTAP":
         config["connectionType"] = connectionType
 
         # Prompt user to enter config details
@@ -94,60 +78,60 @@ def createConfig(configDirPath: str = "~/.ntap_dsutil", configFilename: str = "c
 
         # Prompt user to enter default volume type
         # Verify value entered; promopt user to re-enter if invalid
-        while True :
+        while True:
             config["defaultVolumeType"] = input("Enter default volume type to use when creating new volumes (flexgroup/flexvol) [flexgroup]: ")
             if not config["defaultVolumeType"] :
                 config["defaultVolumeType"] = "flexgroup"
                 break
-            elif config["defaultVolumeType"] in ("flexgroup", "FlexGroup") :
+            elif config["defaultVolumeType"] in ("flexgroup", "FlexGroup"):
                 config["defaultVolumeType"] = "flexgroup"
                 break
-            elif config["defaultVolumeType"] in ("flexvol", "FlexVol") :
+            elif config["defaultVolumeType"] in ("flexvol", "FlexVol"):
                 config["defaultVolumeType"] = "flexvol"
                 break
-            else :
+            else:
                 print("Invalid value. Must enter 'flexgroup' or 'flexvol'.")
 
         # prompt user to enter default export policy
         config["defaultExportPolicy"] = input("Enter export policy to use by default when creating new volumes [default]: ")
-        if not config["defaultExportPolicy"] :
+        if not config["defaultExportPolicy"]:
             config["defaultExportPolicy"] = "default"
 
         # prompt user to enter default snapshot policy
         config["defaultSnapshotPolicy"] = input("Enter snapshot policy to use by default when creating new volumes [none]: ")
-        if not config["defaultSnapshotPolicy"] :
+        if not config["defaultSnapshotPolicy"]:
             config["defaultSnapshotPolicy"] = "none"
 
         # Prompt user to enter default uid, gid, and unix permissions
         # Verify values entered; promopt user to re-enter if invalid
-        while True :
+        while True:
             config["defaultUnixUID"] = input("Enter unix filesystem user id (uid) to apply by default when creating new volumes (ex. '0' for root user) [0]: ")
-            if not config["defaultUnixUID"] :
+            if not config["defaultUnixUID"]:
                 config["defaultUnixUID"] = "0"
                 break
-            try :
+            try:
                 int(config["defaultUnixUID"])
                 break
-            except :
+            except:
                 print("Invalid value. Must enter an integer.")
-        while True :
+        while True:
             config["defaultUnixGID"] = input("Enter unix filesystem group id (gid) to apply by default when creating new volumes (ex. '0' for root group) [0]: ")
-            if not config["defaultUnixGID"] :
+            if not config["defaultUnixGID"]:
                 config["defaultUnixGID"] = "0"
                 break
-            try :
+            try:
                 int(config["defaultUnixGID"])
                 break
-            except :
+            except:
                 print("Invalid value. Must enter an integer.")
-        while True :
+        while True:
             config["defaultUnixPermissions"] = input("Enter unix filesystem permissions to apply by default when creating new volumes (ex. '0777' for full read/write permissions for all users and groups) [0777]: ")
             if not config["defaultUnixPermissions"] :
                 config["defaultUnixPermissions"] = "0777"
                 break
-            elif not re.search("^0[0-7]{3}", config["defaultUnixPermissions"]) :
+            elif not re.search("^0[0-7]{3}", config["defaultUnixPermissions"]):
                 print("Invalud value. Must enter a valid unix permissions value. Acceptable values are '0777', '0755', '0744', etc.")
-            else :
+            else:
                 break
 
         # Prompt user to enter additional config details
@@ -162,7 +146,7 @@ def createConfig(configDirPath: str = "~/.ntap_dsutil", configFilename: str = "c
 
         # Prompt user to enter value denoting whether or not to verify SSL cert when calling ONTAP API
         # Verify value entered; prompt user to re-enter if invalid
-        while True :
+        while True:
             verifySSLCert = input("Verify SSL certificate when calling ONTAP API (true/false): ")
             if verifySSLCert in ("true", "True") :
                 config["verifySSLCert"] = True
@@ -170,18 +154,18 @@ def createConfig(configDirPath: str = "~/.ntap_dsutil", configFilename: str = "c
             elif verifySSLCert in ("false", "False") :
                 config["verifySSLCert"] = False
                 break
-            else :
+            else:
                 print("Invalid value. Must enter 'true' or 'false'.")
 
-    else :
+    else:
         raise ConnectionTypeError()
 
     # Ask user if they want to use cloud sync functionality
     # Verify value entered; prompt user to re-enter if invalid
-    while True :
+    while True:
         useCloudSync = input("Do you intend to use this toolkit to trigger Cloud Sync operations? (yes/no): ")
 
-        if useCloudSync in ("yes", "Yes", "YES") :
+        if useCloudSync in ("yes", "Yes", "YES"):
             # Prompt user to enter cloud central refresh token
             print("Note: If you do not have a Cloud Central refresh token, visit https://services.cloud.netapp.com/refresh-token to create one.")
             refreshTokenString = getpass("Enter Cloud Central refresh token: ")
@@ -193,18 +177,18 @@ def createConfig(configDirPath: str = "~/.ntap_dsutil", configFilename: str = "c
 
             break
 
-        elif useCloudSync in ("no", "No", "NO") :
+        elif useCloudSync in ("no", "No", "NO"):
             break
 
-        else :
+        else:
             print("Invalid value. Must enter 'yes' or 'no'.")
 
     # Ask user if they want to use S3 functionality
     # Verify value entered; prompt user to re-enter if invalid
-    while True :
+    while True:
         useS3 = input("Do you intend to use this toolkit to push/pull from S3? (yes/no): ")
 
-        if useS3 in ("yes", "Yes", "YES") :
+        if useS3 in ("yes", "Yes", "YES"):
             # Promt user to enter S3 endpoint details
             config["s3Endpoint"] = input("Enter S3 endpoint: ")
 
@@ -219,29 +203,29 @@ def createConfig(configDirPath: str = "~/.ntap_dsutil", configFilename: str = "c
 
             # Prompt user to enter value denoting whether or not to verify SSL cert when calling S3 API
             # Verify value entered; prompt user to re-enter if invalid
-            while True :
+            while True:
                 s3VerifySSLCert = input("Verify SSL certificate when calling S3 API (true/false): ")
-                if s3VerifySSLCert in ("true", "True") :
+                if s3VerifySSLCert in ("true", "True"):
                     config["s3VerifySSLCert"] = True
                     config["s3CACertBundle"] = input("Enter CA cert bundle to use when calling S3 API (optional) []: ")
                     break
-                elif s3VerifySSLCert in ("false", "False") :
+                elif s3VerifySSLCert in ("false", "False"):
                     config["s3VerifySSLCert"] = False
                     config["s3CACertBundle"] = ""
                     break
-                else :
+                else:
                     print("Invalid value. Must enter 'true' or 'false'.")
 
             break
 
-        elif useS3 in ("no", "No", "NO") :
+        elif useS3 in ("no", "No", "NO"):
             break
 
-        else :
+        else:
             print("Invalid value. Must enter 'yes' or 'no'.")
 
     # Create config dir if it doesn't already exist
-    try :
+    try:
         os.mkdir(configDirPath)
     except FileExistsError :
         pass
@@ -252,336 +236,6 @@ def createConfig(configDirPath: str = "~/.ntap_dsutil", configFilename: str = "c
         json.dump(config, configFile)
 
     print("Created config file: '" + configFilePath + "'.")
-
-
-## Function for printing appropriate error message when config file is missing or invalid
-
-
-## Function for retrieving config details from existing config file
-
-
-# Function for retrieving Cloud Central refresh token from existing config file
-def retrieveCloudCentralRefreshToken(printOutput: bool = False) -> str :
-    # Retrieve refresh token from config file
-    try :
-        config = retrieveConfig(printOutput=printOutput)
-    except InvalidConfigError:
-        raise
-    try :
-        refreshTokenBase64 = config["cloudCentralRefreshToken"]
-    except :
-        if printOutput :
-            printInvalidConfigError()
-        raise InvalidConfigError()
-
-    # Decode base64-encoded refresh token
-    refreshTokenBase64Bytes = refreshTokenBase64.encode("ascii")
-    refreshTokenBytes = base64.b64decode(refreshTokenBase64Bytes)
-    refreshToken = refreshTokenBytes.decode("ascii")
-
-    return refreshToken
-
-
-# Function for retrieving S3 access details from existing config file
-
-
-## Function for obtaining access token for calling Cloud Central API
-def getCloudCentralAccessToken(refreshToken: str, printOutput: bool = False) -> str :
-    # Define parameters for API call
-    url = "https://netapp-cloud-account.auth0.com/oauth/token"
-    headers = {
-        "Content-Type": "application/json"
-    }
-    data = {
-        "grant_type": "refresh_token",
-        "refresh_token": refreshToken,
-        "client_id": "Mu0V1ywgYteI6w1MbD15fKfVIUrNXGWC"
-    }
-
-    # Call API to optain access token
-    response = requests.post(url=url, headers=headers, data=json.dumps(data))
-
-    # Parse response to retrieve access token
-    try :
-        responseBody = json.loads(response.text)
-        accessToken = responseBody["access_token"]
-    except :
-        errorMessage = "Error obtaining access token from Cloud Sync API"
-        if printOutput :
-            print("Error:", errorMessage)
-            printAPIResponse(response)
-        raise APIConnectionError(errorMessage, response)
-
-    return accessToken
-
-
-##  Function for instantiating an S3 session
-
-
-## Function for instantiating connection to NetApp storage instance
-
-
-## Function for listing all volumes
-
-
-## Function for mounting an existing volume
-
-
-## Function for creating a new volume
-
-
-# Function for creating a snapshot
-
-
-# Function for listing all snapshots
-
-
-# Function for deleting a snapshot
-
-
-# Function for deleting a volume
-
-
-# Function for restoring a snapshot
-
-
-## Function for cloning a volume
-
-
-## Function for obtaining access paremeters for calling Cloud Sync API
-def getCloudSyncAccessParameters(refreshToken: str, printOutput: bool = False) -> (str, str) :
-    try :
-        accessToken = getCloudCentralAccessToken(refreshToken=refreshToken, printOutput=printOutput)
-    except APIConnectionError:
-        raise
-
-    # Define parameters for API call
-    url = "https://cloudsync.netapp.com/api/accounts"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + accessToken
-    }
-
-    # Call API to obtain account ID
-    response = requests.get(url=url, headers=headers)
-
-    # Parse response to retrieve account ID
-    try :
-        responseBody = json.loads(response.text)
-        accountId = responseBody[0]["accountId"]
-    except :
-        errorMessage = "Error obtaining account ID from Cloud Sync API"
-        if printOutput :
-            print("Error:", errorMessage)
-            printAPIResponse(response)
-        raise APIConnectionError(errorMessage, response)
-
-    # Return access token and account ID
-    return accessToken, accountId
-
-
-## Function for listing cloud sync relationships
-
-
-## Function for triggering a sync operation for an existing cloud sync relationships
-def syncCloudSyncRelationship(relationshipID: str, waitUntilComplete: bool = False, printOutput: bool = False) :
-    # Step 1: Obtain access token and account ID for accessing Cloud Sync API
-
-    # Retrieve refresh token
-    try :
-        refreshToken = retrieveCloudCentralRefreshToken(printOutput=printOutput)
-    except InvalidConfigError:
-        raise
-
-    # Obtain access token and account ID
-    try :
-        accessToken, accountId = getCloudSyncAccessParameters(refreshToken=refreshToken, printOutput=printOutput)
-    except APIConnectionError:
-        raise
-
-    # Step 2: Trigger Cloud Sync sync
-
-    # Define parameters for API call
-    url = "https://cloudsync.netapp.com/api/relationships/%s/sync" % (relationshipID)
-    headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "x-account-id": accountId,
-        "Authorization": "Bearer " + accessToken
-    }
-
-    # Call API to trigger sync
-    if printOutput :
-        print("Triggering sync operation for Cloud Sync relationship (ID = " + relationshipID + ").")
-    response = requests.put(url = url, headers = headers)
-
-    # Check for API response status code of 202; if not 202, raise error
-    if response.status_code != 202 :
-        errorMessage = "Error calling Cloud Sync API to trigger sync operation."
-        if printOutput :
-            print("Error:", errorMessage)
-            printAPIResponse(response)
-        raise APIConnectionError(errorMessage, response)
-    
-    if printOutput :
-        print("Sync operation successfully triggered.")
-
-    # Step 3: Obtain status of the sync operation; keep checking until the sync operation has completed
-
-    if waitUntilComplete :
-        while True :
-            # Define parameters for API call
-            url = "https://cloudsync.netapp.com/api/relationships-v2/%s" % (relationshipID)
-            headers = {
-                "Accept": "application/json",
-                "x-account-id": accountId,
-                "Authorization": "Bearer " + accessToken
-            }
-
-            # Call API to obtain status of sync operation
-            response = requests.get(url = url, headers = headers)
-
-            # Parse response to retrieve status of sync operation
-            try :
-                responseBody = json.loads(response.text)
-                latestActivityType = responseBody["activity"]["type"]
-                latestActivityStatus = responseBody["activity"]["status"]
-            except :
-                errorMessage = "Error obtaining status of sync operation from Cloud Sync API."
-                if printOutput :
-                    print("Error:", errorMessage)
-                    printAPIResponse(response)
-                raise APIConnectionError(errorMessage, response)
-            
-            # End execution if the latest update is complete
-            if latestActivityType == "Sync" :
-                if latestActivityStatus == "DONE" :
-                    if printOutput :
-                        print("Success: Sync operation is complete.")
-                    break
-                elif latestActivityStatus == "FAILED" :
-                    if printOutput :
-                        failureMessage = responseBody["activity"]["failureMessage"]
-                        print("Error: Sync operation failed.")
-                        print("Message:", failureMessage)
-                    raise CloudSyncSyncOperationError(latestActivityStatus, failureMessage)
-                elif latestActivityStatus == "RUNNING" :
-                    # Print message re: progress
-                    if printOutput : 
-                        print("Sync operation is not yet complete. Status:", latestActivityStatus)
-                        print("Checking again in 60 seconds...")
-                else :
-                    if printOutput :
-                        print ("Error: Unknown sync operation status (" + latestActivityStatus + ") returned by Cloud Sync API.")
-                    raise CloudSyncSyncOperationError(latestActivityStatus)
-
-            # Sleep for 60 seconds before checking progress again
-            time.sleep(60)
-
-
-## Function for listing all SnapMirror relationships
-
-
-## Function for triggering a sync operation for a SnapMirror relationship
-def syncSnapMirrorRelationship(uuid: str, waitUntilComplete: bool = False, printOutput: bool = False) :
-    # Retrieve config details from config file
-    try :
-        config = retrieveConfig(printOutput=printOutput)
-    except InvalidConfigError:
-        raise
-    try :
-        connectionType = config["connectionType"]
-    except :
-        if printOutput :
-            printInvalidConfigError()
-        raise InvalidConfigError()
-
-    if connectionType == "ONTAP" :
-        # Instantiate connection to ONTAP cluster
-        try :
-            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
-        except InvalidConfigError:
-            raise
-    
-        if printOutput :
-            print("Triggering sync operation for SnapMirror relationship (UUID = " + uuid + ").")
-
-        try :
-            # Trigger sync operation for SnapMirror relationship
-            transfer = NetAppSnapmirrorTransfer(uuid)
-            transfer.post(poll=True)
-        except NetAppRestError as err :
-            if printOutput :
-                print("Error: ONTAP Rest API Error: ", err)
-            raise APIConnectionError(err)
-
-        if printOutput :
-            print("Sync operation successfully triggered.")
-
-        if waitUntilComplete :
-            # Wait to perform initial check
-            print("Waiting for sync operation to complete.")
-            print("Status check will be performed in 10 seconds...")
-            time.sleep(10)
-
-            while True :
-                # Retrieve relationship
-                relationship = NetAppSnapmirrorRelationship.find(uuid=uuid)
-                relationship.get()
-
-                # Check status of sync operation
-                if hasattr(relationship, "transfer") :
-                    transferState = relationship.transfer.state
-                else :
-                    transferState = None
-
-                # if transfer is complete, end execution
-                if not transferState :
-                    healthy = relationship.healthy
-                    if healthy :
-                        if printOutput :
-                            print("Success: Sync operation is complete.")
-                        break
-                    else :
-                        if printOutput :
-                            print("Error: Relationship is not healthy. Access ONTAP System Manager for details.")
-                        raise SnapMirrorSyncOperationError("not healthy")
-                elif transferState != "transferring" :
-                    if printOutput :
-                        print ("Error: Unknown sync operation status (" + transferState + ") returned by ONTAP API.")
-                    raise SnapMirrorSyncOperationError(transferState)
-                else :
-                    # Print message re: progress
-                    if printOutput : 
-                        print("Sync operation is not yet complete. Status:", transferState)
-                        print("Checking again in 60 seconds...")
-
-                # Sleep for 60 seconds before checking progress again
-                time.sleep(60)
-
-    else :
-        raise ConnectionTypeError()
-
-
-# Function for prepopulating a FlexCache
-
-
-## Function for uploading a file to S3
-
-
-## Function for downloading a file from S3
-
-
-##  Function for pushing a file to S3
-
-
-##  Function for pushing a directory to S3
-
-
-##  Function for pull an object from S3
-
-
-##  Function for pushing a directory to S3
 
 
 ## Define contents of help text
@@ -908,29 +562,23 @@ Examples:
 '''
 
 
-## Function for handling situation in which user enters invalid command
-
-
-## Function for getting desired target from command line args
-
-
 ## Main function
-if __name__ == '__main__' :
+if __name__ == '__main__':
     import sys, getopt
 
     # Get desired action from command line args
-    try :
+    try:
         action = sys.argv[1]
-    except :
+    except:
         handleInvalidCommand()
 
     # Invoke desired action
-    if action == "clone" :
+    if action == "clone":
         # Get desired target from command line args
         target = getTarget(sys.argv)
 
         # Invoke desired action based on target
-        if target in ("volume", "vol") :
+        if target in ("volume", "vol"):
             newVolumeName = None
             sourceVolumeName = None
             sourceSnapshotName = None
@@ -939,45 +587,45 @@ if __name__ == '__main__' :
             unixGID = None
 
             # Get command line options
-            try :
+            try:
                 opts, args = getopt.getopt(sys.argv[3:], "hn:v:s:m:u:g:", ["help", "name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid="])
-            except :
+            except:
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
 
             # Parse command line options
-            for opt, arg in opts :
-                if opt in ("-h", "--help") :
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
                     print(helpTextCloneVolume)
                     sys.exit(0)
-                elif opt in ("-n", "--name") :
+                elif opt in ("-n", "--name"):
                     newVolumeName = arg
-                elif opt in ("-v", "--source-volume") :
+                elif opt in ("-v", "--source-volume"):
                     sourceVolumeName = arg
-                elif opt in ("-s", "--source-snapshot") :
+                elif opt in ("-s", "--source-snapshot"):
                     sourceSnapshotName = arg
-                elif opt in ("-m", "--mountpoint") :
+                elif opt in ("-m", "--mountpoint"):
                     mountpoint = arg
-                elif opt in ("-u", "--uid") :
+                elif opt in ("-u", "--uid"):
                     unixUID = arg
-                elif opt in ("-g", "--gid") :
+                elif opt in ("-g", "--gid"):
                     unixGID = arg
             
             # Check for required options
-            if not newVolumeName or not sourceVolumeName  :
+            if not newVolumeName or not sourceVolumeName:
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
-            if (unixUID and not unixGID) or (unixGID and not unixUID) :
+            if (unixUID and not unixGID) or (unixGID and not unixUID):
                 print("Error: if either one of -u/--uid or -g/--gid is spefied, then both must be specified.")
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
 
             # Clone volume
-            try :
+            try:
                 cloneVolume(newVolumeName=newVolumeName, sourceVolumeName=sourceVolumeName, sourceSnapshotName=sourceSnapshotName,
                             mountpoint=mountpoint, unixUID=unixUID, unixGID=unixGID, printOutput=True)
             except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError,
-                    MountOperationError) :
+                    MountOperationError):
                 sys.exit(1)
 
-        else :
+        else:
             handleInvalidCommand()
 
     elif action in ("config", "setup"):
@@ -1010,13 +658,13 @@ if __name__ == '__main__' :
                 handleInvalidCommand(helpText=helpTextCreateSnapshot, invalidOptArg=True)
 
             # Parse command line options
-            for opt, arg in opts :
+            for opt, arg in opts:
                 if opt in ("-h", "--help") :
                     print(helpTextCreateSnapshot)
                     sys.exit(0)
-                elif opt in ("-n", "--name") :
+                elif opt in ("-n", "--name"):
                     snapshotName = arg
-                elif opt in ("-v", "--volume") :
+                elif opt in ("-v", "--volume"):
                     volumeName = arg
             
             # Check for required options
@@ -1050,36 +698,36 @@ if __name__ == '__main__' :
 
             # Parse command line options
             for opt, arg in opts:
-                if opt in ("-h", "--help") :
+                if opt in ("-h", "--help"):
                     print(helpTextCreateVolume)
                     sys.exit(0)
-                elif opt in ("-n", "--name") :
+                elif opt in ("-n", "--name"):
                     volumeName = arg
-                elif opt in ("-s", "--size") :
+                elif opt in ("-s", "--size"):
                     volumeSize = arg
-                elif opt in ("-r", "--guarantee-space") :
+                elif opt in ("-r", "--guarantee-space"):
                     guaranteeSpace = True
-                elif opt in ("-t", "--type") :
+                elif opt in ("-t", "--type"):
                     volumeType = arg
-                elif opt in ("-p", "--permissions") :
+                elif opt in ("-p", "--permissions"):
                     unixPermissions = arg
-                elif opt in ("-u", "--uid") :
+                elif opt in ("-u", "--uid"):
                     unixUID = arg
-                elif opt in ("-g", "--gid") :
+                elif opt in ("-g", "--gid"):
                     unixGID = arg
-                elif opt in ("-e", "--export-policy") :
+                elif opt in ("-e", "--export-policy"):
                     exportPolicy = arg
-                elif opt in ("-d", "--snapshot-policy") :
+                elif opt in ("-d", "--snapshot-policy"):
                     snapshotPolicy = arg
-                elif opt in ("-m", "--mountpoint") :
+                elif opt in ("-m", "--mountpoint"):
                     mountpoint = arg
-                elif opt in ("-a", "--aggregate") :
+                elif opt in ("-a", "--aggregate"):
                     aggregate = arg
             
             # Check for required options
-            if not volumeName or not volumeSize :
+            if not volumeName or not volumeSize:
                 handleInvalidCommand(helpText=helpTextCreateVolume, invalidOptArg=True)
-            if (unixUID and not unixGID) or (unixGID and not unixUID) :
+            if (unixUID and not unixGID) or (unixGID and not unixUID):
                 print("Error: if either one of -u/--uid or -g/--gid is spefied, then both must be specified.")
                 handleInvalidCommand(helpText=helpTextCreateVolume, invalidOptArg=True)
 
@@ -1538,77 +1186,78 @@ if __name__ == '__main__' :
         else:
             handleInvalidCommand()
 
-    elif action == "sync" :
+    elif action == "sync":
         # Get desired target from command line args
         target = getTarget(sys.argv)
         
         # Invoke desired action based on target
-        if target in ("cloud-sync-relationship", "cloud-sync") :
+        if target in ("cloud-sync-relationship", "cloud-sync"):
             relationshipID = None
             waitUntilComplete = False
 
             # Get command line options
-            try :
+            try:
                 opts, args = getopt.getopt(sys.argv[3:], "hi:w", ["help", "id=", "wait"])
-            except :
+            except:
                 handleInvalidCommand(helpText=helpTextSyncCloudSyncRelationship, invalidOptArg=True)
 
             # Parse command line options
-            for opt, arg in opts :
-                if opt in ("-h", "--help") :
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
                     print(helpTextSyncCloudSyncRelationship)
                     sys.exit(0)
-                elif opt in ("-i", "--id") :
+                elif opt in ("-i", "--id"):
                     relationshipID = arg
-                elif opt in ("-w", "--wait") :
+                elif opt in ("-w", "--wait"):
                     waitUntilComplete = True
 
             # Check for required options
-            if not relationshipID :
+            if not relationshipID:
                 handleInvalidCommand(helpText=helpTextSyncCloudSyncRelationship, invalidOptArg=True)
 
             # Update cloud sync relationship
-            try :
+            try:
                 syncCloudSyncRelationship(relationshipID=relationshipID, waitUntilComplete=waitUntilComplete, printOutput=True)
-            except (InvalidConfigError, APIConnectionError, CloudSyncSyncOperationError) :
+            except (InvalidConfigError, APIConnectionError, CloudSyncSyncOperationError):
                 sys.exit(1)
 
-        elif target in ("snapmirror-relationship", "snapmirror") :
+        elif target in ("snapmirror-relationship", "snapmirror"):
             uuid = None
             waitUntilComplete = False
 
             # Get command line options
-            try :
+            try:
                 opts, args = getopt.getopt(sys.argv[3:], "hi:w", ["help", "uuid=", "wait"])
-            except :
+            except:
                 handleInvalidCommand(helpText=helpTextSyncSnapMirrorRelationship, invalidOptArg=True)
 
             # Parse command line options
-            for opt, arg in opts :
-                if opt in ("-h", "--help") :
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
                     print(helpTextSyncSnapMirrorRelationship)
                     sys.exit(0)
-                elif opt in ("-i", "--uuid") :
+                elif opt in ("-i", "--uuid"):
                     uuid = arg
-                elif opt in ("-w", "--wait") :
+                elif opt in ("-w", "--wait"):
                     waitUntilComplete = True
 
             # Check for required options
-            if not uuid :
+            if not uuid:
                 handleInvalidCommand(helpText=helpTextSyncSnapMirrorRelationship, invalidOptArg=True)
 
             # Update SnapMirror relationship
-            try :
+            try:
                 syncSnapMirrorRelationship(uuid=uuid, waitUntilComplete=waitUntilComplete, printOutput=True)
             except (
-                    InvalidConfigError, APIConnectionError, InvalidSnapMirrorParameterError, SnapMirrorSyncOperationError) :
+                    InvalidConfigError, APIConnectionError, InvalidSnapMirrorParameterError,
+                    SnapMirrorSyncOperationError) :
                 sys.exit(1)
 
-        else :
+        else:
             handleInvalidCommand()
 
     elif action in ("version", "v", "-v", "--version") :
         print("NetApp Data Science Toolkit for Traditional Environments - version " + version)
         
-    else :
+    else:
         handleInvalidCommand()

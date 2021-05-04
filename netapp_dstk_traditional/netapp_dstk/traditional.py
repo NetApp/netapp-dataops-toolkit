@@ -9,6 +9,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
@@ -17,6 +18,7 @@ from netapp_ontap import config as netappConfig
 from netapp_ontap.error import NetAppRestError
 from netapp_ontap.resources import Flexcache as NetAppFlexCache
 from netapp_ontap.resources import SnapmirrorRelationship as NetAppSnapmirrorRelationship
+from netapp_ontap.resources import SnapmirrorTransfer as NetAppSnapmirrorTransfer
 from netapp_ontap.resources import Snapshot as NetAppSnapshot
 from netapp_ontap.resources import Volume as NetAppVolume
 import pandas as pd
@@ -30,7 +32,6 @@ __version__ = "0.0.1a1"
 #
 # The following attributes are unique to the traditional package.
 #
-from netapp_dstk.ntap_dsutil import retrieveCloudCentralRefreshToken, getCloudSyncAccessParameters, printAPIResponse
 
 helpTextStandard = '''
 The NetApp Data Science Toolkit is a Python library that makes it simple for data scientists and data engineers to perform various data management tasks, such as provisioning a new data volume, near-instantaneously cloning a data volume, and near-instantaneously snapshotting a data volume for traceability/baselining.
@@ -77,6 +78,11 @@ Note: To view details regarding options/arguments for a specific command, run th
 '''
 
 
+class CloudSyncSyncOperationError(Exception) :
+    """Error that will be raised when a Cloud Sync sync operation fails"""
+    pass
+
+
 class ConnectionTypeError(Exception):
     """Error that will be raised when an invalid connection type is given"""
     pass
@@ -101,6 +107,11 @@ class InvalidVolumeParameterError(Exception):
 
 class MountOperationError(Exception):
     """Error that will be raised when a mount operation fails"""
+    pass
+
+
+class SnapMirrorSyncOperationError(Exception) :
+    """Error that will be raised when a SnapMirror sync operation fails"""
     pass
 
 #
@@ -168,6 +179,68 @@ def downloadFromS3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, 
         raise APIConnectionError(err)
 
 
+# TODO: make this private
+def getCloudCentralAccessToken(refreshToken: str, printOutput: bool = False) -> str:
+    # Define parameters for API call
+    # TODO: get URLs from config
+    url = "https://netapp-cloud-account.auth0.com/oauth/token"
+    headers = {
+        "Content-Type": "application/json"
+    }
+    data = {
+        "grant_type": "refresh_token",
+        "refresh_token": refreshToken,
+        "client_id": "Mu0V1ywgYteI6w1MbD15fKfVIUrNXGWC"
+    }
+
+    # Call API to optain access token
+    response = requests.post(url=url, headers=headers, data=json.dumps(data))
+
+    # Parse response to retrieve access token
+    try:
+        responseBody = json.loads(response.text)
+        accessToken = responseBody["access_token"]
+    except:
+        errorMessage = "Error obtaining access token from Cloud Sync API"
+        if printOutput:
+            print("Error:", errorMessage)
+            printAPIResponse(response)
+        raise APIConnectionError(errorMessage, response)
+
+    return accessToken
+
+
+def getCloudSyncAccessParameters(refreshToken: str, printOutput: bool = False) -> (str, str):
+    try:
+        accessToken = getCloudCentralAccessToken(refreshToken=refreshToken, printOutput=printOutput)
+    except APIConnectionError:
+        raise
+
+    # Define parameters for API call
+    url = "https://cloudsync.netapp.com/api/accounts"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + accessToken
+    }
+
+    # Call API to obtain account ID
+    response = requests.get(url=url, headers=headers)
+
+    # Parse response to retrieve account ID
+    try:
+        responseBody = json.loads(response.text)
+        accountId = responseBody[0]["accountId"]
+    except:
+        errorMessage = "Error obtaining account ID from Cloud Sync API"
+        if printOutput:
+            print("Error:", errorMessage)
+            printAPIResponse(response)
+        raise APIConnectionError(errorMessage, response)
+
+    # Return access token and account ID
+    return accessToken, accountId
+
+
 # TODO: make this function private
 def instantiateConnection(config: dict, connectionType: str = "ONTAP", printOutput: bool = False):
     if connectionType == "ONTAP":
@@ -215,6 +288,15 @@ def instantiateS3Session(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey:
     return s3
 
 
+# TODO: make this private.
+def printAPIResponse(response: requests.Response):
+    print("API Response:")
+    print("Status Code: ", response.status_code)
+    print("Header: ", response.headers)
+    if response.text:
+        print("Body: ", response.text)
+
+
 # TODO: Make this function private
 def printInvalidConfigError() :
     print("Error: Missing or invalid config file. Run `./ntap_dsutil.py config` to create config file.")
@@ -234,6 +316,28 @@ def retrieveConfig(configDirPath: str = "~/.ntap_dsutil", configFilename: str = 
             printInvalidConfigError()
         raise InvalidConfigError()
     return config
+
+
+# TODO: Make this private.
+def retrieveCloudCentralRefreshToken(printOutput: bool = False) -> str:
+    # Retrieve refresh token from config file
+    try:
+        config = retrieveConfig(printOutput=printOutput)
+    except InvalidConfigError:
+        raise
+    try:
+        refreshTokenBase64 = config["cloudCentralRefreshToken"]
+    except:
+        if printOutput:
+            printInvalidConfigError()
+        raise InvalidConfigError()
+
+    # Decode base64-encoded refresh token
+    refreshTokenBase64Bytes = refreshTokenBase64.encode("ascii")
+    refreshTokenBytes = base64.b64decode(refreshTokenBase64Bytes)
+    refreshToken = refreshTokenBytes.decode("ascii")
+
+    return refreshToken
 
 
 # TODO: Make this function private.
@@ -1368,3 +1472,180 @@ def restoreSnapshot(volumeName: str, snapshotName: str, printOutput: bool = Fals
 
     else:
         raise ConnectionTypeError()
+
+
+def syncCloudSyncRelationship(relationshipID: str, waitUntilComplete: bool = False, printOutput: bool = False):
+    # Step 1: Obtain access token and account ID for accessing Cloud Sync API
+
+    # Retrieve refresh token
+    try:
+        refreshToken = retrieveCloudCentralRefreshToken(printOutput=printOutput)
+    except InvalidConfigError:
+        raise
+
+    # Obtain access token and account ID
+    try:
+        accessToken, accountId = getCloudSyncAccessParameters(refreshToken=refreshToken, printOutput=printOutput)
+    except APIConnectionError:
+        raise
+
+    # Step 2: Trigger Cloud Sync sync
+
+    # Define parameters for API call
+    url = "https://cloudsync.netapp.com/api/relationships/%s/sync" % (relationshipID)
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "x-account-id": accountId,
+        "Authorization": "Bearer " + accessToken
+    }
+
+    # Call API to trigger sync
+    if printOutput:
+        print("Triggering sync operation for Cloud Sync relationship (ID = " + relationshipID + ").")
+    response = requests.put(url = url, headers = headers)
+
+    # Check for API response status code of 202; if not 202, raise error
+    if response.status_code != 202:
+        errorMessage = "Error calling Cloud Sync API to trigger sync operation."
+        if printOutput:
+            print("Error:", errorMessage)
+            printAPIResponse(response)
+        raise APIConnectionError(errorMessage, response)
+
+    if printOutput:
+        print("Sync operation successfully triggered.")
+
+    # Step 3: Obtain status of the sync operation; keep checking until the sync operation has completed
+
+    if waitUntilComplete:
+        while True:
+            # Define parameters for API call
+            url = "https://cloudsync.netapp.com/api/relationships-v2/%s" % (relationshipID)
+            headers = {
+                "Accept": "application/json",
+                "x-account-id": accountId,
+                "Authorization": "Bearer " + accessToken
+            }
+
+            # Call API to obtain status of sync operation
+            response = requests.get(url = url, headers = headers)
+
+            # Parse response to retrieve status of sync operation
+            try:
+                responseBody = json.loads(response.text)
+                latestActivityType = responseBody["activity"]["type"]
+                latestActivityStatus = responseBody["activity"]["status"]
+            except:
+                errorMessage = "Error obtaining status of sync operation from Cloud Sync API."
+                if printOutput:
+                    print("Error:", errorMessage)
+                    printAPIResponse(response)
+                raise APIConnectionError(errorMessage, response)
+
+            # End execution if the latest update is complete
+            if latestActivityType == "Sync":
+                if latestActivityStatus == "DONE":
+                    if printOutput:
+                        print("Success: Sync operation is complete.")
+                    break
+                elif latestActivityStatus == "FAILED":
+                    if printOutput:
+                        failureMessage = responseBody["activity"]["failureMessage"]
+                        print("Error: Sync operation failed.")
+                        print("Message:", failureMessage)
+                    raise CloudSyncSyncOperationError(latestActivityStatus, failureMessage)
+                elif latestActivityStatus == "RUNNING":
+                    # Print message re: progress
+                    if printOutput:
+                        print("Sync operation is not yet complete. Status:", latestActivityStatus)
+                        print("Checking again in 60 seconds...")
+                else:
+                    if printOutput:
+                        print ("Error: Unknown sync operation status (" + latestActivityStatus + ") returned by Cloud Sync API.")
+                    raise CloudSyncSyncOperationError(latestActivityStatus)
+
+            # Sleep for 60 seconds before checking progress again
+            time.sleep(60)
+
+
+def syncSnapMirrorRelationship(uuid: str, waitUntilComplete: bool = False, printOutput: bool = False):
+    # Retrieve config details from config file
+    try:
+        config = retrieveConfig(printOutput=printOutput)
+    except InvalidConfigError:
+        raise
+    try:
+        connectionType = config["connectionType"]
+    except:
+        if printOutput :
+            printInvalidConfigError()
+        raise InvalidConfigError()
+
+    if connectionType == "ONTAP":
+        # Instantiate connection to ONTAP cluster
+        try:
+            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+        except InvalidConfigError:
+            raise
+
+        if printOutput:
+            print("Triggering sync operation for SnapMirror relationship (UUID = " + uuid + ").")
+
+        try:
+            # Trigger sync operation for SnapMirror relationship
+            transfer = NetAppSnapmirrorTransfer(uuid)
+            transfer.post(poll=True)
+        except NetAppRestError as err:
+            if printOutput:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+
+        if printOutput:
+            print("Sync operation successfully triggered.")
+
+        if waitUntilComplete:
+            # Wait to perform initial check
+            print("Waiting for sync operation to complete.")
+            print("Status check will be performed in 10 seconds...")
+            time.sleep(10)
+
+            while True:
+                # Retrieve relationship
+                relationship = NetAppSnapmirrorRelationship.find(uuid=uuid)
+                relationship.get()
+
+                # Check status of sync operation
+                if hasattr(relationship, "transfer"):
+                    transferState = relationship.transfer.state
+                else:
+                    transferState = None
+
+                # if transfer is complete, end execution
+                if not transferState:
+                    healthy = relationship.healthy
+                    if healthy:
+                        if printOutput:
+                            print("Success: Sync operation is complete.")
+                        break
+                    else:
+                        if printOutput:
+                            print("Error: Relationship is not healthy. Access ONTAP System Manager for details.")
+                        raise SnapMirrorSyncOperationError("not healthy")
+                elif transferState != "transferring":
+                    if printOutput:
+                        print ("Error: Unknown sync operation status (" + transferState + ") returned by ONTAP API.")
+                    raise SnapMirrorSyncOperationError(transferState)
+                else:
+                    # Print message re: progress
+                    if printOutput:
+                        print("Sync operation is not yet complete. Status:", transferState)
+                        print("Checking again in 60 seconds...")
+
+                # Sleep for 60 seconds before checking progress again
+                time.sleep(60)
+
+    else:
+        raise ConnectionTypeError()
+
+
