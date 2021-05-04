@@ -4,15 +4,14 @@
 from netapp_dstk.traditional import handleInvalidCommand, helpTextStandard, getTarget, cloneVolume, retrieveConfig, \
     InvalidConfigError, printInvalidConfigError, instantiateConnection, InvalidVolumeParameterError, \
     InvalidSnapshotParameterError, APIConnectionError, mountVolume, MountOperationError, ConnectionTypeError, \
-    listVolumes, createSnapshot, createVolume
+    listVolumes, createSnapshot, createVolume, deleteSnapshot, deleteVolume, listCloudSyncRelationships, \
+    listSnapMirrorRelationships, listSnapshots
 
 version = "1.2"
 
 
-import base64, json, os, re, requests, yaml, time, boto3, boto3.session
+import base64, json, os, re, requests, time, boto3, boto3.session
 from getpass import getpass
-import pandas as pd
-from tabulate import tabulate
 from netapp_ontap.resources import Volume as NetAppVolume
 from netapp_ontap.resources import Snapshot as NetAppSnapshot
 from netapp_ontap.resources import SnapmirrorRelationship as NetAppSnapmirrorRelationship
@@ -374,187 +373,12 @@ def instantiateS3Session(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey:
 
 
 # Function for listing all snapshots
-def listSnapshots(volumeName: str, printOutput: bool = False) -> list() :
-    # Retrieve config details from config file
-    try :
-        config = retrieveConfig(printOutput=printOutput)
-    except InvalidConfigError:
-        raise
-    try :
-        connectionType = config["connectionType"]
-    except :
-        if printOutput :
-            printInvalidConfigError()
-        raise InvalidConfigError()
-
-    if connectionType == "ONTAP" :
-        # Instantiate connection to ONTAP cluster
-        try :
-            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
-        except InvalidConfigError:
-            raise
-
-        # Retrieve svm from config file
-        try :
-            svm = config["svm"]
-        except :
-            if printOutput :
-                printInvalidConfigError()
-            raise InvalidConfigError()
-
-        # Retrieve snapshots
-        try :
-            # Retrieve volume
-            volume = NetAppVolume.find(name=volumeName, svm=svm)
-            if not volume :
-                if printOutput :
-                    print("Error: Invalid volume name.")
-                raise InvalidVolumeParameterError("name")
-
-            # Construct list of snapshots
-            snapshotsList = list()
-            for snapshot in NetAppSnapshot.get_collection(volume.uuid) :
-                # Retrieve snapshot
-                snapshot.get()
-
-                # Construct dict of snapshot details
-                snapshotDict = {"Snapshot Name": snapshot.name, "Create Time": snapshot.create_time}
-
-                # Append dict to list of snapshots
-                snapshotsList.append(snapshotDict)
-            
-        except NetAppRestError as err :
-            if printOutput :
-                print("Error: ONTAP Rest API Error: ", err)
-            raise APIConnectionError(err)
-
-        # Print list of snapshots
-        if printOutput :
-            # Convert snapshots array to Pandas DataFrame
-            snapshotsDF = pd.DataFrame.from_dict(snapshotsList, dtype="string")
-            print(tabulate(snapshotsDF, showindex=False, headers=snapshotsDF.columns))
-
-        return snapshotsList
-
-    else :
-        raise ConnectionTypeError()
 
 
 # Function for deleting a snapshot
-def deleteSnapshot(volumeName: str, snapshotName: str, printOutput: bool = False) :
-    # Retrieve config details from config file
-    try :
-        config = retrieveConfig(printOutput=printOutput)
-    except InvalidConfigError:
-        raise
-    try :
-        connectionType = config["connectionType"]
-    except :
-        if printOutput :
-            printInvalidConfigError()
-        raise InvalidConfigError()
-
-    if connectionType == "ONTAP" :
-        # Instantiate connection to ONTAP cluster
-        try :
-            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
-        except InvalidConfigError:
-            raise
-
-        # Retrieve svm from config file
-        try :
-            svm = config["svm"]
-        except :
-            if printOutput :
-                printInvalidConfigError()
-            raise InvalidConfigError()
-
-        if printOutput :
-            print("Deleting snapshot '" + snapshotName + "'.")
-
-        try :
-            # Retrieve volume
-            volume = NetAppVolume.find(name=volumeName, svm=svm)
-            if not volume :
-                if printOutput :
-                    print("Error: Invalid volume name.")
-                raise InvalidVolumeParameterError("name")
-
-            # Retrieve snapshot
-            snapshot = NetAppSnapshot.find(volume.uuid, name=snapshotName)
-            if not snapshot :
-                if printOutput :
-                    print("Error: Invalid snapshot name.")
-                raise InvalidSnapshotParameterError("name")
-
-            # Delete snapshot
-            snapshot.delete(poll=True)
-
-            if printOutput :
-                print("Snapshot deleted successfully.")
-
-        except NetAppRestError as err :
-            if printOutput :
-                print("Error: ONTAP Rest API Error: ", err)
-            raise APIConnectionError(err)
-
-    else :
-        raise ConnectionTypeError()
 
 
 # Function for deleting a volume
-def deleteVolume(volumeName: str, printOutput: bool = False) :
-    # Retrieve config details from config file
-    try :
-        config = retrieveConfig(printOutput=printOutput)
-    except InvalidConfigError:
-        raise
-    try :
-        connectionType = config["connectionType"]
-    except :
-        if printOutput :
-            printInvalidConfigError()
-        raise InvalidConfigError()
-
-    if connectionType == "ONTAP" :
-        # Instantiate connection to ONTAP cluster
-        try :
-            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
-        except InvalidConfigError:
-            raise
-
-        # Retrieve svm from config file
-        try :
-            svm = config["svm"]
-        except :
-            if printOutput :
-                printInvalidConfigError()
-            raise InvalidConfigError()
-
-        if printOutput :
-            print("Deleting volume '" + volumeName + "'.")
-
-        try :
-            # Retrieve volume
-            volume = NetAppVolume.find(name=volumeName, svm=svm)
-            if not volume :
-                if printOutput :
-                    print("Error: Invalid volume name.")
-                raise InvalidVolumeParameterError("name")
-
-            # Delete volume
-            volume.delete(poll=True)
-
-            if printOutput :
-                print("Volume deleted successfully.")
-
-        except NetAppRestError as err :
-            if printOutput :
-                print("Error: ONTAP Rest API Error: ", err)
-            raise APIConnectionError(err)
-
-    else :
-        raise ConnectionTypeError()
 
 
 # Function for restoring a snapshot
@@ -654,57 +478,6 @@ def getCloudSyncAccessParameters(refreshToken: str, printOutput: bool = False) -
 
 
 ## Function for listing cloud sync relationships
-def listCloudSyncRelationships(printOutput: bool = False) -> list() :
-    # Step 1: Obtain access token and account ID for accessing Cloud Sync API
-
-    # Retrieve refresh token
-    try :
-        refreshToken = retrieveCloudCentralRefreshToken(printOutput=printOutput)
-    except InvalidConfigError:
-        raise
-
-    # Obtain access token and account ID
-    try :
-        accessToken, accountId = getCloudSyncAccessParameters(refreshToken=refreshToken, printOutput=printOutput)
-    except APIConnectionError:
-        raise
-
-    # Step 2: Retrieve list of relationships
-
-    # Define parameters for API call
-    url = "https://cloudsync.netapp.com/api/relationships-v2"
-    headers = {
-        "Accept": "application/json",
-        "x-account-id": accountId,
-        "Authorization": "Bearer " + accessToken
-    }
-
-    # Call API to retrieve list of relationships
-    response = requests.get(url = url, headers = headers)
-
-    # Check for API response status code of 200; if not 200, raise error
-    if response.status_code != 200 :
-        errorMessage = "Error calling Cloud Sync API to retrieve list of relationships."
-        if printOutput :
-            print("Error:", errorMessage)
-            printAPIResponse(response)
-        raise APIConnectionError(errorMessage, response)
-
-    # Constrict list of relationships
-    relationships = json.loads(response.text)
-    relationshipsList = list()
-    for relationship in relationships :
-        relationshipDetails = dict()
-        relationshipDetails["id"] = relationship["id"]
-        relationshipDetails["source"] = relationship["source"]
-        relationshipDetails["target"] = relationship["target"]
-        relationshipsList.append(relationshipDetails)
-
-    # Print list of relationships
-    if printOutput :
-        print(yaml.dump(relationshipsList))
-
-    return relationshipsList
 
 
 ## Function for triggering a sync operation for an existing cloud sync relationships
@@ -804,97 +577,6 @@ def syncCloudSyncRelationship(relationshipID: str, waitUntilComplete: bool = Fal
 
 
 ## Function for listing all SnapMirror relationships
-def listSnapMirrorRelationships(printOutput: bool = False) -> list() :
-    # Retrieve config details from config file
-    try :
-        config = retrieveConfig(printOutput=printOutput)
-    except InvalidConfigError:
-        raise
-    try :
-        connectionType = config["connectionType"]
-    except :
-        if printOutput :
-            printInvalidConfigError()
-        raise InvalidConfigError()
-
-    if connectionType == "ONTAP" :
-        # Instantiate connection to ONTAP cluster
-        try :
-            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
-        except InvalidConfigError:
-            raise
-
-        try :
-            # Retrieve all relationships for which destination is on current cluster
-            destinationRelationships = NetAppSnapmirrorRelationship.get_collection()
-
-            # Do not retrieve relationships for which source is on current cluster
-            # Note: Uncomment below line to retrieve all relationships for which source is on current cluster, then add sourceRelationships to for loop
-            #sourceRelationships = NetAppSnapmirrorRelationship.get_collection(list_destinations_only=True)
-
-            # Construct list of relationships
-            relationshipsList = list()
-            for relationship in destinationRelationships :
-                # Retrieve relationship details
-                try :
-                    relationship.get()
-                except NetAppRestError as err :
-                    relationship.get(list_destinations_only=True)
-
-                # Set cluster value
-                if hasattr(relationship.source, "cluster") :
-                    sourceCluster = relationship.source.cluster.name
-                else :
-                    sourceCluster = "user's cluster"
-                if hasattr(relationship.destination, "cluster") :
-                    destinationCluster = relationship.destination.cluster.name
-                else :
-                    destinationCluster = "user's cluster"
-
-                # Set transfer state value
-                if hasattr(relationship, "transfer") :
-                    transferState = relationship.transfer.state
-                else :
-                    transferState = None
-
-                # Set healthy value
-                if hasattr(relationship, "healthy") :
-                    healthy = relationship.healthy
-                else :
-                    healthy = "unknown"
-
-                # Construct dict containing relationship details
-                relationshipDict = {
-                    "UUID": relationship.uuid, 
-                    "Type": relationship.policy.type,
-                    "Healthy": healthy,
-                    "Current Transfer Status": transferState,
-                    "Source Cluster": sourceCluster,
-                    "Source SVM": relationship.source.svm.name,
-                    "Source Volume": relationship.source.path.split(":")[1],
-                    "Dest Cluster": destinationCluster,
-                    "Dest SVM": relationship.destination.svm.name,
-                    "Dest Volume": relationship.destination.path.split(":")[1]
-                }
-
-                # Append dict to list of relationships
-                relationshipsList.append(relationshipDict)
-
-        except NetAppRestError as err :
-            if printOutput :
-                print("Error: ONTAP Rest API Error: ", err)
-            raise APIConnectionError(err)
-        
-        # Print list of relationships
-        if printOutput :
-            # Convert relationships array to Pandas DataFrame
-            relationshipsDF = pd.DataFrame.from_dict(relationshipsList, dtype="string")
-            print(tabulate(relationshipsDF, showindex=False, headers=relationshipsDF.columns))
-
-        return relationshipsList
-
-    else :
-        raise ConnectionTypeError()
 
 
 ## Function for triggering a sync operation for a SnapMirror relationship
@@ -1716,201 +1398,201 @@ if __name__ == '__main__' :
         else:
             handleInvalidCommand()
 
-    elif action in ("delete", "del", "rm") :
+    elif action in ("delete", "del", "rm"):
         # Get desired target from command line args
         target = getTarget(sys.argv)
         
         # Invoke desired action based on target
-        if target in ("snapshot", "snap") :
+        if target in ("snapshot", "snap"):
             volumeName = None
             snapshotName = None
 
             # Get command line options
-            try :
+            try:
                 opts, args = getopt.getopt(sys.argv[3:], "hn:v:", ["help", "name=", "volume="])
-            except :
+            except:
                 handleInvalidCommand(helpText=helpTextDeleteSnapshot, invalidOptArg=True)
 
             # Parse command line options
-            for opt, arg in opts :
-                if opt in ("-h", "--help") :
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
                     print(helpTextDeleteSnapshot)
                     sys.exit(0)
-                elif opt in ("-n", "--name") :
+                elif opt in ("-n", "--name"):
                     snapshotName = arg
-                elif opt in ("-v", "--volume") :
+                elif opt in ("-v", "--volume"):
                     volumeName = arg
             
             # Check for required options
-            if not volumeName or not snapshotName  :
+            if not volumeName or not snapshotName:
                 handleInvalidCommand(helpText=helpTextDeleteSnapshot, invalidOptArg=True)
 
             # Delete snapshot
-            try :
+            try:
                 deleteSnapshot(volumeName=volumeName, snapshotName=snapshotName, printOutput=True)
-            except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError) :
+            except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError):
                 sys.exit(1)
 
-        elif target in ("volume", "vol") :
+        elif target in ("volume", "vol"):
             volumeName = None
             force = False
 
             # Get command line options
-            try :
+            try:
                 opts, args = getopt.getopt(sys.argv[3:], "hn:f", ["help", "name=", "force"])
-            except :
+            except:
                 handleInvalidCommand(helpText=helpTextDeleteVolume, invalidOptArg=True)
 
             # Parse command line options
-            for opt, arg in opts :
-                if opt in ("-h", "--help") :
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
                     print(helpTextDeleteVolume)
                     sys.exit(0)
-                elif opt in ("-n", "--name") :
+                elif opt in ("-n", "--name"):
                     volumeName = arg
-                elif opt in ("-f", "--force") :
+                elif opt in ("-f", "--force"):
                     force = True
             
             # Check for required options
-            if not volumeName :
+            if not volumeName:
                 handleInvalidCommand(helpText=helpTextDeleteVolume, invalidOptArg=True)
 
             # Confirm delete operation
-            if not force :
+            if not force:
                 print("Warning: All data and snapshots associated with the volume will be permanently deleted.")
-                while True :
+                while True:
                     proceed = input("Are you sure that you want to proceed? (yes/no): ")
-                    if proceed in ("yes", "Yes", "YES") :
+                    if proceed in ("yes", "Yes", "YES"):
                         break
-                    elif proceed in ("no", "No", "NO") :
+                    elif proceed in ("no", "No", "NO"):
                         sys.exit(0)
-                    else :
+                    else:
                         print("Invalid value. Must enter 'yes' or 'no'.")
 
             # Delete volume
-            try :
+            try:
                 deleteVolume(volumeName=volumeName, printOutput=True)
-            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError) :
+            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
                 sys.exit(1)
 
-        else :
+        else:
             handleInvalidCommand()
 
-    elif action in ("help", "h", "-h", "--help") :
+    elif action in ("help", "h", "-h", "--help"):
         print(helpTextStandard)
         
-    elif action in ("list", "ls") :
+    elif action in ("list", "ls"):
         # Get desired target from command line args
         target = getTarget(sys.argv)
         
         # Invoke desired action based on target
         if target in ("cloud-sync-relationship", "cloud-sync", "cloud-sync-relationships", "cloud-syncs") :
             # Check command line options
-            if len(sys.argv) > 3 :
-                if sys.argv[3] in ("-h", "--help") :
+            if len(sys.argv) > 3:
+                if sys.argv[3] in ("-h", "--help"):
                     print(helpTextListCloudSyncRelationships)
                     sys.exit(0)
-                else :
+                else:
                     handleInvalidCommand(helpTextListCloudSyncRelationships, invalidOptArg=True)
 
             # List cloud sync relationships
-            try :
+            try:
                 listCloudSyncRelationships(printOutput=True)
-            except (InvalidConfigError, APIConnectionError) :
+            except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
         
-        elif target in ("snapmirror-relationship", "snapmirror", "snapmirror-relationships", "snapmirrors") :
+        elif target in ("snapmirror-relationship", "snapmirror", "snapmirror-relationships", "snapmirrors"):
             # Check command line options
-            if len(sys.argv) > 3 :
-                if sys.argv[3] in ("-h", "--help") :
+            if len(sys.argv) > 3:
+                if sys.argv[3] in ("-h", "--help"):
                     print(helpTextListSnapMirrorRelationships)
                     sys.exit(0)
-                else :
+                else:
                     handleInvalidCommand(helpTextListSnapMirrorRelationships, invalidOptArg=True)
 
             # List cloud sync relationships
-            try :
+            try:
                 listSnapMirrorRelationships(printOutput=True)
-            except (InvalidConfigError, APIConnectionError) :
+            except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
         
-        elif target in ("snapshot", "snap", "snapshots", "snaps") :
+        elif target in ("snapshot", "snap", "snapshots", "snaps"):
             volumeName = None
 
             # Get command line options
-            try :
+            try:
                 opts, args = getopt.getopt(sys.argv[3:], "hv:", ["help", "volume="])
-            except :
+            except:
                 handleInvalidCommand(helpText=helpTextListSnapshots, invalidOptArg=True)
 
             # Parse command line options
-            for opt, arg in opts :
+            for opt, arg in opts:
                 if opt in ("-h", "--help") :
                     print(helpTextListSnapshots)
                     sys.exit(0)
-                elif opt in ("-v", "--volume") :
+                elif opt in ("-v", "--volume"):
                     volumeName = arg
             
             # Check for required options
-            if not volumeName  :
+            if not volumeName:
                 handleInvalidCommand(helpText=helpTextListSnapshots, invalidOptArg=True)
 
             # List volumes
-            try :
+            try:
                 listSnapshots(volumeName=volumeName, printOutput=True)
-            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError) :
+            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
                 sys.exit(1)
         
-        elif target in ("volume", "vol", "volumes", "vols") :
+        elif target in ("volume", "vol", "volumes", "vols"):
             # Check command line options
-            if len(sys.argv) > 3 :
-                if sys.argv[3] in ("-h", "--help") :
+            if len(sys.argv) > 3:
+                if sys.argv[3] in ("-h", "--help"):
                     print(helpTextListVolumes)
                     sys.exit(0)
-                else :
+                else:
                     handleInvalidCommand(helpTextListVolumes, invalidOptArg=True)
 
             # List volumes
-            try :
+            try:
                 listVolumes(checkLocalMounts=True, printOutput=True)
             except (InvalidConfigError, APIConnectionError) :
                 sys.exit(1)
 
-        else :
+        else:
             handleInvalidCommand()
 
-    elif action == "mount" :
+    elif action == "mount":
         # Get desired target from command line args
         target = getTarget(sys.argv)
         
         # Invoke desired action based on target
-        if target in ("volume", "vol") :
+        if target in ("volume", "vol"):
             volumeName = None
             mountpoint = None
 
             # Get command line options
-            try :
+            try:
                 opts, args = getopt.getopt(sys.argv[3:], "hn:m:", ["help", "name=", "mountpoint="])
-            except :
+            except:
                 handleInvalidCommand(helpText=helpTextMountVolume, invalidOptArg=True)
 
             # Parse command line options
-            for opt, arg in opts :
-                if opt in ("-h", "--help") :
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
                     print(helpTextMountVolume)
                     sys.exit(0)
-                elif opt in ("-n", "--name") :
+                elif opt in ("-n", "--name"):
                     volumeName = arg
-                elif opt in ("-m", "--mountpoint") :
+                elif opt in ("-m", "--mountpoint"):
                     mountpoint = arg
 
             # Mount volume
-            try :
+            try:
                 mountVolume(volumeName=volumeName, mountpoint=mountpoint, printOutput=True)
-            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError) :
+            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
 
-        else :
+        else:
             handleInvalidCommand()
         
     elif action in ("prepopulate") :

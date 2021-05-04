@@ -13,9 +13,13 @@ from datetime import datetime
 
 from netapp_ontap import config as netappConfig
 from netapp_ontap.error import NetAppRestError
+from netapp_ontap.resources import SnapmirrorRelationship as NetAppSnapmirrorRelationship
 from netapp_ontap.resources import Snapshot as NetAppSnapshot
 from netapp_ontap.resources import Volume as NetAppVolume
 import pandas as pd
+import requests
+from tabulate import tabulate
+import yaml
 
 
 __version__ = "0.0.1a1"
@@ -23,6 +27,7 @@ __version__ = "0.0.1a1"
 #
 # The following attributes are unique to the traditional package.
 #
+from netapp_dstk.ntap_dsutil import retrieveCloudCentralRefreshToken, getCloudSyncAccessParameters, printAPIResponse
 
 helpTextStandard = '''
 The NetApp Data Science Toolkit is a Python library that makes it simple for data scientists and data engineers to perform various data management tasks, such as provisioning a new data volume, near-instantaneously cloning a data volume, and near-instantaneously snapshotting a data volume for traceability/baselining.
@@ -520,67 +525,331 @@ def createVolume(volumeName: str, volumeSize: str, guaranteeSpace: bool = False,
         raise ConnectionTypeError()
 
 
-def mountVolume(volumeName: str, mountpoint: str, printOutput: bool = False):
-    # Confirm that mountpoint value was passed in
-    if not mountpoint:
-        if printOutput:
-            print("Error: No mountpoint specified.")
-        raise MountOperationError("No mountpoint")
-
-    # Confirm that volume name value was passed in
-    if not volumeName:
-        if printOutput:
-            print("Error: No volume name specified.")
-        raise InvalidVolumeParameterError("name")
-
-    nfsMountTarget = None
-
-    # Retrieve list of volumes
+def deleteSnapshot(volumeName: str, snapshotName: str, printOutput: bool = False):
+    # Retrieve config details from config file
     try:
-        volumes = listVolumes(checkLocalMounts=True)
-    except (InvalidConfigError, APIConnectionError):
+        config = retrieveConfig(printOutput=printOutput)
+    except InvalidConfigError:
+        raise
+    try:
+        connectionType = config["connectionType"]
+    except:
         if printOutput:
-            print("Error: Error retrieving NFS mount target for volume.")
+            printInvalidConfigError()
+        raise InvalidConfigError()
+
+    if connectionType == "ONTAP":
+        # Instantiate connection to ONTAP cluster
+        try:
+            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+        except InvalidConfigError:
+            raise
+
+        # Retrieve svm from config file
+        try:
+            svm = config["svm"]
+        except:
+            if printOutput:
+                printInvalidConfigError()
+            raise InvalidConfigError()
+
+        if printOutput:
+            print("Deleting snapshot '" + snapshotName + "'.")
+
+        try:
+            # Retrieve volume
+            volume = NetAppVolume.find(name=volumeName, svm=svm)
+            if not volume:
+                if printOutput:
+                    print("Error: Invalid volume name.")
+                raise InvalidVolumeParameterError("name")
+
+            # Retrieve snapshot
+            snapshot = NetAppSnapshot.find(volume.uuid, name=snapshotName)
+            if not snapshot:
+                if printOutput:
+                    print("Error: Invalid snapshot name.")
+                raise InvalidSnapshotParameterError("name")
+
+            # Delete snapshot
+            snapshot.delete(poll=True)
+
+            if printOutput:
+                print("Snapshot deleted successfully.")
+
+        except NetAppRestError as err :
+            if printOutput:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+
+    else:
+        raise ConnectionTypeError()
+
+
+def deleteVolume(volumeName: str, printOutput: bool = False):
+    # Retrieve config details from config file
+    try:
+        config = retrieveConfig(printOutput=printOutput)
+    except InvalidConfigError:
+        raise
+    try:
+        connectionType = config["connectionType"]
+    except:
+        if printOutput:
+            printInvalidConfigError()
+        raise InvalidConfigError()
+
+    if connectionType == "ONTAP":
+        # Instantiate connection to ONTAP cluster
+        try:
+            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+        except InvalidConfigError:
+            raise
+
+        # Retrieve svm from config file
+        try:
+            svm = config["svm"]
+        except:
+            if printOutput :
+                printInvalidConfigError()
+            raise InvalidConfigError()
+
+        if printOutput:
+            print("Deleting volume '" + volumeName + "'.")
+
+        try:
+            # Retrieve volume
+            volume = NetAppVolume.find(name=volumeName, svm=svm)
+            if not volume:
+                if printOutput:
+                    print("Error: Invalid volume name.")
+                raise InvalidVolumeParameterError("name")
+
+            # Delete volume
+            volume.delete(poll=True)
+
+            if printOutput:
+                print("Volume deleted successfully.")
+
+        except NetAppRestError as err:
+            if printOutput:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+
+    else:
+        raise ConnectionTypeError()
+
+
+def listCloudSyncRelationships(printOutput: bool = False) -> list():
+    # Step 1: Obtain access token and account ID for accessing Cloud Sync API
+
+    # Retrieve refresh token
+    try:
+        refreshToken = retrieveCloudCentralRefreshToken(printOutput=printOutput)
+    except InvalidConfigError:
         raise
 
-    # Retrieve NFS mount target for volume, and check that no volume is currently mounted at specified mountpoint
-    for volume in volumes:
-        # Check mountpoint
-        if mountpoint == volume["Local Mountpoint"]:
-            if printOutput:
-                print("Error: Volume '" + volume["Volume Name"] + "' is already mounted at '" + mountpoint + "'.")
-            raise MountOperationError("Another volume mounted at mountpoint")
+    # Obtain access token and account ID
+    try:
+        accessToken, accountId = getCloudSyncAccessParameters(refreshToken=refreshToken, printOutput=printOutput)
+    except APIConnectionError:
+        raise
 
-        if volumeName == volume["Volume Name"]:
-            # Retrieve NFS mount target
-            nfsMountTarget = volume["NFS Mount Target"]
+    # Step 2: Retrieve list of relationships
 
-    # Raise error if invalid volume name was entered
-    if not nfsMountTarget:
+    # Define parameters for API call
+    url = "https://cloudsync.netapp.com/api/relationships-v2"
+    headers = {
+        "Accept": "application/json",
+        "x-account-id": accountId,
+        "Authorization": "Bearer " + accessToken
+    }
+
+    # Call API to retrieve list of relationships
+    response = requests.get(url = url, headers = headers)
+
+    # Check for API response status code of 200; if not 200, raise error
+    if response.status_code != 200:
+        errorMessage = "Error calling Cloud Sync API to retrieve list of relationships."
         if printOutput:
-            print("Error: Invalid volume name specified.")
-        raise InvalidVolumeParameterError("name")
+            print("Error:", errorMessage)
+            printAPIResponse(response)
+        raise APIConnectionError(errorMessage, response)
 
-    # Print message describing action to be understaken
+    # Constrict list of relationships
+    relationships = json.loads(response.text)
+    relationshipsList = list()
+    for relationship in relationships:
+        relationshipDetails = dict()
+        relationshipDetails["id"] = relationship["id"]
+        relationshipDetails["source"] = relationship["source"]
+        relationshipDetails["target"] = relationship["target"]
+        relationshipsList.append(relationshipDetails)
+
+    # Print list of relationships
     if printOutput:
-        print("Mounting volume '" + volumeName + "' at '" + mountpoint + "'.")
+        print(yaml.dump(relationshipsList))
 
-    # Create mountpoint if it doesn't already exist
-    mountpoint = os.path.expanduser(mountpoint)
-    try:
-        os.mkdir(mountpoint)
-    except FileExistsError:
-        pass
+    return relationshipsList
 
-    # Mount volume
+
+def listSnapMirrorRelationships(printOutput: bool = False) -> list():
+    # Retrieve config details from config file
     try:
-        subprocess.check_call(['mount', nfsMountTarget, mountpoint])
+        config = retrieveConfig(printOutput=printOutput)
+    except InvalidConfigError:
+        raise
+    try:
+        connectionType = config["connectionType"]
+    except:
         if printOutput:
-            print("Volume mounted successfully.")
-    except subprocess.CalledProcessError as err:
+            printInvalidConfigError()
+        raise InvalidConfigError()
+
+    if connectionType == "ONTAP":
+        # Instantiate connection to ONTAP cluster
+        try:
+            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+        except InvalidConfigError:
+            raise
+
+        try:
+            # Retrieve all relationships for which destination is on current cluster
+            destinationRelationships = NetAppSnapmirrorRelationship.get_collection()
+
+            # Do not retrieve relationships for which source is on current cluster
+            # Note: Uncomment below line to retrieve all relationships for which source is on current cluster, then add sourceRelationships to for loop
+            # sourceRelationships = NetAppSnapmirrorRelationship.get_collection(list_destinations_only=True)
+
+            # Construct list of relationships
+            relationshipsList = list()
+            for relationship in destinationRelationships:
+                # Retrieve relationship details
+                try:
+                    relationship.get()
+                except NetAppRestError as err:
+                    relationship.get(list_destinations_only=True)
+
+                # Set cluster value
+                if hasattr(relationship.source, "cluster"):
+                    sourceCluster = relationship.source.cluster.name
+                else:
+                    sourceCluster = "user's cluster"
+                if hasattr(relationship.destination, "cluster"):
+                    destinationCluster = relationship.destination.cluster.name
+                else:
+                    destinationCluster = "user's cluster"
+
+                # Set transfer state value
+                if hasattr(relationship, "transfer"):
+                    transferState = relationship.transfer.state
+                else:
+                    transferState = None
+
+                # Set healthy value
+                if hasattr(relationship, "healthy"):
+                    healthy = relationship.healthy
+                else:
+                    healthy = "unknown"
+
+                # Construct dict containing relationship details
+                relationshipDict = {
+                    "UUID": relationship.uuid,
+                    "Type": relationship.policy.type,
+                    "Healthy": healthy,
+                    "Current Transfer Status": transferState,
+                    "Source Cluster": sourceCluster,
+                    "Source SVM": relationship.source.svm.name,
+                    "Source Volume": relationship.source.path.split(":")[1],
+                    "Dest Cluster": destinationCluster,
+                    "Dest SVM": relationship.destination.svm.name,
+                    "Dest Volume": relationship.destination.path.split(":")[1]
+                }
+
+                # Append dict to list of relationships
+                relationshipsList.append(relationshipDict)
+
+        except NetAppRestError as err:
+            if printOutput:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+
+        # Print list of relationships
         if printOutput:
-            print("Error: Error running mount command: ", err)
-        raise MountOperationError(err)
+            # Convert relationships array to Pandas DataFrame
+            relationshipsDF = pd.DataFrame.from_dict(relationshipsList, dtype="string")
+            print(tabulate(relationshipsDF, showindex=False, headers=relationshipsDF.columns))
+
+        return relationshipsList
+
+    else:
+        raise ConnectionTypeError()
+
+
+def listSnapshots(volumeName: str, printOutput: bool = False) -> list():
+    # Retrieve config details from config file
+    try:
+        config = retrieveConfig(printOutput=printOutput)
+    except InvalidConfigError:
+        raise
+    try:
+        connectionType = config["connectionType"]
+    except:
+        if printOutput:
+            printInvalidConfigError()
+        raise InvalidConfigError()
+
+    if connectionType == "ONTAP":
+        # Instantiate connection to ONTAP cluster
+        try:
+            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+        except InvalidConfigError:
+            raise
+
+        # Retrieve svm from config file
+        try:
+            svm = config["svm"]
+        except:
+            if printOutput:
+                printInvalidConfigError()
+            raise InvalidConfigError()
+
+        # Retrieve snapshots
+        try:
+            # Retrieve volume
+            volume = NetAppVolume.find(name=volumeName, svm=svm)
+            if not volume:
+                if printOutput:
+                    print("Error: Invalid volume name.")
+                raise InvalidVolumeParameterError("name")
+
+            # Construct list of snapshots
+            snapshotsList = list()
+            for snapshot in NetAppSnapshot.get_collection(volume.uuid):
+                # Retrieve snapshot
+                snapshot.get()
+
+                # Construct dict of snapshot details
+                snapshotDict = {"Snapshot Name": snapshot.name, "Create Time": snapshot.create_time}
+
+                # Append dict to list of snapshots
+                snapshotsList.append(snapshotDict)
+
+        except NetAppRestError as err:
+            if printOutput:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+
+        # Print list of snapshots
+        if printOutput:
+            # Convert snapshots array to Pandas DataFrame
+            snapshotsDF = pd.DataFrame.from_dict(snapshotsList, dtype="string")
+            print(tabulate(snapshotsDF, showindex=False, headers=snapshotsDF.columns))
+
+        return snapshotsList
+
+    else:
+        raise ConnectionTypeError()
 
 
 def listVolumes(checkLocalMounts: bool = False, printOutput: bool = False) -> list():
@@ -700,5 +969,68 @@ def listVolumes(checkLocalMounts: bool = False, printOutput: bool = False) -> li
 
     else:
         raise ConnectionTypeError()
+
+
+def mountVolume(volumeName: str, mountpoint: str, printOutput: bool = False):
+    # Confirm that mountpoint value was passed in
+    if not mountpoint:
+        if printOutput:
+            print("Error: No mountpoint specified.")
+        raise MountOperationError("No mountpoint")
+
+    # Confirm that volume name value was passed in
+    if not volumeName:
+        if printOutput:
+            print("Error: No volume name specified.")
+        raise InvalidVolumeParameterError("name")
+
+    nfsMountTarget = None
+
+    # Retrieve list of volumes
+    try:
+        volumes = listVolumes(checkLocalMounts=True)
+    except (InvalidConfigError, APIConnectionError):
+        if printOutput:
+            print("Error: Error retrieving NFS mount target for volume.")
+        raise
+
+    # Retrieve NFS mount target for volume, and check that no volume is currently mounted at specified mountpoint
+    for volume in volumes:
+        # Check mountpoint
+        if mountpoint == volume["Local Mountpoint"]:
+            if printOutput:
+                print("Error: Volume '" + volume["Volume Name"] + "' is already mounted at '" + mountpoint + "'.")
+            raise MountOperationError("Another volume mounted at mountpoint")
+
+        if volumeName == volume["Volume Name"]:
+            # Retrieve NFS mount target
+            nfsMountTarget = volume["NFS Mount Target"]
+
+    # Raise error if invalid volume name was entered
+    if not nfsMountTarget:
+        if printOutput:
+            print("Error: Invalid volume name specified.")
+        raise InvalidVolumeParameterError("name")
+
+    # Print message describing action to be understaken
+    if printOutput:
+        print("Mounting volume '" + volumeName + "' at '" + mountpoint + "'.")
+
+    # Create mountpoint if it doesn't already exist
+    mountpoint = os.path.expanduser(mountpoint)
+    try:
+        os.mkdir(mountpoint)
+    except FileExistsError:
+        pass
+
+    # Mount volume
+    try:
+        subprocess.check_call(['mount', nfsMountTarget, mountpoint])
+        if printOutput:
+            print("Volume mounted successfully.")
+    except subprocess.CalledProcessError as err:
+        if printOutput:
+            print("Error: Error running mount command: ", err)
+        raise MountOperationError(err)
 
 
