@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """NetApp Data Science Toolkit for Kubernetes Script Interface."""
 
-from netapp_dstk.cloud import (
+from netapp_dstk.k8s import (
     cloneVolume,
     createVolumeSnapshot,
     InvalidConfigError,
