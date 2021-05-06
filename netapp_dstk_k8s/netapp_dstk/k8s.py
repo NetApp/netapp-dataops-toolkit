@@ -1,10 +1,10 @@
-"""NetApp Data Science Toolkit for Cloud Environments import module.
+"""NetApp Data Science Toolkit for Kuberntetes Environments import module.
 
 This module provides the public functions available to be imported directly
 by applications using the import method of utilizing the toolkit.
 """
 
-__version__ = "0.0.1a1"
+__version__ = "0.0.1a2"
 
 from datetime import datetime
 from getpass import getpass
