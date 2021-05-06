@@ -1,4 +1,4 @@
-"""NetApp Data Science Toolkit for Kuberntetes Environments import module.
+"""NetApp Data Science Toolkit for Kubernetes Environments import module.
 
 This module provides the public functions available to be imported directly
 by applications using the import method of utilizing the toolkit.
