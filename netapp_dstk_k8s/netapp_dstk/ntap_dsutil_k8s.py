@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """NetApp Data Science Toolkit for Kubernetes Script Interface."""
-
+from netapp_dstk import k8s
 from netapp_dstk.k8s import (
     cloneVolume,
     createVolumeSnapshot,
@@ -1017,7 +1017,7 @@ if __name__ == '__main__':
             handleInvalidCommand()
 
     elif action in ("version", "v", "-v", "--version"):
-        print("NetApp Data Science Toolkit for Kubernetes - version " + version)
+        print("NetApp Data Science Toolkit for Kubernetes - version " + k8s.__version__)
 
     else:
         handleInvalidCommand()
