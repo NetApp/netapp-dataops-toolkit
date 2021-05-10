@@ -4,7 +4,7 @@ This module provides the public functions available to be imported directly
 by applications using the import method of utilizing the toolkit.
 """
 
-__version__ = "0.0.1a3"
+__version__ = "0.0.1a4"
 
 from datetime import datetime
 import functools
