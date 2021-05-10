@@ -18,6 +18,7 @@ from datetime import datetime
 import boto3
 from netapp_ontap import config as netappConfig
 from netapp_ontap.error import NetAppRestError
+from netapp_ontap.host_connection import HostConnection as NetAppHostConnection
 from netapp_ontap.resources import Flexcache as NetAppFlexCache
 from netapp_ontap.resources import SnapmirrorRelationship as NetAppSnapmirrorRelationship
 from netapp_ontap.resources import SnapmirrorTransfer as NetAppSnapmirrorTransfer
@@ -411,9 +412,9 @@ def uploadToS3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s3Ve
 #
 
 
-def cloneVolume(newVolumeName: str, sourceVolumeName: str, sourceSnapshotName: str = None,
-                unixUID: str = None, unixGID: str = None, mountpoint: str = None,
-                printOutput: bool = False):
+def clone_volume(newVolumeName: str, sourceVolumeName: str, sourceSnapshotName: str = None,
+                 unixUID: str = None, unixGID: str = None, mountpoint: str = None,
+                 printOutput: bool = False):
     # Retrieve config details from config file
     try:
         config = retrieveConfig(printOutput=printOutput)
@@ -532,7 +533,7 @@ def cloneVolume(newVolumeName: str, sourceVolumeName: str, sourceSnapshotName: s
         # Optionally mount newly created volume
         if mountpoint:
             try:
-                mountVolume(volumeName=newVolumeName, mountpoint=mountpoint, printOutput=True)
+                mount_volume(volumeName=newVolumeName, mountpoint=mountpoint, printOutput=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 if printOutput:
                     print("Error: Error mounting clone volume.")
@@ -542,7 +543,7 @@ def cloneVolume(newVolumeName: str, sourceVolumeName: str, sourceSnapshotName: s
         raise ConnectionTypeError()
 
 
-def createSnapshot(volumeName: str, snapshotName: str = None, printOutput: bool = False):
+def create_snapshot(volumeName: str, snapshotName: str = None, printOutput: bool = False):
     # Retrieve config details from config file
     try:
         config = retrieveConfig(printOutput=printOutput)
@@ -605,11 +606,11 @@ def createSnapshot(volumeName: str, snapshotName: str = None, printOutput: bool 
         raise ConnectionTypeError()
 
 
-def createVolume(volumeName: str, volumeSize: str, guaranteeSpace: bool = False,
-                 volumeType: str = "flexvol", unixPermissions: str = "0777",
-                 unixUID: str = "0", unixGID: str = "0", exportPolicy: str = "default",
-                 snapshotPolicy: str = "none", aggregate: str = None, mountpoint: str = None,
-                 printOutput: bool = False):
+def create_volume(volumeName: str, volumeSize: str, guaranteeSpace: bool = False,
+                  volumeType: str = "flexvol", unixPermissions: str = "0777",
+                  unixUID: str = "0", unixGID: str = "0", exportPolicy: str = "default",
+                  snapshotPolicy: str = "none", aggregate: str = None, mountpoint: str = None,
+                  printOutput: bool = False):
     # Retrieve config details from config file
     try:
         config = retrieveConfig(printOutput=printOutput)
@@ -737,7 +738,7 @@ def createVolume(volumeName: str, volumeSize: str, guaranteeSpace: bool = False,
         # Optionally mount newly created volume
         if mountpoint:
             try:
-                mountVolume(volumeName=volumeName, mountpoint=mountpoint, printOutput=True)
+                mount_volume(volumeName=volumeName, mountpoint=mountpoint, printOutput=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 if printOutput:
                     print("Error: Error mounting volume.")
@@ -747,7 +748,7 @@ def createVolume(volumeName: str, volumeSize: str, guaranteeSpace: bool = False,
         raise ConnectionTypeError()
 
 
-def deleteSnapshot(volumeName: str, snapshotName: str, printOutput: bool = False):
+def delete_snapshot(volumeName: str, snapshotName: str, printOutput: bool = False):
     # Retrieve config details from config file
     try:
         config = retrieveConfig(printOutput=printOutput)
@@ -808,7 +809,7 @@ def deleteSnapshot(volumeName: str, snapshotName: str, printOutput: bool = False
         raise ConnectionTypeError()
 
 
-def deleteVolume(volumeName: str, printOutput: bool = False):
+def delete_volume(volumeName: str, printOutput: bool = False):
     # Retrieve config details from config file
     try:
         config = retrieveConfig(printOutput=printOutput)
@@ -862,7 +863,7 @@ def deleteVolume(volumeName: str, printOutput: bool = False):
         raise ConnectionTypeError()
 
 
-def listCloudSyncRelationships(printOutput: bool = False) -> list():
+def list_cloud_sync_relationships(printOutput: bool = False) -> list():
     # Step 1: Obtain access token and account ID for accessing Cloud Sync API
 
     # Retrieve refresh token
@@ -915,7 +916,7 @@ def listCloudSyncRelationships(printOutput: bool = False) -> list():
     return relationshipsList
 
 
-def listSnapMirrorRelationships(printOutput: bool = False) -> list():
+def list_snap_mirror_relationships(printOutput: bool = False) -> list():
     # Retrieve config details from config file
     try:
         config = retrieveConfig(printOutput=printOutput)
@@ -1008,7 +1009,7 @@ def listSnapMirrorRelationships(printOutput: bool = False) -> list():
         raise ConnectionTypeError()
 
 
-def listSnapshots(volumeName: str, printOutput: bool = False) -> list():
+def list_snapshots(volumeName: str, printOutput: bool = False) -> list():
     # Retrieve config details from config file
     try:
         config = retrieveConfig(printOutput=printOutput)
@@ -1074,7 +1075,7 @@ def listSnapshots(volumeName: str, printOutput: bool = False) -> list():
         raise ConnectionTypeError()
 
 
-def listVolumes(checkLocalMounts: bool = False, printOutput: bool = False) -> list():
+def list_volumes(checkLocalMounts: bool = False, printOutput: bool = False) -> list():
     # Retrieve config details from config file
     try:
         config = retrieveConfig(printOutput=printOutput)
@@ -1193,7 +1194,7 @@ def listVolumes(checkLocalMounts: bool = False, printOutput: bool = False) -> li
         raise ConnectionTypeError()
 
 
-def mountVolume(volumeName: str, mountpoint: str, printOutput: bool = False):
+def mount_volume(volumeName: str, mountpoint: str, printOutput: bool = False):
     # Confirm that mountpoint value was passed in
     if not mountpoint:
         if printOutput:
@@ -1210,7 +1211,7 @@ def mountVolume(volumeName: str, mountpoint: str, printOutput: bool = False):
 
     # Retrieve list of volumes
     try:
-        volumes = listVolumes(checkLocalMounts=True)
+        volumes = list_volumes(checkLocalMounts=True)
     except (InvalidConfigError, APIConnectionError):
         if printOutput:
             print("Error: Error retrieving NFS mount target for volume.")
@@ -1256,7 +1257,7 @@ def mountVolume(volumeName: str, mountpoint: str, printOutput: bool = False):
         raise MountOperationError(err)
 
 
-def prepopulateFlexCache(volumeName: str, paths: list, printOutput: bool = False):
+def prepopulate_flex_cache(volumeName: str, paths: list, printOutput: bool = False):
     # Retrieve config details from config file
     try:
         config = retrieveConfig(printOutput=printOutput)
@@ -1311,7 +1312,7 @@ def prepopulateFlexCache(volumeName: str, paths: list, printOutput: bool = False
         raise ConnectionTypeError()
 
 
-def pullBucketFromS3(s3Bucket: str, localDirectory: str, s3ObjectKeyPrefix: str = "", printOutput: bool = False):
+def pull_bucket_from_s3(s3Bucket: str, localDirectory: str, s3ObjectKeyPrefix: str = "", printOutput: bool = False):
     # Retrieve S3 access details from existing config file
     try:
         s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = retrieveS3AccessDetails(printOutput=printOutput)
@@ -1344,7 +1345,7 @@ def pullBucketFromS3(s3Bucket: str, localDirectory: str, s3ObjectKeyPrefix: str 
     print("Download complete.")
 
 
-def pullObjectFromS3(s3Bucket: str, s3ObjectKey: str, localFile: str = None, printOutput: bool = False):
+def pull_object_from_s3(s3Bucket: str, s3ObjectKey: str, localFile: str = None, printOutput: bool = False):
     # Retrieve S3 access details from existing config file
     try:
         s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = retrieveS3AccessDetails(printOutput=printOutput)
@@ -1364,8 +1365,8 @@ def pullObjectFromS3(s3Bucket: str, s3ObjectKey: str, localFile: str = None, pri
     print("Download complete.")
 
 
-def pushDirectoryToS3(s3Bucket: str, localDirectory: str, s3ObjectKeyPrefix: str = "",
-                      s3ExtraArgs: str = None, printOutput: bool = False):
+def push_directory_to_s3(s3Bucket: str, localDirectory: str, s3ObjectKeyPrefix: str = "",
+                         s3ExtraArgs: str = None, printOutput: bool = False):
     # Retrieve S3 access details from existing config file
     try:
         s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = retrieveS3AccessDetails(printOutput=printOutput)
@@ -1407,7 +1408,7 @@ def pushDirectoryToS3(s3Bucket: str, localDirectory: str, s3ObjectKeyPrefix: str
     print("Upload complete.")
 
 
-def pushFileToS3(s3Bucket: str, localFile: str, s3ObjectKey: str = None, s3ExtraArgs: str = None, printOutput: bool = False):
+def push_file_to_s3(s3Bucket: str, localFile: str, s3ObjectKey: str = None, s3ExtraArgs: str = None, printOutput: bool = False):
     # Retrieve S3 access details from existing config file
     try:
         s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = retrieveS3AccessDetails(printOutput=printOutput)
@@ -1427,7 +1428,7 @@ def pushFileToS3(s3Bucket: str, localFile: str, s3ObjectKey: str = None, s3Extra
     print("Upload complete.")
 
 
-def restoreSnapshot(volumeName: str, snapshotName: str, printOutput: bool = False):
+def restore_snapshot(volumeName: str, snapshotName: str, printOutput: bool = False):
     # Retrieve config details from config file
     try:
         config = retrieveConfig(printOutput=printOutput)
@@ -1487,7 +1488,7 @@ def restoreSnapshot(volumeName: str, snapshotName: str, printOutput: bool = Fals
         raise ConnectionTypeError()
 
 
-def syncCloudSyncRelationship(relationshipID: str, waitUntilComplete: bool = False, printOutput: bool = False):
+def sync_cloud_sync_relationship(relationshipID: str, waitUntilComplete: bool = False, printOutput: bool = False):
     # Step 1: Obtain access token and account ID for accessing Cloud Sync API
 
     # Retrieve refresh token
@@ -1582,7 +1583,7 @@ def syncCloudSyncRelationship(relationshipID: str, waitUntilComplete: bool = Fal
             time.sleep(60)
 
 
-def syncSnapMirrorRelationship(uuid: str, waitUntilComplete: bool = False, printOutput: bool = False):
+def sync_snap_mirror_relationship(uuid: str, waitUntilComplete: bool = False, printOutput: bool = False):
     # Retrieve config details from config file
     try:
         config = retrieveConfig(printOutput=printOutput)
@@ -1661,4 +1662,96 @@ def syncSnapMirrorRelationship(uuid: str, waitUntilComplete: bool = False, print
     else:
         raise ConnectionTypeError()
 
+#
+# Deprecated function names
+#
 
+
+@deprecated
+def cloneVolume(*args, **kwargs):
+    clone_volume(*args, **kwargs)
+
+
+@deprecated
+def createSnapshot(*args, **kwargs):
+    create_snapshot(*args, **kwargs)
+
+
+@deprecated
+def createVolume(*args, **kwargs):
+    create_volume(*args, **kwargs)
+
+
+@deprecated
+def deleteSnapshot(*args, **kwargs):
+    delete_snapshot(*args, **kwargs)
+
+
+@deprecated
+def deleteVolume(*args, **kwargs):
+    delete_volume(*args, **kwargs)
+
+
+@deprecated
+def listCloudSyncRelationships(*args, **kwargs):
+    list_cloud_sync_relationships(*args, **kwargs)
+
+
+@deprecated
+def listSnapMirrorRelationships(*args, **kwargs):
+    list_snap_mirror_relationships(*args, **kwargs)
+
+
+@deprecated
+def listSnapshots(*args, **kwargs):
+    list_snapshots(*args, **kwargs)
+
+
+@deprecated
+def listVolumes(*args, **kwargs):
+    list_volumes(*args, **kwargs)
+
+
+@deprecated
+def mountVolume(*args, **kwargs):
+    mount_volume(*args, **kwargs)
+
+
+@deprecated
+def prepopulateFlexCache(*args, **kwargs):
+    prepopulate_flex_cache(*args, **kwargs)
+
+
+@deprecated
+def pullBucketFromS3(*args, **kwargs):
+    pull_bucket_from_s3(*args, **kwargs)
+
+
+@deprecated
+def pullObjectFromS3(*args, **kwargs):
+    pull_object_from_s3(*args, **kwargs)
+
+
+@deprecated
+def pushDirectoryToS3(*args, **kwargs):
+    push_directory_to_s3(*args, **kwargs)
+
+
+@deprecated
+def pushFileToS3(*args, **kwargs):
+    push_file_to_s3(*args, **kwargs)
+
+
+@deprecated
+def restoreSnapshot(*args, **kwargs):
+    restore_snapshot(*args, **kwargs)
+
+
+@deprecated
+def syncCloudSyncRelationship(*args, **kwargs):
+    sync_cloud_sync_relationship(*args, **kwargs)
+
+
+@deprecated
+def syncSnapMirrorRelationship(*args, **kwargs):
+    sync_snap_mirror_relationship(*args, **kwargs)
