@@ -2,23 +2,23 @@
 """NetApp Data Science Toolkit for Kubernetes Script Interface."""
 from netapp_dstk import k8s
 from netapp_dstk.k8s import (
-    cloneVolume,
-    createVolumeSnapshot,
+    clone_volume,
+    create_volume_snapshot,
     InvalidConfigError,
     APIConnectionError,
-    createVolume,
-    cloneJupyterLab,
-    createJupyterLab,
-    createJupyterLabSnapshot,
-    deleteVolumeSnapshot,
-    deleteVolume,
-    deleteJupyterLab,
-    listJupyterLabs,
-    listVolumeSnapshots,
-    listJupyterLabSnapshots,
-    listVolumes,
-    restoreJupyterLabSnapshot,
-    restoreVolumeSnapshot
+    create_volume,
+    clone_jupyter_lab,
+    create_jupyter_lab,
+    create_jupyter_lab_snapshot,
+    delete_volume_snapshot,
+    delete_volume,
+    delete_jupyter_lab,
+    list_jupyter_labs,
+    list_volume_snapshots,
+    list_jupyter_lab_snapshots,
+    list_volumes,
+    restore_jupyter_lab_snapshot,
+    restore_volume_snapshot
 )
 
 version = "1.2"
@@ -423,8 +423,8 @@ if __name__ == '__main__':
 
             # Clone volume
             try:
-                cloneVolume(newPvcName=newPvcName, sourcePvcName=sourcePvcName, sourceSnapshotName=sourceSnapshotName,
-                            volumeSnapshotClass=volumeSnapshotClass, namespace=namespace, printOutput=True)
+                clone_volume(newPvcName=newPvcName, sourcePvcName=sourcePvcName, sourceSnapshotName=sourceSnapshotName,
+                             volumeSnapshotClass=volumeSnapshotClass, namespace=namespace, printOutput=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -479,10 +479,10 @@ if __name__ == '__main__':
 
             # Clone volume
             try:
-                cloneJupyterLab(newWorkspaceName=newWorkspaceName, sourceWorkspaceName=sourceWorkspaceName,
-                                sourceSnapshotName=sourceSnapshotName, volumeSnapshotClass=volumeSnapshotClass,
-                                namespace=namespace, requestCpu=requestCpu, requestMemory=requestMemory,
-                                requestNvidiaGpu=requestNvidiaGpu, printOutput=True)
+                clone_jupyter_lab(newWorkspaceName=newWorkspaceName, sourceWorkspaceName=sourceWorkspaceName,
+                                  sourceSnapshotName=sourceSnapshotName, volumeSnapshotClass=volumeSnapshotClass,
+                                  namespace=namespace, requestCpu=requestCpu, requestMemory=requestMemory,
+                                  requestNvidiaGpu=requestNvidiaGpu, printOutput=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -528,8 +528,8 @@ if __name__ == '__main__':
 
             # Create snapshot
             try:
-                createVolumeSnapshot(pvcName=pvcName, snapshotName=snapshotName,
-                                     volumeSnapshotClass=volumeSnapshotClass, namespace=namespace, printOutput=True)
+                create_volume_snapshot(pvcName=pvcName, snapshotName=snapshotName,
+                                       volumeSnapshotClass=volumeSnapshotClass, namespace=namespace, printOutput=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -566,8 +566,8 @@ if __name__ == '__main__':
 
             # Create volume
             try:
-                createVolume(pvcName=pvcName, volumeSize=volumeSize, storageClass=storageClass, namespace=namespace,
-                             printOutput=True)
+                create_volume(pvcName=pvcName, volumeSize=volumeSize, storageClass=storageClass, namespace=namespace,
+                              printOutput=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -617,9 +617,9 @@ if __name__ == '__main__':
 
             # Create JupyterLab workspace
             try:
-                createJupyterLab(workspaceName=workspaceName, workspaceSize=workspaceSize, storageClass=storageClass,
-                                 namespace=namespace, workspaceImage=workspaceImage, requestCpu=requestCpu,
-                                 requestMemory=requestMemory, requestNvidiaGpu=requestNvidiaGpu, printOutput=True)
+                create_jupyter_lab(workspaceName=workspaceName, workspaceSize=workspaceSize, storageClass=storageClass,
+                                   namespace=namespace, workspaceImage=workspaceImage, requestCpu=requestCpu,
+                                   requestMemory=requestMemory, requestNvidiaGpu=requestNvidiaGpu, printOutput=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -657,8 +657,8 @@ if __name__ == '__main__':
 
             # Create snapshot
             try:
-                createJupyterLabSnapshot(workspaceName=workspaceName, snapshotName=snapshotName,
-                                         volumeSnapshotClass=volumeSnapshotClass, namespace=namespace, printOutput=True)
+                create_jupyter_lab_snapshot(workspaceName=workspaceName, snapshotName=snapshotName,
+                                            volumeSnapshotClass=volumeSnapshotClass, namespace=namespace, printOutput=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -715,7 +715,7 @@ if __name__ == '__main__':
 
             # Delete snapshot
             try:
-                deleteVolumeSnapshot(snapshotName=snapshotName, namespace=namespace, printOutput=True)
+                delete_volume_snapshot(snapshotName=snapshotName, namespace=namespace, printOutput=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -764,8 +764,8 @@ if __name__ == '__main__':
 
             # Delete volume
             try:
-                deleteVolume(pvcName=pvcName, namespace=namespace, preserveSnapshots=preserveSnapshots,
-                             printOutput=True)
+                delete_volume(pvcName=pvcName, namespace=namespace, preserveSnapshots=preserveSnapshots,
+                              printOutput=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -814,8 +814,8 @@ if __name__ == '__main__':
 
             # Delete JupyterLab workspace
             try:
-                deleteJupyterLab(workspaceName=workspaceName, namespace=namespace, preserveSnapshots=preserveSnapshots,
-                                 printOutput=True)
+                delete_jupyter_lab(workspaceName=workspaceName, namespace=namespace, preserveSnapshots=preserveSnapshots,
+                                   printOutput=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -852,7 +852,7 @@ if __name__ == '__main__':
 
             # List volumes
             try:
-                listVolumeSnapshots(pvcName=pvcName, namespace=namespace, printOutput=True)
+                list_volume_snapshots(pvcName=pvcName, namespace=namespace, printOutput=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -876,7 +876,7 @@ if __name__ == '__main__':
 
             # List volumes
             try:
-                listVolumes(namespace=namespace, printOutput=True)
+                list_volumes(namespace=namespace, printOutput=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -902,7 +902,7 @@ if __name__ == '__main__':
 
             # List JupyterLab snapshots
             try:
-                listJupyterLabSnapshots(workspaceName=workspaceName, namespace=namespace, printOutput=True)
+                list_jupyter_lab_snapshots(workspaceName=workspaceName, namespace=namespace, printOutput=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -925,7 +925,7 @@ if __name__ == '__main__':
 
             # List JupyterLab workspaces
             try:
-                listJupyterLabs(namespace=namespace, printOutput=True)
+                list_jupyter_labs(namespace=namespace, printOutput=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -979,7 +979,7 @@ if __name__ == '__main__':
 
             # Restore snapshot
             try:
-                restoreVolumeSnapshot(snapshotName=snapshotName, namespace=namespace, printOutput=True)
+                restore_volume_snapshot(snapshotName=snapshotName, namespace=namespace, printOutput=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1009,7 +1009,7 @@ if __name__ == '__main__':
 
             # Restore snapshot
             try:
-                restoreJupyterLabSnapshot(snapshotName=snapshotName, namespace=namespace, printOutput=True)
+                restore_jupyter_lab_snapshot(snapshotName=snapshotName, namespace=namespace, printOutput=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 

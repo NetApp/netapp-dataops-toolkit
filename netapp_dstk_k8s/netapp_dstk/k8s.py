@@ -4,11 +4,13 @@ This module provides the public functions available to be imported directly
 by applications using the import method of utilizing the toolkit.
 """
 
-__version__ = "0.0.1a2"
+__version__ = "0.0.1a3"
 
 from datetime import datetime
+import functools
 from getpass import getpass
 from time import sleep
+import warnings
 
 import IPython
 from kubernetes import client, config
@@ -18,6 +20,15 @@ from tabulate import tabulate
 import pandas as pd
 
 
+# Using this decorator in lieu of using a dependency to manage deprecation
+def deprecated(func):
+    @functools.wraps(func)
+    def warned_func(*args, **kwargs):
+        warnings.warn("Function {} is deprecated.".format(func.__name__),
+                      category=DeprecationWarning,
+                      stacklevel=2)
+        return func(*args, **kwargs)
+    return warned_func
 #
 # Class definitions
 #
@@ -70,73 +81,7 @@ def jupyterLabWorkspacePVCName(workspaceName: str) -> str:
     return jupyterLabPrefix() + workspaceName
 
 
-def listVolumeSnapshots(pvcName: str = None, namespace: str = "default", printOutput: bool = False,
-                        jupyterLabWorkspacesOnly: bool = False) -> list:
-    # Retrieve kubeconfig
-    try:
-        loadKubeConfig()
-    except:
-        if printOutput:
-            printInvalidConfigError()
-        raise InvalidConfigError()
 
-    # Retrieve list of Snapshots
-    try:
-        api = client.CustomObjectsApi()
-        volumeSnapshotList = api.list_namespaced_custom_object(group=snapshotApiGroup(), version=snapshotApiVersion(),
-                                                               namespace=namespace, plural="volumesnapshots")
-    except ApiException as err:
-        if printOutput:
-            print("Error: Kubernetes API Error: ", err)
-        raise APIConnectionError(err)
-
-    # Construct list of snapshots
-    snapshotsList = list()
-    # return volumeSnapshotList
-    for volumeSnapshot in volumeSnapshotList["items"]:
-        # Construct dict containing snapshot details
-        if (not pvcName) or (volumeSnapshot["spec"]["source"]["persistentVolumeClaimName"] == pvcName):
-            snapshotDict = dict()
-            snapshotDict["VolumeSnapshot Name"] = volumeSnapshot["metadata"]["name"]
-            snapshotDict["Ready to Use"] = volumeSnapshot["status"]["readyToUse"]
-            try:
-                snapshotDict["Creation Time"] = volumeSnapshot["status"]["creationTime"]
-            except:
-                snapshotDict["Creation Time"] = ""
-            snapshotDict["Source PersistentVolumeClaim (PVC)"] = volumeSnapshot["spec"]["source"][
-                "persistentVolumeClaimName"]
-            try:
-                api = client.CoreV1Api()
-                api.read_namespaced_persistent_volume_claim(name=snapshotDict["Source PersistentVolumeClaim (PVC)"],
-                                                            namespace=namespace)  # Confirm that source PVC still exists
-            except:
-                snapshotDict["Source PersistentVolumeClaim (PVC)"] = "*deleted*"
-            try:
-                snapshotDict["Source JupyterLab workspace"] = retrieveJupyterLabWorkspaceForPvc(
-                    pvcName=snapshotDict["Source PersistentVolumeClaim (PVC)"], namespace=namespace, printOutput=False)
-                jupyterLabWorkspace = True
-            except:
-                snapshotDict["Source JupyterLab workspace"] = ""
-                jupyterLabWorkspace = False
-            try:
-                snapshotDict["VolumeSnapshotClass"] = volumeSnapshot["spec"]["volumeSnapshotClassName"]
-            except:
-                snapshotDict["VolumeSnapshotClass"] = ""
-
-            # Append dict to list of snapshots
-            if jupyterLabWorkspacesOnly:
-                if jupyterLabWorkspace:
-                    snapshotsList.append(snapshotDict)
-            else:
-                snapshotsList.append(snapshotDict)
-
-    # Print list of snapshots
-    if printOutput:
-        # Convert snapshots array to Pandas DataFrame
-        snapshotsDF = pd.DataFrame.from_dict(snapshotsList, dtype="string")
-        print(tabulate(snapshotsDF, showindex=False, headers=snapshotsDF.columns))
-
-    return snapshotsList
 
 
 def loadKubeConfig():
@@ -371,10 +316,10 @@ def waitForJupyterLabDeploymentReady(workspaceName: str, namespace: str = "defau
 # Public functions used for imports
 #
 
-def cloneJupyterLab(newWorkspaceName: str, sourceWorkspaceName: str, sourceSnapshotName: str = None,
-                    newWorkspacePassword: str = None, volumeSnapshotClass: str = "csi-snapclass",
-                    namespace: str = "default", requestCpu: str = None, requestMemory: str = None,
-                    requestNvidiaGpu: str = None, printOutput: bool = False):
+def clone_jupyter_lab(newWorkspaceName: str, sourceWorkspaceName: str, sourceSnapshotName: str = None,
+                      newWorkspacePassword: str = None, volumeSnapshotClass: str = "csi-snapclass",
+                      namespace: str = "default", requestCpu: str = None, requestMemory: str = None,
+                      requestNvidiaGpu: str = None, printOutput: bool = False):
     # Determine source PVC details
     if sourceSnapshotName:
         sourcePvcName, workspaceSize = retrieveSourceVolumeDetailsForVolumeSnapshot(snapshotName=sourceSnapshotName,
@@ -404,27 +349,27 @@ def cloneJupyterLab(newWorkspaceName: str, sourceWorkspaceName: str, sourceSnaps
     labels["source-pvc"] = sourcePvcName
 
     # Clone workspace PVC
-    cloneVolume(newPvcName=jupyterLabWorkspacePVCName(workspaceName=newWorkspaceName), sourcePvcName=sourcePvcName,
-                sourceSnapshotName=sourceSnapshotName, volumeSnapshotClass=volumeSnapshotClass, namespace=namespace,
-                printOutput=printOutput, pvcLabels=labels)
+    clone_volume(newPvcName=jupyterLabWorkspacePVCName(workspaceName=newWorkspaceName), sourcePvcName=sourcePvcName,
+                 sourceSnapshotName=sourceSnapshotName, volumeSnapshotClass=volumeSnapshotClass, namespace=namespace,
+                 printOutput=printOutput, pvcLabels=labels)
 
     # Remove source PVC from labels
     del labels["source-pvc"]
 
     # Create new workspace
     print()
-    createJupyterLab(workspaceName=newWorkspaceName, workspaceSize=workspaceSize, namespace=namespace,
-                     workspacePassword=newWorkspacePassword, workspaceImage=sourceWorkspaceImage, requestCpu=requestCpu,
-                     requestMemory=requestMemory, requestNvidiaGpu=requestNvidiaGpu, printOutput=printOutput,
-                     pvcAlreadyExists=True, labels=labels)
+    create_jupyter_lab(workspaceName=newWorkspaceName, workspaceSize=workspaceSize, namespace=namespace,
+                       workspacePassword=newWorkspacePassword, workspaceImage=sourceWorkspaceImage, requestCpu=requestCpu,
+                       requestMemory=requestMemory, requestNvidiaGpu=requestNvidiaGpu, printOutput=printOutput,
+                       pvcAlreadyExists=True, labels=labels)
 
     if printOutput:
         print("JupyterLab workspace successfully cloned.")
 
 
-def cloneVolume(newPvcName: str, sourcePvcName: str, sourceSnapshotName: str = None,
-                volumeSnapshotClass: str = "csi-snapclass", namespace: str = "default", printOutput: bool = False,
-                pvcLabels: dict = None):
+def clone_volume(newPvcName: str, sourcePvcName: str, sourceSnapshotName: str = None,
+                 volumeSnapshotClass: str = "csi-snapclass", namespace: str = "default", printOutput: bool = False,
+                 pvcLabels: dict = None):
     # Handle volume source
     if not sourceSnapshotName:
         # Create new VolumeSnapshot to use as source for clone
@@ -433,8 +378,8 @@ def cloneVolume(newPvcName: str, sourcePvcName: str, sourceSnapshotName: str = N
         if printOutput:
             print(
                 "Creating new VolumeSnapshot '" + sourceSnapshotName + "' for source PVC '" + sourcePvcName + "' in namespace '" + namespace + "' to use as source for clone...")
-        createVolumeSnapshot(pvcName=sourcePvcName, snapshotName=sourceSnapshotName,
-                             volumeSnapshotClass=volumeSnapshotClass, namespace=namespace, printOutput=printOutput)
+        create_volume_snapshot(pvcName=sourcePvcName, snapshotName=sourceSnapshotName,
+                               volumeSnapshotClass=volumeSnapshotClass, namespace=namespace, printOutput=printOutput)
 
     # Retrieve source volume details
     sourcePvcName, restoreSize = retrieveSourceVolumeDetailsForVolumeSnapshot(snapshotName=sourceSnapshotName,
@@ -450,17 +395,17 @@ def cloneVolume(newPvcName: str, sourcePvcName: str, sourceSnapshotName: str = N
     if printOutput:
         print(
             "Creating new PersistentVolumeClaim (PVC) '" + newPvcName + "' from VolumeSnapshot '" + sourceSnapshotName + "' in namespace '" + namespace + "'...")
-    createVolume(pvcName=newPvcName, volumeSize=restoreSize, storageClass=storageClass, namespace=namespace,
-                 printOutput=printOutput, pvcLabels=pvcLabels, sourceSnapshot=sourceSnapshotName)
+    create_volume(pvcName=newPvcName, volumeSize=restoreSize, storageClass=storageClass, namespace=namespace,
+                  printOutput=printOutput, pvcLabels=pvcLabels, sourceSnapshot=sourceSnapshotName)
 
     if printOutput:
         print("Volume successfully cloned.")
 
 
-def createJupyterLab(workspaceName: str, workspaceSize: str, storageClass: str = None, namespace: str = "default",
-                     workspacePassword: str = None, workspaceImage: str = "jupyter/tensorflow-notebook",
-                     requestCpu: str = None, requestMemory: str = None, requestNvidiaGpu: str = None,
-                     printOutput: bool = False, pvcAlreadyExists: bool = False, labels: dict = None) -> str:
+def create_jupyter_lab(workspaceName: str, workspaceSize: str, storageClass: str = None, namespace: str = "default",
+                       workspacePassword: str = None, workspaceImage: str = "jupyter/tensorflow-notebook",
+                       requestCpu: str = None, requestMemory: str = None, requestNvidiaGpu: str = None,
+                       printOutput: bool = False, pvcAlreadyExists: bool = False, labels: dict = None) -> str:
     # Retrieve kubeconfig
     try:
         loadKubeConfig()
@@ -489,8 +434,8 @@ def createJupyterLab(workspaceName: str, workspaceSize: str, storageClass: str =
         if printOutput:
             print("\nCreating persistent volume for workspace...")
         try:
-            createVolume(pvcName=jupyterLabWorkspacePVCName(workspaceName=workspaceName), volumeSize=workspaceSize,
-                         storageClass=storageClass, namespace=namespace, pvcLabels=labels, printOutput=printOutput)
+            create_volume(pvcName=jupyterLabWorkspacePVCName(workspaceName=workspaceName), volumeSize=workspaceSize,
+                          storageClass=storageClass, namespace=namespace, pvcLabels=labels, printOutput=printOutput)
         except:
             if printOutput:
                 print("Aborting workspace creation...")
@@ -652,20 +597,20 @@ def createJupyterLab(workspaceName: str, workspaceSize: str, storageClass: str =
     return url
 
 
-def createJupyterLabSnapshot(workspaceName: str, snapshotName: str = None, volumeSnapshotClass: str = "csi-snapclass",
-                             namespace: str = "default", printOutput: bool = False):
+def create_jupyter_lab_snapshot(workspaceName: str, snapshotName: str = None, volumeSnapshotClass: str = "csi-snapclass",
+                                namespace: str = "default", printOutput: bool = False):
     # Create snapshot
     if printOutput:
         print(
             "Creating VolumeSnapshot for JupyterLab workspace '" + workspaceName + "' in namespace '" + namespace + "'...")
-    createVolumeSnapshot(pvcName=jupyterLabWorkspacePVCName(workspaceName=workspaceName), snapshotName=snapshotName,
-                         volumeSnapshotClass=volumeSnapshotClass, namespace=namespace, printOutput=printOutput)
+    create_volume_snapshot(pvcName=jupyterLabWorkspacePVCName(workspaceName=workspaceName), snapshotName=snapshotName,
+                           volumeSnapshotClass=volumeSnapshotClass, namespace=namespace, printOutput=printOutput)
 
 
-def createVolume(pvcName: str, volumeSize: str, storageClass: str = None, namespace: str = "default",
-                 printOutput: bool = False,
-                 pvcLabels: dict = {"created-by": "ntap-dsutil", "created-by-operation": "create-volume"},
-                 sourceSnapshot: str = None, sourcePvc: str = None):
+def create_volume(pvcName: str, volumeSize: str, storageClass: str = None, namespace: str = "default",
+                  printOutput: bool = False,
+                  pvcLabels: dict = {"created-by": "ntap-dsutil", "created-by-operation": "create-volume"},
+                  sourceSnapshot: str = None, sourcePvc: str = None):
     # Retrieve kubeconfig
     try:
         loadKubeConfig()
@@ -738,8 +683,8 @@ def createVolume(pvcName: str, volumeSize: str, storageClass: str = None, namesp
             "Volume successfully created and bound to PersistentVolumeClaim (PVC) '" + pvcName + "' in namespace '" + namespace + "'.")
 
 
-def createVolumeSnapshot(pvcName: str, snapshotName: str = None, volumeSnapshotClass: str = "csi-snapclass",
-                         namespace: str = "default", printOutput: bool = False):
+def create_volume_snapshot(pvcName: str, snapshotName: str = None, volumeSnapshotClass: str = "csi-snapclass",
+                           namespace: str = "default", printOutput: bool = False):
     # Retrieve kubeconfig
     try:
         loadKubeConfig()
@@ -806,8 +751,8 @@ def createVolumeSnapshot(pvcName: str, snapshotName: str = None, volumeSnapshotC
         print("Snapshot successfully created.")
 
 
-def deleteJupyterLab(workspaceName: str, namespace: str = "default", preserveSnapshots: bool = False,
-                     printOutput: bool = False):
+def delete_jupyter_lab(workspaceName: str, namespace: str = "default", preserveSnapshots: bool = False,
+                       printOutput: bool = False):
     # Retrieve kubeconfig
     try:
         loadKubeConfig()
@@ -840,14 +785,14 @@ def deleteJupyterLab(workspaceName: str, namespace: str = "default", preserveSna
     # Delete PVC
     if printOutput:
         print("Deleting PVC...")
-    deleteVolume(pvcName=jupyterLabWorkspacePVCName(workspaceName=workspaceName), namespace=namespace,
-                 preserveSnapshots=preserveSnapshots, printOutput=printOutput)
+    delete_volume(pvcName=jupyterLabWorkspacePVCName(workspaceName=workspaceName), namespace=namespace,
+                  preserveSnapshots=preserveSnapshots, printOutput=printOutput)
 
     if printOutput:
         print("Workspace successfully deleted.")
 
 
-def deleteVolume(pvcName: str, namespace: str = "default", preserveSnapshots: bool = False, printOutput: bool = False):
+def delete_volume(pvcName: str, namespace: str = "default", preserveSnapshots: bool = False, printOutput: bool = False):
     # Retrieve kubeconfig
     try:
         loadKubeConfig()
@@ -864,7 +809,7 @@ def deleteVolume(pvcName: str, namespace: str = "default", preserveSnapshots: bo
 
         # Retrieve list of snapshots for PVC
         try:
-            snapshotList = listVolumeSnapshots(pvcName=pvcName, namespace=namespace, printOutput=False)
+            snapshotList = list_volume_snapshots(pvcName=pvcName, namespace=namespace, printOutput=False)
         except APIConnectionError as err:
             if printOutput:
                 print("Error: Kubernetes API Error: ", err)
@@ -872,8 +817,8 @@ def deleteVolume(pvcName: str, namespace: str = "default", preserveSnapshots: bo
 
         # Delete each snapshot
         for snapshot in snapshotList:
-            deleteVolumeSnapshot(snapshotName=snapshot["VolumeSnapshot Name"], namespace=namespace,
-                                 printOutput=printOutput)
+            delete_volume_snapshot(snapshotName=snapshot["VolumeSnapshot Name"], namespace=namespace,
+                                   printOutput=printOutput)
 
     # Delete PVC
     if printOutput:
@@ -901,7 +846,7 @@ def deleteVolume(pvcName: str, namespace: str = "default", preserveSnapshots: bo
         print("PersistentVolumeClaim (PVC) successfully deleted.")
 
 
-def deleteVolumeSnapshot(snapshotName: str, namespace: str = "default", printOutput: bool = False):
+def delete_volume_snapshot(snapshotName: str, namespace: str = "default", printOutput: bool = False):
     # Retrieve kubeconfig
     try:
         loadKubeConfig()
@@ -937,7 +882,7 @@ def deleteVolumeSnapshot(snapshotName: str, namespace: str = "default", printOut
         print("VolumeSnapshot successfully deleted.")
 
 
-def listJupyterLabs(namespace: str = "default", printOutput: bool = False) -> list:
+def list_jupyter_labs(namespace: str = "default", printOutput: bool = False) -> list:
     # Retrieve kubeconfig
     try:
         loadKubeConfig()
@@ -1030,7 +975,7 @@ def listJupyterLabs(namespace: str = "default", printOutput: bool = False) -> li
     return workspacesList
 
 
-def listJupyterLabSnapshots(workspaceName: str = None, namespace: str = "default", printOutput: bool = False):
+def list_jupyter_lab_snapshots(workspaceName: str = None, namespace: str = "default", printOutput: bool = False):
     # Determine PVC name
     if workspaceName:
         pvcName = jupyterLabWorkspacePVCName(workspaceName=workspaceName)
@@ -1038,11 +983,11 @@ def listJupyterLabSnapshots(workspaceName: str = None, namespace: str = "default
         pvcName = None
 
     # List snapshots
-    return listVolumeSnapshots(pvcName=pvcName, namespace=namespace, printOutput=printOutput,
-                               jupyterLabWorkspacesOnly=True)
+    return list_volume_snapshots(pvcName=pvcName, namespace=namespace, printOutput=printOutput,
+                                 jupyterLabWorkspacesOnly=True)
 
 
-def listVolumes(namespace: str = "default", printOutput: bool = False) -> list:
+def list_volumes(namespace: str = "default", printOutput: bool = False) -> list:
     # Retrieve kubeconfig
     try:
         loadKubeConfig()
@@ -1118,7 +1063,76 @@ def listVolumes(namespace: str = "default", printOutput: bool = False) -> list:
     return volumesList
 
 
-def restoreJupyterLabSnapshot(snapshotName: str = None, namespace: str = "default", printOutput: bool = False):
+def list_volume_snapshots(pvcName: str = None, namespace: str = "default", printOutput: bool = False,
+                          jupyterLabWorkspacesOnly: bool = False) -> list:
+    # Retrieve kubeconfig
+    try:
+        loadKubeConfig()
+    except:
+        if printOutput:
+            printInvalidConfigError()
+        raise InvalidConfigError()
+
+    # Retrieve list of Snapshots
+    try:
+        api = client.CustomObjectsApi()
+        volumeSnapshotList = api.list_namespaced_custom_object(group=snapshotApiGroup(), version=snapshotApiVersion(),
+                                                               namespace=namespace, plural="volumesnapshots")
+    except ApiException as err:
+        if printOutput:
+            print("Error: Kubernetes API Error: ", err)
+        raise APIConnectionError(err)
+
+    # Construct list of snapshots
+    snapshotsList = list()
+    # return volumeSnapshotList
+    for volumeSnapshot in volumeSnapshotList["items"]:
+        # Construct dict containing snapshot details
+        if (not pvcName) or (volumeSnapshot["spec"]["source"]["persistentVolumeClaimName"] == pvcName):
+            snapshotDict = dict()
+            snapshotDict["VolumeSnapshot Name"] = volumeSnapshot["metadata"]["name"]
+            snapshotDict["Ready to Use"] = volumeSnapshot["status"]["readyToUse"]
+            try:
+                snapshotDict["Creation Time"] = volumeSnapshot["status"]["creationTime"]
+            except:
+                snapshotDict["Creation Time"] = ""
+            snapshotDict["Source PersistentVolumeClaim (PVC)"] = volumeSnapshot["spec"]["source"][
+                "persistentVolumeClaimName"]
+            try:
+                api = client.CoreV1Api()
+                api.read_namespaced_persistent_volume_claim(name=snapshotDict["Source PersistentVolumeClaim (PVC)"],
+                                                            namespace=namespace)  # Confirm that source PVC still exists
+            except:
+                snapshotDict["Source PersistentVolumeClaim (PVC)"] = "*deleted*"
+            try:
+                snapshotDict["Source JupyterLab workspace"] = retrieveJupyterLabWorkspaceForPvc(
+                    pvcName=snapshotDict["Source PersistentVolumeClaim (PVC)"], namespace=namespace, printOutput=False)
+                jupyterLabWorkspace = True
+            except:
+                snapshotDict["Source JupyterLab workspace"] = ""
+                jupyterLabWorkspace = False
+            try:
+                snapshotDict["VolumeSnapshotClass"] = volumeSnapshot["spec"]["volumeSnapshotClassName"]
+            except:
+                snapshotDict["VolumeSnapshotClass"] = ""
+
+            # Append dict to list of snapshots
+            if jupyterLabWorkspacesOnly:
+                if jupyterLabWorkspace:
+                    snapshotsList.append(snapshotDict)
+            else:
+                snapshotsList.append(snapshotDict)
+
+    # Print list of snapshots
+    if printOutput:
+        # Convert snapshots array to Pandas DataFrame
+        snapshotsDF = pd.DataFrame.from_dict(snapshotsList, dtype="string")
+        print(tabulate(snapshotsDF, showindex=False, headers=snapshotsDF.columns))
+
+    return snapshotsList
+
+
+def restore_jupyter_lab_snapshot(snapshotName: str = None, namespace: str = "default", printOutput: bool = False):
     # Retrieve source PVC name
     sourcePvcName = retrieveSourceVolumeDetailsForVolumeSnapshot(snapshotName=snapshotName, namespace=namespace,
                                                                  printOutput=printOutput)[0]
@@ -1140,7 +1154,7 @@ def restoreJupyterLabSnapshot(snapshotName: str = None, namespace: str = "defaul
     sleep(5)
 
     # Restore snapshot
-    restoreVolumeSnapshot(snapshotName=snapshotName, namespace=namespace, printOutput=printOutput, pvcLabels=labels)
+    restore_volume_snapshot(snapshotName=snapshotName, namespace=namespace, printOutput=printOutput, pvcLabels=labels)
 
     # Scale deployment to 1 pod
     scaleJupyterLabDeployment(workspaceName=workspaceName, numPods=1, namespace=namespace, printOutput=printOutput)
@@ -1152,8 +1166,8 @@ def restoreJupyterLabSnapshot(snapshotName: str = None, namespace: str = "defaul
         print("JupyterLab workspace snapshot successfully restored.")
 
 
-def restoreVolumeSnapshot(snapshotName: str, namespace: str = "default", printOutput: bool = False,
-                          pvcLabels: dict = {"created-by": "ntap-dsutil",
+def restore_volume_snapshot(snapshotName: str, namespace: str = "default", printOutput: bool = False,
+                            pvcLabels: dict = {"created-by": "ntap-dsutil",
                                              "created-by-operation": "restore-volume-snapshot"}):
     # Retrieve source PVC, restoreSize, and StorageClass
     sourcePvcName, restoreSize = retrieveSourceVolumeDetailsForVolumeSnapshot(snapshotName=snapshotName,
@@ -1167,7 +1181,7 @@ def restoreVolumeSnapshot(snapshotName: str, namespace: str = "default", printOu
 
     # Delete source PVC
     try:
-        deleteVolume(pvcName=sourcePvcName, namespace=namespace, preserveSnapshots=True, printOutput=False)
+        delete_volume(pvcName=sourcePvcName, namespace=namespace, preserveSnapshots=True, printOutput=False)
     except APIConnectionError as err:
         if printOutput:
             print("Error: Kubernetes API Error: ", err)
@@ -1175,8 +1189,8 @@ def restoreVolumeSnapshot(snapshotName: str, namespace: str = "default", printOu
 
     # Create new PVC from snapshot
     try:
-        createVolume(pvcName=sourcePvcName, volumeSize=restoreSize, storageClass=storageClass, namespace=namespace,
-                     printOutput=False, pvcLabels=pvcLabels, sourceSnapshot=snapshotName)
+        create_volume(pvcName=sourcePvcName, volumeSize=restoreSize, storageClass=storageClass, namespace=namespace,
+                      printOutput=False, pvcLabels=pvcLabels, sourceSnapshot=snapshotName)
     except APIConnectionError as err:
         if printOutput:
             print("Error: Kubernetes API Error: ", err)
@@ -1184,3 +1198,83 @@ def restoreVolumeSnapshot(snapshotName: str, namespace: str = "default", printOu
 
     if printOutput:
         print("VolumeSnapshot successfully restored.")
+
+
+#
+# Deprecated function names
+#
+
+
+@deprecated
+def cloneJupyterLab(*args, **kwargs):
+    clone_jupyter_lab(*args, **kwargs)
+
+
+@deprecated
+def cloneVolume(*args, **kwargs):
+    clone_volume(*args, **kwargs)
+
+
+@deprecated
+def createJupyterLab(*args, **kwargs):
+    create_jupyter_lab(*args, **kwargs)
+
+
+@deprecated
+def createJupyterLabSnapshot(*args, **kwargs):
+    create_jupyter_lab_snapshot(*args, **kwargs)
+
+
+@deprecated
+def createVolume(*args, **kwargs):
+    create_volume(*args, **kwargs)
+
+
+@deprecated
+def createVolumeSnapshot(*args, **kwargs):
+    create_volume_snapshot(*args, **kwargs)
+
+
+@deprecated
+def deleteJupyterLab(*args, **kwargs):
+    delete_jupyter_lab(*args, **kwargs)
+
+
+@deprecated
+def deleteVolume(*args, **kwargs):
+    delete_volume(*args, **kwargs)
+
+
+@deprecated
+def deleteVolumeSnapshot(*args, **kwargs):
+    delete_volume_snapshot(*args, **kwargs)
+
+
+@deprecated
+def listJupyterLabs(*args, **kwargs):
+    list_jupyter_labs(*args, **kwargs)
+
+
+@deprecated
+def listJupyterLabSnapshots(*args, **kwargs):
+    list_jupyter_lab_snapshots(*args, **kwargs)
+
+
+@deprecated
+def listVolumes(*args, **kwargs):
+    list_volumes(*args, **kwargs)
+
+
+@deprecated
+def listVolumeSnapshots(*args, **kwargs):
+    list_volume_snapshots(*args, **kwargs)
+
+
+@deprecated
+def restoreJupyterLabSnapshot(*args, **kwargs):
+    restore_jupyter_lab_snapshot(*args, **kwargs)
+
+
+@deprecated
+def restoreVolumeSnapshot(*args, **kwargs):
+    restore_volume_snapshot(*args, **kwargs)

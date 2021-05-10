@@ -4,12 +4,14 @@ This module provides the public functions available to be imported directly
 by applications using the import method of utilizing the toolkit.
 """
 import base64
+import functools
 import json
 import os
 import re
 import subprocess
 import sys
 import time
+import warnings
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
@@ -28,6 +30,17 @@ import yaml
 
 
 __version__ = "0.0.1a2"
+
+
+# Using this decorator in lieu of using a dependency to manage deprecation
+def deprecated(func):
+    @functools.wraps(func)
+    def warned_func(*args, **kwargs):
+        warnings.warn("Function {} is deprecated.".format(func.__name__),
+                      category=DeprecationWarning,
+                      stacklevel=2)
+        return func(*args, **kwargs)
+    return warned_func
 
 #
 # The following attributes are unique to the traditional package.
