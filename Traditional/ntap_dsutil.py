@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 ## NetApp Data Science Toolkit
-version = "1.2"
+version = "1.2.2"
 
 
 import base64, json, os, subprocess, re, requests, yaml, time, boto3, boto3.session
