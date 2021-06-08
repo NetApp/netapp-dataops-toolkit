@@ -3,6 +3,7 @@
 This module provides the public functions available to be imported directly
 by applications using the import method of utilizing the toolkit.
 """
+
 import base64
 import functools
 import json
@@ -14,7 +15,6 @@ import time
 import warnings
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-
 import boto3
 from netapp_ontap import config as netappConfig
 from netapp_ontap.error import NetAppRestError
@@ -30,7 +30,7 @@ from tabulate import tabulate
 import yaml
 
 
-__version__ = "0.0.1a4"
+__version__ = "2.0.0alpha5"
 
 
 # Using this decorator in lieu of using a dependency to manage deprecation
@@ -43,54 +43,6 @@ def deprecated(func):
         return func(*args, **kwargs)
     return warned_func
 
-#
-# The following attributes are unique to the traditional package.
-#
-
-helpTextStandard = '''
-The NetApp Data Science Toolkit is a Python library that makes it simple for data scientists and data engineers to perform various data management tasks, such as provisioning a new data volume, near-instantaneously cloning a data volume, and near-instantaneously snapshotting a data volume for traceability/baselining.
-
-Basic Commands:
-
-\tconfig\t\t\t\tCreate a new config file (a config file is required to perform other commands).
-\thelp\t\t\t\tPrint help text.
-\tversion\t\t\t\tPrint version details.
-
-Data Volume Management Commands:
-Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
-
-\tclone volume\t\t\tCreate a new data volume that is an exact copy of an existing volume.
-\tcreate volume\t\t\tCreate a new data volume.
-\tdelete volume\t\t\tDelete an existing data volume.
-\tlist volumes\t\t\tList all data volumes.
-\tmount volume\t\t\tMount an existing data volume locally. Note: on Linux hosts - must be run as root.
-
-Snapshot Management Commands:
-Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
-
-\tcreate snapshot\t\t\tCreate a new snapshot for a data volume.
-\tdelete snapshot\t\t\tDelete an existing snapshot for a data volume.
-\tlist snapshots\t\t\tList all snapshots for a data volume.
-\trestore snapshot\t\tRestore a snapshot for a data volume (restore the volume to its exact state at the time that the snapshot was created).
-
-Data Fabric Commands:
-Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
-
-\tlist cloud-sync-relationships\tList all existing Cloud Sync relationships.
-\tsync cloud-sync-relationship\tTrigger a sync operation for an existing Cloud Sync relationship.
-\tpull-from-s3 bucket\t\tPull the contents of a bucket from S3.
-\tpull-from-s3 object\t\tPull an object from S3.
-\tpush-to-s3 directory\t\tPush the contents of a directory to S3 (multithreaded).
-\tpush-to-s3 file\t\t\tPush a file to S3.
-
-Advanced Data Fabric Commands:
-Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
-
-\tprepopulate flexcache\t\tPrepopulate specific files/directories on a FlexCache volume (ONTAP 9.8 and above ONLY).
-\tlist snapmirror-relationships\tList all existing SnapMirror relationships.
-\tsync snapmirror-relationship\tTrigger a sync operation for an existing SnapMirror relationship.
-'''
-
 
 class CloudSyncSyncOperationError(Exception) :
     """Error that will be raised when a Cloud Sync sync operation fails"""
@@ -102,10 +54,13 @@ class ConnectionTypeError(Exception):
     pass
 
 
-# Technically this is common with cloud but the config referenced is different.
-# TODO: Consider making this common?
 class InvalidConfigError(Exception):
     """Error that will be raised when the config file is invalid or missing"""
+    pass
+
+
+class InvalidSnapMirrorParameterError(Exception) :
+    """Error that will be raised when an invalid SnapMirror parameter is given"""
     pass
 
 
@@ -128,52 +83,33 @@ class SnapMirrorSyncOperationError(Exception) :
     """Error that will be raised when a SnapMirror sync operation fails"""
     pass
 
-#
-# The following attributes and functions are common with the cloud package.
-# TODO: Consider consolidating these in a new third package (common)?
-#
-
 
 class APIConnectionError(Exception) :
     '''Error that will be raised when an API connection cannot be established'''
     pass
 
 
-def getTarget(args: list) -> str:
-    try:
-        target = args[2]
-    except:
-        handleInvalidCommand()
-    return target
+def _print_api_response(response: requests.Response):
+    print("API Response:")
+    print("Status Code: ", response.status_code)
+    print("Header: ", response.headers)
+    if response.text:
+        print("Body: ", response.text)
 
 
-def handleInvalidCommand(helpText: str = helpTextStandard, invalidOptArg: bool = False):
-    if invalidOptArg:
-        print("Error: Invalid option/argument.")
-    else:
-        print("Error: Invalid command.")
-    print(helpText)
-    sys.exit(1)
-
-
-#
-# The following attributes and functions are unique to the traditional package
-#
-
-# TODO: make this private. Is this common with cloud?
-def downloadFromS3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s3VerifySSLCert: bool,
-                   s3CACertBundle: str, s3Bucket: str, s3ObjectKey: str, localFile: str, printOutput: bool = False):
+def _download_from_s3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s3VerifySSLCert: bool,
+                   s3CACertBundle: str, s3Bucket: str, s3ObjectKey: str, localFile: str, print_output: bool = False):
     # Instantiate S3 session
     try:
-        s3 = instantiateS3Session(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId,
+        s3 = _instantiate_s3_session(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId,
                                   s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert,
-                                  s3CACertBundle=s3CACertBundle, printOutput=printOutput)
+                                  s3CACertBundle=s3CACertBundle, print_output=print_output)
     except Exception as err:
-        if printOutput:
+        if print_output:
             print("Error: S3 API error: ", err)
         raise APIConnectionError(err)
 
-    if printOutput:
+    if print_output:
         print(
             "Downloading object '" + s3ObjectKey + "' from bucket '" + s3Bucket + "' and saving as '" + localFile + "'.")
 
@@ -188,15 +124,13 @@ def downloadFromS3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, 
     try:
         s3.Object(s3Bucket, s3ObjectKey).download_file(localFile)
     except Exception as err:
-        if printOutput:
+        if print_output:
             print("Error: S3 API error: ", err)
         raise APIConnectionError(err)
 
 
-# TODO: make this private
-def getCloudCentralAccessToken(refreshToken: str, printOutput: bool = False) -> str:
+def _get_cloud_central_access_token(refreshToken: str, print_output: bool = False) -> str:
     # Define parameters for API call
-    # TODO: get URLs from config
     url = "https://netapp-cloud-account.auth0.com/oauth/token"
     headers = {
         "Content-Type": "application/json"
@@ -216,17 +150,17 @@ def getCloudCentralAccessToken(refreshToken: str, printOutput: bool = False) -> 
         accessToken = responseBody["access_token"]
     except:
         errorMessage = "Error obtaining access token from Cloud Sync API"
-        if printOutput:
+        if print_output:
             print("Error:", errorMessage)
-            printAPIResponse(response)
+            _print_api_response(response)
         raise APIConnectionError(errorMessage, response)
 
     return accessToken
 
 
-def getCloudSyncAccessParameters(refreshToken: str, printOutput: bool = False) -> (str, str):
+def _get_cloud_sync_access_parameters(refreshToken: str, print_output: bool = False) -> (str, str):
     try:
-        accessToken = getCloudCentralAccessToken(refreshToken=refreshToken, printOutput=printOutput)
+        accessToken = _get_cloud_central_access_token(refreshToken=refreshToken, print_output=print_output)
     except APIConnectionError:
         raise
 
@@ -246,17 +180,16 @@ def getCloudSyncAccessParameters(refreshToken: str, printOutput: bool = False) -
         accountId = responseBody[0]["accountId"]
     except:
         errorMessage = "Error obtaining account ID from Cloud Sync API"
-        if printOutput:
+        if print_output:
             print("Error:", errorMessage)
-            printAPIResponse(response)
+            _print_api_response(response)
         raise APIConnectionError(errorMessage, response)
 
     # Return access token and account ID
     return accessToken, accountId
 
 
-# TODO: make this function private
-def instantiateConnection(config: dict, connectionType: str = "ONTAP", printOutput: bool = False):
+def _instantiate_connection(config: dict, connectionType: str = "ONTAP", print_output: bool = False):
     if connectionType == "ONTAP":
         ## Connection details for ONTAP cluster
         try:
@@ -265,8 +198,8 @@ def instantiateConnection(config: dict, connectionType: str = "ONTAP", printOutp
             ontapClusterAdminPasswordBase64 = config["password"]
             verifySSLCert = config["verifySSLCert"]
         except:
-            if printOutput:
-                printInvalidConfigError()
+            if print_output:
+                _print_invalid_config_error()
             raise InvalidConfigError()
 
         # Decode base64-encoded password
@@ -286,8 +219,7 @@ def instantiateConnection(config: dict, connectionType: str = "ONTAP", printOutp
         raise ConnectionTypeError()
 
 
-# TODO: Make private. Is this common with cloud?
-def instantiateS3Session(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s3VerifySSLCert: bool, s3CACertBundle: str, printOutput: bool = False):
+def _instantiate_s3_session(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s3VerifySSLCert: bool, s3CACertBundle: str, print_output: bool = False):
     # Instantiate session
     session = boto3.session.Session(aws_access_key_id=s3AccessKeyId, aws_secret_access_key=s3SecretAccessKey)
 
@@ -302,23 +234,12 @@ def instantiateS3Session(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey:
     return s3
 
 
-# TODO: make this private.
-def printAPIResponse(response: requests.Response):
-    print("API Response:")
-    print("Status Code: ", response.status_code)
-    print("Header: ", response.headers)
-    if response.text:
-        print("Body: ", response.text)
-
-
-# TODO: Make this function private
-def printInvalidConfigError() :
+def _print_invalid_config_error() :
     print("Error: Missing or invalid config file. Run `./ntap_dsutil.py config` to create config file.")
 
 
-# TODO: Check if this should be made private after all functions moved.
-def retrieveConfig(configDirPath: str = "~/.ntap_dsutil", configFilename: str = "config.json",
-                   printOutput: bool = False) -> dict:
+def _retrieve_config(configDirPath: str = "~/.ntap_dsutil", configFilename: str = "config.json",
+                   print_output: bool = False) -> dict:
     configDirPath = os.path.expanduser(configDirPath)
     configFilePath = os.path.join(configDirPath, configFilename)
     try:
@@ -326,24 +247,23 @@ def retrieveConfig(configDirPath: str = "~/.ntap_dsutil", configFilename: str = 
             # Read connection details from config file; read into dict
             config = json.load(configFile)
     except:
-        if printOutput:
-            printInvalidConfigError()
+        if print_output:
+            _print_invalid_config_error()
         raise InvalidConfigError()
     return config
 
 
-# TODO: Make this private.
-def retrieveCloudCentralRefreshToken(printOutput: bool = False) -> str:
+def _retrieve_cloud_central_refresh_token(print_output: bool = False) -> str:
     # Retrieve refresh token from config file
     try:
-        config = retrieveConfig(printOutput=printOutput)
+        config = _retrieve_config(print_output=print_output)
     except InvalidConfigError:
         raise
     try:
         refreshTokenBase64 = config["cloudCentralRefreshToken"]
     except:
-        if printOutput:
-            printInvalidConfigError()
+        if print_output:
+            _print_invalid_config_error()
         raise InvalidConfigError()
 
     # Decode base64-encoded refresh token
@@ -354,11 +274,10 @@ def retrieveCloudCentralRefreshToken(printOutput: bool = False) -> str:
     return refreshToken
 
 
-# TODO: Make this function private.
-def retrieveS3AccessDetails(printOutput: bool = False) -> (str, str, str, bool, str):
+def _retrieve_s3_access_details(print_output: bool = False) -> (str, str, str, bool, str):
     # Retrieve refresh token from config file
     try:
-        config = retrieveConfig(printOutput=printOutput)
+        config = _retrieve_config(print_output=print_output)
     except InvalidConfigError:
         raise
     try:
@@ -368,8 +287,8 @@ def retrieveS3AccessDetails(printOutput: bool = False) -> (str, str, str, bool, 
         s3VerifySSLCert = config["s3VerifySSLCert"]
         s3CACertBundle = config["s3CACertBundle"]
     except:
-        if printOutput:
-            printInvalidConfigError()
+        if print_output:
+            _print_invalid_config_error()
         raise InvalidConfigError()
 
     # Decode base64-encoded refresh token
@@ -380,21 +299,20 @@ def retrieveS3AccessDetails(printOutput: bool = False) -> (str, str, str, bool, 
     return s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle
 
 
-# TODO: make this private. Is this common with cloud?
-def uploadToS3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s3VerifySSLCert: bool, s3CACertBundle: str,
-               s3Bucket: str, localFile: str, s3ObjectKey: str, s3ExtraArgs: str = None, printOutput: bool = False):
+def _upload_to_s3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s3VerifySSLCert: bool, s3CACertBundle: str,
+               s3Bucket: str, localFile: str, s3ObjectKey: str, s3ExtraArgs: str = None, print_output: bool = False):
     # Instantiate S3 session
     try:
-        s3 = instantiateS3Session(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId,
+        s3 = _instantiate_s3_session(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId,
                                   s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert,
-                                  s3CACertBundle=s3CACertBundle, printOutput=printOutput)
+                                  s3CACertBundle=s3CACertBundle, print_output=print_output)
     except Exception as err:
-        if printOutput:
+        if print_output:
             print("Error: S3 API error: ", err)
         raise APIConnectionError(err)
 
     # Upload file
-    if printOutput:
+    if print_output:
         print("Uploading file '" + localFile + "' to bucket '" + s3Bucket + "' and applying key '" + s3ObjectKey + "'.")
 
     try:
@@ -403,83 +321,85 @@ def uploadToS3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s3Ve
         else:
             s3.Object(s3Bucket, s3ObjectKey).upload_file(localFile)
     except Exception as err:
-        if printOutput:
+        if print_output:
             print("Error: S3 API error: ", err)
         raise APIConnectionError(err)
+
 
 #
 # Public importable functions specific to the traditional package
 #
 
 
-def clone_volume(newVolumeName: str, sourceVolumeName: str, sourceSnapshotName: str = None,
-                 unixUID: str = None, unixGID: str = None, mountpoint: str = None,
-                 printOutput: bool = False):
+def clone_volume(new_volume_name: str, source_volume_name: str, source_snapshot_name: str = None,
+                 unix_uid: str = None, unix_gid: str = None, mountpoint: str = None,
+                 print_output: bool = False):
     # Retrieve config details from config file
     try:
-        config = retrieveConfig(printOutput=printOutput)
+        config = _retrieve_config(print_output=print_output)
     except InvalidConfigError:
         raise
     try:
         connectionType = config["connectionType"]
     except:
-        if printOutput:
-            printInvalidConfigError()
+        if print_output:
+            _print_invalid_config_error()
         raise InvalidConfigError()
 
     if connectionType == "ONTAP":
         # Instantiate connection to ONTAP cluster
         try:
-            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
         except InvalidConfigError:
             raise
 
         # Retrieve values from config file if not passed into function
         try:
             svm = config["svm"]
-            if not unixUID:
-                unixUID = config["defaultUnixUID"]
-            if not unixGID:
-                unixGID = config["defaultUnixGID"]
+            if not unix_uid:
+                unix_uid = config["defaultUnixUID"]
+            if not unix_gid:
+                unix_gid = config["defaultUnixGID"]
         except:
-            if printOutput:
-                printInvalidConfigError()
+            if print_output:
+                _print_invalid_config_error()
             raise InvalidConfigError()
 
         # Check unix uid for validity
         try:
-            unixUID = int(unixUID)
+            unix_uid = int(unix_uid)
         except:
-            if printOutput:
+            if print_output:
                 print("Error: Invalid unix uid specified. Value be an integer. Example: '0' for root user.")
             raise InvalidVolumeParameterError("unixUID")
 
         # Check unix gid for validity
         try:
-            unixGID = int(unixGID)
+            unix_gid = int(unix_gid)
         except:
-            if printOutput:
+            if print_output:
                 print("Error: Invalid unix gid specified. Value must be an integer. Example: '0' for root group.")
             raise InvalidVolumeParameterError("unixGID")
 
         # Create volume
-        if printOutput:
-            print("Creating clone volume '" + newVolumeName + "' from source volume '" + sourceVolumeName + "'.")
+        if print_output:
+            print("Creating clone volume '" + new_volume_name + "' from source volume '" + source_volume_name + "'.")
 
         try:
             # Retrieve source volume
-            sourceVolume = NetAppVolume.find(name=sourceVolumeName, svm=svm)
+            sourceVolume = NetAppVolume.find(name=source_volume_name, svm=svm)
             if not sourceVolume:
-                if printOutput:
+                if print_output:
                     print("Error: Invalid source volume name.")
                 raise InvalidVolumeParameterError("name")
 
             # Construct dict representing new volume
             newVolumeDict = {
-                "name": newVolumeName,
+                "name": new_volume_name,
+                "comment": "ntap-dsutil",
                 "svm": {"name": svm},
                 "nas": {
-                    "path": "/" + newVolumeName
+                    "path": "/" + new_volume_name
                 },
                 "clone": {
                     "is_flexclone": True,
@@ -493,23 +413,23 @@ def clone_volume(newVolumeName: str, sourceVolumeName: str, sourceSnapshotName: 
                     }
                 }
             }
-            if unixUID != 0:
-                newVolumeDict["nas"]["uid"] = unixUID
+            if unix_uid != 0:
+                newVolumeDict["nas"]["uid"] = unix_uid
             else:
-                if printOutput:
+                if print_output:
                     print("Warning: Cannot apply uid of '0' when creating clone; uid of source volume will be retained.")
-            if unixGID != 0:
-                newVolumeDict["nas"]["gid"] = unixGID
+            if unix_gid != 0:
+                newVolumeDict["nas"]["gid"] = unix_gid
             else:
-                if printOutput:
+                if print_output:
                     print("Warning: Cannot apply gid of '0' when creating clone; gid of source volume will be retained.")
 
             # Add source snapshot details to volume dict if specified
-            if sourceSnapshotName:
+            if source_snapshot_name:
                 # Retrieve source snapshot
-                sourceSnapshot = NetAppSnapshot.find(sourceVolume.uuid, name=sourceSnapshotName)
+                sourceSnapshot = NetAppSnapshot.find(sourceVolume.uuid, name=source_snapshot_name)
                 if not sourceSnapshot:
-                    if printOutput:
+                    if print_output:
                         print("Error: Invalid source snapshot name.")
                     raise InvalidSnapshotParameterError("name")
 
@@ -522,20 +442,20 @@ def clone_volume(newVolumeName: str, sourceVolumeName: str, sourceSnapshotName: 
             # Create new volume
             newVolume = NetAppVolume.from_dict(newVolumeDict)
             newVolume.post(poll=True, poll_timeout=120)
-            if printOutput:
+            if print_output:
                 print("Clone volume created successfully.")
 
         except NetAppRestError as err:
-            if printOutput:
+            if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
 
         # Optionally mount newly created volume
         if mountpoint:
             try:
-                mount_volume(volumeName=newVolumeName, mountpoint=mountpoint, printOutput=True)
+                mount_volume(volume_name=new_volume_name, mountpoint=mountpoint, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
-                if printOutput:
+                if print_output:
                     print("Error: Error mounting clone volume.")
                 raise
 
@@ -543,23 +463,23 @@ def clone_volume(newVolumeName: str, sourceVolumeName: str, sourceSnapshotName: 
         raise ConnectionTypeError()
 
 
-def create_snapshot(volumeName: str, snapshotName: str = None, printOutput: bool = False):
+def create_snapshot(volume_name: str, snapshot_name: str = None, print_output: bool = False):
     # Retrieve config details from config file
     try:
-        config = retrieveConfig(printOutput=printOutput)
+        config = _retrieve_config(print_output=print_output)
     except InvalidConfigError:
         raise
     try:
         connectionType = config["connectionType"]
     except:
-        if printOutput:
-            printInvalidConfigError()
+        if print_output:
+            _print_invalid_config_error()
         raise InvalidConfigError()
 
     if connectionType == "ONTAP":
         # Instantiate connection to ONTAP cluster
         try:
-            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
         except InvalidConfigError:
             raise
 
@@ -567,38 +487,38 @@ def create_snapshot(volumeName: str, snapshotName: str = None, printOutput: bool
         try:
             svm = config["svm"]
         except:
-            if printOutput:
-                printInvalidConfigError()
+            if print_output:
+                _print_invalid_config_error()
             raise InvalidConfigError()
 
         # Set snapshot name if not passed into function
-        if not snapshotName:
+        if not snapshot_name:
             timestamp = datetime.today().strftime("%Y%m%d_%H%M%S")
-            snapshotName = "ntap_dsutil_" + timestamp
+            snapshot_name = "ntap_dsutil_" + timestamp
 
-        if printOutput:
-            print("Creating snapshot '" + snapshotName + "'.")
+        if print_output:
+            print("Creating snapshot '" + snapshot_name + "'.")
 
         try:
             # Retrieve volume
-            volume = NetAppVolume.find(name=volumeName, svm=svm)
+            volume = NetAppVolume.find(name=volume_name, svm=svm)
             if not volume:
-                if printOutput:
+                if print_output:
                     print("Error: Invalid volume name.")
                 raise InvalidVolumeParameterError("name")
 
             # Create snapshot
             snapshot = NetAppSnapshot.from_dict({
-                'name': snapshotName,
+                'name': snapshot_name,
                 'volume': volume.to_dict()
             })
             snapshot.post(poll=True)
 
-            if printOutput:
+            if print_output:
                 print("Snapshot created successfully.")
 
         except NetAppRestError as err:
-            if printOutput:
+            if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
 
@@ -606,141 +526,142 @@ def create_snapshot(volumeName: str, snapshotName: str = None, printOutput: bool
         raise ConnectionTypeError()
 
 
-def create_volume(volumeName: str, volumeSize: str, guaranteeSpace: bool = False,
-                  volumeType: str = "flexvol", unixPermissions: str = "0777",
-                  unixUID: str = "0", unixGID: str = "0", exportPolicy: str = "default",
-                  snapshotPolicy: str = "none", aggregate: str = None, mountpoint: str = None,
-                  printOutput: bool = False):
+def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = False,
+                  volume_type: str = "flexvol", unix_permissions: str = "0777",
+                  unix_uid: str = "0", unix_gid: str = "0", export_policy: str = "default",
+                  snapshot_policy: str = "none", aggregate: str = None, mountpoint: str = None,
+                  print_output: bool = False):
     # Retrieve config details from config file
     try:
-        config = retrieveConfig(printOutput=printOutput)
+        config = _retrieve_config(print_output=print_output)
     except InvalidConfigError:
         raise
     try:
         connectionType = config["connectionType"]
     except:
-        if printOutput:
-            printInvalidConfigError()
+        if print_output:
+            _print_invalid_config_error()
         raise InvalidConfigError()
 
     if connectionType == "ONTAP":
         # Instantiate connection to ONTAP cluster
         try:
-            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
         except InvalidConfigError:
             raise
 
         # Retrieve values from config file if not passed into function
         try:
             svm = config["svm"]
-            if not volumeType :
-                volumeType = config["defaultVolumeType"]
-            if not unixPermissions :
-                unixPermissions = config["defaultUnixPermissions"]
-            if not unixUID :
-                unixUID = config["defaultUnixUID"]
-            if not unixGID :
-                unixGID = config["defaultUnixGID"]
-            if not exportPolicy :
-                exportPolicy = config["defaultExportPolicy"]
-            if not snapshotPolicy :
-                snapshotPolicy = config["defaultSnapshotPolicy"]
+            if not volume_type :
+                volume_type = config["defaultVolumeType"]
+            if not unix_permissions :
+                unix_permissions = config["defaultUnixPermissions"]
+            if not unix_uid :
+                unix_uid = config["defaultUnixUID"]
+            if not unix_gid :
+                unix_gid = config["defaultUnixGID"]
+            if not export_policy :
+                export_policy = config["defaultExportPolicy"]
+            if not snapshot_policy :
+                snapshot_policy = config["defaultSnapshotPolicy"]
             if not aggregate :
                 aggregate = config["defaultAggregate"]
         except:
-            if printOutput :
-                printInvalidConfigError()
+            if print_output :
+                _print_invalid_config_error()
             raise InvalidConfigError()
 
         # Check volume type for validity
-        if volumeType not in ("flexvol", "flexgroup"):
-            if printOutput:
+        if volume_type not in ("flexvol", "flexgroup"):
+            if print_output:
                 print("Error: Invalid volume type specified. Acceptable values are 'flexvol' and 'flexgroup'.")
             raise InvalidVolumeParameterError("size")
 
         # Check unix permissions for validity
-        if not re.search("^0[0-7]{3}", unixPermissions):
-            if printOutput:
+        if not re.search("^0[0-7]{3}", unix_permissions):
+            if print_output:
                 print("Error: Invalid unix permissions specified. Acceptable values are '0777', '0755', '0744', etc.")
             raise InvalidVolumeParameterError("unixPermissions")
 
         # Check unix uid for validity
         try:
-            unixUID = int(unixUID)
+            unix_uid = int(unix_uid)
         except:
-            if printOutput :
+            if print_output :
                 print("Error: Invalid unix uid specified. Value be an integer. Example: '0' for root user.")
             raise InvalidVolumeParameterError("unixUID")
 
         # Check unix gid for validity
         try:
-            unixGID = int(unixGID)
+            unix_gid = int(unix_gid)
         except:
-            if printOutput:
+            if print_output:
                 print("Error: Invalid unix gid specified. Value must be an integer. Example: '0' for root group.")
             raise InvalidVolumeParameterError("unixGID")
 
         # Convert volume size to Bytes
-        if re.search("^[0-9]+MB$", volumeSize):
+        if re.search("^[0-9]+MB$", volume_size):
             # Convert from MB to Bytes
-            volumeSizeBytes = int(volumeSize[:len(volumeSize)-2]) * 1024**2
-        elif re.search("^[0-9]+GB$", volumeSize):
+            volumeSizeBytes = int(volume_size[:len(volume_size)-2]) * 1024**2
+        elif re.search("^[0-9]+GB$", volume_size):
             # Convert from GB to Bytes
-            volumeSizeBytes = int(volumeSize[:len(volumeSize)-2]) * 1024**3
-        elif re.search("^[0-9]+TB$", volumeSize):
+            volumeSizeBytes = int(volume_size[:len(volume_size)-2]) * 1024**3
+        elif re.search("^[0-9]+TB$", volume_size):
             # Convert from TB to Bytes
-            volumeSizeBytes = int(volumeSize[:len(volumeSize)-2]) * 1024**4
+            volumeSizeBytes = int(volume_size[:len(volume_size)-2]) * 1024**4
         else :
-            if printOutput:
+            if print_output:
                 print("Error: Invalid volume size specified. Acceptable values are '1024MB', '100GB', '10TB', etc.")
             raise InvalidVolumeParameterError("size")
 
         # Create dict representing volume
         volumeDict = {
-            "name": volumeName,
+            "name": volume_name,
+            "comment": "ntap-dsutil",
             "svm": {"name": svm},
             "size": volumeSizeBytes,
-            "style": volumeType,
+            "style": volume_type,
             "nas": {
-                "path": "/" + volumeName,
-                "export_policy": {"name": exportPolicy},
+                "path": "/" + volume_name,
+                "export_policy": {"name": export_policy},
                 "security_style": "unix",
-                "unix_permissions": unixPermissions,
-                "uid": unixUID,
-                "gid": unixGID
+                "unix_permissions": unix_permissions,
+                "uid": unix_uid,
+                "gid": unix_gid
             },
-            "snapshot_policy": {"name": snapshotPolicy}
+            "snapshot_policy": {"name": snapshot_policy}
         }
 
         # Set space guarantee field
-        if guaranteeSpace:
+        if guarantee_space:
             volumeDict["guarantee"] = {"type": "volume"}
         else:
             volumeDict["guarantee"] = {"type": "none"}
 
         # If flexvol -> set aggregate field
-        if volumeType == "flexvol":
+        if volume_type == "flexvol":
             volumeDict["aggregates"] = [{'name': aggregate}]
 
         # Create volume
-        if printOutput:
-            print("Creating volume '" + volumeName + "'.")
+        if print_output:
+            print("Creating volume '" + volume_name + "'.")
         try:
             volume = NetAppVolume.from_dict(volumeDict)
             volume.post(poll=True)
-            if printOutput:
+            if print_output:
                 print("Volume created successfully.")
         except NetAppRestError as err:
-            if printOutput:
+            if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
 
         # Optionally mount newly created volume
         if mountpoint:
             try:
-                mount_volume(volumeName=volumeName, mountpoint=mountpoint, printOutput=True)
+                mount_volume(volume_name=volume_name, mountpoint=mountpoint, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
-                if printOutput:
+                if print_output:
                     print("Error: Error mounting volume.")
                 raise
 
@@ -748,23 +669,23 @@ def create_volume(volumeName: str, volumeSize: str, guaranteeSpace: bool = False
         raise ConnectionTypeError()
 
 
-def delete_snapshot(volumeName: str, snapshotName: str, printOutput: bool = False):
+def delete_snapshot(volume_name: str, snapshot_name: str, print_output: bool = False):
     # Retrieve config details from config file
     try:
-        config = retrieveConfig(printOutput=printOutput)
+        config = _retrieve_config(print_output=print_output)
     except InvalidConfigError:
         raise
     try:
         connectionType = config["connectionType"]
     except:
-        if printOutput:
-            printInvalidConfigError()
+        if print_output:
+            _print_invalid_config_error()
         raise InvalidConfigError()
 
     if connectionType == "ONTAP":
         # Instantiate connection to ONTAP cluster
         try:
-            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
         except InvalidConfigError:
             raise
 
@@ -772,36 +693,36 @@ def delete_snapshot(volumeName: str, snapshotName: str, printOutput: bool = Fals
         try:
             svm = config["svm"]
         except:
-            if printOutput:
-                printInvalidConfigError()
+            if print_output:
+                _print_invalid_config_error()
             raise InvalidConfigError()
 
-        if printOutput:
-            print("Deleting snapshot '" + snapshotName + "'.")
+        if print_output:
+            print("Deleting snapshot '" + snapshot_name + "'.")
 
         try:
             # Retrieve volume
-            volume = NetAppVolume.find(name=volumeName, svm=svm)
+            volume = NetAppVolume.find(name=volume_name, svm=svm)
             if not volume:
-                if printOutput:
+                if print_output:
                     print("Error: Invalid volume name.")
                 raise InvalidVolumeParameterError("name")
 
             # Retrieve snapshot
-            snapshot = NetAppSnapshot.find(volume.uuid, name=snapshotName)
+            snapshot = NetAppSnapshot.find(volume.uuid, name=snapshot_name)
             if not snapshot:
-                if printOutput:
+                if print_output:
                     print("Error: Invalid snapshot name.")
                 raise InvalidSnapshotParameterError("name")
 
             # Delete snapshot
             snapshot.delete(poll=True)
 
-            if printOutput:
+            if print_output:
                 print("Snapshot deleted successfully.")
 
         except NetAppRestError as err :
-            if printOutput:
+            if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
 
@@ -809,23 +730,23 @@ def delete_snapshot(volumeName: str, snapshotName: str, printOutput: bool = Fals
         raise ConnectionTypeError()
 
 
-def delete_volume(volumeName: str, printOutput: bool = False):
+def delete_volume(volume_name: str, print_output: bool = False):
     # Retrieve config details from config file
     try:
-        config = retrieveConfig(printOutput=printOutput)
+        config = _retrieve_config(print_output=print_output)
     except InvalidConfigError:
         raise
     try:
         connectionType = config["connectionType"]
     except:
-        if printOutput:
-            printInvalidConfigError()
+        if print_output:
+            _print_invalid_config_error()
         raise InvalidConfigError()
 
     if connectionType == "ONTAP":
         # Instantiate connection to ONTAP cluster
         try:
-            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
         except InvalidConfigError:
             raise
 
@@ -833,29 +754,29 @@ def delete_volume(volumeName: str, printOutput: bool = False):
         try:
             svm = config["svm"]
         except:
-            if printOutput :
-                printInvalidConfigError()
+            if print_output :
+                _print_invalid_config_error()
             raise InvalidConfigError()
 
-        if printOutput:
-            print("Deleting volume '" + volumeName + "'.")
+        if print_output:
+            print("Deleting volume '" + volume_name + "'.")
 
         try:
             # Retrieve volume
-            volume = NetAppVolume.find(name=volumeName, svm=svm)
+            volume = NetAppVolume.find(name=volume_name, svm=svm)
             if not volume:
-                if printOutput:
+                if print_output:
                     print("Error: Invalid volume name.")
                 raise InvalidVolumeParameterError("name")
 
             # Delete volume
             volume.delete(poll=True)
 
-            if printOutput:
+            if print_output:
                 print("Volume deleted successfully.")
 
         except NetAppRestError as err:
-            if printOutput:
+            if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
 
@@ -863,18 +784,18 @@ def delete_volume(volumeName: str, printOutput: bool = False):
         raise ConnectionTypeError()
 
 
-def list_cloud_sync_relationships(printOutput: bool = False) -> list():
+def list_cloud_sync_relationships(print_output: bool = False) -> list():
     # Step 1: Obtain access token and account ID for accessing Cloud Sync API
 
     # Retrieve refresh token
     try:
-        refreshToken = retrieveCloudCentralRefreshToken(printOutput=printOutput)
+        refreshToken = _retrieve_cloud_central_refresh_token(print_output=print_output)
     except InvalidConfigError:
         raise
 
     # Obtain access token and account ID
     try:
-        accessToken, accountId = getCloudSyncAccessParameters(refreshToken=refreshToken, printOutput=printOutput)
+        accessToken, accountId = _get_cloud_sync_access_parameters(refreshToken=refreshToken, print_output=print_output)
     except APIConnectionError:
         raise
 
@@ -894,9 +815,9 @@ def list_cloud_sync_relationships(printOutput: bool = False) -> list():
     # Check for API response status code of 200; if not 200, raise error
     if response.status_code != 200:
         errorMessage = "Error calling Cloud Sync API to retrieve list of relationships."
-        if printOutput:
+        if print_output:
             print("Error:", errorMessage)
-            printAPIResponse(response)
+            _print_api_response(response)
         raise APIConnectionError(errorMessage, response)
 
     # Constrict list of relationships
@@ -910,29 +831,29 @@ def list_cloud_sync_relationships(printOutput: bool = False) -> list():
         relationshipsList.append(relationshipDetails)
 
     # Print list of relationships
-    if printOutput:
+    if print_output:
         print(yaml.dump(relationshipsList))
 
     return relationshipsList
 
 
-def list_snap_mirror_relationships(printOutput: bool = False) -> list():
+def list_snap_mirror_relationships(print_output: bool = False) -> list():
     # Retrieve config details from config file
     try:
-        config = retrieveConfig(printOutput=printOutput)
+        config = _retrieve_config(print_output=print_output)
     except InvalidConfigError:
         raise
     try:
         connectionType = config["connectionType"]
     except:
-        if printOutput:
-            printInvalidConfigError()
+        if print_output:
+            _print_invalid_config_error()
         raise InvalidConfigError()
 
     if connectionType == "ONTAP":
         # Instantiate connection to ONTAP cluster
         try:
-            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
         except InvalidConfigError:
             raise
 
@@ -993,12 +914,12 @@ def list_snap_mirror_relationships(printOutput: bool = False) -> list():
                 relationshipsList.append(relationshipDict)
 
         except NetAppRestError as err:
-            if printOutput:
+            if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
 
         # Print list of relationships
-        if printOutput:
+        if print_output:
             # Convert relationships array to Pandas DataFrame
             relationshipsDF = pd.DataFrame.from_dict(relationshipsList, dtype="string")
             print(tabulate(relationshipsDF, showindex=False, headers=relationshipsDF.columns))
@@ -1009,23 +930,23 @@ def list_snap_mirror_relationships(printOutput: bool = False) -> list():
         raise ConnectionTypeError()
 
 
-def list_snapshots(volumeName: str, printOutput: bool = False) -> list():
+def list_snapshots(volume_name: str, print_output: bool = False) -> list():
     # Retrieve config details from config file
     try:
-        config = retrieveConfig(printOutput=printOutput)
+        config = _retrieve_config(print_output=print_output)
     except InvalidConfigError:
         raise
     try:
         connectionType = config["connectionType"]
     except:
-        if printOutput:
-            printInvalidConfigError()
+        if print_output:
+            _print_invalid_config_error()
         raise InvalidConfigError()
 
     if connectionType == "ONTAP":
         # Instantiate connection to ONTAP cluster
         try:
-            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
         except InvalidConfigError:
             raise
 
@@ -1033,16 +954,16 @@ def list_snapshots(volumeName: str, printOutput: bool = False) -> list():
         try:
             svm = config["svm"]
         except:
-            if printOutput:
-                printInvalidConfigError()
+            if print_output:
+                _print_invalid_config_error()
             raise InvalidConfigError()
 
         # Retrieve snapshots
         try:
             # Retrieve volume
-            volume = NetAppVolume.find(name=volumeName, svm=svm)
+            volume = NetAppVolume.find(name=volume_name, svm=svm)
             if not volume:
-                if printOutput:
+                if print_output:
                     print("Error: Invalid volume name.")
                 raise InvalidVolumeParameterError("name")
 
@@ -1059,12 +980,12 @@ def list_snapshots(volumeName: str, printOutput: bool = False) -> list():
                 snapshotsList.append(snapshotDict)
 
         except NetAppRestError as err:
-            if printOutput:
+            if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
 
         # Print list of snapshots
-        if printOutput:
+        if print_output:
             # Convert snapshots array to Pandas DataFrame
             snapshotsDF = pd.DataFrame.from_dict(snapshotsList, dtype="string")
             print(tabulate(snapshotsDF, showindex=False, headers=snapshotsDF.columns))
@@ -1075,23 +996,23 @@ def list_snapshots(volumeName: str, printOutput: bool = False) -> list():
         raise ConnectionTypeError()
 
 
-def list_volumes(checkLocalMounts: bool = False, printOutput: bool = False) -> list():
+def list_volumes(check_local_mounts: bool = False, print_output: bool = False) -> list():
     # Retrieve config details from config file
     try:
-        config = retrieveConfig(printOutput=printOutput)
+        config = _retrieve_config(print_output=print_output)
     except InvalidConfigError:
         raise
     try:
         connectionType = config["connectionType"]
     except:
-        if printOutput :
-            printInvalidConfigError()
+        if print_output :
+            _print_invalid_config_error()
         raise InvalidConfigError()
 
     if connectionType == "ONTAP":
         # Instantiate connection to ONTAP cluster
         try:
-            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
         except InvalidConfigError:
             raise
 
@@ -1100,7 +1021,7 @@ def list_volumes(checkLocalMounts: bool = False, printOutput: bool = False) -> l
             volumes = NetAppVolume.get_collection(svm=config["svm"])
 
             # Retrieve local mounts if desired
-            if checkLocalMounts :
+            if check_local_mounts :
                 mounts = subprocess.check_output(['mount']).decode()
 
             # Construct list of volumes; do not include SVM root volume
@@ -1162,7 +1083,7 @@ def list_volumes(checkLocalMounts: bool = False, printOutput: bool = False) -> l
                         "Type": volume.style,
                         "NFS Mount Target": nfsMountTarget
                     }
-                    if checkLocalMounts:
+                    if check_local_mounts:
                         localMountpoint = ""
                         for mount in mounts.split("\n") :
                             mountDetails = mount.split(" ")
@@ -1178,12 +1099,12 @@ def list_volumes(checkLocalMounts: bool = False, printOutput: bool = False) -> l
                     volumesList.append(volumeDict)
 
         except NetAppRestError as err:
-            if printOutput :
+            if print_output :
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
 
         # Print list of volumes
-        if printOutput:
+        if print_output:
             # Convert volumes array to Pandas DataFrame
             volumesDF = pd.DataFrame.from_dict(volumesList, dtype="string")
             print(tabulate(volumesDF, showindex=False, headers=volumesDF.columns))
@@ -1194,16 +1115,16 @@ def list_volumes(checkLocalMounts: bool = False, printOutput: bool = False) -> l
         raise ConnectionTypeError()
 
 
-def mount_volume(volumeName: str, mountpoint: str, printOutput: bool = False):
+def mount_volume(volume_name: str, mountpoint: str, print_output: bool = False):
     # Confirm that mountpoint value was passed in
     if not mountpoint:
-        if printOutput:
+        if print_output:
             print("Error: No mountpoint specified.")
         raise MountOperationError("No mountpoint")
 
     # Confirm that volume name value was passed in
-    if not volumeName:
-        if printOutput:
+    if not volume_name:
+        if print_output:
             print("Error: No volume name specified.")
         raise InvalidVolumeParameterError("name")
 
@@ -1211,9 +1132,9 @@ def mount_volume(volumeName: str, mountpoint: str, printOutput: bool = False):
 
     # Retrieve list of volumes
     try:
-        volumes = list_volumes(checkLocalMounts=True)
+        volumes = list_volumes(check_local_mounts=True)
     except (InvalidConfigError, APIConnectionError):
-        if printOutput:
+        if print_output:
             print("Error: Error retrieving NFS mount target for volume.")
         raise
 
@@ -1221,23 +1142,23 @@ def mount_volume(volumeName: str, mountpoint: str, printOutput: bool = False):
     for volume in volumes:
         # Check mountpoint
         if mountpoint == volume["Local Mountpoint"]:
-            if printOutput:
+            if print_output:
                 print("Error: Volume '" + volume["Volume Name"] + "' is already mounted at '" + mountpoint + "'.")
             raise MountOperationError("Another volume mounted at mountpoint")
 
-        if volumeName == volume["Volume Name"]:
+        if volume_name == volume["Volume Name"]:
             # Retrieve NFS mount target
             nfsMountTarget = volume["NFS Mount Target"]
 
     # Raise error if invalid volume name was entered
     if not nfsMountTarget:
-        if printOutput:
+        if print_output:
             print("Error: Invalid volume name specified.")
         raise InvalidVolumeParameterError("name")
 
     # Print message describing action to be understaken
-    if printOutput:
-        print("Mounting volume '" + volumeName + "' at '" + mountpoint + "'.")
+    if print_output:
+        print("Mounting volume '" + volume_name + "' at '" + mountpoint + "'.")
 
     # Create mountpoint if it doesn't already exist
     mountpoint = os.path.expanduser(mountpoint)
@@ -1249,31 +1170,31 @@ def mount_volume(volumeName: str, mountpoint: str, printOutput: bool = False):
     # Mount volume
     try:
         subprocess.check_call(['mount', nfsMountTarget, mountpoint])
-        if printOutput:
+        if print_output:
             print("Volume mounted successfully.")
     except subprocess.CalledProcessError as err:
-        if printOutput:
+        if print_output:
             print("Error: Error running mount command: ", err)
         raise MountOperationError(err)
 
 
-def prepopulate_flex_cache(volumeName: str, paths: list, printOutput: bool = False):
+def prepopulate_flex_cache(volume_name: str, paths: list, print_output: bool = False):
     # Retrieve config details from config file
     try:
-        config = retrieveConfig(printOutput=printOutput)
+        config = _retrieve_config(print_output=print_output)
     except InvalidConfigError:
         raise
     try:
         connectionType = config["connectionType"]
     except:
-        if printOutput:
-            printInvalidConfigError()
+        if print_output:
+            _print_invalid_config_error()
         raise InvalidConfigError()
 
     if connectionType == "ONTAP":
         # Instantiate connection to ONTAP cluster
         try:
-            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
         except InvalidConfigError:
             raise
 
@@ -1281,18 +1202,18 @@ def prepopulate_flex_cache(volumeName: str, paths: list, printOutput: bool = Fal
         try:
             svm = config["svm"]
         except:
-            if printOutput:
-                printInvalidConfigError()
+            if print_output:
+                _print_invalid_config_error()
             raise InvalidConfigError()
 
-        if printOutput:
-            print("FlexCache '" + volumeName + "' - Prepopulating paths: ", paths)
+        if print_output:
+            print("FlexCache '" + volume_name + "' - Prepopulating paths: ", paths)
 
         try:
             # Retrieve FlexCache
-            flexcache = NetAppFlexCache.find(name=volumeName, svm=svm)
+            flexcache = NetAppFlexCache.find(name=volume_name, svm=svm)
             if not flexcache:
-                if printOutput:
+                if print_output:
                     print("Error: Invalid volume name.")
                 raise InvalidVolumeParameterError("name")
 
@@ -1300,11 +1221,11 @@ def prepopulate_flex_cache(volumeName: str, paths: list, printOutput: bool = Fal
             flexcache.prepopulate = {"dir_paths": paths}
             flexcache.patch()
 
-            if printOutput:
+            if print_output:
                 print("FlexCache prepopulated successfully.")
 
         except NetAppRestError as err:
-            if printOutput:
+            if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
 
@@ -1312,81 +1233,81 @@ def prepopulate_flex_cache(volumeName: str, paths: list, printOutput: bool = Fal
         raise ConnectionTypeError()
 
 
-def pull_bucket_from_s3(s3Bucket: str, localDirectory: str, s3ObjectKeyPrefix: str = "", printOutput: bool = False):
+def pull_bucket_from_s3(s3_bucket: str, local_directory: str, s3_object_key_prefix: str = "", print_output: bool = False):
     # Retrieve S3 access details from existing config file
     try:
-        s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = retrieveS3AccessDetails(printOutput=printOutput)
+        s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = _retrieve_s3_access_details(print_output=print_output)
     except InvalidConfigError:
         raise
 
     # Add slash to end of local directory path if not present
-    if not localDirectory.endswith(os.sep):
-        localDirectory += os.sep
+    if not local_directory.endswith(os.sep):
+        local_directory += os.sep
 
     # Multithread the download operation
     with ThreadPoolExecutor() as executor:
         try:
             # Instantiate S3 session
-            s3 = instantiateS3Session(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, printOutput=printOutput)
+            s3 = _instantiate_s3_session(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, print_output=print_output)
 
             # Loop through all objects with prefix in bucket and download
-            bucket = s3.Bucket(s3Bucket)
-            for obj in bucket.objects.filter(Prefix=s3ObjectKeyPrefix):
-                executor.submit(downloadFromS3, s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, s3Bucket=s3Bucket, s3ObjectKey=obj.key, localFile=localDirectory+obj.key, printOutput=printOutput)
+            bucket = s3.Bucket(s3_bucket)
+            for obj in bucket.objects.filter(Prefix=s3_object_key_prefix):
+                executor.submit(_download_from_s3, s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, s3Bucket=s3_bucket, s3ObjectKey=obj.key, localFile=local_directory+obj.key, print_output=print_output)
 
         except APIConnectionError:
             raise
 
         except Exception as err:
-            if printOutput:
+            if print_output:
                 print("Error: S3 API error: ", err)
             raise APIConnectionError(err)
 
     print("Download complete.")
 
 
-def pull_object_from_s3(s3Bucket: str, s3ObjectKey: str, localFile: str = None, printOutput: bool = False):
+def pull_object_from_s3(s3_bucket: str, s3_object_key: str, local_file: str = None, print_output: bool = False):
     # Retrieve S3 access details from existing config file
     try:
-        s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = retrieveS3AccessDetails(printOutput=printOutput)
+        s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = _retrieve_s3_access_details(print_output=print_output)
     except InvalidConfigError:
         raise
 
     # Set S3 object key
-    if not localFile:
-        localFile = s3ObjectKey
+    if not local_file:
+        local_file = s3_object_key
 
     # Upload file
     try:
-        downloadFromS3(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, s3Bucket=s3Bucket, s3ObjectKey=s3ObjectKey, localFile=localFile, printOutput=printOutput)
+        _download_from_s3(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, s3Bucket=s3_bucket, s3ObjectKey=s3_object_key, localFile=local_file, print_output=print_output)
     except APIConnectionError:
         raise
 
     print("Download complete.")
 
 
-def push_directory_to_s3(s3Bucket: str, localDirectory: str, s3ObjectKeyPrefix: str = "",
-                         s3ExtraArgs: str = None, printOutput: bool = False):
+def push_directory_to_s3(s3_bucket: str, local_directory: str, s3_object_key_prefix: str = "",
+                         s3_extra_args: str = None, print_output: bool = False):
     # Retrieve S3 access details from existing config file
     try:
-        s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = retrieveS3AccessDetails(printOutput=printOutput)
+        s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = _retrieve_s3_access_details(print_output=print_output)
     except InvalidConfigError:
         raise
 
     # Multithread the upload operation
     with ThreadPoolExecutor() as executor:
         # Loop through all files in directory
-        for dirpath, dirnames, filenames in os.walk(localDirectory):
+        for dirpath, dirnames, filenames in os.walk(local_directory):
             # Exclude hidden files and directories
             filenames = [filename for filename in filenames if not filename[0] == '.']
             dirnames[:] = [dirname for dirname in dirnames if not dirname[0] == '.']
 
             for filename in filenames:
                 # Build filepath
-                if localDirectory.endswith(os.sep):
-                    dirpathBeginIndex = len(localDirectory)
+                if local_directory.endswith(os.sep):
+                    dirpathBeginIndex = len(local_directory)
                 else:
-                    dirpathBeginIndex = len(localDirectory) + 1
+                    dirpathBeginIndex = len(local_directory) + 1
 
                 subdirpath = dirpath[dirpathBeginIndex:]
 
@@ -1396,55 +1317,55 @@ def push_directory_to_s3(s3Bucket: str, localDirectory: str, s3ObjectKeyPrefix: 
                     filepath = filename
 
                 # Set S3 object details
-                s3ObjectKey = s3ObjectKeyPrefix + filepath
+                s3ObjectKey = s3_object_key_prefix + filepath
                 localFile = dirpath + os.sep + filename
 
                 # Upload file
                 try:
-                    executor.submit(uploadToS3, s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, s3Bucket=s3Bucket, localFile=localFile, s3ObjectKey=s3ObjectKey, s3ExtraArgs=s3ExtraArgs, printOutput=printOutput)
+                    executor.submit(_upload_to_s3, s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, s3Bucket=s3_bucket, localFile=localFile, s3ObjectKey=s3ObjectKey, s3ExtraArgs=s3_extra_args, print_output=print_output)
                 except APIConnectionError:
                     raise
 
     print("Upload complete.")
 
 
-def push_file_to_s3(s3Bucket: str, localFile: str, s3ObjectKey: str = None, s3ExtraArgs: str = None, printOutput: bool = False):
+def push_file_to_s3(s3_bucket: str, local_file: str, s3_object_key: str = None, s3_extra_args: str = None, print_output: bool = False):
     # Retrieve S3 access details from existing config file
     try:
-        s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = retrieveS3AccessDetails(printOutput=printOutput)
+        s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle = _retrieve_s3_access_details(print_output=print_output)
     except InvalidConfigError:
         raise
 
     # Set S3 object key
-    if not s3ObjectKey:
-        s3ObjectKey = localFile
+    if not s3_object_key:
+        s3_object_key = local_file
 
     # Upload file
     try:
-        uploadToS3(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, s3Bucket=s3Bucket, localFile=localFile, s3ObjectKey=s3ObjectKey, s3ExtraArgs=s3ExtraArgs, printOutput=printOutput)
+        _upload_to_s3(s3Endpoint=s3Endpoint, s3AccessKeyId=s3AccessKeyId, s3SecretAccessKey=s3SecretAccessKey, s3VerifySSLCert=s3VerifySSLCert, s3CACertBundle=s3CACertBundle, s3Bucket=s3_bucket, localFile=local_file, s3ObjectKey=s3_object_key, s3ExtraArgs=s3_extra_args, print_output=print_output)
     except APIConnectionError:
         raise
 
     print("Upload complete.")
 
 
-def restore_snapshot(volumeName: str, snapshotName: str, printOutput: bool = False):
+def restore_snapshot(volume_name: str, snapshot_name: str, print_output: bool = False):
     # Retrieve config details from config file
     try:
-        config = retrieveConfig(printOutput=printOutput)
+        config = _retrieve_config(print_output=print_output)
     except InvalidConfigError:
         raise
     try:
         connectionType = config["connectionType"]
     except:
-        if printOutput:
-            printInvalidConfigError()
+        if print_output:
+            _print_invalid_config_error()
         raise InvalidConfigError()
 
     if connectionType == "ONTAP":
         # Instantiate connection to ONTAP cluster
         try:
-            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
         except InvalidConfigError:
             raise
 
@@ -1452,35 +1373,35 @@ def restore_snapshot(volumeName: str, snapshotName: str, printOutput: bool = Fal
         try:
             svm = config["svm"]
         except:
-            if printOutput:
-                printInvalidConfigError()
+            if print_output:
+                _print_invalid_config_error()
             raise InvalidConfigError()
 
-        if printOutput:
-            print("Restoring snapshot '" + snapshotName + "'.")
+        if print_output:
+            print("Restoring snapshot '" + snapshot_name + "'.")
 
         try:
             # Retrieve volume
-            volume = NetAppVolume.find(name=volumeName, svm=svm)
+            volume = NetAppVolume.find(name=volume_name, svm=svm)
             if not volume:
-                if printOutput:
+                if print_output:
                     print("Error: Invalid volume name.")
                 raise InvalidVolumeParameterError("name")
 
             # Retrieve snapshot
-            snapshot = NetAppSnapshot.find(volume.uuid, name=snapshotName)
+            snapshot = NetAppSnapshot.find(volume.uuid, name=snapshot_name)
             if not snapshot:
-                if printOutput:
+                if print_output:
                     print("Error: Invalid snapshot name.")
                 raise InvalidSnapshotParameterError("name")
 
             # Restore snapshot
             volume.patch(volume.uuid, **{"restore_to.snapshot.name": snapshot.name, "restore_to.snapshot.uuid": snapshot.uuid}, poll=True)
-            if printOutput:
+            if print_output:
                 print("Snapshot restored successfully.")
 
         except NetAppRestError as err:
-            if printOutput:
+            if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
 
@@ -1488,25 +1409,25 @@ def restore_snapshot(volumeName: str, snapshotName: str, printOutput: bool = Fal
         raise ConnectionTypeError()
 
 
-def sync_cloud_sync_relationship(relationshipID: str, waitUntilComplete: bool = False, printOutput: bool = False):
+def sync_cloud_sync_relationship(relationship_id: str, wait_until_complete: bool = False, print_output: bool = False):
     # Step 1: Obtain access token and account ID for accessing Cloud Sync API
 
     # Retrieve refresh token
     try:
-        refreshToken = retrieveCloudCentralRefreshToken(printOutput=printOutput)
+        refreshToken = _retrieve_cloud_central_refresh_token(print_output=print_output)
     except InvalidConfigError:
         raise
 
     # Obtain access token and account ID
     try:
-        accessToken, accountId = getCloudSyncAccessParameters(refreshToken=refreshToken, printOutput=printOutput)
+        accessToken, accountId = _get_cloud_sync_access_parameters(refreshToken=refreshToken, print_output=print_output)
     except APIConnectionError:
         raise
 
     # Step 2: Trigger Cloud Sync sync
 
     # Define parameters for API call
-    url = "https://cloudsync.netapp.com/api/relationships/%s/sync" % (relationshipID)
+    url = "https://cloudsync.netapp.com/api/relationships/%s/sync" % relationship_id
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
@@ -1515,27 +1436,27 @@ def sync_cloud_sync_relationship(relationshipID: str, waitUntilComplete: bool = 
     }
 
     # Call API to trigger sync
-    if printOutput:
-        print("Triggering sync operation for Cloud Sync relationship (ID = " + relationshipID + ").")
+    if print_output:
+        print("Triggering sync operation for Cloud Sync relationship (ID = " + relationship_id + ").")
     response = requests.put(url = url, headers = headers)
 
     # Check for API response status code of 202; if not 202, raise error
     if response.status_code != 202:
         errorMessage = "Error calling Cloud Sync API to trigger sync operation."
-        if printOutput:
+        if print_output:
             print("Error:", errorMessage)
-            printAPIResponse(response)
+            _print_api_response(response)
         raise APIConnectionError(errorMessage, response)
 
-    if printOutput:
+    if print_output:
         print("Sync operation successfully triggered.")
 
     # Step 3: Obtain status of the sync operation; keep checking until the sync operation has completed
 
-    if waitUntilComplete:
+    if wait_until_complete:
         while True:
             # Define parameters for API call
-            url = "https://cloudsync.netapp.com/api/relationships-v2/%s" % (relationshipID)
+            url = "https://cloudsync.netapp.com/api/relationships-v2/%s" % relationship_id
             headers = {
                 "Accept": "application/json",
                 "x-account-id": accountId,
@@ -1552,30 +1473,30 @@ def sync_cloud_sync_relationship(relationshipID: str, waitUntilComplete: bool = 
                 latestActivityStatus = responseBody["activity"]["status"]
             except:
                 errorMessage = "Error obtaining status of sync operation from Cloud Sync API."
-                if printOutput:
+                if print_output:
                     print("Error:", errorMessage)
-                    printAPIResponse(response)
+                    _print_api_response(response)
                 raise APIConnectionError(errorMessage, response)
 
             # End execution if the latest update is complete
             if latestActivityType == "Sync":
                 if latestActivityStatus == "DONE":
-                    if printOutput:
+                    if print_output:
                         print("Success: Sync operation is complete.")
                     break
                 elif latestActivityStatus == "FAILED":
-                    if printOutput:
+                    if print_output:
                         failureMessage = responseBody["activity"]["failureMessage"]
                         print("Error: Sync operation failed.")
                         print("Message:", failureMessage)
                     raise CloudSyncSyncOperationError(latestActivityStatus, failureMessage)
                 elif latestActivityStatus == "RUNNING":
                     # Print message re: progress
-                    if printOutput:
+                    if print_output:
                         print("Sync operation is not yet complete. Status:", latestActivityStatus)
                         print("Checking again in 60 seconds...")
                 else:
-                    if printOutput:
+                    if print_output:
                         print ("Error: Unknown sync operation status (" + latestActivityStatus + ") returned by Cloud Sync API.")
                     raise CloudSyncSyncOperationError(latestActivityStatus)
 
@@ -1583,27 +1504,27 @@ def sync_cloud_sync_relationship(relationshipID: str, waitUntilComplete: bool = 
             time.sleep(60)
 
 
-def sync_snap_mirror_relationship(uuid: str, waitUntilComplete: bool = False, printOutput: bool = False):
+def sync_snap_mirror_relationship(uuid: str, wait_until_complete: bool = False, print_output: bool = False):
     # Retrieve config details from config file
     try:
-        config = retrieveConfig(printOutput=printOutput)
+        config = _retrieve_config(print_output=print_output)
     except InvalidConfigError:
         raise
     try:
         connectionType = config["connectionType"]
     except:
-        if printOutput :
-            printInvalidConfigError()
+        if print_output :
+            _print_invalid_config_error()
         raise InvalidConfigError()
 
     if connectionType == "ONTAP":
         # Instantiate connection to ONTAP cluster
         try:
-            instantiateConnection(config=config, connectionType=connectionType, printOutput=printOutput)
+            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
         except InvalidConfigError:
             raise
 
-        if printOutput:
+        if print_output:
             print("Triggering sync operation for SnapMirror relationship (UUID = " + uuid + ").")
 
         try:
@@ -1611,14 +1532,14 @@ def sync_snap_mirror_relationship(uuid: str, waitUntilComplete: bool = False, pr
             transfer = NetAppSnapmirrorTransfer(uuid)
             transfer.post(poll=True)
         except NetAppRestError as err:
-            if printOutput:
+            if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
 
-        if printOutput:
+        if print_output:
             print("Sync operation successfully triggered.")
 
-        if waitUntilComplete:
+        if wait_until_complete:
             # Wait to perform initial check
             print("Waiting for sync operation to complete.")
             print("Status check will be performed in 10 seconds...")
@@ -1639,20 +1560,20 @@ def sync_snap_mirror_relationship(uuid: str, waitUntilComplete: bool = False, pr
                 if not transferState:
                     healthy = relationship.healthy
                     if healthy:
-                        if printOutput:
+                        if print_output:
                             print("Success: Sync operation is complete.")
                         break
                     else:
-                        if printOutput:
+                        if print_output:
                             print("Error: Relationship is not healthy. Access ONTAP System Manager for details.")
                         raise SnapMirrorSyncOperationError("not healthy")
                 elif transferState != "transferring":
-                    if printOutput:
+                    if print_output:
                         print ("Error: Unknown sync operation status (" + transferState + ") returned by ONTAP API.")
                     raise SnapMirrorSyncOperationError(transferState)
                 else:
                     # Print message re: progress
-                    if printOutput:
+                    if print_output:
                         print("Sync operation is not yet complete. Status:", transferState)
                         print("Checking again in 60 seconds...")
 
@@ -1668,90 +1589,92 @@ def sync_snap_mirror_relationship(uuid: str, waitUntilComplete: bool = False, pr
 
 
 @deprecated
-def cloneVolume(*args, **kwargs):
-    clone_volume(*args, **kwargs)
+def cloneVolume(newVolumeName: str, sourceVolumeName: str, sourceSnapshotName: str = None, unixUID: str = None, unixGID: str = None, mountpoint: str = None, printOutput: bool = False) :
+    clone_volume(new_volume_name=newVolumeName, source_volume_name=sourceVolumeName, source_snapshot_name=sourceSnapshotName,
+                             mountpoint=mountpoint, unix_uid=unixUID, unix_gid=unixGID, print_output=printOutput)
 
 
 @deprecated
-def createSnapshot(*args, **kwargs):
-    create_snapshot(*args, **kwargs)
+def createSnapshot(volumeName: str, snapshotName: str = None, printOutput: bool = False) :
+    create_snapshot(volume_name=volumeName, snapshot_name=snapshotName, print_output=printOutput)
 
 
 @deprecated
-def createVolume(*args, **kwargs):
-    create_volume(*args, **kwargs)
+def createVolume(volumeName: str, volumeSize: str, guaranteeSpace: bool = False, volumeType: str = "flexvol", unixPermissions: str = "0777", unixUID: str = "0", unixGID: str = "0", exportPolicy: str = "default", snapshotPolicy: str = "none", aggregate: str = None, mountpoint: str = None, printOutput: bool = False) :
+    create_volume(volume_name=volumeName, volume_size=volumeSize, guarantee_space=guaranteeSpace, volume_type=volumeType, unix_permissions=unixPermissions, unix_uid=unixUID,
+                              unix_gid=unixGID, export_policy=exportPolicy, snapshot_policy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, print_output=printOutput)
 
 
 @deprecated
-def deleteSnapshot(*args, **kwargs):
-    delete_snapshot(*args, **kwargs)
+def deleteSnapshot(volumeName: str, snapshotName: str, printOutput: bool = False) :
+    delete_snapshot(volume_name=volumeName, snapshot_name=snapshotName, print_output=printOutput)
 
 
 @deprecated
-def deleteVolume(*args, **kwargs):
-    delete_volume(*args, **kwargs)
+def deleteVolume(volumeName: str, printOutput: bool = False) :
+    delete_volume(volume_name=volumeName, print_output=printOutput)
 
 
 @deprecated
-def listCloudSyncRelationships(*args, **kwargs):
-    list_cloud_sync_relationships(*args, **kwargs)
+def listCloudSyncRelationships(printOutput: bool = False) :
+    list_cloud_sync_relationships(print_output=printOutput)
 
 
 @deprecated
-def listSnapMirrorRelationships(*args, **kwargs):
-    list_snap_mirror_relationships(*args, **kwargs)
+def listSnapMirrorRelationships(printOutput: bool = False) :
+    list_snap_mirror_relationships(print_output=printOutput)
 
 
 @deprecated
-def listSnapshots(*args, **kwargs):
-    list_snapshots(*args, **kwargs)
+def listSnapshots(volumeName: str, printOutput: bool = False) :
+    list_snapshots(volume_name=volumeName, print_output=printOutput)
 
 
 @deprecated
-def listVolumes(*args, **kwargs):
-    list_volumes(*args, **kwargs)
+def listVolumes(checkLocalMounts: bool = False, printOutput: bool = False) :
+    list_volumes(check_local_mounts=checkLocalMounts, print_output=printOutput)
 
 
 @deprecated
-def mountVolume(*args, **kwargs):
-    mount_volume(*args, **kwargs)
+def ountVolume(volumeName: str, mountpoint: str, printOutput: bool = False) :
+    mount_volume(volume_name=volumeName, mountpoint=mountpoint, print_output=printOutput)
 
 
 @deprecated
-def prepopulateFlexCache(*args, **kwargs):
-    prepopulate_flex_cache(*args, **kwargs)
+def prepopulateFlexCache(volumeName: str, paths: list, printOutput: bool = False) :
+    prepopulate_flex_cache(volume_name=volumeName, paths=paths, print_output=printOutput)
 
 
 @deprecated
-def pullBucketFromS3(*args, **kwargs):
-    pull_bucket_from_s3(*args, **kwargs)
+def pullBucketFromS3(s3Bucket: str, localDirectory: str, s3ObjectKeyPrefix: str = "", printOutput: bool = False) :
+    pull_bucket_from_s3(s3_bucket=s3Bucket, local_directory=localDirectory, s3_object_key_prefix=s3ObjectKeyPrefix, print_output=printOutput)
 
 
 @deprecated
-def pullObjectFromS3(*args, **kwargs):
-    pull_object_from_s3(*args, **kwargs)
+def pullObjectFromS3(s3Bucket: str, s3ObjectKey: str, localFile: str = None, printOutput: bool = False) :
+    pull_object_from_s3(s3_bucket=s3Bucket, s3_object_key=s3ObjectKey, local_file=localFile, print_output=printOutput)
 
 
 @deprecated
-def pushDirectoryToS3(*args, **kwargs):
-    push_directory_to_s3(*args, **kwargs)
+def pushDirectoryToS3(s3Bucket: str, localDirectory: str, s3ObjectKeyPrefix: str = "", s3ExtraArgs: str = None, printOutput: bool = False) :
+    push_directory_to_s3(s3_bucket=s3Bucket, local_directory=localDirectory, s3_object_key_prefix=s3ObjectKeyPrefix, s3_extra_args=s3ExtraArgs, print_output=printOutput)
 
 
 @deprecated
-def pushFileToS3(*args, **kwargs):
-    push_file_to_s3(*args, **kwargs)
+def pushFileToS3(s3Bucket: str, localFile: str, s3ObjectKey: str = None, s3ExtraArgs: str = None, printOutput: bool = False) :
+    push_file_to_s3(s3_bucket=s3Bucket, s3_object_key=s3ObjectKey, local_file=localFile, s3_extra_args=s3ExtraArgs, print_output=printOutput)
 
 
 @deprecated
-def restoreSnapshot(*args, **kwargs):
-    restore_snapshot(*args, **kwargs)
+def restoreSnapshot(volumeName: str, snapshotName: str, printOutput: bool = False) :
+    restore_snapshot(volume_name=volumeName, snapshot_name=snapshotName, print_output=printOutput)
 
 
 @deprecated
-def syncCloudSyncRelationship(*args, **kwargs):
-    sync_cloud_sync_relationship(*args, **kwargs)
+def syncCloudSyncRelationship(relationshipID: str, waitUntilComplete: bool = False, printOutput: bool = False) :
+    sync_cloud_sync_relationship(relationship_id=relationshipID, wait_until_complete=waitUntilComplete, print_output=printOutput)
 
 
 @deprecated
-def syncSnapMirrorRelationship(*args, **kwargs):
-    sync_snap_mirror_relationship(*args, **kwargs)
+def syncSnapMirrorRelationship(uuid: str, waitUntilComplete: bool = False, printOutput: bool = False) :
+    sync_snap_mirror_relationship(uuid=uuid, wait_until_complete=waitUntilComplete, print_output=printOutput)

@@ -8,12 +8,10 @@ from getpass import getpass
 
 from netapp_dstk import traditional
 from netapp_dstk.traditional import (
-    handleInvalidCommand,
-    helpTextStandard,
-    getTarget,
     clone_volume,
     InvalidConfigError,
     InvalidVolumeParameterError,
+    InvalidSnapMirrorParameterError,
     InvalidSnapshotParameterError,
     APIConnectionError,
     mount_volume,
@@ -38,14 +36,6 @@ from netapp_dstk.traditional import (
     sync_snap_mirror_relationship,
     SnapMirrorSyncOperationError
 )
-
-version = "1.2"
-
-
-## Invalid SnapMirror parameter error class; objects of this class will be raised when an invalid SnapMirror parameter is given
-class InvalidSnapMirrorParameterError(Exception) :
-    """Error that will be raised when an invalid SnapMirror parameter is give"""
-    pass
 
 
 ## Function for creating config file
@@ -239,7 +229,67 @@ def createConfig(configDirPath: str = "~/.ntap_dsutil", configFilename: str = "c
     print("Created config file: '" + configFilePath + "'.")
 
 
+def getTarget(args: list) -> str:
+    try:
+        target = args[2]
+    except:
+        handleInvalidCommand()
+    return target
+
+
+def handleInvalidCommand(helpText: str = helpTextStandard, invalidOptArg: bool = False):
+    if invalidOptArg:
+        print("Error: Invalid option/argument.")
+    else:
+        print("Error: Invalid command.")
+    print(helpText)
+    sys.exit(1)
+
+
 ## Define contents of help text
+helpTextStandard = '''
+The NetApp Data Science Toolkit is a Python library that makes it simple for data scientists and data engineers to perform various data management tasks, such as provisioning a new data volume, near-instantaneously cloning a data volume, and near-instantaneously snapshotting a data volume for traceability/baselining.
+
+Basic Commands:
+
+\tconfig\t\t\t\tCreate a new config file (a config file is required to perform other commands).
+\thelp\t\t\t\tPrint help text.
+\tversion\t\t\t\tPrint version details.
+
+Data Volume Management Commands:
+Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
+
+\tclone volume\t\t\tCreate a new data volume that is an exact copy of an existing volume.
+\tcreate volume\t\t\tCreate a new data volume.
+\tdelete volume\t\t\tDelete an existing data volume.
+\tlist volumes\t\t\tList all data volumes.
+\tmount volume\t\t\tMount an existing data volume locally. Note: on Linux hosts - must be run as root.
+
+Snapshot Management Commands:
+Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
+
+\tcreate snapshot\t\t\tCreate a new snapshot for a data volume.
+\tdelete snapshot\t\t\tDelete an existing snapshot for a data volume.
+\tlist snapshots\t\t\tList all snapshots for a data volume.
+\trestore snapshot\t\tRestore a snapshot for a data volume (restore the volume to its exact state at the time that the snapshot was created).
+
+Data Fabric Commands:
+Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
+
+\tlist cloud-sync-relationships\tList all existing Cloud Sync relationships.
+\tsync cloud-sync-relationship\tTrigger a sync operation for an existing Cloud Sync relationship.
+\tpull-from-s3 bucket\t\tPull the contents of a bucket from S3.
+\tpull-from-s3 object\t\tPull an object from S3.
+\tpush-to-s3 directory\t\tPush the contents of a directory to S3 (multithreaded).
+\tpush-to-s3 file\t\t\tPush a file to S3.
+
+Advanced Data Fabric Commands:
+Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
+
+\tprepopulate flexcache\t\tPrepopulate specific files/directories on a FlexCache volume (ONTAP 9.8 and above ONLY).
+\tlist snapmirror-relationships\tList all existing SnapMirror relationships.
+\tsync snapmirror-relationship\tTrigger a sync operation for an existing SnapMirror relationship.
+'''
 helpTextCloneVolume = '''
 Command: clone volume
 
@@ -620,8 +670,8 @@ if __name__ == '__main__':
 
             # Clone volume
             try:
-                clone_volume(newVolumeName=newVolumeName, sourceVolumeName=sourceVolumeName, sourceSnapshotName=sourceSnapshotName,
-                             mountpoint=mountpoint, unixUID=unixUID, unixGID=unixGID, printOutput=True)
+                clone_volume(new_volume_name=newVolumeName, source_volume_name=sourceVolumeName, source_snapshot_name=sourceSnapshotName,
+                             mountpoint=mountpoint, unix_uid=unixUID, unix_gid=unixGID, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError,
                     MountOperationError):
                 sys.exit(1)
@@ -674,7 +724,7 @@ if __name__ == '__main__':
 
             # Create snapshot
             try:
-                create_snapshot(volumeName=volumeName, snapshotName=snapshotName, printOutput=True)
+                create_snapshot(volume_name=volumeName, snapshot_name=snapshotName, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
                 sys.exit(1)
 
@@ -734,8 +784,8 @@ if __name__ == '__main__':
 
             # Create volume
             try:
-                create_volume(volumeName=volumeName, volumeSize=volumeSize, guaranteeSpace=guaranteeSpace, volumeType=volumeType, unixPermissions=unixPermissions, unixUID=unixUID,
-                              unixGID=unixGID, exportPolicy=exportPolicy, snapshotPolicy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, printOutput=True)
+                create_volume(volume_name=volumeName, volume_size=volumeSize, guarantee_space=guaranteeSpace, volume_type=volumeType, unix_permissions=unixPermissions, unix_uid=unixUID,
+                              unix_gid=unixGID, export_policy=exportPolicy, snapshot_policy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
 
@@ -773,7 +823,7 @@ if __name__ == '__main__':
 
             # Delete snapshot
             try:
-                delete_snapshot(volumeName=volumeName, snapshotName=snapshotName, printOutput=True)
+                delete_snapshot(volume_name=volumeName, snapshot_name=snapshotName, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError):
                 sys.exit(1)
 
@@ -815,7 +865,7 @@ if __name__ == '__main__':
 
             # Delete volume
             try:
-                delete_volume(volumeName=volumeName, printOutput=True)
+                delete_volume(volume_name=volumeName, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
                 sys.exit(1)
 
@@ -841,7 +891,7 @@ if __name__ == '__main__':
 
             # List cloud sync relationships
             try:
-                list_cloud_sync_relationships(printOutput=True)
+                list_cloud_sync_relationships(print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
         
@@ -856,7 +906,7 @@ if __name__ == '__main__':
 
             # List cloud sync relationships
             try:
-                list_snap_mirror_relationships(printOutput=True)
+                list_snap_mirror_relationships(print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
         
@@ -883,7 +933,7 @@ if __name__ == '__main__':
 
             # List volumes
             try:
-                list_snapshots(volumeName=volumeName, printOutput=True)
+                list_snapshots(volume_name=volumeName, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
                 sys.exit(1)
         
@@ -898,7 +948,7 @@ if __name__ == '__main__':
 
             # List volumes
             try:
-                list_volumes(checkLocalMounts=True, printOutput=True)
+                list_volumes(check_local_mounts=True, print_output=True)
             except (InvalidConfigError, APIConnectionError) :
                 sys.exit(1)
 
@@ -932,7 +982,7 @@ if __name__ == '__main__':
 
             # Mount volume
             try:
-                mount_volume(volumeName=volumeName, mountpoint=mountpoint, printOutput=True)
+                mount_volume(volume_name=volumeName, mountpoint=mountpoint, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
 
@@ -973,7 +1023,7 @@ if __name__ == '__main__':
 
             # Prepopulate FlexCache
             try:
-                prepopulate_flex_cache(volumeName=volumeName, paths=pathsList, printOutput=True)
+                prepopulate_flex_cache(volume_name=volumeName, paths=pathsList, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
                 sys.exit(1)
         
@@ -1014,7 +1064,7 @@ if __name__ == '__main__':
 
             # Push file to S3
             try:
-                pull_bucket_from_s3(s3Bucket=s3Bucket, localDirectory=localDirectory, s3ObjectKeyPrefix=s3ObjectKeyPrefix, printOutput=True)
+                pull_bucket_from_s3(s3_bucket=s3Bucket, local_directory=localDirectory, s3_object_key_prefix=s3ObjectKeyPrefix, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1047,7 +1097,7 @@ if __name__ == '__main__':
 
             # Push file to S3
             try:
-                pull_object_from_s3(s3Bucket=s3Bucket, s3ObjectKey=s3ObjectKey, localFile=localFile, printOutput=True)
+                pull_object_from_s3(s3_bucket=s3Bucket, s3_object_key=s3ObjectKey, local_file=localFile, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1091,7 +1141,7 @@ if __name__ == '__main__':
 
             # Push file to S3
             try:
-                push_directory_to_s3(s3Bucket=s3Bucket, localDirectory=localDirectory, s3ObjectKeyPrefix=s3ObjectKeyPrefix, s3ExtraArgs=s3ExtraArgs, printOutput=True)
+                push_directory_to_s3(s3_bucket=s3Bucket, local_directory=localDirectory, s3_object_key_prefix=s3ObjectKeyPrefix, s3_extra_args=s3ExtraArgs, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1127,7 +1177,7 @@ if __name__ == '__main__':
 
             # Push file to S3
             try:
-                push_file_to_s3(s3Bucket=s3Bucket, s3ObjectKey=s3ObjectKey, localFile=localFile, s3ExtraArgs=s3ExtraArgs, printOutput=True)
+                push_file_to_s3(s3_bucket=s3Bucket, s3_object_key=s3ObjectKey, local_file=localFile, s3_extra_args=s3ExtraArgs, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1180,7 +1230,7 @@ if __name__ == '__main__':
 
             # Restore snapshot
             try:
-                restore_snapshot(volumeName=volumeName, snapshotName=snapshotName, printOutput=True)
+                restore_snapshot(volume_name=volumeName, snapshot_name=snapshotName, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError):
                 sys.exit(1)
 
@@ -1218,7 +1268,7 @@ if __name__ == '__main__':
 
             # Update cloud sync relationship
             try:
-                sync_cloud_sync_relationship(relationshipID=relationshipID, waitUntilComplete=waitUntilComplete, printOutput=True)
+                sync_cloud_sync_relationship(relationship_id=relationshipID, wait_until_complete=waitUntilComplete, print_output=True)
             except (InvalidConfigError, APIConnectionError, CloudSyncSyncOperationError):
                 sys.exit(1)
 
@@ -1248,7 +1298,7 @@ if __name__ == '__main__':
 
             # Update SnapMirror relationship
             try:
-                sync_snap_mirror_relationship(uuid=uuid, waitUntilComplete=waitUntilComplete, printOutput=True)
+                sync_snap_mirror_relationship(uuid=uuid, wait_until_complete=waitUntilComplete, print_output=True)
             except (
                     InvalidConfigError, APIConnectionError, InvalidSnapMirrorParameterError,
                     SnapMirrorSyncOperationError) :
