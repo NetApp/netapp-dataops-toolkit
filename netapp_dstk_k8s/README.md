@@ -9,9 +9,7 @@ The NetApp Data Science Toolkit for Kubernetes supports Linux and macOS hosts.
 
 The toolkit must be used in conjunction with a Kubernetes cluster in order to be useful. Additionally, [Trident](https://netapp.io/persistent-storage-provisioner-for-kubernetes/), NetApp's dynamic storage orchestrator for Kubernetes, and/or the [BeeGFS CSI driver](https://github.com/NetApp/beegfs-csi-driver/) must be installed within the Kubernetes cluster. The toolkit simplifies performing of various data management tasks that are actually executed by a NetApp maintained CSI driver. In order to facilitate this, the toolkit communicates with the appropriate driver via the Kubernetes API. 
 
-The toolkit is currently compatible with Kubernetes versions 1.17* and above.
-
-\* The toolkit has been fully validated with Kubernetes versions 1.17 and 1.18.
+The toolkit is currently compatible with Kubernetes versions 1.17 and above, and OpenShift versions 4.4 and above.
 
 The toolkit is currently compatible with Trident versions 20.07 and above. Additionally, the toolkit is compatible with the following Trident backend types:
 
@@ -63,6 +61,11 @@ In the [Examples](Examples/) directory, you will find the following examples per
 
 Refer to the [Kubernetes documentation](https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/) for more information on accessing the Kubernetes API from within a pod.
 
+## Tips and Tricks
+
+- [Use the NetApp Data Science Toolkit in conjunction with Kubeflow.](Examples/Kubeflow/)
+- [Use the NetApp Data Science Toolkit in conjunction with Apache Airflow.](Examples/Airflow/)
+
 <a name="command-line-functionality"></a>
 
 ## Command Line Functionality
@@ -101,7 +104,7 @@ The NetApp Data Science Toolkit can be used to near-instantaneously provision a 
 
 Note: Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified. However, only one of these flags (not both) should be specified for a given operation. If -j/--source-workspace-name is specified, then the clone will be created from the current state of the workspace. If -s/--source-snapshot-name is specified, then the clone will be created from a specific snapshot related the source workspace.
 
-Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/stable-v21.01/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots and PVC cloning. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots and PVC cloning within a Kubernetes cluster.
+Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/latest/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots and PVC cloning. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots and PVC cloning within a Kubernetes cluster.
 
 The following options/arguments are required:
 
@@ -335,7 +338,7 @@ sathish               Ready     2Ti     ontap-flexvol    http://10.61.188.112:31
 
 The NetApp Data Science Toolkit can be used to near-instantaneously save a space-efficient, read-only copy of an existing JupyterLab workspace. These read-only copies are called snapshots, and are represented within a Kubernetes cluster by VolumeSnapshot objects. This functionality can be used to version workspaces and/or implement workspace-to-model traceability. The command for creating a new snapshot for a specific JupyterLab workspace is `./ntap_dsutil_k8s.py create jupyterlab-snapshot`.
 
-Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/stable-v21.01/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots within a Kubernetes cluster.
+Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/latest/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots within a Kubernetes cluster.
 
 The following options/arguments are required:
 
@@ -412,7 +415,7 @@ VolumeSnapshot successfully deleted.
 
 The NetApp Data Science Toolkit can be used to list all existing JupyterLab workspace snapshots in a specific namespace. The command for listing all existing snapshots is `./ntap_dsutil_k8s.py list jupyterlab-snapshots`.
 
-Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/stable-v21.01/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots within a Kubernetes cluster.
+Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/latest/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots within a Kubernetes cluster.
 
 No options/arguments are required for this command.
 
@@ -481,7 +484,7 @@ The NetApp Data Science Toolkit can be used to near-instantaneously provision a 
 
 Note: Either -s/--source-snapshot-name or -v/--source-pvc-name must be specified. However, only one of these flags (not both) should be specified for a given operation. If -v/--source-pvc-name is specified, then the clone will be created from the current state of the volume. If -s/--source-snapshot-name is specified, then the clone will be created from a specific snapshot related the source volume.
 
-Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/stable-v21.01/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots and PVC cloning. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots and PVC cloning within a Kubernetes cluster.
+Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/latest/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots and PVC cloning. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots and PVC cloning within a Kubernetes cluster.
 
 The following options/arguments are required:
 
@@ -634,7 +637,7 @@ test2-clone1                        Bound     10Gi    ontap-flexvol    Yes      
 
 The NetApp Data Science Toolkit can be used to near-instantaneously save a space-efficient, read-only copy of an existing persistent volume. These read-only copies are called snapshots, and are represented within a Kubernetes cluster by VolumeSnapshot objects. This functionality can be used to version datasets and/or implement dataset-to-model traceability. The command for creating a new snapshot for a specific persistent volume is `./ntap_dsutil_k8s.py create volume-snapshot`.
 
-Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/stable-v21.01/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots within a Kubernetes cluster.
+Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/latest/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots within a Kubernetes cluster.
 
 The following options/arguments are required:
 
@@ -709,7 +712,7 @@ VolumeSnapshot successfully deleted.
 
 The NetApp Data Science Toolkit can be used to list all existing persistent volume snapshots in a specific namespace. The command for listing all existing snapshots is `./ntap_dsutil_k8s.py list volume-snapshots`.
 
-Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/stable-v21.01/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots within a Kubernetes cluster.
+Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/latest/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots within a Kubernetes cluster.
 
 No options/arguments are required for this command.
 
@@ -815,7 +818,7 @@ When being utilized as an importable library of functions, the toolkit supports 
 
 The NetApp Data Science Toolkit can be used to near-instantaneously provision a new JupyterLab workspace (within a Kubernetes cluster), that is an exact copy of an existing JupyterLab workspace or JupyterLab workspace snapshot, as part of any Python program or workflow. In other words, the NetApp Data Science Toolkit can be used to near-instantaneously clone a JupyterLab workspace as part of any Python program or workflow.
 
-Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/stable-v21.01/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots and PVC cloning. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots and PVC cloning within a Kubernetes cluster.
+Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/latest/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots and PVC cloning. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots and PVC cloning within a Kubernetes cluster.
 
 ##### Function Definition
 
@@ -949,7 +952,7 @@ APIConnectionError              # The Kubernetes API returned an error.
 
 The NetApp Data Science Toolkit can be used to near-instantaneously save a space-efficient, read-only copy of an existing JupyterLab workspace as part of any Python program or workflow. These read-only copies are called snapshots, and are represented within a Kubernetes cluster by VolumeSnapshot objects. This functionality can be used to version workspaces and/or implement workspace-to-model traceability.
 
-Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/stable-v21.01/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots within a Kubernetes cluster.
+Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/latest/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots within a Kubernetes cluster.
 
 ##### Function Definition
 
@@ -992,7 +995,7 @@ To delete a JupyterLab workspace snapshot, use the [deleteVolumeSnapshot functio
 
 The NetApp Data Science Toolkit can be used to list all existing JupyterLab workspace snapshots in a specific namespace as part of any Python program or workflow.
 
-Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/stable-v21.01/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots within a Kubernetes cluster.
+Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/latest/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots within a Kubernetes cluster.
 
 ##### Function Definition
 
@@ -1054,7 +1057,7 @@ APIConnectionError              # The Kubernetes API returned an error.
 
 The NetApp Data Science Toolkit can be used to near-instantaneously provision a new persistent volume (within a Kubernetes cluster) that is an exact copy of an existing persistent volume or snapshot, as part of any Python program or workflow. In other words, the NetApp Data Science Toolkit can be used to near-instantaneously clone a persistent volume as part of any Python program or workflow.
 
-Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/stable-v21.01/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots and PVC cloning. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots and PVC cloning within a Kubernetes cluster.
+Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/latest/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots and PVC cloning. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots and PVC cloning within a Kubernetes cluster.
 
 ##### Function Definition
 
@@ -1179,7 +1182,7 @@ APIConnectionError              # The Kubernetes API returned an error.
 
 The NetApp Data Science Toolkit can be used to near-instantaneously save a space-efficient, read-only copy of an existing persistent volume as part of any Python program or workflow. These read-only copies are called snapshots, and are represented within a Kubernetes cluster by VolumeSnapshot objects. This functionality can be used to version datasets and/or implement dataset-to-model traceability.
 
-Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/stable-v21.01/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots within a Kubernetes cluster.
+Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/latest/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots within a Kubernetes cluster.
 
 ##### Function Definition
 
@@ -1241,7 +1244,7 @@ APIConnectionError              # The Kubernetes API returned an error.
 
 The NetApp Data Science Toolkit can be used to list all existing persistent volume snapshots in a specific namespace as part of any Python program or workflow.
 
-Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/stable-v21.01/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots within a Kubernetes cluster.
+Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/latest/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots within a Kubernetes cluster.
 
 ##### Function Definition
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 ## NetApp Data Science Toolkit
-version = "1.2"
+version = "1.2.2"
 
 
 import base64, json, os, subprocess, re, requests, yaml, time, boto3, boto3.session
@@ -692,6 +692,7 @@ def createVolume(volumeName: str, volumeSize: str, guaranteeSpace: bool = False,
         # Create dict representing volume
         volumeDict = {
             "name": volumeName,
+            "comment": "ntap-dsutil",
             "svm": {"name": svm},
             "size": volumeSizeBytes,
             "style": volumeType,
@@ -1115,6 +1116,7 @@ def cloneVolume(newVolumeName: str, sourceVolumeName: str, sourceSnapshotName: s
             # Construct dict representing new volume
             newVolumeDict = {
                 "name": newVolumeName,
+                "comment": "ntap-dsutil",
                 "svm": {"name": svm},
                 "nas": {
                     "path": "/" + newVolumeName
