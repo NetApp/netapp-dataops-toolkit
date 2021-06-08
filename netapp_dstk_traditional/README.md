@@ -818,14 +818,14 @@ The NetApp Data Science Toolkit can be used to near-instantaneously create a new
 ##### Function Definition
 
 ```py
-def cloneVolume(
-    newVolumeName: str,             # Name of new volume (required).
-    sourceVolumeName: str,          # Name of volume to be cloned (required).
-    sourceSnapshotName: str = None, # Name of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
-    unixUID: str = None,            # Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
-    unixGID: str = None,            # Unix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
-    mountpoint: str = None,         # Local mountpoint to mount new volume at. If not specified, volume will not be mounted locally. On Linux hosts - if specified, calling program must be run as root.
-    printOutput: bool = False       # Denotes whether or not to print messages to the console during execution.
+def clone_volume(
+    new_volume_name: str,             # Name of new volume (required).
+    source_volume_name: str,          # Name of volume to be cloned (required).
+    source_snapshot_name: str = None, # Name of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
+    unix_uid: str = None,             # Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
+    unix_gid: str = None,             # Unix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
+    mountpoint: str = None,           # Local mountpoint to mount new volume at. If not specified, volume will not be mounted locally. On Linux hosts - if specified, calling program must be run as root.
+    print_output: bool = False        # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
@@ -854,19 +854,19 @@ The NetApp Data Science Toolkit can be used to rapidly provision a new data volu
 ##### Function Definition
 
 ```py
-def createVolume(
-    volumeName: str,                # Name of new volume (required).
-    volumeSize: str,                # Size of new volume (required). Format: '1024MB', '100GB', '10TB', etc.
-    guaranteeSpace: bool = False,   # Guarantee sufficient storage space for full capacity of the volume (i.e. do not use thin provisioning).
-    volumeType: str = "flexvol",    # Volume type to use when creating new volume (flexgroup/flexvol).
-    unixPermissions: str = "0777",  # Unix filesystem permissions to apply when creating new volume (ex. '0777' for full read/write permissions for all users and groups).
-    unixUID: str = "0",             # Unix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
-    unixGID: str = "0",             # Unix filesystem group id (gid) to apply when creating new volume (ex. '0' for root group).
-    exportPolicy: str = "default",  # NFS export policy to use when exporting new volume.
-    snapshotPolicy: str = "none",   # Snapshot policy to apply for new volume.
-    aggregate: str = None,          # Aggregate to use when creating new volume (flexvol volumes only).
-    mountpoint: str = None,         # Local mountpoint to mount new volume at. If not specified, volume will not be mounted locally. On Linux hosts - if specified, calling program must be run as root.
-    printOutput: bool = False       # Denotes whether or not to print messages to the console during execution.
+def create_volume(
+    volume_name: str,                # Name of new volume (required).
+    volume_size: str,                # Size of new volume (required). Format: '1024MB', '100GB', '10TB', etc.
+    guarantee_space: bool = False,   # Guarantee sufficient storage space for full capacity of the volume (i.e. do not use thin provisioning).
+    volume_type: str = "flexvol",    # Volume type to use when creating new volume (flexgroup/flexvol).
+    unix_permissions: str = "0777",  # Unix filesystem permissions to apply when creating new volume (ex. '0777' for full read/write permissions for all users and groups).
+    unix_uid: str = "0",             # Unix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
+    unix_gid: str = "0",             # Unix filesystem group id (gid) to apply when creating new volume (ex. '0' for root group).
+    export_policy: str = "default",  # NFS export policy to use when exporting new volume.
+    snapshot_policy: str = "none",   # Snapshot policy to apply for new volume.
+    aggregate: str = None,           # Aggregate to use when creating new volume (flexvol volumes only).
+    mountpoint: str = None,          # Local mountpoint to mount new volume at. If not specified, volume will not be mounted locally. On Linux hosts - if specified, calling program must be run as root.
+    print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
@@ -894,9 +894,9 @@ The NetApp Data Science Toolkit can be used to near-instantaneously delete an ex
 ##### Function Definition
 
 ```py
-def deleteVolume(
-    volumeName: str,            # Name of volume (required).
-    printOutput: bool = False   # Denotes whether or not to print messages to the console during execution.
+def delete_volume(
+    volume_name: str,            # Name of volume (required).
+    print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
@@ -923,9 +923,9 @@ The NetApp Data Science Toolkit can be used to retrieve a list of all existing d
 ##### Function Definition
 
 ```py
-def listVolumes(
-    checkLocalMounts: bool = False,     # If set to true, then the local mountpoints of any mounted volumes will be included in the returned list and included in printed output.
-    printOutput: bool = False           # Denotes whether or not to print messages to the console during execution.
+def list_volumes(
+    check_local_mounts: bool = False,    # If set to true, then the local mountpoints of any mounted volumes will be included in the returned list and included in printed output.
+    print_output: bool = False           # Denotes whether or not to print messages to the console during execution.
 ) -> list() :
 ```
 
@@ -951,10 +951,10 @@ The NetApp Data Science Toolkit can be used to mount an existing data volume on 
 ##### Function Definition
 
 ```py
-def mountVolume(
-    volumeName: str,            # Name of volume (required).
+def mount_volume(
+    volume_name: str,           # Name of volume (required).
     mountpoint: str,            # Local mountpoint to mount volume at (required).
-    printOutput: bool = False   # Denotes whether or not to print messages to the console during execution.
+    print_output: bool = False  # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
@@ -984,10 +984,10 @@ The NetApp Data Science Toolkit can be used to near-instantaneously save a space
 ##### Function Definition
 
 ```py
-def createSnapshot(
-    volumeName: str,                    # Name of volume (required).
-    snapshotName: str = None,           # Name of new snapshot. If not specified, will be set to 'ntap_dsutil_<timestamp>'.
-    printOutput: bool = False           # Denotes whether or not to print messages to the console during execution.
+def create_snapshot(
+    volume_name: str,                    # Name of volume (required).
+    snapshot_name: str = None,           # Name of new snapshot. If not specified, will be set to 'ntap_dsutil_<timestamp>'.
+    print_output: bool = False           # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
@@ -1014,10 +1014,10 @@ The NetApp Data Science Toolkit can be used to near-instantaneously delete an ex
 ##### Function Definition
 
 ```py
-def deleteSnapshot(
-    volumeName: str,            # Name of volume (required).
-    snapshotName: str,          # Name of snapshot to be deleted (required).
-    printOutput: bool = False   # Denotes whether or not to print messages to the console during execution.
+def delete_snapshot(
+    volume_name: str,            # Name of volume (required).
+    snapshot_name: str,          # Name of snapshot to be deleted (required).
+    print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
@@ -1045,9 +1045,9 @@ The NetApp Data Science Toolkit can be used to retrieve a list of all existing s
 ##### Function Definition
 
 ```py
-def listSnapshots(
-    volumeName: str,            # Name of volume.
-    printOutput: bool = False   # Denotes whether or not to print messages to the console during execution.
+def list_snapshots(
+    volume_name: str,            # Name of volume.
+    print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
 ) -> list() :
 ```
 
@@ -1076,10 +1076,10 @@ Warning: A snapshot restore operation will delete all snapshots that were create
 ##### Function Definition
 
 ```py
-def restoreSnapshot(
-    volumeName: str,            # Name of volume (required).
-    snapshotName: str,          # Name of snapshot to be restored (required).
-    printOutput: bool = False   # Denotes whether or not to print messages to the console during execution.
+def restore_snapshot(
+    volume_name: str,            # Name of volume (required).
+    snapshot_name: str,          # Name of snapshot to be restored (required).
+    print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
@@ -1111,8 +1111,8 @@ Note: To create a new Cloud Sync relationship, visit [cloudsync.netapp.com](http
 ##### Function Definition
 
 ```py
-def listCloudSyncRelationships(
-    printOutput: bool = False   # Denotes whether or not to print messages to the console during execution.
+def list_cloud_sync_relationships(
+    print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
 ) -> list() :
 ```
 
@@ -1149,10 +1149,10 @@ Note: To create a new Cloud Sync relationship, visit [cloudsync.netapp.com](http
 ##### Function Definition
 
 ```py
-def syncCloudSyncRelationship(
-    relationshipID: str,                # ID of the relationship for which the sync operation is to be triggered (required).
-    waitUntilComplete: bool = False,    # Denotes whether or not to wait for sync operation to complete before returning.
-    printOutput: bool = False           # Denotes whether or not to print messages to the console during execution.
+def sync_cloud_sync_relationship(
+    relationship_id: str,                # ID of the relationship for which the sync operation is to be triggered (required).
+    wait_until_complete: bool = False,   # Denotes whether or not to wait for sync operation to complete before returning.
+    print_output: bool = False           # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
@@ -1183,11 +1183,11 @@ Warning: This operation has not been tested at scale and may not be appropriate 
 ##### Function Definition
 
 ```py
-def pullBucketFromS3(
-    s3Bucket: str,                  # S3 bucket to pull from (required).
-    localDirectory: str,            # Local directory to save contents of bucket to (required).
-    s3ObjectKeyPrefix: str = "",    # Object key prefix (pull will be limited to objects with key that starts with this prefix).
-    printOutput: bool = False       # Denotes whether or not to print messages to the console during execution.
+def pull_bucket_from_s3(
+    s3_bucket: str,                  # S3 bucket to pull from (required).
+    local_directory: str,            # Local directory to save contents of bucket to (required).
+    s3_object_key_prefix: str = "",  # Object key prefix (pull will be limited to objects with key that starts with this prefix).
+    print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
@@ -1215,11 +1215,11 @@ Note: To pull to a data volume, the volume must be mounted locally.
 ##### Function Definition
 
 ```py
-def pullObjectFromS3(
-    s3Bucket: str,              # S3 bucket to pull from. (required).
-    s3ObjectKey: str,           # Key of S3 object to pull (required).
-    localFile: str = None,      # Local filepath (including filename) to save object to (if not specified, value of s3ObjectKey argument will be used).
-    printOutput: bool = False   # Denotes whether or not to print messages to the console during execution.
+def pull_object_from_s3(
+    s3_bucket: str,              # S3 bucket to pull from. (required).
+    s3_object_key: str,          # Key of S3 object to pull (required).
+    local_file: str = None,      # Local filepath (including filename) to save object to (if not specified, value of s3_object_key argument will be used).
+    print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
@@ -1249,12 +1249,12 @@ Warning: This operation has not been tested at scale and may not be appropriate 
 ##### Function Definition
 
 ```py
-def pushDirectoryToS3(
-    s3Bucket: str,                  # S3 bucket to push to (required).
-    localDirectory: str,            # Local directory to push contents of (required).
-    s3ObjectKeyPrefix: str = "",    # Prefix to add to key for newly-pushed S3 objects (Note: by default, key will be local filepath relative to directory being pushed).
-    s3ExtraArgs: str = None,        # Extra args to apply to newly-pushed S3 objects (For details on this field, refer to https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-uploading-files.html#the-extraargs-parameter).
-    printOutput: bool = False       # Denotes whether or not to print messages to the console during execution.
+def push_directory_to_s3(
+    s3_bucket: str,                  # S3 bucket to push to (required).
+    local_directory: str,            # Local directory to push contents of (required).
+    s3_object_key_prefix: str = "",  # Prefix to add to key for newly-pushed S3 objects (Note: by default, key will be local filepath relative to directory being pushed).
+    s3_extra_args: str = None,       # Extra args to apply to newly-pushed S3 objects (For details on this field, refer to https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-uploading-files.html#the-extraargs-parameter).
+    print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
@@ -1282,12 +1282,12 @@ Note: To push from a data volume, the volume must be mounted locally.
 ##### Function Definition
 
 ```py
-def pushFileToS3(
-    s3Bucket: str,              # S3 bucket to push to (required).
-    localFile: str,             # Local file to push (required).
-    s3ObjectKey: str = None,    # Key to assign to newly-pushed S3 object (if not specified, key will be set to value of localFile).
-    s3ExtraArgs: str = None,    # Extra args to apply to newly-pushed S3 object (For details on this field, refer to https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-uploading-files.html#the-extraargs-parameter).
-    printOutput: bool = False   # Denotes whether or not to print messages to the console during execution.
+def push_file_to_s3(
+    s3_bucket: str,             # S3 bucket to push to (required).
+    local_file: str,            # Local file to push (required).
+    s3_object_key: str = None,  # Key to assign to newly-pushed S3 object (if not specified, key will be set to value of local_file).
+    s3_extra_args: str = None,  # Extra args to apply to newly-pushed S3 object (For details on this field, refer to https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-uploading-files.html#the-extraargs-parameter).
+    print_output: bool = False  # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
@@ -1317,10 +1317,10 @@ Compatibility: ONTAP 9.8 and above ONLY
 ##### Function Definition
 
 ```py
-def prepopulateFlexCache(
-    volumeName: str,            # Name of FlexCache volume (required).
+def prepopulate_flex_cache(
+    volume_name: str,           # Name of FlexCache volume (required).
     paths: list,                # List of dirpaths/filepaths to prepopulate (required).
-    printOutput: bool = False
+    print_output: bool = False
 ) :
 ```
 
@@ -1349,8 +1349,8 @@ Note: To create a new SnapMirror relationship, access ONTAP System Manager.
 ##### Function Definition
 
 ```py
-def listSnapMirrorRelationships(
-    printOutput: bool = False   # Denotes whether or not to print messages to the console during execution.
+def list_snap_mirror_relationships(
+    print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
 ) -> list() :
 ```
 
@@ -1380,10 +1380,10 @@ Note: To create a new SnapMirror relationship, access ONTAP System Manager.
 ##### Function Definition
 
 ```py
-def syncSnapMirrorRelationship(
+def sync_snap_mirror_relationship(
     uuid: str,                          # UUID of the relationship for which the sync operation is to be triggered (required).
-    waitUntilComplete: bool = False,    # Denotes whether or not to wait for sync operation to complete before returning.
-    printOutput: bool = False           # Denotes whether or not to print messages to the console during execution.
+    wait_until_complete: bool = False,  # Denotes whether or not to wait for sync operation to complete before returning.
+    print_output: bool = False          # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
