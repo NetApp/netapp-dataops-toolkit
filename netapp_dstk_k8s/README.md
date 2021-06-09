@@ -781,7 +781,7 @@ The NetApp Data Science Toolkit for Kubernetes can also be utilized as a library
 To import the NetApp Data Science Toolkit for Kubernetes library functions into a Python program, ensure that the `ntap_dsutil_k8s.py` file is in the same directory as the program, and include the following line of code in the program:
 
 ```py
-from ntap_dsutil_k8s import cloneJupyterLab, createJupyterLab, deleteJupyterLab, listJupyterLabs, createJupyterLabSnapshot, listJupyterLabSnapshots, restoreJupyterLabSnapshot, cloneVolume, createVolume, deleteVolume, listVolumes, createVolumeSnapshot, deleteVolumeSnapshot, listVolumeSnapshots, restoreVolumeSnapshot
+from ntap_dsutil_k8s import clone_jupyter_lab, create_jupyter_lab, delete_jupyter_lab, list_jupyter_labs, create_jupyter_lab_snapshot, list_jupyter_lab_snapshots, restore_jupyter_lab_snapshot, clone_volume, create_volume, delete_volume, list_volumes, create_volume_snapshot, delete_volume_snapshot, list_volume_snapshots, restore_volume_snapshot
 ```
 
 Note: The prerequisite steps outlined in the [Getting Started](#getting-started) section still apply when the toolkit is being utilized as an importable library of functions.
@@ -823,17 +823,17 @@ Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/
 ##### Function Definition
 
 ```py
-def cloneJupyterLab(
-    newWorkspaceName: str,                          # Name of new workspace (name to be applied to new JupyterLab workspace) (required).
-    sourceWorkspaceName: str,                       # Name of JupyterLab workspace to use as source for clone. (required).
-    sourceSnapshotName: str = None,                 # Name of Kubernetes VolumeSnapshot to use as source for clone.
-    newWorkspacePassword: str = None,               # Workspace password (this password will be required in order to access the workspace). If not specified, you will be prompted to enter a password via the console.
-    volumeSnapshotClass: str = "csi-snapclass",     # Kubernetes VolumeSnapshotClass to use when creating clone. If not specified, "csi-snapclass" will be used. Note: VolumeSnapshotClass must be configured to use Trident.
-    namespace: str = "default",                     # Kubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
-    requestCpu: str = None,                         # Number of CPUs to reserve for new JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
-    requestMemory: str = None,                      # Amount of memory to reserve for newe JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
-    requestNvidiaGpu: str = None,                   # Number of NVIDIA GPUs to allocate to new JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
-    printOutput: bool = False                       # Denotes whether or not to print messages to the console during execution.
+def clone_jupyter_lab(
+    new_workspace_name: str,                          # Name of new workspace (name to be applied to new JupyterLab workspace) (required).
+    source_workspace_name: str,                       # Name of JupyterLab workspace to use as source for clone. (required).
+    source_snapshot_name: str = None,                 # Name of Kubernetes VolumeSnapshot to use as source for clone.
+    new_workspace_password: str = None,               # Workspace password (this password will be required in order to access the workspace). If not specified, you will be prompted to enter a password via the console.
+    volume_snapshot_class: str = "csi-snapclass",     # Kubernetes VolumeSnapshotClass to use when creating clone. If not specified, "csi-snapclass" will be used. Note: VolumeSnapshotClass must be configured to use Trident.
+    namespace: str = "default",                      # Kubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
+    request_cpu: str = None,                         # Number of CPUs to reserve for new JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+    request_memory: str = None,                      # Amount of memory to reserve for newe JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
+    request_nvidia_gpu: str = None,                  # Number of NVIDIA GPUs to allocate to new JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
+    print_output: bool = False                       # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
@@ -861,17 +861,17 @@ Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/
 ##### Function Definition
 
 ```py
-def createJupyterLab(
-    workspaceName: str,                                     # Name of new JupyterLab workspace (required).
-    workspaceSize: str,                                     # Size new workspace (i.e. size of backing persistent volume to be created) (required). Format: '1024Mi', '100Gi', '10Ti', etc.
-    storageClass: str = None,                               # Kubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
-    namespace: str = "default",                             # Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
-    workspacePassword: str = None,                          # Workspace password (this password will be required in order to access the workspace). If not specified, you will be prompted to enter a password via the console.
-    workspaceImage: str = "jupyter/tensorflow-notebook",    # Container image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.
-    requestCpu: str = None,                                 # Number of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
-    requestMemory: str = None,                              # Amount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
-    requestNvidiaGpu: str = None,                           # Number of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
-    printOutput: bool = False                               # Denotes whether or not to print messages to the console during execution.
+def create_jupyter_lab(
+    workspace_name: str,                                     # Name of new JupyterLab workspace (required).
+    workspace_size: str,                                     # Size new workspace (i.e. size of backing persistent volume to be created) (required). Format: '1024Mi', '100Gi', '10Ti', etc.
+    storage_class: str = None,                               # Kubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
+    namespace: str = "default",                              # Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
+    workspace_password: str = None,                          # Workspace password (this password will be required in order to access the workspace). If not specified, you will be prompted to enter a password via the console.
+    workspace_image: str = "jupyter/tensorflow-notebook",    # Container image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.
+    request_cpu: str = None,                                 # Number of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+    request_memory: str = None,                              # Amount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
+    request_nvidia_gpu: str = None,                          # Number of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
+    print_output: bool = False                               # Denotes whether or not to print messages to the console during execution.
 ) -> str :
 ```
 
@@ -897,11 +897,11 @@ The NetApp Data Science Toolkit can be used to near-instantaneously delete an ex
 ##### Function Definition
 
 ```py
-def deleteJupyterLab(
-    workspaceName: str,                 # Name of JupyterLab workspace to be deleted (required).
-    namespace: str = "default",         # Kubernetes namespace that the workspace is located in. If not specified, namespace "default" will be used.
-    preserveSnapshots: bool = False,    # Denotes whether or not to preserve VolumeSnapshots associated with workspace (if set to False, all VolumeSnapshots associated with workspace will be deleted).
-    printOutput: bool = False           # Denotes whether or not to print messages to the console during execution.
+def delete_jupyter_lab(
+    workspace_name: str,                 # Name of JupyterLab workspace to be deleted (required).
+    namespace: str = "default",          # Kubernetes namespace that the workspace is located in. If not specified, namespace "default" will be used.
+    preserve_snapshots: bool = False,    # Denotes whether or not to preserve VolumeSnapshots associated with workspace (if set to False, all VolumeSnapshots associated with workspace will be deleted).
+    print_output: bool = False           # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
@@ -927,9 +927,9 @@ The NetApp Data Science Toolkit can be used to retrieve a list of all existing J
 ##### Function Definition
 
 ```py
-def listJupyterLabs(
+def list_jupyter_labs(
     namespace: str = "default",     # Kubernetes namespace for which to retrieve list of workspaces. If not specified, namespace "default" will be used.
-    printOutput: bool = False       # Denotes whether or not to print messages to the console during execution.
+    print_output: bool = False      # Denotes whether or not to print messages to the console during execution.
 ) -> list :
 ```
 
@@ -957,12 +957,12 @@ Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/
 ##### Function Definition
 
 ```py
-def createJupyterLabSnapshot(
-    workspaceName: str,                             # Name of JupyterLab workspace (required).
-    snapshotName: str = None,                       # Name of new Kubernetes VolumeSnapshot for workspace. If not specified, will be set to 'ntap-dsutil.<timestamp>'.
-    volumeSnapshotClass: str = "csi-snapclass",     # Kubernetes VolumeSnapshotClass to use when creating snapshot of backing volume for workspace. If not specified, "csi-snapclass" will be used. Note: VolumeSnapshotClass must be configured to use Trident.
-    namespace: str = "default",                     # Kubernetes namespace that workspace is located in. If not specified, namespace "default" will be used.
-    printOutput: bool = False                       # Denotes whether or not to print messages to the console during execution.
+def create_jupyter_lab_snapshot(
+    workspace_name: str,                             # Name of JupyterLab workspace (required).
+    snapshot_name: str = None,                       # Name of new Kubernetes VolumeSnapshot for workspace. If not specified, will be set to 'ntap-dsutil.<timestamp>'.
+    volume_snapshot_class: str = "csi-snapclass",    # Kubernetes VolumeSnapshotClass to use when creating snapshot of backing volume for workspace. If not specified, "csi-snapclass" will be used. Note: VolumeSnapshotClass must be configured to use Trident.
+    namespace: str = "default",                      # Kubernetes namespace that workspace is located in. If not specified, namespace "default" will be used.
+    print_output: bool = False                       # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
@@ -987,7 +987,7 @@ The NetApp Data Science Toolkit can be used to near-instantaneously delete an ex
 
 ##### Function Definition
 
-To delete a JupyterLab workspace snapshot, use the [deleteVolumeSnapshot function](#lib-delete-volume-snapshot).
+To delete a JupyterLab workspace snapshot, use the [delete_volume_snapshot() function](#lib-delete-volume-snapshot).
 
 <a name="lib-list-jupyterlab-snapshots"></a>
 
@@ -1000,10 +1000,10 @@ Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/
 ##### Function Definition
 
 ```py
-def listJupyterLabSnapshots(
-    workspaceName: str = None,      # Name of JupyterLab workspace to list snapshots for. If not specified, all VolumeSnapshots in namespace will be listed.
-    namespace: str = "default",     # Kubernetes namespace that Kubernetes VolumeSnapshot is located in. If not specified, namespace "default" will be used.
-    printOutput: bool = False       # Denotes whether or not to print messages to the console during execution.
+def list_jupyter_lab_snapshots(
+    workspace_name: str = None,      # Name of JupyterLab workspace to list snapshots for. If not specified, all VolumeSnapshots in namespace will be listed.
+    namespace: str = "default",      # Kubernetes namespace that Kubernetes VolumeSnapshot is located in. If not specified, namespace "default" will be used.
+    print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
 ) -> list :
 ```
 
@@ -1029,10 +1029,10 @@ The NetApp Data Science Toolkit can be used to near-instantaneously restore a sp
 ##### Function Definition
 
 ```py
-def restoreJupyterLabSnapshot(
-    snapshotName: str,              # Name of Kubernetes VolumeSnapshot to be restored (required).
-    namespace: str = "default",     # Kubernetes namespace that VolumeSnapshot is located in. If not specified, namespace "default" will be used.
-    printOutput: bool = False       # Denotes whether or not to print messages to the console during execution.
+def restore_jupyter_lab_snapshot(
+    snapshot_name: str,              # Name of Kubernetes VolumeSnapshot to be restored (required).
+    namespace: str = "default",      # Kubernetes namespace that VolumeSnapshot is located in. If not specified, namespace "default" will be used.
+    print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
@@ -1062,13 +1062,13 @@ Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/
 ##### Function Definition
 
 ```py
-def cloneVolume(
-    newPvcName: str,                                # Name of new volume (name to be applied to new Kubernetes PersistentVolumeClaim/PVC) (required).
-    sourcePvcName: str,                             # Name of Kubernetes PersistentVolumeClaim (PVC) to use as source for clone (required).
-    sourceSnapshotName: str = None,                 # Name of Kubernetes VolumeSnapshot to use as source for clone.
-    volumeSnapshotClass: str = "csi-snapclass",     # Kubernetes VolumeSnapshotClass to use when creating clone. If not specified, "csi-snapclass" will be used. Note: VolumeSnapshotClass must be configured to use Trident.
-    namespace: str = "default",                     # Kubernetes namespace that source PersistentVolumeClaim (PVC) is located in. If not specified, namespace "default" will be used.
-    printOutput: bool = False                       # Denotes whether or not to print messages to the console during execution.
+def clone_volume(
+    new_pvc_name: str,                                # Name of new volume (name to be applied to new Kubernetes PersistentVolumeClaim/PVC) (required).
+    source_pvc_name: str,                             # Name of Kubernetes PersistentVolumeClaim (PVC) to use as source for clone (required).
+    source_snapshot_name: str = None,                 # Name of Kubernetes VolumeSnapshot to use as source for clone.
+    volume_snapshot_class: str = "csi-snapclass",     # Kubernetes VolumeSnapshotClass to use when creating clone. If not specified, "csi-snapclass" will be used. Note: VolumeSnapshotClass must be configured to use Trident.
+    namespace: str = "default",                       # Kubernetes namespace that source PersistentVolumeClaim (PVC) is located in. If not specified, namespace "default" will be used.
+    print_output: bool = False                        # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
@@ -1096,12 +1096,12 @@ Tip: Refer to the [Trident](https://netapp-trident.readthedocs.io/) or [BeeGFS C
 ##### Function Definition
 
 ```py
-def createVolume(
-    pvcName: str,               # Name of new volume (name to be applied to new Kubernetes PersistentVolumeClaim/PVC) (required).
-    volumeSize: str,            # Size of new volume. Format: '1024Mi', '100Gi', '10Ti', etc (required).
-    storageClass: str = None,   # Kubernetes StorageClass to use when provisioning new volume. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
-    namespace: str = "default", # Kubernetes namespace to create new PersistentVolumeClaim (PVC) in. If not specified, PVC will be created in namespace "default".
-    printOutput: bool = False   # Denotes whether or not to print messages to the console during execution.
+def create_volume(
+    pvc_name: str,               # Name of new volume (name to be applied to new Kubernetes PersistentVolumeClaim/PVC) (required).
+    volume_size: str,            # Size of new volume. Format: '1024Mi', '100Gi', '10Ti', etc (required).
+    storage_class: str = None,   # Kubernetes StorageClass to use when provisioning new volume. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
+    namespace: str = "default",  # Kubernetes namespace to create new PersistentVolumeClaim (PVC) in. If not specified, PVC will be created in namespace "default".
+    print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
@@ -1127,11 +1127,11 @@ The NetApp Data Science Toolkit can be used to near-instantaneously delete an ex
 ##### Function Definition
 
 ```py
-def deleteVolume(
-    pvcName: str,                       # Name of Kubernetes PersistentVolumeClaim (PVC) to be deleted (required).
+def delete_volume(
+    pvc_name: str,                      # Name of Kubernetes PersistentVolumeClaim (PVC) to be deleted (required).
     namespace: str = "default",         # Kubernetes namespace that PersistentVolumeClaim (PVC) is located in. If not specified, namespace "default" will be used.
-    preserveSnapshots: bool = False,    # Denotes whether or not to preserve VolumeSnapshots associated with PersistentVolumeClaim (PVC)  (if set to False, all VolumeSnapshots associated with PVC will be deleted).
-    printOutput: bool = False           # Denotes whether or not to print messages to the console during execution.
+    preserve_snapshots: bool = False,   # Denotes whether or not to preserve VolumeSnapshots associated with PersistentVolumeClaim (PVC)  (if set to False, all VolumeSnapshots associated with PVC will be deleted).
+    print_output: bool = False          # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
@@ -1157,9 +1157,9 @@ The NetApp Data Science Toolkit can be used to retrieve a list of all existing p
 ##### Function Definition
 
 ```py
-def listVolumes(
+def list_volumes(
     namespace: str = "default",     # Kubernetes namespace for which to retrieve list of volumes. If not specified, namespace "default" will be used.
-    printOutput: bool = False       # Denotes whether or not to print messages to the console during execution.
+    print_output: bool = False      # Denotes whether or not to print messages to the console during execution.
 ) -> list :
 ```
 
@@ -1187,12 +1187,12 @@ Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/
 ##### Function Definition
 
 ```py
-def createVolumeSnapshot(
-    pvcName: str,                                   # Name of Kubernetes PersistentVolumeClaim (PVC) to create snapshot for (required).
-    snapshotName: str = None,                       # Name of new Kubernetes VolumeSnapshot. If not specified, will be set to 'ntap-dsutil.<timestamp>'.
-    volumeSnapshotClass: str = "csi-snapclass",     # Kubernetes VolumeSnapshotClass to use when creating snapshot. If not specified, "csi-snapclass" will be used. Note: VolumeSnapshotClass must be configured to use Trident.
+def create_volume_snapshot(
+    pvc_name: str,                                  # Name of Kubernetes PersistentVolumeClaim (PVC) to create snapshot for (required).
+    snapshot_name: str = None,                      # Name of new Kubernetes VolumeSnapshot. If not specified, will be set to 'ntap-dsutil.<timestamp>'.
+    volume_snapshot_class: str = "csi-snapclass",   # Kubernetes VolumeSnapshotClass to use when creating snapshot. If not specified, "csi-snapclass" will be used. Note: VolumeSnapshotClass must be configured to use Trident.
     namespace: str = "default",                     # Kubernetes namespace that PersistentVolumeClaim (PVC) is located in. If not specified, namespace "default" will be used.
-    printOutput: bool = False                       # Denotes whether or not to print messages to the console during execution.
+    print_output: bool = False                      # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
@@ -1218,10 +1218,10 @@ The NetApp Data Science Toolkit can be used to near-instantaneously delete an ex
 ##### Function Definition
 
 ```py
-def deleteVolumeSnapshot(
-    snapshotName: str,              # Name of Kubernetes VolumeSnapshot to be deleted (required).
+def delete_volume_snapshot(
+    snapshot_name: str,             # Name of Kubernetes VolumeSnapshot to be deleted (required).
     namespace: str = "default",     # Kubernetes namespace that VolumeSnapshot is located in. If not specified, namespace "default" will be used.
-    printOutput: bool = False       # Denotes whether or not to print messages to the console during execution.
+    print_output: bool = False      # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
@@ -1249,10 +1249,10 @@ Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/
 ##### Function Definition
 
 ```py
-def listVolumeSnapshots(
-    pvcName: str = None,            # Name of Kubernetes PersistentVolumeClaim (PVC) to list snapshots for. If not specified, all VolumeSnapshots in namespace will be listed.
+def list_volume_snapshots(
+    pvc_name: str = None,           # Name of Kubernetes PersistentVolumeClaim (PVC) to list snapshots for. If not specified, all VolumeSnapshots in namespace will be listed.
     namespace: str = "default",     # Kubernetes namespace that Kubernetes VolumeSnapshot is located in. If not specified, namespace "default" will be used.
-    printOutput: bool = False       # Denotes whether or not to print messages to the console during execution.
+    print_output: bool = False      # Denotes whether or not to print messages to the console during execution.
 ) -> list :
 ```
 
@@ -1281,10 +1281,10 @@ Tip: If the PVC associated with the snapshot is currently mounted to a pod that 
 ##### Function Definition
 
 ```py
-def restoreVolumeSnapshot(
-    snapshotName: str,              # Name of Kubernetes VolumeSnapshot to be restored (required).
+def restore_volume_snapshot(
+    snapshot_name: str,             # Name of Kubernetes VolumeSnapshot to be restored (required).
     namespace: str = "default",     # Kubernetes namespace that VolumeSnapshot is located in. If not specified, namespace "default" will be used.
-    printOutput: bool = False       # Denotes whether or not to print messages to the console during execution.
+    print_output: bool = False      # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
