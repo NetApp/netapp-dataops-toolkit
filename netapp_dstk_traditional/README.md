@@ -770,7 +770,7 @@ The NetApp Data Science Toolkit can also be utilized as a library of functions t
 To import the NetApp Data Science Toolkit library functions into a Python program, ensure that the `ntap_dsutil.py` file is in the same directory as the program, and include the following line of code in the program:
 
 ```py
-from ntap_dsutil import cloneVolume, createVolume, deleteVolume, listVolumes, mountVolume, createSnapshot, deleteSnapshot, listSnapshots, restoreSnapshot, listCloudSyncRelationships, syncCloudSyncRelationship, pullBucketFromS3, pullObjectFromS3, pushDirectoryToS3. pushFileToS3, prepopulateFlexCache, listSnapMirrorRelationships, syncSnapMirrorRelationship
+from ntap_dsutil import clone_volume, create_volume, delete_volume, list_volumes, mount_volume, create_snapshot, delete_snapshot, list_snapshots, restore_snapshot, list_cloud_sync_relationships, sync_cloud_sync_relationship, list_snap_mirror_relationships, sync_snap_mirror_relationship, prepopulate_flex_cache, push_directory_to_s3, push_file_to_s3, pull_bucket_from_s3, pull_object_from_s3
 ```
 
 Note: The prerequisite steps outlined in the [Getting Started](#getting-started) section still appy when the toolkit is being utilized as an importable library of functions.
