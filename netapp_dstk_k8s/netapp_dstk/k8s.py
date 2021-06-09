@@ -525,10 +525,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, storage_class: 
                                     value="yes"
                                 )
                             ],
-                            security_context=client.V1PodSecurityContext(
-                                run_as_user=0
-                            ),
-                            args=["start-notebook.sh", "--LabApp.password=" + hashedPassword, "--LabApp.ip='0.0.0.0'",
+                            args=["start-notebook.sh", "--ServerApp.password=" + hashedPassword, "--ServerApp.ip='0.0.0.0'",
                                   "--no-browser"],
                             ports=[
                                 client.V1ContainerPort(container_port=8888)
