@@ -1216,7 +1216,7 @@ def cloneVolume(newPvcName: str, sourcePvcName: str, sourceSnapshotName: str = N
 
 @deprecated
 def createJupyterLab(workspaceName: str, workspaceSize: str, storageClass: str = None, namespace: str = "default", workspacePassword: str = None, workspaceImage: str = "jupyter/tensorflow-notebook", requestCpu: str = None, requestMemory: str = None, requestNvidiaGpu: str = None, printOutput: bool = False, pvcAlreadyExists: bool = False, labels: dict = None) -> str :
-    create_jupyter_lab(workspace_name=workspaceName, workspace_size=workspaceSize, storage_class=storageClass,
+    return create_jupyter_lab(workspace_name=workspaceName, workspace_size=workspaceSize, storage_class=storageClass,
                         namespace=namespace, workspace_password=workspacePassword, workspace_image=workspaceImage, request_cpu=requestCpu,
                         request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu, print_output=printOutput, pvc_already_exists=pvcAlreadyExists, labels=labels)
 
@@ -1258,7 +1258,7 @@ def deleteVolumeSnapshot(snapshotName: str, namespace: str = "default", printOut
 
 @deprecated
 def listJupyterLabs(namespace: str = "default", printOutput: bool = False) -> list :
-    list_jupyter_labs(namespace=namespace, print_output=printOutput)
+    return list_jupyter_labs(namespace=namespace, print_output=printOutput)
 
 
 @deprecated
@@ -1268,12 +1268,12 @@ def listJupyterLabSnapshots(workspaceName: str = None, namespace: str = "default
 
 @deprecated
 def listVolumes(namespace: str = "default", printOutput: bool = False) -> list :
-    list_volumes(namespace=namespace, print_output=printOutput)
+    return list_volumes(namespace=namespace, print_output=printOutput)
 
 
 @deprecated
 def listVolumeSnapshots(pvcName: str = None, namespace: str = "default", printOutput: bool = False, jupyterLabWorkspacesOnly: bool = False) -> list :
-    list_volume_snapshots(pvc_name=pvcName, namespace=namespace, print_output=printOutput, jupyter_lab_workspaces_only=jupyterLabWorkspacesOnly)
+    return list_volume_snapshots(pvc_name=pvcName, namespace=namespace, print_output=printOutput, jupyter_lab_workspaces_only=jupyterLabWorkspacesOnly)
 
 
 @deprecated
