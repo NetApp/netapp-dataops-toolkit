@@ -1616,27 +1616,27 @@ def deleteVolume(volumeName: str, printOutput: bool = False) :
 
 
 @deprecated
-def listCloudSyncRelationships(printOutput: bool = False) :
-    list_cloud_sync_relationships(print_output=printOutput)
+def listCloudSyncRelationships(printOutput: bool = False) -> list() :
+    return list_cloud_sync_relationships(print_output=printOutput)
 
 
 @deprecated
-def listSnapMirrorRelationships(printOutput: bool = False) :
-    list_snap_mirror_relationships(print_output=printOutput)
+def listSnapMirrorRelationships(printOutput: bool = False) -> list() :
+    return list_snap_mirror_relationships(print_output=printOutput)
 
 
 @deprecated
-def listSnapshots(volumeName: str, printOutput: bool = False) :
-    list_snapshots(volume_name=volumeName, print_output=printOutput)
+def listSnapshots(volumeName: str, printOutput: bool = False) -> list() :
+    return list_snapshots(volume_name=volumeName, print_output=printOutput)
 
 
 @deprecated
-def listVolumes(checkLocalMounts: bool = False, printOutput: bool = False) :
-    list_volumes(check_local_mounts=checkLocalMounts, print_output=printOutput)
+def listVolumes(checkLocalMounts: bool = False, printOutput: bool = False) -> list() :
+    return list_volumes(check_local_mounts=checkLocalMounts, print_output=printOutput)
 
 
 @deprecated
-def ountVolume(volumeName: str, mountpoint: str, printOutput: bool = False) :
+def mountVolume(volumeName: str, mountpoint: str, printOutput: bool = False) :
     mount_volume(volume_name=volumeName, mountpoint=mountpoint, print_output=printOutput)
 
 
