@@ -38,214 +38,6 @@ from netapp_dstk.traditional import (
 )
 
 
-## Function for creating config file
-def createConfig(configDirPath: str = "~/.ntap_dsutil", configFilename: str = "config.json", connectionType: str = "ONTAP"):
-    # Check to see if user has an existing config file
-    configDirPath = os.path.expanduser(configDirPath)
-    configFilePath = os.path.join(configDirPath, configFilename)
-    if os.path.isfile(configFilePath):
-        print("You already have an existing config file. Creating a new config file will overwrite this existing config.")
-        # If existing config file is present, ask user if they want to proceed
-        # Verify value entered; prompt user to re-enter if invalid
-        while True:
-            proceed = input("Are you sure that you want to proceed? (yes/no): ")
-            if proceed in ("yes", "Yes", "YES"):
-                break
-            elif proceed in ("no", "No", "NO"):
-                sys.exit(0)
-            else:
-                print("Invalid value. Must enter 'yes' or 'no'.")
-        
-    # Instantiate dict for storing connection details
-    config = dict()
-
-    if connectionType == "ONTAP":
-        config["connectionType"] = connectionType
-
-        # Prompt user to enter config details
-        config["hostname"] = input("Enter ONTAP management interface or IP address (Note: Can be cluster or SVM management interface): ")
-        config["svm"] = input("Enter SVM (Storage VM) name: ")
-        config["dataLif"] = input("Enter SVM NFS data LIF hostname or IP address: ")
-
-        # Prompt user to enter default volume type
-        # Verify value entered; promopt user to re-enter if invalid
-        while True:
-            config["defaultVolumeType"] = input("Enter default volume type to use when creating new volumes (flexgroup/flexvol) [flexgroup]: ")
-            if not config["defaultVolumeType"] :
-                config["defaultVolumeType"] = "flexgroup"
-                break
-            elif config["defaultVolumeType"] in ("flexgroup", "FlexGroup"):
-                config["defaultVolumeType"] = "flexgroup"
-                break
-            elif config["defaultVolumeType"] in ("flexvol", "FlexVol"):
-                config["defaultVolumeType"] = "flexvol"
-                break
-            else:
-                print("Invalid value. Must enter 'flexgroup' or 'flexvol'.")
-
-        # prompt user to enter default export policy
-        config["defaultExportPolicy"] = input("Enter export policy to use by default when creating new volumes [default]: ")
-        if not config["defaultExportPolicy"]:
-            config["defaultExportPolicy"] = "default"
-
-        # prompt user to enter default snapshot policy
-        config["defaultSnapshotPolicy"] = input("Enter snapshot policy to use by default when creating new volumes [none]: ")
-        if not config["defaultSnapshotPolicy"]:
-            config["defaultSnapshotPolicy"] = "none"
-
-        # Prompt user to enter default uid, gid, and unix permissions
-        # Verify values entered; promopt user to re-enter if invalid
-        while True:
-            config["defaultUnixUID"] = input("Enter unix filesystem user id (uid) to apply by default when creating new volumes (ex. '0' for root user) [0]: ")
-            if not config["defaultUnixUID"]:
-                config["defaultUnixUID"] = "0"
-                break
-            try:
-                int(config["defaultUnixUID"])
-                break
-            except:
-                print("Invalid value. Must enter an integer.")
-        while True:
-            config["defaultUnixGID"] = input("Enter unix filesystem group id (gid) to apply by default when creating new volumes (ex. '0' for root group) [0]: ")
-            if not config["defaultUnixGID"]:
-                config["defaultUnixGID"] = "0"
-                break
-            try:
-                int(config["defaultUnixGID"])
-                break
-            except:
-                print("Invalid value. Must enter an integer.")
-        while True:
-            config["defaultUnixPermissions"] = input("Enter unix filesystem permissions to apply by default when creating new volumes (ex. '0777' for full read/write permissions for all users and groups) [0777]: ")
-            if not config["defaultUnixPermissions"] :
-                config["defaultUnixPermissions"] = "0777"
-                break
-            elif not re.search("^0[0-7]{3}", config["defaultUnixPermissions"]):
-                print("Invalud value. Must enter a valid unix permissions value. Acceptable values are '0777', '0755', '0744', etc.")
-            else:
-                break
-
-        # Prompt user to enter additional config details
-        config["defaultAggregate"] = input("Enter aggregate to use by default when creating new FlexVol volumes: ")
-        config["username"] = input("Enter ONTAP API username (Note: Can be cluster or SVM admin account): ")
-        passwordString = getpass("Enter ONTAP API password (Note: Can be cluster or SVM admin account): ")
-
-        # Convert password to base64 enconding
-        passwordBytes = passwordString.encode("ascii") 
-        passwordBase64Bytes = base64.b64encode(passwordBytes)
-        config["password"] = passwordBase64Bytes.decode("ascii")
-
-        # Prompt user to enter value denoting whether or not to verify SSL cert when calling ONTAP API
-        # Verify value entered; prompt user to re-enter if invalid
-        while True:
-            verifySSLCert = input("Verify SSL certificate when calling ONTAP API (true/false): ")
-            if verifySSLCert in ("true", "True") :
-                config["verifySSLCert"] = True
-                break
-            elif verifySSLCert in ("false", "False") :
-                config["verifySSLCert"] = False
-                break
-            else:
-                print("Invalid value. Must enter 'true' or 'false'.")
-
-    else:
-        raise ConnectionTypeError()
-
-    # Ask user if they want to use cloud sync functionality
-    # Verify value entered; prompt user to re-enter if invalid
-    while True:
-        useCloudSync = input("Do you intend to use this toolkit to trigger Cloud Sync operations? (yes/no): ")
-
-        if useCloudSync in ("yes", "Yes", "YES"):
-            # Prompt user to enter cloud central refresh token
-            print("Note: If you do not have a Cloud Central refresh token, visit https://services.cloud.netapp.com/refresh-token to create one.")
-            refreshTokenString = getpass("Enter Cloud Central refresh token: ")
-
-            # Convert refresh token to base64 enconding
-            refreshTokenBytes = refreshTokenString.encode("ascii") 
-            refreshTokenBase64Bytes = base64.b64encode(refreshTokenBytes)
-            config["cloudCentralRefreshToken"] = refreshTokenBase64Bytes.decode("ascii")
-
-            break
-
-        elif useCloudSync in ("no", "No", "NO"):
-            break
-
-        else:
-            print("Invalid value. Must enter 'yes' or 'no'.")
-
-    # Ask user if they want to use S3 functionality
-    # Verify value entered; prompt user to re-enter if invalid
-    while True:
-        useS3 = input("Do you intend to use this toolkit to push/pull from S3? (yes/no): ")
-
-        if useS3 in ("yes", "Yes", "YES"):
-            # Promt user to enter S3 endpoint details
-            config["s3Endpoint"] = input("Enter S3 endpoint: ")
-
-            # Prompt user to enter S3 credentials
-            config["s3AccessKeyId"] = input("Enter S3 Access Key ID: ")
-            s3SecretAccessKeyString = getpass("Enter S3 Secret Access Key: ")
-
-            # Convert refresh token to base64 enconding
-            s3SecretAccessKeyBytes = s3SecretAccessKeyString.encode("ascii") 
-            s3SecretAccessKeyBase64Bytes = base64.b64encode(s3SecretAccessKeyBytes)
-            config["s3SecretAccessKey"] = s3SecretAccessKeyBase64Bytes.decode("ascii")
-
-            # Prompt user to enter value denoting whether or not to verify SSL cert when calling S3 API
-            # Verify value entered; prompt user to re-enter if invalid
-            while True:
-                s3VerifySSLCert = input("Verify SSL certificate when calling S3 API (true/false): ")
-                if s3VerifySSLCert in ("true", "True"):
-                    config["s3VerifySSLCert"] = True
-                    config["s3CACertBundle"] = input("Enter CA cert bundle to use when calling S3 API (optional) []: ")
-                    break
-                elif s3VerifySSLCert in ("false", "False"):
-                    config["s3VerifySSLCert"] = False
-                    config["s3CACertBundle"] = ""
-                    break
-                else:
-                    print("Invalid value. Must enter 'true' or 'false'.")
-
-            break
-
-        elif useS3 in ("no", "No", "NO"):
-            break
-
-        else:
-            print("Invalid value. Must enter 'yes' or 'no'.")
-
-    # Create config dir if it doesn't already exist
-    try:
-        os.mkdir(configDirPath)
-    except FileExistsError :
-        pass
-    
-    # Create config file in config dir
-    with open(configFilePath, 'w') as configFile:
-        # Write connection details to config file
-        json.dump(config, configFile)
-
-    print("Created config file: '" + configFilePath + "'.")
-
-
-def getTarget(args: list) -> str:
-    try:
-        target = args[2]
-    except:
-        handleInvalidCommand()
-    return target
-
-
-def handleInvalidCommand(helpText: str = helpTextStandard, invalidOptArg: bool = False):
-    if invalidOptArg:
-        print("Error: Invalid option/argument.")
-    else:
-        print("Error: Invalid command.")
-    print(helpText)
-    sys.exit(1)
-
-
 ## Define contents of help text
 helpTextStandard = '''
 The NetApp Data Science Toolkit is a Python library that makes it simple for data scientists and data engineers to perform various data management tasks, such as provisioning a new data volume, near-instantaneously cloning a data volume, and near-instantaneously snapshotting a data volume for traceability/baselining.
@@ -611,6 +403,214 @@ Examples:
 \t./ntap_dsutil.py sync snapmirror-relationship --uuid=132aab2c-4557-11eb-b542-005056932373
 \t./ntap_dsutil.py sync snapmirror-relationship -i 132aab2c-4557-11eb-b542-005056932373 -w
 '''
+
+
+## Function for creating config file
+def createConfig(configDirPath: str = "~/.ntap_dsutil", configFilename: str = "config.json", connectionType: str = "ONTAP"):
+    # Check to see if user has an existing config file
+    configDirPath = os.path.expanduser(configDirPath)
+    configFilePath = os.path.join(configDirPath, configFilename)
+    if os.path.isfile(configFilePath):
+        print("You already have an existing config file. Creating a new config file will overwrite this existing config.")
+        # If existing config file is present, ask user if they want to proceed
+        # Verify value entered; prompt user to re-enter if invalid
+        while True:
+            proceed = input("Are you sure that you want to proceed? (yes/no): ")
+            if proceed in ("yes", "Yes", "YES"):
+                break
+            elif proceed in ("no", "No", "NO"):
+                sys.exit(0)
+            else:
+                print("Invalid value. Must enter 'yes' or 'no'.")
+        
+    # Instantiate dict for storing connection details
+    config = dict()
+
+    if connectionType == "ONTAP":
+        config["connectionType"] = connectionType
+
+        # Prompt user to enter config details
+        config["hostname"] = input("Enter ONTAP management interface or IP address (Note: Can be cluster or SVM management interface): ")
+        config["svm"] = input("Enter SVM (Storage VM) name: ")
+        config["dataLif"] = input("Enter SVM NFS data LIF hostname or IP address: ")
+
+        # Prompt user to enter default volume type
+        # Verify value entered; promopt user to re-enter if invalid
+        while True:
+            config["defaultVolumeType"] = input("Enter default volume type to use when creating new volumes (flexgroup/flexvol) [flexgroup]: ")
+            if not config["defaultVolumeType"] :
+                config["defaultVolumeType"] = "flexgroup"
+                break
+            elif config["defaultVolumeType"] in ("flexgroup", "FlexGroup"):
+                config["defaultVolumeType"] = "flexgroup"
+                break
+            elif config["defaultVolumeType"] in ("flexvol", "FlexVol"):
+                config["defaultVolumeType"] = "flexvol"
+                break
+            else:
+                print("Invalid value. Must enter 'flexgroup' or 'flexvol'.")
+
+        # prompt user to enter default export policy
+        config["defaultExportPolicy"] = input("Enter export policy to use by default when creating new volumes [default]: ")
+        if not config["defaultExportPolicy"]:
+            config["defaultExportPolicy"] = "default"
+
+        # prompt user to enter default snapshot policy
+        config["defaultSnapshotPolicy"] = input("Enter snapshot policy to use by default when creating new volumes [none]: ")
+        if not config["defaultSnapshotPolicy"]:
+            config["defaultSnapshotPolicy"] = "none"
+
+        # Prompt user to enter default uid, gid, and unix permissions
+        # Verify values entered; promopt user to re-enter if invalid
+        while True:
+            config["defaultUnixUID"] = input("Enter unix filesystem user id (uid) to apply by default when creating new volumes (ex. '0' for root user) [0]: ")
+            if not config["defaultUnixUID"]:
+                config["defaultUnixUID"] = "0"
+                break
+            try:
+                int(config["defaultUnixUID"])
+                break
+            except:
+                print("Invalid value. Must enter an integer.")
+        while True:
+            config["defaultUnixGID"] = input("Enter unix filesystem group id (gid) to apply by default when creating new volumes (ex. '0' for root group) [0]: ")
+            if not config["defaultUnixGID"]:
+                config["defaultUnixGID"] = "0"
+                break
+            try:
+                int(config["defaultUnixGID"])
+                break
+            except:
+                print("Invalid value. Must enter an integer.")
+        while True:
+            config["defaultUnixPermissions"] = input("Enter unix filesystem permissions to apply by default when creating new volumes (ex. '0777' for full read/write permissions for all users and groups) [0777]: ")
+            if not config["defaultUnixPermissions"] :
+                config["defaultUnixPermissions"] = "0777"
+                break
+            elif not re.search("^0[0-7]{3}", config["defaultUnixPermissions"]):
+                print("Invalud value. Must enter a valid unix permissions value. Acceptable values are '0777', '0755', '0744', etc.")
+            else:
+                break
+
+        # Prompt user to enter additional config details
+        config["defaultAggregate"] = input("Enter aggregate to use by default when creating new FlexVol volumes: ")
+        config["username"] = input("Enter ONTAP API username (Note: Can be cluster or SVM admin account): ")
+        passwordString = getpass("Enter ONTAP API password (Note: Can be cluster or SVM admin account): ")
+
+        # Convert password to base64 enconding
+        passwordBytes = passwordString.encode("ascii") 
+        passwordBase64Bytes = base64.b64encode(passwordBytes)
+        config["password"] = passwordBase64Bytes.decode("ascii")
+
+        # Prompt user to enter value denoting whether or not to verify SSL cert when calling ONTAP API
+        # Verify value entered; prompt user to re-enter if invalid
+        while True:
+            verifySSLCert = input("Verify SSL certificate when calling ONTAP API (true/false): ")
+            if verifySSLCert in ("true", "True") :
+                config["verifySSLCert"] = True
+                break
+            elif verifySSLCert in ("false", "False") :
+                config["verifySSLCert"] = False
+                break
+            else:
+                print("Invalid value. Must enter 'true' or 'false'.")
+
+    else:
+        raise ConnectionTypeError()
+
+    # Ask user if they want to use cloud sync functionality
+    # Verify value entered; prompt user to re-enter if invalid
+    while True:
+        useCloudSync = input("Do you intend to use this toolkit to trigger Cloud Sync operations? (yes/no): ")
+
+        if useCloudSync in ("yes", "Yes", "YES"):
+            # Prompt user to enter cloud central refresh token
+            print("Note: If you do not have a Cloud Central refresh token, visit https://services.cloud.netapp.com/refresh-token to create one.")
+            refreshTokenString = getpass("Enter Cloud Central refresh token: ")
+
+            # Convert refresh token to base64 enconding
+            refreshTokenBytes = refreshTokenString.encode("ascii") 
+            refreshTokenBase64Bytes = base64.b64encode(refreshTokenBytes)
+            config["cloudCentralRefreshToken"] = refreshTokenBase64Bytes.decode("ascii")
+
+            break
+
+        elif useCloudSync in ("no", "No", "NO"):
+            break
+
+        else:
+            print("Invalid value. Must enter 'yes' or 'no'.")
+
+    # Ask user if they want to use S3 functionality
+    # Verify value entered; prompt user to re-enter if invalid
+    while True:
+        useS3 = input("Do you intend to use this toolkit to push/pull from S3? (yes/no): ")
+
+        if useS3 in ("yes", "Yes", "YES"):
+            # Promt user to enter S3 endpoint details
+            config["s3Endpoint"] = input("Enter S3 endpoint: ")
+
+            # Prompt user to enter S3 credentials
+            config["s3AccessKeyId"] = input("Enter S3 Access Key ID: ")
+            s3SecretAccessKeyString = getpass("Enter S3 Secret Access Key: ")
+
+            # Convert refresh token to base64 enconding
+            s3SecretAccessKeyBytes = s3SecretAccessKeyString.encode("ascii") 
+            s3SecretAccessKeyBase64Bytes = base64.b64encode(s3SecretAccessKeyBytes)
+            config["s3SecretAccessKey"] = s3SecretAccessKeyBase64Bytes.decode("ascii")
+
+            # Prompt user to enter value denoting whether or not to verify SSL cert when calling S3 API
+            # Verify value entered; prompt user to re-enter if invalid
+            while True:
+                s3VerifySSLCert = input("Verify SSL certificate when calling S3 API (true/false): ")
+                if s3VerifySSLCert in ("true", "True"):
+                    config["s3VerifySSLCert"] = True
+                    config["s3CACertBundle"] = input("Enter CA cert bundle to use when calling S3 API (optional) []: ")
+                    break
+                elif s3VerifySSLCert in ("false", "False"):
+                    config["s3VerifySSLCert"] = False
+                    config["s3CACertBundle"] = ""
+                    break
+                else:
+                    print("Invalid value. Must enter 'true' or 'false'.")
+
+            break
+
+        elif useS3 in ("no", "No", "NO"):
+            break
+
+        else:
+            print("Invalid value. Must enter 'yes' or 'no'.")
+
+    # Create config dir if it doesn't already exist
+    try:
+        os.mkdir(configDirPath)
+    except FileExistsError :
+        pass
+    
+    # Create config file in config dir
+    with open(configFilePath, 'w') as configFile:
+        # Write connection details to config file
+        json.dump(config, configFile)
+
+    print("Created config file: '" + configFilePath + "'.")
+
+
+def getTarget(args: list) -> str:
+    try:
+        target = args[2]
+    except:
+        handleInvalidCommand()
+    return target
+
+
+def handleInvalidCommand(helpText: str = helpTextStandard, invalidOptArg: bool = False):
+    if invalidOptArg:
+        print("Error: Invalid option/argument.")
+    else:
+        print("Error: Invalid command.")
+    print(helpText)
+    sys.exit(1)
 
 
 ## Main function
