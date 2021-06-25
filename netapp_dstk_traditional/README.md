@@ -18,15 +18,21 @@ Note: The 'prepopulate flexcache' operation only supports ONTAP 9.8 and above. A
 
 <a name="getting-started"></a>
 
-## Getting Started
+## Installation
 
-The NetApp Data Science Toolkit for Traditional Environments requires that Python 3.5 or above be installed on the local host.
+### Prerequisites
 
-The following Python libraries that are not generally bundled with a standard Python installation are required in order for the NetApp Data Science Toolkit for Traditional Environments to function correctly - netapp-ontap, pandas, tabulate, requests, boto3, pyyaml. These libraries can be installed with a Python package manager like pip.
+The NetApp Data Science Toolkit for Traditional Environments requires that Python 3.6 or above be installed on the local host. Additionally, the toolkit requires that pip for Python3 be installed on the local host. For more details regarding pip, including installation instructions, refer to the [pip documentation](https://pip.pypa.io/en/stable/installing/).
+
+### Installation Instructions
+
+To install the NetApp Data Science Toolkit for Traditional Environments, run the following command.
 
 ```sh
-python3 -m pip install netapp-ontap pandas tabulate requests boto3 pyyaml
+python3 -m pip install netapp-dstk-traditional
 ```
+
+## Getting Started
 
 A config file must be created before the NetApp Data Management Toolkit for Traditional Environments can be used to perform data management operations. To create a config file, run the following command. This command will create a config file named 'config.json' in '~/.ntap_dsutil/'.
 

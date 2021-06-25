@@ -22,19 +22,25 @@ The toolkit is also compatible with all versions of the BeeGFS CSI driver, thoug
 
 <a name="getting-started"></a>
 
+## Installation
+
+### Prerequisites
+
+The NetApp Data Science Toolkit for Kubernetes requires that Python 3.6 or above be installed on the local host. Additionally, the toolkit requires that pip for Python3 be installed on the local host. For more details regarding pip, including installation instructions, refer to the [pip documentation](https://pip.pypa.io/en/stable/installing/).
+
+### Installation Instructions
+
+To install the NetApp Data Science Toolkit for Kubernetes, run the following command.
+
+```sh
+python3 -m pip install netapp-dstk-k8s
+```
+
 ## Getting Started: Standard Usage
 
 The NetApp Data Science Toolkit for Kubernetes can be utilized from any Linux or macOS host that has network access to the Kubernetes cluster.
 
-The toolkit requires that Python 3.6 or above be installed on the local host.
-
-The following Python libraries that are not generally bundled with a standard Python installation are required in order for the toolkit to function correctly - ipython, kubernetes, pandas, tabulate. These libraries can be installed with a Python package manager like pip.
-
-```sh
-python3 -m pip install ipython kubernetes pandas tabulate
-```
-
-Additionally, the toolkit requires that a valid kubeconfig file be present on the local host, located at `$HOME/.kube/config` or at another path specified by the `KUBECONFIG` environment variable. Refer to the [Kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/) for more information regarding kubeconfig files.
+The toolkit requires that a valid kubeconfig file be present on the local host, located at `$HOME/.kube/config` or at another path specified by the `KUBECONFIG` environment variable. Refer to the [Kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/) for more information regarding kubeconfig files.
 
 ## Getting Started: In-cluster Usage (for advanced Kubernetes users)
 
