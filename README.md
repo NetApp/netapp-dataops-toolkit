@@ -7,8 +7,8 @@ The NetApp DataOps Toolkit is a Python library that makes it simple for develope
 
 The NetApp DataOps Toolkit comes in two different flavors - one for Kubernetes-based environments, and one for traditional VM-based or bare-metal environments. Choose the appropriate flavor to use based on your specific environment and use case.
 
-- [NetApp DataOps Toolkit for Kubernetes](netapp_dstk_k8s/)
-- [NetApp DataOps Toolkit for Traditional Environments](netapp_dstk_traditional/)
+- [NetApp DataOps Toolkit for Kubernetes](netapp_dataops_k8s/)
+- [NetApp DataOps Toolkit for Traditional Environments](netapp_dataops_traditional/)
 
 ## Support
 
