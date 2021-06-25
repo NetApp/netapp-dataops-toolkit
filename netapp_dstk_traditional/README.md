@@ -1,11 +1,11 @@
-NetApp Data Science Toolkit for Traditional Environments
+NetApp DataOps Toolkit for Traditional Environments
 =========
 
-The NetApp Data Science Toolkit for Traditional Environments is a Python library that makes it simple for data scientists and data engineers to perform various data management tasks, such as provisioning a new data volume, near-instantaneously cloning a data volume, and near-instantaneously snapshotting a data volume for traceability/baselining. This Python library can function as either a [command line utility](#command-line-functionality) or a [library of functions](#library-of-functions) that can be imported into any Python program or Jupyter Notebook.
+The NetApp DataOps Toolkit for Traditional Environments is a Python library that makes it simple for developers, data scientists, DevOps engineers, and data engineers to perform various data management tasks, such as provisioning a new data volume, near-instantaneously cloning a data volume, and near-instantaneously snapshotting a data volume for traceability/baselining. This Python library can function as either a [command line utility](#command-line-functionality) or a [library of functions](#library-of-functions) that can be imported into any Python program or Jupyter Notebook.
 
 ## Compatibility
 
-The NetApp Data Science Toolkit for Traditional Environments supports Linux and macOS hosts.
+The NetApp DataOps Toolkit for Traditional Environments supports Linux and macOS hosts.
 
 The toolkit must be used in conjunction with a data storage system or service in order to be useful. The toolkit simplifies the performing of various data management tasks that are actually executed by the data storage system or service. In order to facilitate this, the toolkit communicates with the data storage system or service via API. The toolkit is currently compatible with the following storage systems and services:
 
@@ -16,34 +16,34 @@ The toolkit must be used in conjunction with a data storage system or service in
 
 Note: The 'prepopulate flexcache' operation only supports ONTAP 9.8 and above. All other operations support ONTAP 9.7 and above.
 
-<a name="getting-started"></a>
-
 ## Installation
 
 ### Prerequisites
 
-The NetApp Data Science Toolkit for Traditional Environments requires that Python 3.6 or above be installed on the local host. Additionally, the toolkit requires that pip for Python3 be installed on the local host. For more details regarding pip, including installation instructions, refer to the [pip documentation](https://pip.pypa.io/en/stable/installing/).
+The NetApp DataOps Toolkit for Traditional Environments requires that Python 3.6 or above be installed on the local host. Additionally, the toolkit requires that pip for Python3 be installed on the local host. For more details regarding pip, including installation instructions, refer to the [pip documentation](https://pip.pypa.io/en/stable/installing/).
 
 ### Installation Instructions
 
-To install the NetApp Data Science Toolkit for Traditional Environments, run the following command.
+To install the NetApp DataOps Toolkit for Traditional Environments, run the following command.
 
 ```sh
-python3 -m pip install netapp-dstk-traditional
+python3 -m pip install netapp-dataops-traditional
 ```
+
+<a name="getting-started"></a>
 
 ## Getting Started
 
-A config file must be created before the NetApp Data Management Toolkit for Traditional Environments can be used to perform data management operations. To create a config file, run the following command. This command will create a config file named 'config.json' in '~/.ntap_dsutil/'.
+A config file must be created before the NetApp Data Management Toolkit for Traditional Environments can be used to perform data management operations. To create a config file, run the following command. This command will create a config file named 'config.json' in '~/.netapp_dataops/'.
 
 ```sh
-./ntap_dsutil.py config
+./netapp_dataops.py config
 ```
 
 #### Example Usage
 
 ```sh
-./ntap_dsutil.py config
+./netapp_dataops.py config
 Enter ONTAP management interface or IP address (Note: Can be cluster or SVM management interface): 10.61.188.114
 Enter SVM (Storage VM) name: ailab1
 Enter SVM NFS data LIF hostname or IP address: 10.61.188.119
@@ -65,7 +65,7 @@ Enter S3 endpoint: http://10.61.188.75:2113
 Enter S3 Access Key ID: TN9ISEC5BDGIOK59LC3I
 Enter S3 Secret Access Key: 
 Verify SSL certificate when calling S3 API (true/false): false
-Created config file: '/Users/moglesby/.ntap_dsutil/config.json'.
+Created config file: '/Users/moglesby/.netapp_dataops/config.json'.
 ```
 
 ## Troubleshooting Errors
@@ -74,14 +74,14 @@ If you experience an error and do not know how to resolve it, visit the [Trouble
 
 ## Tips and Tricks
 
-- [Accelerating the AI training workflow with the NetApp Data Science Toolkit.](https://netapp.io/2020/12/14/accelerating-the-ai-training-workflow-with-the-netapp-data-science-toolkit/)
-- [Easy AI dataset-to-model traceability with the NetApp Data Science Toolkit.](https://netapp.io/2021/01/13/easy-ai-dataset-to-model-traceability-with-the-netapp-data-science-toolkit/)
+- [Accelerating the AI training workflow with the NetApp DataOps Toolkit.](https://netapp.io/2020/12/14/accelerating-the-ai-training-workflow-with-the-netapp-data-science-toolkit/)
+- [Easy AI dataset-to-model traceability with the NetApp DataOps Toolkit.](https://netapp.io/2021/01/13/easy-ai-dataset-to-model-traceability-with-the-netapp-data-science-toolkit/)
 
 <a name="command-line-functionality"></a>
 
 ## Command Line Functionality
 
-The simplest way to use the NetApp Data Science Toolkit is as a command line utility. When functioning as a command line utility, the toolkit supports the following operations.
+The simplest way to use the NetApp DataOps Toolkit is as a command line utility. When functioning as a command line utility, the toolkit supports the following operations.
 
 Data volume management operations:
 - [Clone a data volume.](#cli-clone-volume)
@@ -115,7 +115,7 @@ Advanced data fabric operations:
 
 #### Clone a Data Volume
 
-The NetApp Data Science Toolkit can be used to near-instantaneously create a new data volume that is an exact copy of an existing volume. This functionality utilizes NetApp FlexClone technology. This means that any clones created will be extremely storage-space-efficient. Aside from metadata, a clone will not consume additional storage space until its contents starts to deviate from the source volume. The command for cloning a data volume is `./ntap_dsutil.py clone volume`.
+The NetApp DataOps Toolkit can be used to near-instantaneously create a new data volume that is an exact copy of an existing volume. This functionality utilizes NetApp FlexClone technology. This means that any clones created will be extremely storage-space-efficient. Aside from metadata, a clone will not consume additional storage space until its contents starts to deviate from the source volume. The command for cloning a data volume is `./netapp_dataops.py clone volume`.
 
 The following options/arguments are required:
 
@@ -139,7 +139,7 @@ The following options/arguments are optional:
 Create a volume named 'project2' that is an exact copy of the volume 'project1'.
 
 ```sh
-./ntap_dsutil.py clone volume --name=project2 --source-volume=project1
+./netapp_dataops.py clone volume --name=project2 --source-volume=project1
 Creating clone volume 'project2' from source volume 'project1'.
 Clone volume created successfully.
 ```
@@ -147,7 +147,7 @@ Clone volume created successfully.
 Create a volume named 'project2' that is an exact copy of the contents of volume 'project1' at the time that the snapshot 'snap1' was created, and locally mount the newly created volume at '~/project2'.
 
 ```sh
-sudo -E ./ntap_dsutil.py clone volume --name=project2 --source-volume=project1 --source-snapshot=snap1 --mountpoint=~/project2
+sudo -E ./netapp_dataops.py clone volume --name=project2 --source-volume=project1 --source-snapshot=snap1 --mountpoint=~/project2
 Creating clone volume 'project2' from source volume 'project1'.
 Warning: Cannot apply uid of '0' when creating clone; uid of source volume will be retained.
 Warning: Cannot apply gid of '0' when creating clone; gid of source volume will be retained.
@@ -156,13 +156,13 @@ Mounting volume 'project2' at '~/project2'.
 Volume mounted successfully.
 ```
 
-For additional examples, run `./ntap_dsutil.py clone volume -h`.
+For additional examples, run `./netapp_dataops.py clone volume -h`.
 
 <a name="cli-create-volume"></a>
 
 #### Create a New Data Volume
 
-The NetApp Data Science Toolkit can be used to rapidly provision a new data volume. The command for creating a new data volume is `./ntap_dsutil.py create volume`.
+The NetApp DataOps Toolkit can be used to rapidly provision a new data volume. The command for creating a new data volume is `./netapp_dataops.py create volume`.
 
 The following options/arguments are required:
 
@@ -191,7 +191,7 @@ The following options/arguments are optional:
 Create a volume named 'project1' of size 10TB.
 
 ```sh
-./ntap_dsutil.py create volume --name=project1 --size=10TB
+./netapp_dataops.py create volume --name=project1 --size=10TB
 Creating volume 'project1'.
 Volume created successfully.
 ```
@@ -199,7 +199,7 @@ Volume created successfully.
 Create a volume named 'project2' of size 2TB, and locally mount the newly created volume at '~/project2'.
 
 ```sh
-sudo -E ./ntap_dsutil.py create volume --name=project2 --size=2TB --mountpoint=~/project2
+sudo -E ./netapp_dataops.py create volume --name=project2 --size=2TB --mountpoint=~/project2
 [sudo] password for ai:
 Creating volume 'project2'.
 Volume created successfully.
@@ -207,13 +207,13 @@ Mounting volume 'project2' at '~/project2'.
 Volume mounted successfully.
 ```
 
-For additional examples, run `./ntap_dsutil.py create volume -h`.
+For additional examples, run `./netapp_dataops.py create volume -h`.
 
 <a name="cli-delete-volume"></a>
 
 #### Delete an Existing Data Volume
 
-The NetApp Data Science Toolkit can be used to near-instantaneously delete an existing data volume. The command for deleting an existing data volume is `./ntap_dsutil.py delete volume`.
+The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing data volume. The command for deleting an existing data volume is `./netapp_dataops.py delete volume`.
 
 The following options/arguments are required:
 
@@ -233,7 +233,7 @@ The following options/arguments are optional:
 Delete the volume named 'test1'.
 
 ```sh
-./ntap_dsutil.py delete volume --name=test1
+./netapp_dataops.py delete volume --name=test1
 Warning: All data and snapshots associated with the volume will be permanently deleted.
 Are you sure that you want to proceed? (yes/no): yes
 Deleting volume 'test1'.
@@ -244,14 +244,14 @@ Volume deleted successfully.
 
 #### List All Data Volumes
 
-The NetApp Data Science Toolkit can be used to print a list of all existing data volumes. The command for printing a list of all existing data volumes is `./ntap_dsutil.py list volumes`.
+The NetApp DataOps Toolkit can be used to print a list of all existing data volumes. The command for printing a list of all existing data volumes is `./netapp_dataops.py list volumes`.
 
 No options/arguments are required for this command.
 
 ##### Example Usage
 
 ```sh
-./ntap_dsutil.py list volumes
+./netapp_dataops.py list volumes
 Volume Name    Size    Type       NFS Mount Target            Local Mountpoint      FlexCache    Clone    Source Volume    Source Snapshot
 -------------  ------  ---------  --------------------------  --------------------  -----------  -------  ---------------  ---------------------------
 test5          2.0TB   flexvol    10.61.188.49:/test5                               no           yes      test2            clone_test5.1
@@ -263,14 +263,14 @@ home           10.0TB  flexgroup  10.61.188.49:/home                            
 ailab_data02   10.0TB  flexvol    10.61.188.49:/ailab_data02                        no           no
 project        2.0TB   flexvol    10.61.188.49:/project                             yes          no
 test3          2.0TB   flexgroup  10.61.188.49:/test3         /home/ai/test3        no           no
-test1_clone    10.0TB  flexvol    10.61.188.49:/test1_clone   /home/ai/test1_clone  no           yes      test1            ntap_dsutil_20201124_172255
+test1_clone    10.0TB  flexvol    10.61.188.49:/test1_clone   /home/ai/test1_clone  no           yes      test1            netapp_dataops_20201124_172255
 ```
 
 <a name="cli-mount-volume"></a>
 
 #### Mount an Existing Data Volume Locally
 
-The NetApp Data Science Toolkit can be used to mount an existing data volume on your local host. The command for mounting an existing volume locally is `./ntap_dsutil.py mount volume`. If executed on a Linux host, this command must be run as root. It is usually not necessary to run this command as root on macOS hosts.
+The NetApp DataOps Toolkit can be used to mount an existing data volume on your local host. The command for mounting an existing volume locally is `./netapp_dataops.py mount volume`. If executed on a Linux host, this command must be run as root. It is usually not necessary to run this command as root on macOS hosts.
 
 The following options/arguments are required:
 
@@ -284,7 +284,7 @@ The following options/arguments are required:
 Locally mount the volume named 'project1' at '~/project1'.
 
 ```sh
-sudo -E ./ntap_dsutil.py mount volume --name=project1 --mountpoint=~/project1
+sudo -E ./netapp_dataops.py mount volume --name=project1 --mountpoint=~/project1
 [sudo] password for ai:
 Mounting volume 'project1' at '~/project1'.
 Volume mounted successfully.
@@ -296,7 +296,7 @@ Volume mounted successfully.
 
 #### Create a New Snapshot for a Data Volume
 
-The NetApp Data Science Toolkit can be used to near-instantaneously save a space-efficient, read-only copy of an existing data volume. These read-only copies are called snapshots. This functionality can be used to version datasets and/or implement dataset-to-model traceability. The command for creating a new snapshot for a specific data volume is `./ntap_dsutil.py create snapshot`.
+The NetApp DataOps Toolkit can be used to near-instantaneously save a space-efficient, read-only copy of an existing data volume. These read-only copies are called snapshots. This functionality can be used to version datasets and/or implement dataset-to-model traceability. The command for creating a new snapshot for a specific data volume is `./netapp_dataops.py create snapshot`.
 
 The following options/arguments are required:
 
@@ -308,7 +308,7 @@ The following options/arguments are optional:
 
 ```
     -h, --help      Print help text.
-    -n, --name=     Name of new snapshot. If not specified, will be set to 'ntap_dsutil_<timestamp>'.
+    -n, --name=     Name of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
 ```
 
 ##### Example Usage
@@ -316,7 +316,7 @@ The following options/arguments are optional:
 Create a snapshot named 'final_dataset' for the volume named 'test1'.
 
 ```sh
-./ntap_dsutil.py create snapshot --volume=test1 --name=final_dataset
+./netapp_dataops.py create snapshot --volume=test1 --name=final_dataset
 Creating snapshot 'final_dataset'.
 Snapshot created successfully.
 ```
@@ -324,8 +324,8 @@ Snapshot created successfully.
 Create a snapshot for the volume named 'test1'.
 
 ```sh
-./ntap_dsutil.py create snapshot -v test1
-Creating snapshot 'ntap_dsutil_20201113_125210'.
+./netapp_dataops.py create snapshot -v test1
+Creating snapshot 'netapp_dataops_20201113_125210'.
 Snapshot created successfully.
 ```
 
@@ -333,7 +333,7 @@ Snapshot created successfully.
 
 #### Delete an Existing Snapshot for a Data Volume
 
-The NetApp Data Science Toolkit can be used to near-instantaneously delete an existing snapshot for a specific data volume. The command for deleting an existing snapshot for a specific data volume is `./ntap_dsutil.py delete snapshot`.
+The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing snapshot for a specific data volume. The command for deleting an existing snapshot for a specific data volume is `./netapp_dataops.py delete snapshot`.
 
 The following options/arguments are required:
 
@@ -353,7 +353,7 @@ The following options/arguments are optional:
 Delete the snapshot named 'snap1' for the volume named 'test1'.
 
 ```sh
-./ntap_dsutil.py delete snapshot --volume=test1 --name=snap1
+./netapp_dataops.py delete snapshot --volume=test1 --name=snap1
 Deleting snapshot 'snap1'.
 Snapshot deleted successfully.
 ```
@@ -362,7 +362,7 @@ Snapshot deleted successfully.
 
 #### List All Snapshots for a Data Volume
 
-The NetApp Data Science Toolkit can be used to print a list of all existing snapshots for a specific data volume. The command for printing a list of all snapshots for a specific data volume is `./ntap_dsutil.py list snapshots`.
+The NetApp DataOps Toolkit can be used to print a list of all existing snapshots for a specific data volume. The command for printing a list of all snapshots for a specific data volume is `./netapp_dataops.py list snapshots`.
 
 The following options/arguments are required:
 
@@ -375,13 +375,13 @@ The following options/arguments are required:
 List all snapshots for the volume named 'test1'.
 
 ```sh
-./ntap_dsutil.py list snapshots --volume=test1
+./netapp_dataops.py list snapshots --volume=test1
 Snapshot Name                Create Time
 ---------------------------  -------------------------
 snap1                        2020-11-13 20:17:48+00:00
-ntap_dsutil_20201113_151807  2020-11-13 20:18:07+00:00
+netapp_dataops_20201113_151807  2020-11-13 20:18:07+00:00
 snap3                        2020-11-13 21:43:48+00:00
-ntap_dsutil_20201113_164402  2020-11-13 21:44:02+00:00
+netapp_dataops_20201113_164402  2020-11-13 21:44:02+00:00
 final_dataset                2020-11-13 21:45:16+00:00
 ```
 
@@ -389,7 +389,7 @@ final_dataset                2020-11-13 21:45:16+00:00
 
 #### Restore a Snapshot for a Data Volume
 
-The NetApp Data Science Toolkit can be used to near-instantaneously restore a specific snapshot for a data volume. This action will restore the volume to its exact state at the time that the snapshot was created. The command for restoring a specific snapshot for a data volume is `./ntap_dsutil.py restore snapshot`.
+The NetApp DataOps Toolkit can be used to near-instantaneously restore a specific snapshot for a data volume. This action will restore the volume to its exact state at the time that the snapshot was created. The command for restoring a specific snapshot for a data volume is `./netapp_dataops.py restore snapshot`.
 
 Warning: When you restore a snapshot, all subsequent snapshots are deleted.
 
@@ -414,7 +414,7 @@ Restore the volume 'project2' to its exact state at the time that the snapshot n
 Warning: This will delete any snapshots that were created after 'initial_dataset' was created.
 
 ```sh
-/ntap_dsutil.py restore snapshot --volume=project2 --name=initial_dataset
+/netapp_dataops.py restore snapshot --volume=project2 --name=initial_dataset
 Warning: When you restore a snapshot, all subsequent snapshots are deleted.
 Are you sure that you want to proceed? (yes/no): yes
 Restoring snapshot 'initial_dataset'.
@@ -427,7 +427,7 @@ Snapshot restored successfully.
 
 #### List All Cloud Sync Relationships
 
-The NetApp Data Science Toolkit can be used to print a list of all existing Cloud Sync relationships that exist under the user's NetApp Cloud Central account. The command for printing a list of all existing Cloud Sync relationships is `./ntap_dsutil.py list cloud-sync-relationships`.
+The NetApp DataOps Toolkit can be used to print a list of all existing Cloud Sync relationships that exist under the user's NetApp Cloud Central account. The command for printing a list of all existing Cloud Sync relationships is `./netapp_dataops.py list cloud-sync-relationships`.
 
 No options/arguments are required for this command.
 
@@ -436,7 +436,7 @@ Note: To create a new Cloud Sync relationship, visit [cloudsync.netapp.com](http
 ##### Example Usage
 
 ```sh
-./ntap_dsutil.py list cloud-sync-relationships
+./netapp_dataops.py list cloud-sync-relationships
 - id: 5f4cf53cf7f32c000bc61616
   source:
     nfs:
@@ -477,7 +477,7 @@ Note: To create a new Cloud Sync relationship, visit [cloudsync.netapp.com](http
 
 #### Trigger a Sync Operation for an Existing Cloud Sync Relationship
 
-The NetApp Data Science Toolkit can be used to trigger a sync operation for an existing Cloud Sync relationshp under the user's NetApp Cloud Central account. NetApp's Cloud Sync service can be used to replicate data to and from a variety of file and object storage platforms. Potential use cases include the following:
+The NetApp DataOps Toolkit can be used to trigger a sync operation for an existing Cloud Sync relationshp under the user's NetApp Cloud Central account. NetApp's Cloud Sync service can be used to replicate data to and from a variety of file and object storage platforms. Potential use cases include the following:
 
 - Replicating newly acquired sensor data gathered at the edge back to the core data center or to the cloud to be used for AI/ML model training or retraining.
 - Replicating a newly trained or newly updated model from the core data center to the edge or to the cloud to be deployed as part of an inferencing application.
@@ -486,7 +486,7 @@ The NetApp Data Science Toolkit can be used to trigger a sync operation for an e
 - Saving a new version of a trained model to an S3 or Hadoop data lake for permanent storage.
 - Replicating NFS-accessible data from a legacy or non-NetApp system of record to a high-performance AI/ML training environment for use in the training of an AI/ML model.
 
-The command for triggering a sync operation for an existing Cloud Sync relationship is `./ntap_dsutil.py sync cloud-sync-relationship`.
+The command for triggering a sync operation for an existing Cloud Sync relationship is `./netapp_dataops.py sync cloud-sync-relationship`.
 
 The following options/arguments are required:
 
@@ -501,14 +501,14 @@ The following options/arguments are optional:
     -w, --wait      Wait for sync operation to complete before exiting.
 ```
 
-Tip: Run `./ntap_dsutil.py list cloud-sync-relationships` to obtain the relationship ID.
+Tip: Run `./netapp_dataops.py list cloud-sync-relationships` to obtain the relationship ID.
 
 Note: To create a new Cloud Sync relationship, visit [cloudsync.netapp.com](https://cloudsync.netapp.com).
 
 ##### Example Usage
 
 ```sh
-./ntap_dsutil.py sync cloud-sync-relationship --id=5fe2706697a1892a3ae6db55 --wait
+./netapp_dataops.py sync cloud-sync-relationship --id=5fe2706697a1892a3ae6db55 --wait
 Triggering sync operation for Cloud Sync relationship (ID = 5fe2706697a1892a3ae6db55).
 Sync operation successfully triggered.
 Sync operation is not yet complete. Status: RUNNING
@@ -524,7 +524,7 @@ Success: Sync operation is complete.
 
 #### Pull the Contents of a Bucket from S3 (multithreaded)
 
-The NetApp Data Science Toolkit can be used to pull the contents of a bucket from S3. The command for pulling the contents of a bucket from S3 is `./ntap_dsutil.py pull-from-s3 bucket`.
+The NetApp DataOps Toolkit can be used to pull the contents of a bucket from S3. The command for pulling the contents of a bucket from S3 is `./netapp_dataops.py pull-from-s3 bucket`.
 
 Note: To pull to a data volume, the volume must be mounted locally.
 
@@ -549,7 +549,7 @@ The following options/arguments are optional:
 Pull all objects in S3 bucket 'project1' and save them to a directory named 'testdl/' on data volume 'project1', which is mounted locally at './test_scripts/test_data/'.
 
 ```sh
-./ntap_dsutil.py pull-from-s3 bucket --bucket=project1 --directory=./test_scripts/test_data/testdl
+./netapp_dataops.py pull-from-s3 bucket --bucket=project1 --directory=./test_scripts/test_data/testdl
 Downloading object 'test1.csv' from bucket 'project1' and saving as './test_scripts/test_data/testdl/test1.csv'.
 Downloading object 'test2/dup/test3.csv' from bucket 'project1' and saving as './test_scripts/test_data/testdl/test2/dup/test3.csv'.
 Downloading object 'test2/dup/test2.csv' from bucket 'project1' and saving as './test_scripts/test_data/testdl/test2/dup/test2.csv'.
@@ -561,7 +561,7 @@ Download complete.
 Pull all objects in S3 bucket 'project1' with a key that starts with 'test2/', and save them to local directory './test_scripts/test_data/testdl/'.
 
 ```sh
-./ntap_dsutil.py pull-from-s3 bucket --bucket=project1 --key-prefix=test2/ --directory=./test_scripts/test_data/testdl
+./netapp_dataops.py pull-from-s3 bucket --bucket=project1 --key-prefix=test2/ --directory=./test_scripts/test_data/testdl
 Downloading object 'test2/dup/test3.csv' from bucket 'project1' and saving as './test_scripts/test_data/testdl/test2/dup/test3.csv'.
 Downloading object 'test2/test3/test3.csv' from bucket 'project1' and saving as './test_scripts/test_data/testdl/test2/test3/test3.csv'.
 Downloading object 'test2/test2.csv' from bucket 'project1' and saving as './test_scripts/test_data/testdl/test2/test2.csv'.
@@ -573,7 +573,7 @@ Download complete.
 
 #### Pull an Object from S3
 
-The NetApp Data Science Toolkit can be used to pull an object from S3. The command for pulling an object from S3 is `./ntap_dsutil.py pull-from-s3 object`.
+The NetApp DataOps Toolkit can be used to pull an object from S3. The command for pulling an object from S3 is `./netapp_dataops.py pull-from-s3 object`.
 
 Note: To pull toa data volume, the volume must be mounted locally.
 
@@ -596,7 +596,7 @@ The following options/arguments are optional:
 Pull the object 'test1.csv' from S3 bucket 'testbucket' and save locally as './test_scripts/test_data/test.csv'.
 
 ```sh
-./ntap_dsutil.py pull-from-s3 object --bucket=testbucket --key=test1.csv --file=./test_scripts/test_data/test.csv
+./netapp_dataops.py pull-from-s3 object --bucket=testbucket --key=test1.csv --file=./test_scripts/test_data/test.csv
 Downloading object 'test1.csv' from bucket 'testbucket' and saving as './test_scripts/test_data/test.csv'.
 Download complete.
 ```
@@ -605,7 +605,7 @@ Download complete.
 
 #### Push the Contents of a Directory to S3 (multithreaded)
 
-The NetApp Data Science Toolkit can be used to push the contents of a directory to S3. The command for pushing the contents of a directory to S3 is `./ntap_dsutil.py push-to-s3 directory`.
+The NetApp DataOps Toolkit can be used to push the contents of a directory to S3. The command for pushing the contents of a directory to S3 is `./netapp_dataops.py push-to-s3 directory`.
 
 Note: To push from a data volume, the volume must be mounted locally.
 
@@ -631,7 +631,7 @@ The following options/arguments are optional:
 Push the contents of data volume 'project1', which is mounted locally at 'project1_data/', to S3 bucket 'ailab'; apply the prefix 'test/' to all object keys.
 
 ```sh
-./ntap_dsutil.py push-to-s3 directory --bucket=ailab --directory=project1_data/ --key-prefix=proj1/
+./netapp_dataops.py push-to-s3 directory --bucket=ailab --directory=project1_data/ --key-prefix=proj1/
 Uploading file 'project1_data/test2/test3/test3.csv' to bucket 'ailab' and applying key 'proj1/test2/test3/test3.csv'.
 Uploading file 'project1_data/test2/dup/test3.csv' to bucket 'ailab' and applying key 'proj1/test2/dup/test3.csv'.
 Uploading file 'project1_data/test2/test2.csv' to bucket 'ailab' and applying key 'proj1/test2/test2.csv'.
@@ -643,7 +643,7 @@ Upload complete.
 Push the contents of the local directory 'test_data/' to S3 bucket 'testbucket'.
 
 ```sh
-./ntap_dsutil.py push-to-s3 directory --bucket=testbucket --directory=test_data/
+./netapp_dataops.py push-to-s3 directory --bucket=testbucket --directory=test_data/
 Uploading file 'test_data/test2/test3/test3.csv' to bucket 'testbucket' and applying key 'test2/test3/test3.csv'.
 Uploading file 'test_data/test2/dup/test3.csv' to bucket 'testbucket' and applying key 'test2/dup/test3.csv'.
 Uploading file 'test_data/test2/test2.csv' to bucket 'testbucket' and applying key 'test2/test2.csv'.
@@ -656,7 +656,7 @@ Upload complete.
 
 #### Push a File to S3
 
-The NetApp Data Science Toolkit can be used to push a file to S3. The command for pushing a file to S3 is `./ntap_dsutil.py push-to-s3 file`.
+The NetApp DataOps Toolkit can be used to push a file to S3. The command for pushing a file to S3 is `./netapp_dataops.py push-to-s3 file`.
 
 Note: To push from a data volume, the volume must be mounted locally.
 
@@ -680,7 +680,7 @@ The following options/arguments are optional:
 Push the file 'test_scripts/test_data/test1.csv' to S3 bucket 'testbucket'; assign the key 'test1.csv' to the newly-pushed object.
 
 ```sh
-./ntap_dsutil.py push-to-s3 file --bucket=testbucket --file=test_scripts/test_data/test1.csv --key=test1.csv
+./netapp_dataops.py push-to-s3 file --bucket=testbucket --file=test_scripts/test_data/test1.csv --key=test1.csv
 Uploading file 'test_scripts/test_data/test1.csv' to bucket 'testbucket' and applying key 'test1.csv'.
 Upload complete.
 ```
@@ -691,7 +691,7 @@ Upload complete.
 
 #### Prepopulate Specific Files/Directories on a FlexCache Volume
 
-The NetApp Data Science Toolkit can be used to prepopulate specific files/directories on a FlexCache volume. This can be usefule when you have a FlexCache volume acting as a local cache for a remote volume, and you want to prepopulate (i.e. hydrate) the cache with specific files/directories. The command for prepopulating specific files/directories on a FlexCache volume is `./ntap_dsutil.py prepopulate flexcache`.
+The NetApp DataOps Toolkit can be used to prepopulate specific files/directories on a FlexCache volume. This can be usefule when you have a FlexCache volume acting as a local cache for a remote volume, and you want to prepopulate (i.e. hydrate) the cache with specific files/directories. The command for prepopulating specific files/directories on a FlexCache volume is `./netapp_dataops.py prepopulate flexcache`.
 
 Compatibility: ONTAP 9.8 and above ONLY
 
@@ -707,7 +707,7 @@ The following options/arguments are required:
 Prepopulate the file '/test2/test2.csv' and the contents of the directory '/test2/misc' on a FlexCache volume named 'flexcache_cach'.
 
 ```sh
-./ntap_dsutil.py prepopulate flexcache --name=flexcache_cache --paths=/test2/misc,/test2/test2.csv
+./netapp_dataops.py prepopulate flexcache --name=flexcache_cache --paths=/test2/misc,/test2/test2.csv
 FlexCache 'flexcache_cache' - Prepopulating paths:  ['/test2/misc', '/test2/test2.csv']
 FlexCache prepopulated successfully.
 ```
@@ -716,7 +716,7 @@ FlexCache prepopulated successfully.
 
 #### List All SnapMirror Relationships
 
-The NetApp Data Science Toolkit can be used to print a list of all existing SnapMirror relationships for which the destination volume resides on the user's storage system. The command for printing a list of all existing SnapMirror relationships is `./ntap_dsutil.py list snapmirror-relationships`.
+The NetApp DataOps Toolkit can be used to print a list of all existing SnapMirror relationships for which the destination volume resides on the user's storage system. The command for printing a list of all existing SnapMirror relationships is `./netapp_dataops.py list snapmirror-relationships`.
 
 No options/arguments are required for this command.
 
@@ -725,7 +725,7 @@ Note: To create a new SnapMirror relationship, access ONTAP System Manager.
 ##### Example Usage
 
 ```sh
-./ntap_dsutil.py list snapmirror-relationships
+./netapp_dataops.py list snapmirror-relationships
 UUID                                  Type    Healthy    Current Transfer Status    Source Cluster    Source SVM    Source Volume    Dest Cluster    Dest SVM    Dest Volume
 ------------------------------------  ------  ---------  -------------------------  ----------------  ------------  ---------------  --------------  ----------  -------------
 9e8d14c8-359d-11eb-b94d-005056935ebe  async   True       <NA>                       user's cluster    ailab1        sm01             user's cluster  ailab1      vol_sm01_dest
@@ -735,9 +735,9 @@ UUID                                  Type    Healthy    Current Transfer Status
 
 #### Trigger a Sync Operation for an Existing SnapMirror Relationship
 
-The NetApp Data Science Toolkit can be used to trigger a sync operation for an existing SnapMirror relationshp for which the destination volume resides on the user's storage system. NetApp's SnapMirror volume replication technology can be used to quickly and efficiently replicate data between NetApp storage systems. For example, SnapMirror could be used to replicate newly acquired data, gathered on a different NetApp storage system, to the user's NetApp storage system to be used for AI/ML model training or retraining. The command for triggering a sync operation for an existing SnapMirror relationship is `./ntap_dsutil.py sync snapmirror-relationship`.
+The NetApp DataOps Toolkit can be used to trigger a sync operation for an existing SnapMirror relationshp for which the destination volume resides on the user's storage system. NetApp's SnapMirror volume replication technology can be used to quickly and efficiently replicate data between NetApp storage systems. For example, SnapMirror could be used to replicate newly acquired data, gathered on a different NetApp storage system, to the user's NetApp storage system to be used for AI/ML model training or retraining. The command for triggering a sync operation for an existing SnapMirror relationship is `./netapp_dataops.py sync snapmirror-relationship`.
 
-Tip: Run `./ntap_dsutil.py list snapmirror-relationships` to obtain the relationship UUID.
+Tip: Run `./netapp_dataops.py list snapmirror-relationships` to obtain the relationship UUID.
 
 The following options/arguments are required:
 
@@ -757,7 +757,7 @@ Note: To create a new SnapMirror relationship, access ONTAP System Manager.
 ##### Example Usage
 
 ```sh
-./ntap_dsutil.py sync snapmirror-relationship --uuid=132aab2c-4557-11eb-b542-005056932373 --wait
+./netapp_dataops.py sync snapmirror-relationship --uuid=132aab2c-4557-11eb-b542-005056932373 --wait
 Triggering sync operation for SnapMirror relationship (UUID = 132aab2c-4557-11eb-b542-005056932373).
 Sync operation successfully triggered.
 Waiting for sync operation to complete.
@@ -771,12 +771,10 @@ Success: Sync operation is complete.
 
 ## Advanced: Importable Library of Functions
 
-The NetApp Data Science Toolkit can also be utilized as a library of functions that can be imported into any Python program or Jupyter Notebook. In this manner, data scientists and data engineers can easily incorporate data management tasks into their existing projects, programs, and workflows. This functionality is only recommended for advanced users who are proficient in Python.
-
-To import the NetApp Data Science Toolkit library functions into a Python program, ensure that the `ntap_dsutil.py` file is in the same directory as the program, and include the following line of code in the program:
+The NetApp DataOps Toolkit can also be utilized as a library of functions that can be imported into any Python program or Jupyter Notebook. In this manner, data scientists and data engineers can easily incorporate data management tasks into their existing projects, programs, and workflows. This functionality is only recommended for advanced users who are proficient in Python.
 
 ```py
-from ntap_dsutil import clone_volume, create_volume, delete_volume, list_volumes, mount_volume, create_snapshot, delete_snapshot, list_snapshots, restore_snapshot, list_cloud_sync_relationships, sync_cloud_sync_relationship, list_snap_mirror_relationships, sync_snap_mirror_relationship, prepopulate_flex_cache, push_directory_to_s3, push_file_to_s3, pull_bucket_from_s3, pull_object_from_s3
+from netapp_dataops.traditional import clone_volume, create_volume, delete_volume, list_volumes, mount_volume, create_snapshot, delete_snapshot, list_snapshots, restore_snapshot, list_cloud_sync_relationships, sync_cloud_sync_relationship, list_snap_mirror_relationships, sync_snap_mirror_relationship, prepopulate_flex_cache, push_directory_to_s3, push_file_to_s3, pull_bucket_from_s3, pull_object_from_s3
 ```
 
 Note: The prerequisite steps outlined in the [Getting Started](#getting-started) section still appy when the toolkit is being utilized as an importable library of functions.
@@ -811,7 +809,7 @@ Advanced data fabric operations:
 
 ### Examples
 
-[Examples.ipynb](Examples.ipynb) is a Jupyter Notebook that contains examples that demonstrate how the NetApp Data Science Toolkit can be utilized as an importable library of functions.
+[Examples.ipynb](Examples.ipynb) is a Jupyter Notebook that contains examples that demonstrate how the NetApp DataOps Toolkit can be utilized as an importable library of functions.
 
 ### Data Volume Management Operations
 
@@ -819,7 +817,7 @@ Advanced data fabric operations:
 
 #### Clone a Data Volume
 
-The NetApp Data Science Toolkit can be used to near-instantaneously create a new data volume that is an exact copy of an existing volume as part of any Python program or workflow. This functionality utilizes NetApp FlexClone technology. This means that any clones created will be extremely storage-space-efficient. Aside from metadata, a clone will not consume additional storage space until its contents starts to deviate from the source volume.
+The NetApp DataOps Toolkit can be used to near-instantaneously create a new data volume that is an exact copy of an existing volume as part of any Python program or workflow. This functionality utilizes NetApp FlexClone technology. This means that any clones created will be extremely storage-space-efficient. Aside from metadata, a clone will not consume additional storage space until its contents starts to deviate from the source volume.
 
 ##### Function Definition
 
@@ -841,7 +839,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.py`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -855,7 +853,7 @@ MountOperationError             # The volume was not succesfully mounted locally
 
 #### Create a New Data Volume
 
-The NetApp Data Science Toolkit can be used to rapidly provision a new data volume as part of any Python program or workflow.
+The NetApp DataOps Toolkit can be used to rapidly provision a new data volume as part of any Python program or workflow.
 
 ##### Function Definition
 
@@ -882,7 +880,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.py`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -895,7 +893,7 @@ MountOperationError             # The volume was not succesfully mounted locally
 
 #### Delete an Existing Data Volume
 
-The NetApp Data Science Toolkit can be used to near-instantaneously delete an existing data volume as part of any Python program or workflow. 
+The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing data volume as part of any Python program or workflow. 
 
 ##### Function Definition
 
@@ -912,7 +910,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.py`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -924,7 +922,7 @@ InvalidVolumeParameterError     # An invalid parameter was specified.
 
 #### List All Data Volumes
 
-The NetApp Data Science Toolkit can be used to retrieve a list of all existing data volumes as part of any Python program or workflow.
+The NetApp DataOps Toolkit can be used to retrieve a list of all existing data volumes as part of any Python program or workflow.
 
 ##### Function Definition
 
@@ -941,7 +939,7 @@ The function returns a list of all existing volumes. Each item in the list will 
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.py`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -952,7 +950,7 @@ APIConnectionError              # The storage system/service API returned an err
 
 #### Mount an Existing Data Volume Locally
 
-The NetApp Data Science Toolkit can be used to mount an existing data volume on your local host as part of any Python program or workflow. On Linux hosts, mounting requires root privileges, so any Python program that invokes this function must be run as root. It is usually not necessary to invoke this function as root on macOS hosts.
+The NetApp DataOps Toolkit can be used to mount an existing data volume on your local host as part of any Python program or workflow. On Linux hosts, mounting requires root privileges, so any Python program that invokes this function must be run as root. It is usually not necessary to invoke this function as root on macOS hosts.
 
 ##### Function Definition
 
@@ -970,7 +968,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.py`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -985,14 +983,14 @@ MountOperationError             # The volume was not succesfully mounted locally
 
 #### Create a New Snapshot for a Data Volume
 
-The NetApp Data Science Toolkit can be used to near-instantaneously save a space-efficient, read-only copy of an existing data volume as part of any Python program or workflow. These read-only copies are called snapshots. This functionality can be used to version datasets and/or implement dataset-to-model traceability.
+The NetApp DataOps Toolkit can be used to near-instantaneously save a space-efficient, read-only copy of an existing data volume as part of any Python program or workflow. These read-only copies are called snapshots. This functionality can be used to version datasets and/or implement dataset-to-model traceability.
 
 ##### Function Definition
 
 ```py
 def create_snapshot(
     volume_name: str,                    # Name of volume (required).
-    snapshot_name: str = None,           # Name of new snapshot. If not specified, will be set to 'ntap_dsutil_<timestamp>'.
+    snapshot_name: str = None,           # Name of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
     print_output: bool = False           # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
@@ -1003,7 +1001,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.py`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1015,7 +1013,7 @@ InvalidVolumeParameterError     # An invalid parameter was specified.
 
 #### Delete an Existing Snapshot for a Data Volume
 
-The NetApp Data Science Toolkit can be used to near-instantaneously delete an existing snapshot for a specific data volume as part of any Python program or workflow. 
+The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing snapshot for a specific data volume as part of any Python program or workflow. 
 
 ##### Function Definition
 
@@ -1033,7 +1031,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.py`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1046,7 +1044,7 @@ InvalidVolumeParameterError     # An invalid parameter was specified.
 
 #### List All Existing Snapshots for a Data Volume
 
-The NetApp Data Science Toolkit can be used to retrieve a list of all existing snapshots for a specific data volume as part of any Python program or workflow.
+The NetApp DataOps Toolkit can be used to retrieve a list of all existing snapshots for a specific data volume as part of any Python program or workflow.
 
 ##### Function Definition
 
@@ -1063,7 +1061,7 @@ The function returns a list of all existing snapshots for the specific data volu
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.py`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1075,7 +1073,7 @@ InvalidVolumeParameterError     # An invalid parameter was specified.
 
 #### Restore a Snapshot for a Data Volume
 
-The NetApp Data Science Toolkit can be used to near-instantaneously restore a specific snapshot for a data volume as part of any Python program or workflow. This action will restore the volume to its exact state at the time that the snapshot was created.
+The NetApp DataOps Toolkit can be used to near-instantaneously restore a specific snapshot for a data volume as part of any Python program or workflow. This action will restore the volume to its exact state at the time that the snapshot was created.
 
 Warning: A snapshot restore operation will delete all snapshots that were created after the snapshot that you are restoring.
 
@@ -1095,7 +1093,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.py`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1110,7 +1108,7 @@ InvalidVolumeParameterError     # An invalid parameter was specified.
 
 #### List All Cloud Sync Relationships
 
-The NetApp Data Science Toolkit can be used to retrieve a list of all existing Cloud Sync relationships that exist under the user's NetApp Cloud Central account, as part of any Python program or workflow.
+The NetApp DataOps Toolkit can be used to retrieve a list of all existing Cloud Sync relationships that exist under the user's NetApp Cloud Central account, as part of any Python program or workflow.
 
 Note: To create a new Cloud Sync relationship, visit [cloudsync.netapp.com](https://cloudsync.netapp.com).
 
@@ -1128,7 +1126,7 @@ The function returns a list of all existing Cloud Sync relationships. Each item 
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.py`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1139,7 +1137,7 @@ APIConnectionError              # The Cloud Sync API returned an error.
 
 #### Trigger a Sync Operation for an Existing Cloud Sync Relationship
 
-The NetApp Data Science Toolkit can be used to trigger a sync operation for an existing Cloud Sync relationshp under the user's NetApp Cloud Central account, as part of any Python program or workflow. NetApp's Cloud Sync service can be used to replicate data to and from a variety of file and object storage platforms. Potential use cases include the following:
+The NetApp DataOps Toolkit can be used to trigger a sync operation for an existing Cloud Sync relationshp under the user's NetApp Cloud Central account, as part of any Python program or workflow. NetApp's Cloud Sync service can be used to replicate data to and from a variety of file and object storage platforms. Potential use cases include the following:
 
 - Replicating newly acquired sensor data gathered at the edge back to the core data center or to the cloud to be used for AI/ML model training or retraining.
 - Replicating a newly trained or newly updated model from the core data center to the edge or to the cloud to be deployed as part of an inferencing application.
@@ -1168,7 +1166,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.py`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1180,7 +1178,7 @@ CloudSyncSyncOperationError     # The sync operation failed.
 
 #### Pull the Contents of a Bucket S3 (multithreaded)
 
-The NetApp Data Science Toolkit can be used to pull the contents of a bucket from S3 as part of any Python program or workflow.
+The NetApp DataOps Toolkit can be used to pull the contents of a bucket from S3 as part of any Python program or workflow.
 
 Note: To pull to a data volume, the volume must be mounted locally.
 
@@ -1203,7 +1201,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.py`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1214,7 +1212,7 @@ APIConnectionError              # The S3 API returned an error.
 
 #### Pull an Object from S3
 
-The NetApp Data Science Toolkit can be used to pull an object from S3 as part of any Python program or workflow.
+The NetApp DataOps Toolkit can be used to pull an object from S3 as part of any Python program or workflow.
 
 Note: To pull to a data volume, the volume must be mounted locally.
 
@@ -1235,7 +1233,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.py`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1246,7 +1244,7 @@ APIConnectionError              # The S3 API returned an error.
 
 #### Push the Contents of a Directory to S3 (multithreaded)
 
-The NetApp Data Science Toolkit can be used to push the contents of a directory to S3 as part of any Python program or workflow.
+The NetApp DataOps Toolkit can be used to push the contents of a directory to S3 as part of any Python program or workflow.
 
 Note: To push from a data volume, the volume must be mounted locally.
 
@@ -1270,7 +1268,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.py`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1281,7 +1279,7 @@ APIConnectionError              # The S3 API returned an error.
 
 #### Push a File to S3
 
-The NetApp Data Science Toolkit can be used to push a file to S3 as part of any Python program or workflow.
+The NetApp DataOps Toolkit can be used to push a file to S3 as part of any Python program or workflow.
 
 Note: To push from a data volume, the volume must be mounted locally.
 
@@ -1303,7 +1301,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.py`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1316,7 +1314,7 @@ APIConnectionError              # The S3 API returned an error.
 
 #### Prepopulate Specific Files/Directories on a FlexCache Volume
 
-The NetApp Data Science Toolkit can be used to prepopulate specific files/directories on a FlexCache volume as part of any Python program or workflow. This can be usefule when you have a FlexCache volume acting as a local cache for a remote volume, and you want to prepopulate (i.e. hydrate) the cache with specific files/directories.
+The NetApp DataOps Toolkit can be used to prepopulate specific files/directories on a FlexCache volume as part of any Python program or workflow. This can be usefule when you have a FlexCache volume acting as a local cache for a remote volume, and you want to prepopulate (i.e. hydrate) the cache with specific files/directories.
 
 Compatibility: ONTAP 9.8 and above ONLY
 
@@ -1336,7 +1334,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.py`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1348,7 +1346,7 @@ InvalidVolumeParameterError     # An invalid parameter was specified.
 
 #### List All SnapMirror Relationships
 
-The NetApp Data Science Toolkit can be used to retrieve a list of all existing SnapMirror relationships for which the destination volume resides on the user's storage system, as part of any Python program or workflow.
+The NetApp DataOps Toolkit can be used to retrieve a list of all existing SnapMirror relationships for which the destination volume resides on the user's storage system, as part of any Python program or workflow.
 
 Note: To create a new SnapMirror relationship, access ONTAP System Manager.
 
@@ -1366,7 +1364,7 @@ The function returns a list of all existing SnapMirror relationships for which t
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.py`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1377,7 +1375,7 @@ APIConnectionError              # The storage system/service API returned an err
 
 #### Trigger a Sync Operation for an Existing SnapMirror Relationship
 
-The NetApp Data Science Toolkit can be used to trigger a sync operation for an existing SnapMirror relationshp for which the destination volume resides on the user's storage system, as part of any Python program or workflow. NetApp's SnapMirror volume replication technology can be used to quickly and efficiently replicate data between NetApp storage systems. For example, SnapMirror could be used to replicate newly acquired data, gathered on a different NetApp storage system, to the user's NetApp storage system to be used for AI/ML model training or retraining.
+The NetApp DataOps Toolkit can be used to trigger a sync operation for an existing SnapMirror relationshp for which the destination volume resides on the user's storage system, as part of any Python program or workflow. NetApp's SnapMirror volume replication technology can be used to quickly and efficiently replicate data between NetApp storage systems. For example, SnapMirror could be used to replicate newly acquired data, gathered on a different NetApp storage system, to the user's NetApp storage system to be used for AI/ML model training or retraining.
 
 Tip: Use the listSnapMirrorRelationships() function to obtain the UUID.
 
@@ -1399,7 +1397,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `ntap_dsutil.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.py`.
 
 ```py
 InvalidConfigError                  # Config file is missing or contains an invalid value.

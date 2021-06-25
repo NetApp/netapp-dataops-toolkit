@@ -1,4 +1,4 @@
-"""NetApp Data Science Toolkit for Traditional Environments import module.
+"""NetApp DataOps Toolkit for Traditional Environments import module.
 
 This module provides the public functions available to be imported directly
 by applications using the import method of utilizing the toolkit.
@@ -235,10 +235,10 @@ def _instantiate_s3_session(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessK
 
 
 def _print_invalid_config_error() :
-    print("Error: Missing or invalid config file. Run `./ntap_dsutil.py config` to create config file.")
+    print("Error: Missing or invalid config file. Run `./netapp_dataops.py config` to create config file.")
 
 
-def _retrieve_config(configDirPath: str = "~/.ntap_dsutil", configFilename: str = "config.json",
+def _retrieve_config(configDirPath: str = "~/.netapp_dataops", configFilename: str = "config.json",
                    print_output: bool = False) -> dict:
     configDirPath = os.path.expanduser(configDirPath)
     configFilePath = os.path.join(configDirPath, configFilename)
@@ -494,7 +494,7 @@ def create_snapshot(volume_name: str, snapshot_name: str = None, print_output: b
         # Set snapshot name if not passed into function
         if not snapshot_name:
             timestamp = datetime.today().strftime("%Y%m%d_%H%M%S")
-            snapshot_name = "ntap_dsutil_" + timestamp
+            snapshot_name = "netapp_dataops_" + timestamp
 
         if print_output:
             print("Creating snapshot '" + snapshot_name + "'.")

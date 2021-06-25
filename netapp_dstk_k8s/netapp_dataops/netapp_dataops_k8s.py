@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""NetApp Data Science Toolkit for Kubernetes Script Interface."""
-from netapp_dstk import k8s
-from netapp_dstk.k8s import (
+"""NetApp DataOps Toolkit for Kubernetes Script Interface."""
+from netapp_dataops import k8s
+from netapp_dataops.k8s import (
     clone_volume,
     create_volume_snapshot,
     InvalidConfigError,
@@ -24,7 +24,7 @@ from netapp_dstk.k8s import (
 
 # Define contents of help text
 helpTextStandard = '''
-The NetApp Data Science Toolkit for Kubernetes is a Python library that makes it simple for data scientists and data engineers to perform various data management tasks, such as provisioning a new data volume, near-instantaneously cloning a data volume, and near-instantaneously snapshotting a data volume for traceability/baselining.
+The NetApp DataOps Toolkit for Kubernetes is a Python library that makes it simple for data scientists and data engineers to perform various data management tasks, such as provisioning a new data volume, near-instantaneously cloning a data volume, and near-instantaneously snapshotting a data volume for traceability/baselining.
 
 Basic Commands:
 
@@ -75,8 +75,8 @@ Optional Options/Arguments:
 \t-s, --source-snapshot-name=\tName of Kubernetes VolumeSnapshot to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
 
 Examples:
-\t./ntap_dsutil_k8s.py clone jupyterlab --new-workspace-name=project1-experiment1 --source-workspace-name=project1 --nvidia-gpu=1
-\t./ntap_dsutil_k8s.py clone jupyterlab -w project2-mike -s project2-snap1 -n team1 -g 1 -p 0.5 -m 1Gi
+\t./netapp_dataops_k8s.py clone jupyterlab --new-workspace-name=project1-experiment1 --source-workspace-name=project1 --nvidia-gpu=1
+\t./netapp_dataops_k8s.py clone jupyterlab -w project2-mike -s project2-snap1 -n team1 -g 1 -p 0.5 -m 1Gi
 '''
 helpTextCloneVolume = '''
 Command: clone volume
@@ -96,8 +96,8 @@ Optional Options/Arguments:
 \t-v, --source-pvc-name=\t\tName of Kubernetes PersistentVolumeClaim (PVC) to use as source for clone. Either -s/--source-snapshot-name or -v/--source-pvc-name must be specified.
 
 Examples:
-\t./ntap_dsutil_k8s.py clone volume --new-pvc-name=project1-experiment1 --source-pvc-name=project1
-\t./ntap_dsutil_k8s.py clone volume -p project2-mike -s snap1 -n team1
+\t./netapp_dataops_k8s.py clone volume --new-pvc-name=project1-experiment1 --source-pvc-name=project1
+\t./netapp_dataops_k8s.py clone volume -p project2-mike -s snap1 -n team1
 '''
 helpTextCreateJupyterLab = '''
 Command: create jupyterlab
@@ -118,8 +118,8 @@ Optional Options/Arguments:
 \t-p, --cpu=\t\tNumber of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
 
 Examples:
-\t./ntap_dsutil_k8s.py create jupyterlab --workspace-name=mike --size=10Gi --nvidia-gpu=2
-\t./ntap_dsutil_k8s.py create jupyterlab -n dst-test -w dave -i jupyter/scipy-notebook:latest -s 2Ti -c ontap-flexgroup -g 1 -p 0.5 -m 1Gi
+\t./netapp_dataops_k8s.py create jupyterlab --workspace-name=mike --size=10Gi --nvidia-gpu=2
+\t./netapp_dataops_k8s.py create jupyterlab -n dst-test -w dave -i jupyter/scipy-notebook:latest -s 2Ti -c ontap-flexgroup -g 1 -p 0.5 -m 1Gi
 '''
 helpTextCreateJupyterLabSnapshot = '''
 Command: create jupyterlab-snapshot
@@ -136,8 +136,8 @@ Optional Options/Arguments:
 \t-s, --snapshot-name=\t\tName of new Kubernetes VolumeSnapshot for workspace. If not specified, will be set to 'ntap-dsutil.<timestamp>'.
 
 Examples:
-\t./ntap_dsutil_k8s.py create jupyterlab-snapshot --workspace-name=mike
-\t./ntap_dsutil_k8s.py create jupyterlab-snapshot -w sathish -s snap1 -c ontap -n team1
+\t./netapp_dataops_k8s.py create jupyterlab-snapshot --workspace-name=mike
+\t./netapp_dataops_k8s.py create jupyterlab-snapshot -w sathish -s snap1 -c ontap -n team1
 '''
 helpTextCreateVolumeSnapshot = '''
 Command: create volume-snapshot
@@ -154,8 +154,8 @@ Optional Options/Arguments:
 \t-s, --snapshot-name=\t\tName of new Kubernetes VolumeSnapshot. If not specified, will be set to 'ntap-dsutil.<timestamp>'.
 
 Examples:
-\t./ntap_dsutil_k8s.py create volume-snapshot --pvc-name=project1
-\t./ntap_dsutil_k8s.py create volume-snapshot -p project2 -s snap1 -c ontap -n team1
+\t./netapp_dataops_k8s.py create volume-snapshot --pvc-name=project1
+\t./netapp_dataops_k8s.py create volume-snapshot -p project2 -s snap1 -c ontap -n team1
 '''
 helpTextCreateVolume = '''
 Command: create volume
@@ -172,9 +172,9 @@ Optional Options/Arguments:
 \t-n, --namespace=\tKubernetes namespace to create new PersistentVolumeClaim (PVC) in. If not specified, PVC will be created in namespace "default".
 
 Examples:
-\t./ntap_dsutil_k8s.py create volume --pvc-name=project1 --size=10Gi
-\t./ntap_dsutil_k8s.py create volume -p datasets -s 10Ti -n team1
-\t./ntap_dsutil_k8s.py create volume --pvc-name=project2 --size=2Ti --namespace=team2 --storage-class=ontap-flexgroup
+\t./netapp_dataops_k8s.py create volume --pvc-name=project1 --size=10Gi
+\t./netapp_dataops_k8s.py create volume -p datasets -s 10Ti -n team1
+\t./netapp_dataops_k8s.py create volume --pvc-name=project2 --size=2Ti --namespace=team2 --storage-class=ontap-flexgroup
 '''
 helpTextDeleteJupyterLab = '''
 Command: delete jupyterlab
@@ -191,8 +191,8 @@ Optional Options/Arguments:
 \t-s, --preserve-snapshots\tDo not delete VolumeSnapshots associated with workspace.
 
 Examples:
-\t./ntap_dsutil_k8s.py delete jupyterlab --workspace-name=mike
-\t./ntap_dsutil_k8s.py delete jupyterlab -w dave -n dst-test
+\t./netapp_dataops_k8s.py delete jupyterlab --workspace-name=mike
+\t./netapp_dataops_k8s.py delete jupyterlab -w dave -n dst-test
 '''
 helpTextDeleteJupyterLabSnapshot = '''
 Command: delete jupyterlab-snapshot
@@ -208,8 +208,8 @@ Optional Options/Arguments:
 \t-n, --namespace=\tKubernetes namespace that VolumeSnapshot is located in. If not specified, namespace "default" will be used.
 
 Examples:
-\t./ntap_dsutil_k8s.py delete jupyterlab-snapshot --snapshot-name=snap1
-\t./ntap_dsutil_k8s.py delete jupyterlab-snapshot -s ntap-dsutil.20210304151544 -n team1
+\t./netapp_dataops_k8s.py delete jupyterlab-snapshot --snapshot-name=snap1
+\t./netapp_dataops_k8s.py delete jupyterlab-snapshot -s ntap-dsutil.20210304151544 -n team1
 '''
 helpTextDeleteVolumeSnapshot = '''
 Command: delete volume-snapshot
@@ -225,8 +225,8 @@ Optional Options/Arguments:
 \t-n, --namespace=\tKubernetes namespace that VolumeSnapshot is located in. If not specified, namespace "default" will be used.
 
 Examples:
-\t./ntap_dsutil_k8s.py delete volume-snapshot --snapshot-name=snap1
-\t./ntap_dsutil_k8s.py delete volume-snapshot -s ntap-dsutil.20210304151544 -n team1
+\t./netapp_dataops_k8s.py delete volume-snapshot --snapshot-name=snap1
+\t./netapp_dataops_k8s.py delete volume-snapshot -s ntap-dsutil.20210304151544 -n team1
 '''
 helpTextDeleteVolume = '''
 Command: delete volume
@@ -243,8 +243,8 @@ Optional Options/Arguments:
 \t-s, --preserve-snapshots\tDo not delete VolumeSnapshots associated with PersistentVolumeClaim (PVC).
 
 Examples:
-\t./ntap_dsutil_k8s.py delete volume --pvc-name=project1
-\t./ntap_dsutil_k8s.py delete volume -p project2 -n team1
+\t./netapp_dataops_k8s.py delete volume --pvc-name=project1
+\t./netapp_dataops_k8s.py delete volume -p project2 -n team1
 '''
 helpTextListJupyterLabs = '''
 Command: list jupyterlabs
@@ -258,8 +258,8 @@ Optional Options/Arguments:
 \t-n, --namespace=\tKubernetes namespace for which to retrieve list of workspaces. If not specified, namespace "default" will be used.
 
 Examples:
-\t./ntap_dsutil_k8s.py list jupyterlabs -n team1
-\t./ntap_dsutil_k8s.py list jupyterlabs --namespace=team2
+\t./netapp_dataops_k8s.py list jupyterlabs -n team1
+\t./netapp_dataops_k8s.py list jupyterlabs --namespace=team2
 '''
 helpTextListJupyterLabSnapshots = '''
 Command: list jupyterlab-snapshots
@@ -274,8 +274,8 @@ Optional Options/Arguments:
 \t-w, --workspace-name=\tName of JupyterLab workspace to list snapshots for. If not specified, all VolumeSnapshots in namespace will be listed.
 
 Examples:
-\t./ntap_dsutil_k8s.py list jupyterlab-snapshots --workspace-name=mike
-\t./ntap_dsutil_k8s.py list jupyterlab-snapshots -n team2
+\t./netapp_dataops_k8s.py list jupyterlab-snapshots --workspace-name=mike
+\t./netapp_dataops_k8s.py list jupyterlab-snapshots -n team2
 '''
 helpTextListVolumeSnapshots = '''
 Command: list volume-snapshots
@@ -290,8 +290,8 @@ Optional Options/Arguments:
 \t-p, --pvc-name=\t\tName of Kubernetes PersistentVolumeClaim (PVC) to list snapshots for. If not specified, all VolumeSnapshots in namespace will be listed.
 
 Examples:
-\t./ntap_dsutil_k8s.py list volume-snapshots --pvc-name=project1
-\t./ntap_dsutil_k8s.py list volume-snapshots -n team2
+\t./netapp_dataops_k8s.py list volume-snapshots --pvc-name=project1
+\t./netapp_dataops_k8s.py list volume-snapshots -n team2
 '''
 helpTextListVolumes = '''
 Command: list volumes
@@ -305,8 +305,8 @@ Optional Options/Arguments:
 \t-n, --namespace=\tKubernetes namespace for which to retrieve list of volumes. If not specified, namespace "default" will be used.
 
 Examples:
-\t./ntap_dsutil_k8s.py list volumes -n team1
-\t./ntap_dsutil_k8s.py list volumes --namespace=team2
+\t./netapp_dataops_k8s.py list volumes -n team1
+\t./netapp_dataops_k8s.py list volumes --namespace=team2
 '''
 helpTextRestoreJupyterLabSnapshot = '''
 Command: restore jupyterlab-snapshot
@@ -321,8 +321,8 @@ Optional Options/Arguments:
 \t-n, --namespace=\tKubernetes namespace that VolumeSnapshot is located in. If not specified, namespace "default" will be used.
 
 Examples:
-\t./ntap_dsutil_k8s.py restore jupyterlab-snapshot --snapshot-name=mike-snap1
-\t./ntap_dsutil_k8s.py restore jupyterlab-snapshot -s ntap-dsutil.20210304151544 -n team1
+\t./netapp_dataops_k8s.py restore jupyterlab-snapshot --snapshot-name=mike-snap1
+\t./netapp_dataops_k8s.py restore jupyterlab-snapshot -s ntap-dsutil.20210304151544 -n team1
 '''
 helpTextRestoreVolumeSnapshot = '''
 Command: restore volume-snapshot
@@ -341,8 +341,8 @@ Optional Options/Arguments:
 \t-n, --namespace=\tKubernetes namespace that VolumeSnapshot is located in. If not specified, namespace "default" will be used.
 
 Examples:
-\t./ntap_dsutil_k8s.py restore volume-snapshot --snapshot-name=snap1
-\t./ntap_dsutil_k8s.py restore volume-snapshot -s ntap-dsutil.20210304151544 -n team1
+\t./netapp_dataops_k8s.py restore volume-snapshot --snapshot-name=snap1
+\t./netapp_dataops_k8s.py restore volume-snapshot -s ntap-dsutil.20210304151544 -n team1
 '''
 
 
@@ -1016,7 +1016,7 @@ if __name__ == '__main__':
             handleInvalidCommand()
 
     elif action in ("version", "v", "-v", "--version"):
-        print("NetApp Data Science Toolkit for Kubernetes - version " + k8s.__version__)
+        print("NetApp DataOps Toolkit for Kubernetes - version " + k8s.__version__)
 
     else:
         handleInvalidCommand()

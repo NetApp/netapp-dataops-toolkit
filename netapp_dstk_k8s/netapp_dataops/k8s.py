@@ -1,4 +1,4 @@
-"""NetApp Data Science Toolkit for Kubernetes Environments import module.
+"""NetApp DataOps Toolkit for Kubernetes Environments import module.
 
 This module provides the public functions available to be imported directly
 by applications using the import method of utilizing the toolkit.
@@ -92,7 +92,7 @@ def _load_kube_config():
 
 def _print_invalid_config_error():
     print(
-        "Error: Missing or invalid kubeconfig file. The NetApp Data Science Toolkit for Kubernetes requires that a valid kubeconfig file be present on the host, located at $HOME/.kube or at another path specified by the KUBECONFIG environment variable.")
+        "Error: Missing or invalid kubeconfig file. The NetApp DataOps Toolkit for Kubernetes requires that a valid kubeconfig file be present on the host, located at $HOME/.kube or at another path specified by the KUBECONFIG environment variable.")
 
 
 def _retrieve_image_for_jupyter_lab_deployment(workspaceName: str, namespace: str = "default",
