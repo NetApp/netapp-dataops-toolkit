@@ -9,10 +9,8 @@ def netappCloudSyncUpdate(relationshipId: str, printResponse: bool = True, keepC
     import sys, subprocess, json, os, base64
 
     # Install pre-requisites
-    subprocess.run([sys.executable, '-m', 'pip', 'install', 'netapp-ontap', 'pandas', 'tabulate', 'requests', 'boto3', 'pyyaml'])
-    subprocess.run(['git', 'clone', 'https://github.com/NetApp/netapp-data-science-toolkit'])
-    subprocess.run(['cp', '-a', '/netapp-data-science-toolkit/Traditional/ntap_dsutil.py', '/tmp/'])
-    from ntap_dsutil import syncCloudSyncRelationship
+    subprocess.run([sys.executable, '-m', 'pip', 'install', 'netapp-dataops-traditional'])
+    from netapp_dataops.traditional import syncCloudSyncRelationship
 
     # Retrieve Cloud Sync refresh token from mounted k8s secret
     with open('/mnt/secret/refreshToken', 'r') as refreshTokenSecret :
@@ -22,7 +20,7 @@ def netappCloudSyncUpdate(relationshipId: str, printResponse: bool = True, keepC
     refreshTokenBytes = refreshTokenString.encode("ascii") 
     refreshTokenBase64Bytes = base64.b64encode(refreshTokenBytes)
     configJson = {"cloudCentralRefreshToken": refreshTokenBase64Bytes.decode("ascii")}
-    configDirPath = os.path.expanduser("~/.ntap_dsutil")
+    configDirPath = os.path.expanduser("~/.netapp_dataops")
     os.mkdir(configDirPath)
     configFilePath = os.path.join(configDirPath, "config.json")
     with open(configFilePath, 'w') as configFile :

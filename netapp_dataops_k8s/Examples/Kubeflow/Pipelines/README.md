@@ -14,8 +14,8 @@ The following Python modules are required in order to execute any of these scrip
 These pipelines require the following prerequisites in order to function correctly.
 
 - [Trident](https://netapp.io/persistent-storage-provisioner-for-kubernetes/), NetApp's dynamic storage orchestrator for Kubernetes, must be installed within the Kubernetes cluster.
-- A cluster role that has all of the required permissions for executing NetApp Data Science Toolkit for Kubernetes operations must be present in the Kubernetes cluster. For an example, see [cluster-role-ntap-dsutil.yaml](cluster-role-ntap-dsutil.yaml). This file contains the manifest for a Kubernetes ClusterRole named 'ntap-dsutil' that has all of the required permissions for executing toolkit operations within the cluster.
-- Your Kubeflow Pipelines service account must be bound to the the previously mentioned cluster role within the namespace that you intend to execute the pipeline in. Note that the default Kubeflow Pipelines service account is 'default-editor'. For an example, see [role-binding-kubeflow-ntap-dsutil.yaml](role-binding-kubeflow-ntap-dsutil.yaml). This file contains the manifest for a Kubernetes RoleBinding named 'kubeflow-ntap-dsutil' that will bind the 'default-editor' ServiceAccount to the 'ntap-dsutil' cluster role within the 'admin' namespace.
+- A cluster role that has all of the required permissions for executing NetApp DataOps Toolkit for Kubernetes operations must be present in the Kubernetes cluster. For an example, see [cluster-role-netapp-dataops.yaml](cluster-role-netapp-dataops.yaml). This file contains the manifest for a Kubernetes ClusterRole named 'netapp-dataops' that has all of the required permissions for executing toolkit operations within the cluster.
+- Your Kubeflow Pipelines service account must be bound to the the previously mentioned cluster role within the namespace that you intend to execute the pipeline in. Note that the default Kubeflow Pipelines service account is 'default-editor'. For an example, see [role-binding-kubeflow-netapp-dataops.yaml](role-binding-kubeflow-netapp-dataops.yaml). This file contains the manifest for a Kubernetes RoleBinding named 'kubeflow-netapp-dataops' that will bind the 'default-editor' ServiceAccount to the 'netapp-dataops' cluster role within the 'admin' namespace.
 
 Some of the pipelines have additional prerequisites, which are noted under the specific pipeline definitions below.
 
@@ -111,7 +111,7 @@ In addition to the standard prerequisites outlined above, this pipeline requires
 Python script that creates a Kubeflow pipeline definition for a workflow that can be used to perform a sync operation for an existing [Cloud Sync](https://cloudsync.netapp.com) relationship. This is intended to demonstrate how a data scientist or data engineer could define an automated AI/ML workflow that incorporates Cloud Sync for data movement between platforms (e.g. NFS, S3) and/or across environments (e.g. edge data center, core data center, private cloud, public cloud).
 
 #### Run-time Parameters
-- cloud_sync_relationship_id: The relationship ID of the Cloud Sync relationship for which you want to perform a sync operation. If you do not know the relationship ID, you can retrieve it by using NetApp Data Science Toolkit for Traditional Environments (refer to the 'list all Cloud Sync relationships' operation).
+- cloud_sync_relationship_id: The relationship ID of the Cloud Sync relationship for which you want to perform a sync operation. If you do not know the relationship ID, you can retrieve it by using NetApp DataOps Toolkit for Traditional Environments (refer to the 'list all Cloud Sync relationships' operation).
 - cloud_sync_refresh_token_k8s_secret: The name of the Kubernetes secret containing your Cloud Sync refresh token.
 
 #### Pipeline Steps
@@ -133,7 +133,7 @@ In addition to the standard prerequisites outlined above, this pipeline requires
 Python script that creates a Kubeflow pipeline definition for a workflow that can be used to perform a sync operation for an existing asynchronous SnapMirror relationship. This is intended to demonstrate how a data scientist or data engineer could define an automated AI/ML workflow that incorporates SnapMirror replication for data movement across environments (e.g. edge data center, core data center, private cloud, public cloud).
 
 #### Run-time Parameters
-- snapmirror_relationship_id: The UUID of the SnapMirror relationship for which you want to perform a sync operation. If you do not know the UUID, you can retrieve it by using NetApp Data Science Toolkit for Traditional Environments (refer to the 'list all SnapMirror relationships' operation).
+- snapmirror_relationship_id: The UUID of the SnapMirror relationship for which you want to perform a sync operation. If you do not know the UUID, you can retrieve it by using NetApp DataOps Toolkit for Traditional Environments (refer to the 'list all SnapMirror relationships' operation).
 - destination_ontap_cluster_or_svm_mgmt_hostname: The host name or IP address of the ONTAP cluster or SVM management LIF corresponding to the cluster/SVM on which the destination volume resides.
 - destination_ontap_cluster_or_svm_admin_acct_k8s_secret: The name of the Kubernetes secret containing the ONTAP cluster or SVM admin account details for the cluster/SVM on which the destination volume resides.
 - destination_svm: The name of the SVM on which the destination volume resides.

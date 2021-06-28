@@ -112,10 +112,8 @@ with ai_training_run_dag as dag :
         image="python:3",
         cmds=["/bin/bash", "-c"],
         arguments=["\
-            python3 -m pip install ipython kubernetes pandas tabulate && \
-            git clone https://github.com/NetApp/netapp-data-science-toolkit && \
-            mv /netapp-data-science-toolkit/Kubernetes/ntap_dsutil_k8s.py / && \
-            /ntap_dsutil_k8s.py create volume-snapshot --pvc-name=" + str(dataset_volume_pvc_existing) + " --snapshot-name=dataset-{{ task_instance.xcom_pull(task_ids='generate-uuid', dag_id='ai_training_run', key='return_value') }} --namespace=" + namespace],
+            python3 -m pip install netapp-dataops-k8s && \
+            netapp_dataops_k8s_cli.py create volume-snapshot --pvc-name=" + str(dataset_volume_pvc_existing) + " --snapshot-name=dataset-{{ task_instance.xcom_pull(task_ids='generate-uuid', dag_id='ai_training_run', key='return_value') }} --namespace=" + namespace],
         name="ai-training-run-dataset-snapshot",
         task_id="dataset-snapshot",
         is_delete_operator_pod=True,
@@ -149,10 +147,8 @@ with ai_training_run_dag as dag :
         image="python:3",
         cmds=["/bin/bash", "-c"],
         arguments=["\
-            python3 -m pip install ipython kubernetes pandas tabulate && \
-            git clone https://github.com/NetApp/netapp-data-science-toolkit && \
-            mv /netapp-data-science-toolkit/Kubernetes/ntap_dsutil_k8s.py / && \
-            /ntap_dsutil_k8s.py create volume-snapshot --pvc-name=" + str(model_volume_pvc_existing) + " --snapshot-name=model-{{ task_instance.xcom_pull(task_ids='generate-uuid', dag_id='ai_training_run', key='return_value') }} --namespace=" + namespace],
+            python3 -m pip install netapp-dataops-k8s && \
+            netapp_dataops_k8s_cli.py create volume-snapshot --pvc-name=" + str(model_volume_pvc_existing) + " --snapshot-name=model-{{ task_instance.xcom_pull(task_ids='generate-uuid', dag_id='ai_training_run', key='return_value') }} --namespace=" + namespace],
         name="ai-training-run-model-snapshot",
         task_id="model-snapshot",
         is_delete_operator_pod=True,

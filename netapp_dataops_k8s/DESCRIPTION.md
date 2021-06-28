@@ -1,5 +1,5 @@
-The NetApp Data Science Toolkit for Kubernetes is a Python library that makes it
-simple for data scientists and data engineers to perform various data management
+The NetApp DataOps Toolkit for Kubernetes is a Python library that makes it
+simple for developers, data scientists, DevOps engineers, and data engineers to perform various data management
 tasks within a Kubernetes cluster, such as provisioning a new Kubernetes
 persistent volume or JupyterLab workspace, near-instantaneously cloning a
 Kubernetes persistent volume or JupterLab workspace, and near-instantaneously

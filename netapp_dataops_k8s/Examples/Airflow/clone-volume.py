@@ -39,10 +39,8 @@ source_volume_snapshot_name = "snap1"
 
 # Construct command args
 arg = "\
-    python3 -m pip install ipython kubernetes pandas tabulate && \
-    git clone https://github.com/NetApp/netapp-data-science-toolkit && \
-    mv /netapp-data-science-toolkit/Kubernetes/ntap_dsutil_k8s.py / && \
-    /ntap_dsutil_k8s.py clone volume --namespace=" + str(namespace) + " --new-pvc-name=" + str(new_volume_pvc_name)
+    python3 -m pip install netapp-dataops-k8s && \
+    netapp_dataops_k8s_cli.py clone volume --namespace=" + str(namespace) + " --new-pvc-name=" + str(new_volume_pvc_name)
 if clone_from_snapshot :
     arg += " --source-snapshot-name=" + str(source_volume_snapshot_name)
 else :

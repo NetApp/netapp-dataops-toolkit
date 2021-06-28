@@ -52,11 +52,9 @@ def ai_training_run(
         image="python:3",
         command=["/bin/bash", "-c"],
         arguments=["\
-            python3 -m pip install ipython kubernetes pandas tabulate && \
-            git clone https://github.com/NetApp/netapp-data-science-toolkit && \
-            mv /netapp-data-science-toolkit/Kubernetes/ntap_dsutil_k8s.py / && \
+            python3 -m pip install netapp-dataops-k8s && \
             echo '" + volume_snapshot_name + "' > /volume_snapshot_name.txt && \
-            /ntap_dsutil_k8s.py create volume-snapshot --pvc-name=" + str(dataset_volume_pvc_existing) + " --snapshot-name=" + str(volume_snapshot_name) + " --namespace={{workflow.namespace}}"],
+            netapp_dataops_k8s_cli.py create volume-snapshot --pvc-name=" + str(dataset_volume_pvc_existing) + " --snapshot-name=" + str(volume_snapshot_name) + " --namespace={{workflow.namespace}}"],
         file_outputs={"volume_snapshot_name": "/volume_snapshot_name.txt"}
     )
     # State that snapshot should be created after the data prep job completes
@@ -90,11 +88,9 @@ def ai_training_run(
         image="python:3",
         command=["/bin/bash", "-c"],
         arguments=["\
-            python3 -m pip install ipython kubernetes pandas tabulate && \
-            git clone https://github.com/NetApp/netapp-data-science-toolkit && \
-            mv /netapp-data-science-toolkit/Kubernetes/ntap_dsutil_k8s.py / && \
+            python3 -m pip install netapp-dataops-k8s && \
             echo '" + volume_snapshot_name + "' > /volume_snapshot_name.txt && \
-            /ntap_dsutil_k8s.py create volume-snapshot --pvc-name=" + str(trained_model_volume_pvc_existing) + " --snapshot-name=" + str(volume_snapshot_name) + " --namespace={{workflow.namespace}}"],
+            netapp_dataops_k8s_cli.py create volume-snapshot --pvc-name=" + str(trained_model_volume_pvc_existing) + " --snapshot-name=" + str(volume_snapshot_name) + " --namespace={{workflow.namespace}}"],
         file_outputs={"volume_snapshot_name": "/volume_snapshot_name.txt"}
     )
     # State that snapshot should be created after the training job completes

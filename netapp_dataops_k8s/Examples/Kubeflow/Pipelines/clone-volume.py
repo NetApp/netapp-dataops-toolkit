@@ -23,11 +23,9 @@ def clone_volume(
     command = ["/bin/bash", "-c"]
     file_outputs = {"new_volume_pvc_name": "/new_volume_pvc_name.txt"}
     args = "\
-        python3 -m pip install ipython kubernetes pandas tabulate && \
-        git clone https://github.com/NetApp/netapp-data-science-toolkit && \
-        mv /netapp-data-science-toolkit/Kubernetes/ntap_dsutil_k8s.py / && \
+        python3 -m pip install netapp-dataops-k8s && \
         echo '" + str(new_volume_pvc_name) + "' > /new_volume_pvc_name.txt && \
-        /ntap_dsutil_k8s.py clone volume --namespace={{workflow.namespace}} --new-pvc-name=" + str(new_volume_pvc_name)
+        netapp_dataops_k8s_cli.py clone volume --namespace={{workflow.namespace}} --new-pvc-name=" + str(new_volume_pvc_name)
     with dsl.Condition(clone_from_snapshot__yes_or_no == "yes") :
         clone_volume = dsl.ContainerOp(
             name=name+"-from-snapshot",

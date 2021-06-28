@@ -13,8 +13,8 @@ These DAGs require the following prerequisites in order to function correctly.
 - Airflow must be deployed within a Kubernetes cluster. These example DAGs do not support Airflow deployments that are not Kubernetes-based.
 - Airflow must be configured to use the [Celery Executor](https://airflow.apache.org/docs/apache-airflow/stable/executor/celery.html). Although they may work with other executors, these DAGs have only been validated with the Celery Executor.
 - [Trident](https://netapp.io/persistent-storage-provisioner-for-kubernetes/), NetApp's dynamic storage orchestrator for Kubernetes, must be installed within the Kubernetes cluster.
-- A cluster role that has all of the required permissions for executing NetApp Data Science Toolkit for Kubernetes operations must be present in the Kubernetes cluster. For an example, see [cluster-role-ntap-dsutil.yaml](cluster-role-ntap-dsutil.yaml). This file contains the manifest for a Kubernetes ClusterRole named 'ntap-dsutil' that has all of the required permissions for executing toolkit operations within the cluster.
-- Your Airflow [Kubernetes Pod Operator](https://airflow.apache.org/docs/apache-airflow-providers-cncf-kubernetes/stable/operators.html#kubernetespodoperator) service account must be bound to the the previously mentioned cluster role within the namespace that you intend to execute the DAGs in. Note that the default Airflow Kubernetes Pod Operator service account is 'default'. For an example, see [role-binding-airflow-ntap-dsutil.yaml](role-binding-airflow-ntap-dsutil.yaml). This file contains the manifest for a Kubernetes RoleBinding named 'airflow-ntap-dsutil' that will bind the 'default' ServiceAccount to the 'ntap-dsutil' cluster role within the 'airflow' namespace.
+- A cluster role that has all of the required permissions for executing NetApp DataOps Toolkit for Kubernetes operations must be present in the Kubernetes cluster. For an example, see [cluster-role-netapp-dataops.yaml](cluster-role-netapp-dataops.yaml). This file contains the manifest for a Kubernetes ClusterRole named 'netapp-dataops' that has all of the required permissions for executing toolkit operations within the cluster.
+- Your Airflow [Kubernetes Pod Operator](https://airflow.apache.org/docs/apache-airflow-providers-cncf-kubernetes/stable/operators.html#kubernetespodoperator) service account must be bound to the the previously mentioned cluster role within the namespace that you intend to execute the DAGs in. Note that the default Airflow Kubernetes Pod Operator service account is 'default'. For an example, see [role-binding-airflow-netapp-dataops.yaml](role-binding-airflow-netapp-dataops.yaml). This file contains the manifest for a Kubernetes RoleBinding named 'airflow-netapp-dataops' that will bind the 'default' ServiceAccount to the 'netapp-dataops' cluster role within the 'airflow' namespace.
 
 Some of the DAGs have additional prerequisites, which are noted under the specific DAG definitions below.
 
@@ -62,7 +62,7 @@ DAG definition for a workflow that can be used to perform a sync operation for a
 #### Workflow Steps
 1. Perform a sync operation for the specified Cloud Sync relationship.
 
-> Tip: If you do not know the Cloud Sync relationship ID for a specific relationship, you can retrieve it by using NetApp Data Science Toolkit for Traditional Environments (refer to the 'list all Cloud Sync relationships' operation).
+> Tip: If you do not know the Cloud Sync relationship ID for a specific relationship, you can retrieve it by using NetApp DataOps Toolkit for Traditional Environments (refer to the 'list all Cloud Sync relationships' operation).
 
 ### [replicate-data-snapmirror.py](replicate-data-snapmirror.py)
 
@@ -82,7 +82,7 @@ DAG definition for a workflow that can be used to perform a sync operation for a
 #### Pipeline Steps
 1. Perform a sync operation for the specified asynchronous SnapMirror relationship.
 
-> Tip: If you do not know the SnapMirror relationship UUID for a specific relationship, you can retrieve it by using NetApp Data Science Toolkit for Traditional Environments (refer to the 'list all SnapMirror relationships' operation).
+> Tip: If you do not know the SnapMirror relationship UUID for a specific relationship, you can retrieve it by using NetApp DataOps Toolkit for Traditional Environments (refer to the 'list all SnapMirror relationships' operation).
 
 ### [replicate-data-xcp.py](replicate-data-xcp.py)
 

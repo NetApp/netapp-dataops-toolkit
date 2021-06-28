@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: netapp-dataops
+  namespace: default # Replace with desired namespace
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      containers:
+      - name: netapp-dataops
+        image: python:3
+        command:
+        - "/bin/bash"
+        - "-c"
+        - "python3 -m pip install netapp-dataops-k8s && \
+           netapp_dataops_k8s_cli.py list jupyterlabs" # Replace with desired command
+        imagePullPolicy: IfNotPresent
+      serviceAccountName: netapp-dataops
+      restartPolicy: Never

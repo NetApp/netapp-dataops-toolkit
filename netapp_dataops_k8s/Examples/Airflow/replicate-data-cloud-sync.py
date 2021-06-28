@@ -42,9 +42,8 @@ def netappCloudSyncUpdate(**kwargs) :
     from airflow.hooks.base_hook import BaseHook
 
     # Install pre-requisites
-    subprocess.run([sys.executable, '-m', 'pip', 'install', '--user', 'netapp-ontap', 'pandas', 'tabulate', 'requests', 'boto3', 'pyyaml'])
-    subprocess.run(['curl', '-o', '/home/airflow/.local/lib/python3.8/site-packages/ntap_dsutil.py', 'https://raw.githubusercontent.com/NetApp/netapp-data-science-toolkit/main/Traditional/ntap_dsutil.py'])
-    from ntap_dsutil import syncCloudSyncRelationship
+    subprocess.run([sys.executable, '-m', 'pip', 'install', '--user', 'netapp-dataops-traditional'])
+    from netapp_dataops.traditional import syncCloudSyncRelationship
 
     # Parse args
     printResponse = True # Default value
@@ -67,7 +66,7 @@ def netappCloudSyncUpdate(**kwargs) :
     refreshTokenBytes = refreshTokenString.encode("ascii") 
     refreshTokenBase64Bytes = base64.b64encode(refreshTokenBytes)
     configJson = {"cloudCentralRefreshToken": refreshTokenBase64Bytes.decode("ascii")}
-    configDirPath = os.path.expanduser("~/.ntap_dsutil")
+    configDirPath = os.path.expanduser("~/.netapp_dataops")
     try : 
         os.mkdir(configDirPath)
     except :
