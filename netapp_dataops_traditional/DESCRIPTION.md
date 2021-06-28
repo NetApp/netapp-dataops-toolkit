@@ -1,5 +1,5 @@
-The NetApp Data Science Toolkit for Traditional Environments is a Python library
-that makes it simple for data scientists and data engineers to perform various
+The NetApp DataOps Toolkit for Traditional Environments is a Python library
+that makes it simple for developers, data scientists, DevOps engineers, and data engineers to perform various
 data management tasks, such as provisioning a new data volume,
 near-instantaneously cloning a data volume, and near-instantaneously
 snapshotting a data volume for traceability/baselining. This Python library can
