@@ -23,7 +23,7 @@ For example, if you want to mount the data volume 'project1' at '/workspace/proj
 1. Mount data volume on host.
 
 ```sh
-sudo -E ./ntap_dsutil.py mount volume --name=project1 --mountpoint=~/project1
+sudo -E ./netapp_dataops_cli.py mount volume --name=project1 --mountpoint=~/project1
 [sudo] password for user:
 Mounting volume 'project1' at '~/project1'.
 Volume mounted successfully.

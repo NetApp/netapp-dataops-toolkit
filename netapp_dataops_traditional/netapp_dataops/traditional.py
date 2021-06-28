@@ -235,7 +235,7 @@ def _instantiate_s3_session(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessK
 
 
 def _print_invalid_config_error() :
-    print("Error: Missing or invalid config file. Run `./netapp_dataops.py config` to create config file.")
+    print("Error: Missing or invalid config file. Run `./netapp_dataops_cli.py config` to create config file.")
 
 
 def _retrieve_config(configDirPath: str = "~/.netapp_dataops", configFilename: str = "config.json",
