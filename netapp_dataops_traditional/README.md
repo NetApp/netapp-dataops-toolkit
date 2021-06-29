@@ -252,10 +252,12 @@ The following options/arguments are optional:
 
 ```
     -h, --help                  Print help text.
-	-f, --include-footprint	    Include physical storage space footprint in output.
+    -f, --include-footprint	    Include physical storage space footprint in output.
 ```
 
 ##### Example Usage
+
+Standard usage:
 
 ```sh
 netapp_dataops_cli.py list volumes
@@ -272,6 +274,8 @@ project        2.0TB   flexvol    10.61.188.49:/project                         
 test3          2.0TB   flexgroup  10.61.188.49:/test3         /home/ai/test3        no           no
 test1_clone    10.0TB  flexvol    10.61.188.49:/test1_clone   /home/ai/test1_clone  no           yes      test1            netapp_dataops_20201124_172255
 ```
+
+Include physical storage space footprint in output:
 
 ```sh
 netapp_dataops_cli.py list volumes --include-footprint
@@ -948,14 +952,15 @@ The NetApp DataOps Toolkit can be used to retrieve a list of all existing data v
 
 ```py
 def list_volumes(
-    check_local_mounts: bool = False,    # If set to true, then the local mountpoints of any mounted volumes will be included in the returned list and included in printed output.
-    print_output: bool = False           # Denotes whether or not to print messages to the console during execution.
+    check_local_mounts: bool = False,   # If set to true, then the local mountpoints of any mounted volumes will be included in the returned list and included in printed output.
+    include_footprint: bool = False,    # Include physical storage space footprint in output.
+    print_output: bool = False          # Denotes whether or not to print messages to the console during execution.
 ) -> list() :
 ```
 
 ##### Return Value
 
-The function returns a list of all existing volumes. Each item in the list will be a dictionary containing details regarding a specific volume. The keys for the values in this dictionary are "Volume Name", "Size", "Type", "NFS Mount Target", "FlexCache" (yes/no), "Clone" (yes/no), "Source Volume", "Source Snapshot". If `checkLocalMounts` is set to `True`, then "Local Mountpoint" will also be included as a key in the dictionary.
+The function returns a list of all existing volumes. Each item in the list will be a dictionary containing details regarding a specific volume. The keys for the values in this dictionary are "Volume Name", "Logical Size", "Type", "NFS Mount Target", "FlexCache" (yes/no), "Clone" (yes/no), "Source Volume", "Source Snapshot". If `check_local_mounts` is set to `True`, then "Local Mountpoint" will also be included as a key in the dictionary. If `include_footprint` is set to `True`, then "Physical Footprint" will also be included as a key in the dictionary.
 
 ##### Error Handling
 
