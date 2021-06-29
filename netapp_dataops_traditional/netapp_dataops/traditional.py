@@ -31,7 +31,7 @@ from tabulate import tabulate
 import yaml
 
 
-__version__ = "2.0.0alpha19"
+__version__ = "2.0.0alpha20"
 
 
 # Using this decorator in lieu of using a dependency to manage deprecation
@@ -532,6 +532,7 @@ def create_snapshot(volume_name: str, snapshot_name: str = None, print_output: b
             # Create snapshot
             snapshot = NetAppSnapshot.from_dict({
                 'name': snapshot_name,
+                'comment': 'netapp-dataops',
                 'volume': volume.to_dict()
             })
             snapshot.post(poll=True)
@@ -640,7 +641,7 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
         # Create dict representing volume
         volumeDict = {
             "name": volume_name,
-            "comment": "ntap-dsutil",
+            "comment": "netapp-dataops",
             "svm": {"name": svm},
             "size": volumeSizeBytes,
             "style": volume_type,
