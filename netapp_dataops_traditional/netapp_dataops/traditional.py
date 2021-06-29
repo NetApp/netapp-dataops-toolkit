@@ -532,7 +532,6 @@ def create_snapshot(volume_name: str, snapshot_name: str = None, print_output: b
             # Create snapshot
             snapshot = NetAppSnapshot.from_dict({
                 'name': snapshot_name,
-                'comment': 'netapp-dataops',
                 'volume': volume.to_dict()
             })
             snapshot.post(poll=True)
