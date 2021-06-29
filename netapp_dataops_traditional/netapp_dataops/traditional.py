@@ -30,7 +30,7 @@ from tabulate import tabulate
 import yaml
 
 
-__version__ = "2.0.0alpha12"
+__version__ = "2.0.0alpha13"
 
 
 # Using this decorator in lieu of using a dependency to manage deprecation
