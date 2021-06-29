@@ -31,7 +31,7 @@ from tabulate import tabulate
 import yaml
 
 
-__version__ = "2.0.0alpha16"
+__version__ = "2.0.0alpha17"
 
 
 # Using this decorator in lieu of using a dependency to manage deprecation
@@ -1656,8 +1656,8 @@ def listSnapshots(volumeName: str, printOutput: bool = False) -> list() :
 
 
 @deprecated
-def listVolumes(checkLocalMounts: bool = False, printOutput: bool = False) -> list() :
-    return list_volumes(check_local_mounts=checkLocalMounts, print_output=printOutput)
+def listVolumes(checkLocalMounts: bool = False, includeFootprint: bool = False, printOutput: bool = False) -> list() :
+    return list_volumes(check_local_mounts=checkLocalMounts, include_footprint=includeFootprint, print_output=printOutput)
 
 
 @deprecated
