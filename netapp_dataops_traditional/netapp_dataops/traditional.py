@@ -418,7 +418,7 @@ def clone_volume(new_volume_name: str, source_volume_name: str, source_snapshot_
             # Construct dict representing new volume
             newVolumeDict = {
                 "name": new_volume_name,
-                "comment": "ntap-dsutil",
+                "comment": "netapp-dataops",
                 "svm": {"name": svm},
                 "nas": {
                     "path": "/" + new_volume_name
