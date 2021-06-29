@@ -438,7 +438,7 @@ def createConfig(configDirPath: str = "~/.netapp_dataops", configFilename: str =
         config["connectionType"] = connectionType
 
         # Prompt user to enter config details
-        config["hostname"] = input("Enter ONTAP management interface or IP address (Note: Can be cluster or SVM management interface): ")
+        config["hostname"] = input("Enter ONTAP management LIF hostname or IP address (Note: Can be cluster or SVM management interface): ")
         config["svm"] = input("Enter SVM (Storage VM) name: ")
         config["dataLif"] = input("Enter SVM NFS data LIF hostname or IP address: ")
 

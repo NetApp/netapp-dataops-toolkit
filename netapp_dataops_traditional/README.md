@@ -44,7 +44,7 @@ netapp_dataops_cli.py config
 
 ```sh
 netapp_dataops_cli.py config
-Enter ONTAP management interface or IP address (Note: Can be cluster or SVM management interface): 10.61.188.114
+Enter ONTAP management LIF hostname or IP address (Note: Can be cluster or SVM management interface): 10.61.188.114
 Enter SVM (Storage VM) name: ailab1
 Enter SVM NFS data LIF hostname or IP address: 10.61.188.119
 Enter default volume type to use when creating new volumes (flexgroup/flexvol) [flexgroup]:        
