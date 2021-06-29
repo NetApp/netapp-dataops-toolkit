@@ -233,8 +233,8 @@ List all data volumes.
 No options/arguments are required.
 
 Optional Options/Arguments:
-\t-h, --help\t\tPrint help text.
-\t-f, --include-footprint\tInclude physical storage space footprint in output.
+\t-h, --help\t\t\tPrint help text.
+\t-f, --include-footprint\t\tInclude physical storage space footprint in output.
 
 Examples:
 \t./netapp_dataops_cli.py list volumes
