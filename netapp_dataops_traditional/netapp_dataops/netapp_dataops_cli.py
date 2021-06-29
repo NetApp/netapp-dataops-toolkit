@@ -99,12 +99,12 @@ Optional Options/Arguments:
 \t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
 
 Examples (basic usage):
-\t./netapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset
-\t./netapp_dataops_cli.py clone volume -n project2 -v gold_dataset -s snap1
-\tsudo -E ./netapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset --mountpoint=~/project1
+\tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset
+\tnetapp_dataops_cli.py clone volume -n project2 -v gold_dataset -s snap1
+\tsudo -E netapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset --mountpoint=~/project1
 
 Examples (advanced usage):
-\t./netapp_dataops_cli.py clone volume -n testvol -v gold_dataset -u 1000 -g 1000
+\tnetapp_dataops_cli.py clone volume -n testvol -v gold_dataset -u 1000 -g 1000
 '''
 helpTextConfig = '''
 Command: config
@@ -126,9 +126,9 @@ Optional Options/Arguments:
 \t-n, --name=\tName of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
 
 Examples:
-\t./netapp_dataops_cli.py create snapshot --volume=project1 --name=snap1
-\t./netapp_dataops_cli.py create snapshot -v project2 -n final_dataset
-\t./netapp_dataops_cli.py create snapshot --volume=test1
+\tnetapp_dataops_cli.py create snapshot --volume=project1 --name=snap1
+\tnetapp_dataops_cli.py create snapshot -v project2 -n final_dataset
+\tnetapp_dataops_cli.py create snapshot --volume=test1
 '''
 helpTextCreateVolume = '''
 Command: create volume
@@ -152,17 +152,17 @@ Optional Options/Arguments:
 \t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
 
 Examples (basic usage):
-\t./netapp_dataops_cli.py create volume --name=project1 --size=10GB
-\t./netapp_dataops_cli.py create volume -n datasets -s 10TB
-\tsudo -E ./netapp_dataops_cli.py create volume --name=project2 --size=2TB --mountpoint=~/project2
+\tnetapp_dataops_cli.py create volume --name=project1 --size=10GB
+\tnetapp_dataops_cli.py create volume -n datasets -s 10TB
+\tsudo -E netapp_dataops_cli.py create volume --name=project2 --size=2TB --mountpoint=~/project2
 
 Examples (advanced usage):
-\tsudo -E ./netapp_dataops_cli.py create volume --name=project1 --size=10GB --permissions=0755 --type=flexvol --mountpoint=~/project1
-\tsudo -E ./netapp_dataops_cli.py create volume --name=project2_flexgroup --size=2TB --type=flexgroup --mountpoint=/mnt/project2
-\t./netapp_dataops_cli.py create volume --name=testvol --size=10GB --type=flexvol --aggregate=n2_data
-\t./netapp_dataops_cli.py create volume -n testvol -s 10GB -t flexvol -p 0755 -u 1000 -g 1000
-\tsudo -E ./netapp_dataops_cli.py create volume -n vol1 -s 5GB -t flexvol --export-policy=team1 -m /mnt/vol1
-\t./netapp_dataops_cli.py create vol -n test2 -s 10GB -t flexvol --snapshot-policy=default
+\tsudo -E netapp_dataops_cli.py create volume --name=project1 --size=10GB --permissions=0755 --type=flexvol --mountpoint=~/project1
+\tsudo -E netapp_dataops_cli.py create volume --name=project2_flexgroup --size=2TB --type=flexgroup --mountpoint=/mnt/project2
+\tnetapp_dataops_cli.py create volume --name=testvol --size=10GB --type=flexvol --aggregate=n2_data
+\tnetapp_dataops_cli.py create volume -n testvol -s 10GB -t flexvol -p 0755 -u 1000 -g 1000
+\tsudo -E netapp_dataops_cli.py create volume -n vol1 -s 5GB -t flexvol --export-policy=team1 -m /mnt/vol1
+\tnetapp_dataops_cli.py create vol -n test2 -s 10GB -t flexvol --snapshot-policy=default
 '''
 helpTextDeleteSnapshot = '''
 Command: delete snapshot
@@ -177,8 +177,8 @@ Optional Options/Arguments:
 \t-h, --help\tPrint help text.
 
 Examples:
-\t./netapp_dataops_cli.py delete snapshot --volume=project1 --name=snap1
-\t./netapp_dataops_cli.py delete snapshot -v project2 -n netapp_dataops_20201113_221917
+\tnetapp_dataops_cli.py delete snapshot --volume=project1 --name=snap1
+\tnetapp_dataops_cli.py delete snapshot -v project2 -n netapp_dataops_20201113_221917
 '''
 helpTextDeleteVolume = '''
 Command: delete volume
@@ -193,8 +193,8 @@ Optional Options/Arguments:
 \t-h, --help\tPrint help text.
 
 Examples:
-\t./netapp_dataops_cli.py delete volume --name=project1
-\t./netapp_dataops_cli.py delete volume -n project2
+\tnetapp_dataops_cli.py delete volume --name=project1
+\tnetapp_dataops_cli.py delete volume -n project2
 '''
 helpTextListCloudSyncRelationships = '''
 Command: list cloud-sync-relationships
@@ -222,8 +222,8 @@ Optional Options/Arguments:
 \t-h, --help\tPrint help text.
 
 Examples:
-\t./netapp_dataops_cli.py list snapshots --volume=project1
-\t./netapp_dataops_cli.py list snapshots -v test1
+\tnetapp_dataops_cli.py list snapshots --volume=project1
+\tnetapp_dataops_cli.py list snapshots -v test1
 '''
 helpTextListVolumes = '''
 Command: list volumes
@@ -237,8 +237,8 @@ Optional Options/Arguments:
 \t-f, --include-footprint\t\tInclude physical storage space footprint in output.
 
 Examples:
-\t./netapp_dataops_cli.py list volumes
-\t./netapp_dataops_cli.py list volumes --include-footprint
+\tnetapp_dataops_cli.py list volumes
+\tnetapp_dataops_cli.py list volumes --include-footprint
 '''
 helpTextMountVolume = '''
 Command: mount volume
@@ -255,8 +255,8 @@ Optional Options/Arguments:
 \t-h, --help\t\tPrint help text.
 
 Examples:
-\tsudo -E ./netapp_dataops_cli.py mount volume --name=project1 --mountpoint=/mnt/project1
-\tsudo -E ./netapp_dataops_cli.py mount volume -m ~/testvol -n testvol
+\tsudo -E netapp_dataops_cli.py mount volume --name=project1 --mountpoint=/mnt/project1
+\tsudo -E netapp_dataops_cli.py mount volume -m ~/testvol -n testvol
 '''
 helpTextPullFromS3Bucket = '''
 Command: pull-from-s3 bucket
@@ -276,8 +276,8 @@ Optional Options/Arguments:
 \t-p, --key-prefix=\tObject key prefix (pull will be limited to objects with key that starts with this prefix).
 
 Examples:
-\t./netapp_dataops_cli.py pull-from-s3 bucket --bucket=project1 --directory=/mnt/project1
-\t./netapp_dataops_cli.py pull-from-s3 bucket -b project1 -p project1/ -d ./project1/
+\tnetapp_dataops_cli.py pull-from-s3 bucket --bucket=project1 --directory=/mnt/project1
+\tnetapp_dataops_cli.py pull-from-s3 bucket -b project1 -p project1/ -d ./project1/
 '''
 helpTextPullFromS3Object = '''
 Command: pull-from-s3 object
@@ -295,8 +295,8 @@ Optional Options/Arguments:
 \t-h, --help\t\tPrint help text.
 
 Examples:
-\t./netapp_dataops_cli.py pull-from-s3 object --bucket=project1 --key=data.csv --file=./project1/data.csv
-\t./netapp_dataops_cli.py pull-from-s3 object -b project1 -k data.csv
+\tnetapp_dataops_cli.py pull-from-s3 object --bucket=project1 --key=data.csv --file=./project1/data.csv
+\tnetapp_dataops_cli.py pull-from-s3 object -b project1 -k data.csv
 '''
 helpTextPushToS3Directory = '''
 Command: push-to-s3 directory
@@ -317,8 +317,8 @@ Optional Options/Arguments:
 \t-p, --key-prefix=\tPrefix to add to key for newly-pushed S3 objects (Note: by default, key will be local filepath relative to directory being pushed).
 
 Examples:
-\t./netapp_dataops_cli.py push-to-s3 directory --bucket=project1 --directory=/mnt/project1
-\t./netapp_dataops_cli.py push-to-s3 directory -b project1 -d /mnt/project1 -p project1/ -e '{"Metadata": {"mykey": "myvalue"}}'
+\tnetapp_dataops_cli.py push-to-s3 directory --bucket=project1 --directory=/mnt/project1
+\tnetapp_dataops_cli.py push-to-s3 directory -b project1 -d /mnt/project1 -p project1/ -e '{"Metadata": {"mykey": "myvalue"}}'
 '''
 helpTextPushToS3File = '''
 Command: push-to-s3 file
@@ -337,8 +337,8 @@ Optional Options/Arguments:
 \t-k, --key=\t\tKey to assign to newly-pushed S3 object (if not specified, key will be set to value of -f/--file argument).
 
 Examples:
-\t./netapp_dataops_cli.py push-to-s3 file --bucket=project1 --file=data.csv
-\t./netapp_dataops_cli.py push-to-s3 file -b project1 -k data.csv -f /mnt/project1/data.csv -e '{"Metadata": {"mykey": "myvalue"}}'
+\tnetapp_dataops_cli.py push-to-s3 file --bucket=project1 --file=data.csv
+\tnetapp_dataops_cli.py push-to-s3 file -b project1 -k data.csv -f /mnt/project1/data.csv -e '{"Metadata": {"mykey": "myvalue"}}'
 '''
 helpTextPrepopulateFlexCache = '''
 Command: prepopulate flexcache
@@ -355,8 +355,8 @@ Optional Options/Arguments:
 \t-h, --help\tPrint help text.
 
 Examples:
-\t./netapp_dataops_cli.py prepopulate flexcache --name=project1 --paths=/datasets/project1,/datasets/project2
-\t./netapp_dataops_cli.py prepopulate flexcache -n test1 -p /datasets/project1,/datasets/project2
+\tnetapp_dataops_cli.py prepopulate flexcache --name=project1 --paths=/datasets/project1,/datasets/project2
+\tnetapp_dataops_cli.py prepopulate flexcache -n test1 -p /datasets/project1,/datasets/project2
 '''
 helpTextRestoreSnapshot = '''
 Command: restore snapshot
@@ -372,15 +372,15 @@ Optional Options/Arguments:
 \t-h, --help\tPrint help text.
 
 Examples:
-\t./netapp_dataops_cli.py restore snapshot --volume=project1 --name=snap1
-\t./netapp_dataops_cli.py restore snapshot -v project2 -n netapp_dataops_20201113_221917
+\tnetapp_dataops_cli.py restore snapshot --volume=project1 --name=snap1
+\tnetapp_dataops_cli.py restore snapshot -v project2 -n netapp_dataops_20201113_221917
 '''
 helpTextSyncCloudSyncRelationship = '''
 Command: sync cloud-sync-relationship
 
 Trigger a sync operation for an existing Cloud Sync relationship.
 
-Tip: Run `./netapp_dataops_cli.py list cloud-sync-relationships` to obtain relationship ID.
+Tip: Run `netapp_dataops_cli.py list cloud-sync-relationships` to obtain relationship ID.
 
 Required Options/Arguments:
 \t-i, --id=\tID of the relationship for which the sync operation is to be triggered.
@@ -390,15 +390,15 @@ Optional Options/Arguments:
 \t-w, --wait\tWait for sync operation to complete before exiting.
 
 Examples:
-\t./netapp_dataops_cli.py sync cloud-sync-relationship --id=5ed00996ca85650009a83db2
-\t./netapp_dataops_cli.py sync cloud-sync-relationship -i 5ed00996ca85650009a83db2 -w
+\tnetapp_dataops_cli.py sync cloud-sync-relationship --id=5ed00996ca85650009a83db2
+\tnetapp_dataops_cli.py sync cloud-sync-relationship -i 5ed00996ca85650009a83db2 -w
 '''
 helpTextSyncSnapMirrorRelationship = '''
 Command: sync snapmirror-relationship
 
 Trigger a sync operation for an existing SnapMirror relationship.
 
-Tip: Run `./netapp_dataops_cli.py list snapmirror-relationships` to obtain relationship UUID.
+Tip: Run `netapp_dataops_cli.py list snapmirror-relationships` to obtain relationship UUID.
 
 Required Options/Arguments:
 \t-i, --uuid=\tUUID of the relationship for which the sync operation is to be triggered.
@@ -408,8 +408,8 @@ Optional Options/Arguments:
 \t-w, --wait\tWait for sync operation to complete before exiting.
 
 Examples:
-\t./netapp_dataops_cli.py sync snapmirror-relationship --uuid=132aab2c-4557-11eb-b542-005056932373
-\t./netapp_dataops_cli.py sync snapmirror-relationship -i 132aab2c-4557-11eb-b542-005056932373 -w
+\tnetapp_dataops_cli.py sync snapmirror-relationship --uuid=132aab2c-4557-11eb-b542-005056932373
+\tnetapp_dataops_cli.py sync snapmirror-relationship -i 132aab2c-4557-11eb-b542-005056932373 -w
 '''
 
 
