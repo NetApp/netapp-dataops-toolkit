@@ -230,7 +230,15 @@ Command: list volumes
 
 List all data volumes.
 
-No additional options/arguments required.
+No options/arguments are required.
+
+Optional Options/Arguments:
+\t-h, --help\t\tPrint help text.
+\t-f, --include-footprint\tInclude physical storage space footprint in output.
+
+Examples:
+\t./netapp_dataops_cli.py list volumes
+\t./netapp_dataops_cli.py list volumes --include-footprint
 '''
 helpTextMountVolume = '''
 Command: mount volume
@@ -938,17 +946,25 @@ if __name__ == '__main__':
                 sys.exit(1)
         
         elif target in ("volume", "vol", "volumes", "vols"):
-            # Check command line options
-            if len(sys.argv) > 3:
-                if sys.argv[3] in ("-h", "--help"):
+            includeFootprint = False
+
+            # Get command line options
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hf", ["help", "include-footprint"])
+            except:
+                handleInvalidCommand(helpText=helpTextListVolumes, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help") :
                     print(helpTextListVolumes)
                     sys.exit(0)
-                else:
-                    handleInvalidCommand(helpTextListVolumes, invalidOptArg=True)
+                elif opt in ("-f", "--include-footprint"):
+                    includeFootprint
 
             # List volumes
             try:
-                list_volumes(check_local_mounts=True, print_output=True)
+                list_volumes(check_local_mounts=True, include_footprint=includeFootprint, print_output=True)
             except (InvalidConfigError, APIConnectionError) :
                 sys.exit(1)
 

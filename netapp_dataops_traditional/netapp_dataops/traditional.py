@@ -328,6 +328,26 @@ def _upload_to_s3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s
         raise APIConnectionError(err)
 
 
+def _convert_bytes_to_pretty_size(size_in_bytes: str) -> str :
+    # Convert size in bytes to "pretty" size (size in KB, MB, GB, or TB)
+    prettySize = float(size_in_bytes) / 1024
+    if prettySize >= 1024:
+        prettySize = float(prettySize) / 1024
+        if prettySize >= 1024:
+            prettySize = float(prettySize) / 1024
+            if prettySize >= 1024:
+                prettySize = float(prettySize) / 1024
+                prettySize = str(prettySize) + "TB"
+            else:
+                prettySize = str(prettySize) + "GB"
+        else:
+            prettySize = str(prettySize) + "MB"
+    else:
+        prettySize = str(prettySize) + "KB"
+    
+    return prettySize
+
+
 #
 # Public importable functions specific to the traditional package
 #
@@ -998,7 +1018,7 @@ def list_snapshots(volume_name: str, print_output: bool = False) -> list():
         raise ConnectionTypeError()
 
 
-def list_volumes(check_local_mounts: bool = False, print_output: bool = False) -> list():
+def list_volumes(check_local_mounts: bool = False, include_footprint: bool = False, print_output: bool = False) -> list():
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -1029,7 +1049,10 @@ def list_volumes(check_local_mounts: bool = False, print_output: bool = False) -
             # Construct list of volumes; do not include SVM root volume
             volumesList = list()
             for volume in volumes:
-                volume.get(fields="nas.path,size,style,clone,flexcache_endpoint_type")
+                volumeFields = "nas.path,size,style,clone,flexcache_endpoint_type"
+                if include_footprint :
+                    volumeFields += ",space,constituents"
+                volume.get(fields=volumeFields)
 
                 # Retrieve volume export path; handle case where volume is not exported
                 if hasattr(volume, "nas"):
@@ -1039,6 +1062,9 @@ def list_volumes(check_local_mounts: bool = False, print_output: bool = False) -
 
                 # Include all vols except for SVM root vol
                 if volumeExportPath != "/":
+                    # Determine volume type
+                    type = volume.style
+
                     # Construct NFS mount target
                     if not volumeExportPath :
                         nfsMountTarget = None
@@ -1063,28 +1089,25 @@ def list_volumes(check_local_mounts: bool = False, print_output: bool = False) -
                         flexcache = "no"
 
                     # Convert size in bytes to "pretty" size (size in KB, MB, GB, or TB)
-                    prettySize = float(volume.size) / 1024
-                    if prettySize >= 1024:
-                        prettySize = float(prettySize) / 1024
-                        if prettySize >= 1024:
-                            prettySize = float(prettySize) / 1024
-                            if prettySize >= 1024:
-                                prettySize = float(prettySize) / 1024
-                                prettySize = str(prettySize) + "TB"
-                            else:
-                                prettySize = str(prettySize) + "GB"
-                        else:
-                            prettySize = str(prettySize) + "MB"
-                    else:
-                        prettySize = str(prettySize) + "KB"
+                    prettySize = _convert_bytes_to_pretty_size(size_in_bytes=volume.size)
+                    if include_footprint :
+                        if type == "flexgroup" :
+                            totalFootprint: float = 0.0
+                            for constituentVolume in volume.constituents :
+                                totalFootprint += float(constituentVolume["space"]["total_footprint"])
+                        else :
+                            totalFootprint = float(volume.space.total_footprint)
+                        prettyFootprint = _convert_bytes_to_pretty_size(size_in_bytes=totalFootprint)
 
                     # Construct dict containing volume details; optionally include local mountpoint
                     volumeDict = {
                         "Volume Name": volume.name,
-                        "Size": prettySize,
-                        "Type": volume.style,
-                        "NFS Mount Target": nfsMountTarget
+                        "Logical Size": prettySize
                     }
+                    if include_footprint :
+                        volumeDict["Physical Footprint"] = prettyFootprint
+                    volumeDict["Type"] = volume.style
+                    volumeDict["NFS Mount Target"] = nfsMountTarget
                     if check_local_mounts:
                         localMountpoint = ""
                         for mount in mounts.split("\n") :
