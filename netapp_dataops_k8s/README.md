@@ -106,7 +106,7 @@ The simplest way to use the NetApp DataOps Toolkit for Kubernetes is as a comman
 
 #### Clone a JupyterLab Workspace
 
-The NetApp DataOps Toolkit can be used to near-instantaneously provision a new JupyterLab workspace (within a Kubernetes cluster) that is an exact copy of an existing JupyterLab workspace or JupyterLab workspace snapshot. In other words, the NetApp DataOps Toolkit can be used to near-instantaneously clone a JupyterLab workspace. The command for cloning a JupyterLab workspace is `./netapp_dataops_k8s_cli.py clone jupyterlab`.
+The NetApp DataOps Toolkit can be used to near-instantaneously provision a new JupyterLab workspace (within a Kubernetes cluster) that is an exact copy of an existing JupyterLab workspace or JupyterLab workspace snapshot. In other words, the NetApp DataOps Toolkit can be used to near-instantaneously clone a JupyterLab workspace. The command for cloning a JupyterLab workspace is `netapp_dataops_k8s_cli.py clone jupyterlab`.
 
 Note: Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified. However, only one of these flags (not both) should be specified for a given operation. If -j/--source-workspace-name is specified, then the clone will be created from the current state of the workspace. If -s/--source-snapshot-name is specified, then the clone will be created from a specific snapshot related the source workspace.
 
@@ -136,7 +136,7 @@ The following options/arguments are optional:
 Near-instantaneously create a new JupyterLab workspace, named 'project1-experiment3', that is an exact copy of the current contents of existing JupyterLab workspace 'project1' in namespace 'default'. Allocate 2 NVIDIA GPUs to the new workspace.
 
 ```sh
-./netapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment3 --source-workspace-name=project1 --nvidia-gpu=2
+netapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment3 --source-workspace-name=project1 --nvidia-gpu=2
 Creating new JupyterLab workspace 'project1-experiment3' from source workspace 'project1' in namespace 'default'...
 
 Creating new VolumeSnapshot 'ntap-dsutil.for-clone.20210315185504' for source PVC 'ntap-dsutil-jupyterlab-project1' in namespace 'default' to use as source for clone...
@@ -168,7 +168,7 @@ JupyterLab workspace successfully cloned.
 Near-instantaneously create a new JupyterLab workspace, named 'project1-experiment2', that is an exact copy of the contents of JupyterLab workspace VolumeSnapshot 'project1-snap1' in namespace 'default'.
 
 ```sh
-./netapp_dataops_k8s_cli.py clone jupyterlab -s project1-snap1 -w project1-experiment2
+netapp_dataops_k8s_cli.py clone jupyterlab -s project1-snap1 -w project1-experiment2
 Creating new JupyterLab workspace 'project1-experiment2' from VolumeSnapshot 'project1-snap1' in namespace 'default'...
 
 Creating new PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment2' from VolumeSnapshot 'project1-snap1' in namespace 'default'...
@@ -197,7 +197,7 @@ JupyterLab workspace successfully cloned.
 
 #### Create a New JupyterLab Workspace
 
-The NetApp DataOps Toolkit can be used to rapidly provision a new JupyterLab workspace within a Kubernetes cluster. Workspaces provisioned using the NetApp DataOps Toolkit will be backed by NetApp persistent storage and, thus, will persist across any shutdowns or outages in the Kubernetes environment. The command for creating a new JupyterLab workspace is `./netapp_dataops_k8s_cli.py create jupyterlab`.
+The NetApp DataOps Toolkit can be used to rapidly provision a new JupyterLab workspace within a Kubernetes cluster. Workspaces provisioned using the NetApp DataOps Toolkit will be backed by NetApp persistent storage and, thus, will persist across any shutdowns or outages in the Kubernetes environment. The command for creating a new JupyterLab workspace is `netapp_dataops_k8s_cli.py create jupyterlab`.
 
 Tip: Refer to the [Trident](https://netapp-trident.readthedocs.io/) or [BeeGFS CSI driver](https://github.com/NetApp/beegfs-csi-driver/blob/master/docs/usage.md#dynamic-provisioning-workflow) documentation for more information on StorageClasses.
 
@@ -225,7 +225,7 @@ The following options/arguments are optional:
 Provision a new JupyterLab workspace named 'mike' of size 10GB in namespace 'default'. Allocate 1 NVIDIA GPU to the new workspace.
 
 ```sh
-./netapp_dataops_k8s_cli.py create jupyterlab --workspace-name=mike --size=10Gi --nvidia-gpu=1
+netapp_dataops_k8s_cli.py create jupyterlab --workspace-name=mike --size=10Gi --nvidia-gpu=1
 Set workspace password (this password will be required in order to access the workspace): 
 Re-enter password: 
 
@@ -248,7 +248,7 @@ To access workspace, navigate to http://10.61.188.112:31082
 Provision a new JupyterLab workspace named 'dave', of size 2TB, in the namespace 'dst-test', using the container image 'jupyter/scipy-notebook:latest', and use Kubernetes StorageClass 'ontap-flexgroup' when provisioning the backing volume for the workspace.
 
 ```sh
-./netapp_dataops_k8s_cli.py create jupyterlab --namespace=dst-test --workspace-name=dave --image=jupyter/scipy-notebook:latest --size=2Ti --storage-class=ontap-flexgroup
+netapp_dataops_k8s_cli.py create jupyterlab --namespace=dst-test --workspace-name=dave --image=jupyter/scipy-notebook:latest --size=2Ti --storage-class=ontap-flexgroup
 Set workspace password (this password will be required in order to access the workspace): 
 Re-enter password: 
 
@@ -272,7 +272,7 @@ To access workspace, navigate to http://10.61.188.112:32275
 
 #### Delete an Existing JupyterLab Workspace
 
-The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing JupyterLab workspace within a Kubernetes cluster. The command for deleting an existing JupyterLab workspace is `./netapp_dataops_k8s_cli.py delete jupyterlab`.
+The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing JupyterLab workspace within a Kubernetes cluster. The command for deleting an existing JupyterLab workspace is `netapp_dataops_k8s_cli.py delete jupyterlab`.
 
 The following options/arguments are required:
 
@@ -294,7 +294,7 @@ The following options/arguments are optional:
 Delete the workspace 'mike' in namespace 'dst-test'.
 
 ```sh
-./netapp_dataops_k8s_cli.py delete jupyterlab --workspace-name=mike --namespace=dst-test
+netapp_dataops_k8s_cli.py delete jupyterlab --workspace-name=mike --namespace=dst-test
 Warning: All data and snapshots associated with the workspace will be permanently deleted.
 Are you sure that you want to proceed? (yes/no): yes
 Deleting workspace 'mike' in namespace 'dst-test'.
@@ -308,7 +308,7 @@ Workspace successfully deleted.
 
 #### List All JupyterLab Workspaces
 
-The NetApp DataOps Toolkit can be used to print a list of all existing JupyterLab workspaces in a specific namespace within a Kubernetes cluster. The command for printing a list of all existing JupyterLab workspaces is `./netapp_dataops_k8s_cli.py list jupyterlabs`.
+The NetApp DataOps Toolkit can be used to print a list of all existing JupyterLab workspaces in a specific namespace within a Kubernetes cluster. The command for printing a list of all existing JupyterLab workspaces is `netapp_dataops_k8s_cli.py list jupyterlabs`.
 
 No options/arguments are required for this command.
 
@@ -322,7 +322,7 @@ The following options/arguments are optional:
 ##### Example Usage
 
 ```sh
-./netapp_dataops_k8s_cli.py list jupyterlabs --namespace=dst-test
+netapp_dataops_k8s_cli.py list jupyterlabs --namespace=dst-test
 Workspace Name        Status    Size    StorageClass     Access URL                  Clone    Source Workspace    Source VolumeSnapshot
 --------------------  --------  ------  ---------------  --------------------------  -------  ------------------  ------------------------------------
 aj                    Ready     1Ti     ontap-flexvol    http://10.61.188.112:30590  No
@@ -342,7 +342,7 @@ sathish               Ready     2Ti     ontap-flexvol    http://10.61.188.112:31
 
 #### Create a New Snapshot for a JupyterLab Workspace
 
-The NetApp DataOps Toolkit can be used to near-instantaneously save a space-efficient, read-only copy of an existing JupyterLab workspace. These read-only copies are called snapshots, and are represented within a Kubernetes cluster by VolumeSnapshot objects. This functionality can be used to version workspaces and/or implement workspace-to-model traceability. The command for creating a new snapshot for a specific JupyterLab workspace is `./netapp_dataops_k8s_cli.py create jupyterlab-snapshot`.
+The NetApp DataOps Toolkit can be used to near-instantaneously save a space-efficient, read-only copy of an existing JupyterLab workspace. These read-only copies are called snapshots, and are represented within a Kubernetes cluster by VolumeSnapshot objects. This functionality can be used to version workspaces and/or implement workspace-to-model traceability. The command for creating a new snapshot for a specific JupyterLab workspace is `netapp_dataops_k8s_cli.py create jupyterlab-snapshot`.
 
 Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/latest/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots within a Kubernetes cluster.
 
@@ -366,7 +366,7 @@ The following options/arguments are optional:
 Create a VolumeSnapshot for the workspace named 'mike' in namespace 'default'.
 
 ```sh
-./netapp_dataops_k8s_cli.py create jupyterlab-snapshot --workspace-name=mike
+netapp_dataops_k8s_cli.py create jupyterlab-snapshot --workspace-name=mike
 Creating VolumeSnapshot for JupyterLab workspace 'mike' in namespace 'default'...
 Creating VolumeSnapshot 'ntap-dsutil.20210309141230' for PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-mike' in namespace 'default'.
 VolumeSnapshot 'ntap-dsutil.20210309141230' created. Waiting for Trident to create snapshot on backing storage.
@@ -376,7 +376,7 @@ Snapshot successfully created.
 Create a VolumeSnapshot named 'snap1', for the workspace named 'rick', in namespace 'dst-test'.
 
 ```sh
-./netapp_dataops_k8s_cli.py create jupyterlab-snapshot --workspace-name=rick --namespace=dst-test --snapshot-name=snap1
+netapp_dataops_k8s_cli.py create jupyterlab-snapshot --workspace-name=rick --namespace=dst-test --snapshot-name=snap1
 Creating VolumeSnapshot for JupyterLab workspace 'rick' in namespace 'dst-test'...
 Creating VolumeSnapshot 'snap1' for PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-rick' in namespace 'dst-test'.
 VolumeSnapshot 'snap1' created. Waiting for Trident to create snapshot on backing storage.
@@ -387,7 +387,7 @@ Snapshot successfully created.
 
 #### Delete an Existing Snapshot
 
-The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing JupyterLab workspace snapshot. The command for deleting an existing snapshot is `./netapp_dataops_k8s_cli.py delete jupyterlab-snapshot`.
+The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing JupyterLab workspace snapshot. The command for deleting an existing snapshot is `netapp_dataops_k8s_cli.py delete jupyterlab-snapshot`.
 
 The following options/arguments are required:
 
@@ -408,7 +408,7 @@ The following options/arguments are optional:
 Delete VolumeSnapshot 'ntap-dsutil.20210304151544' in namespace 'dst-test'.
 
 ```sh
-./netapp_dataops_k8s_cli.py delete jupyterlab-snapshot --snapshot-name=ntap-dsutil.20210304151544 --namespace=dst-test
+netapp_dataops_k8s_cli.py delete jupyterlab-snapshot --snapshot-name=ntap-dsutil.20210304151544 --namespace=dst-test
 Warning: This snapshot will be permanently deleted.
 Are you sure that you want to proceed? (yes/no): yes
 Deleting VolumeSnapshot 'ntap-dsutil.20210304151544' in namespace 'dst-test'.
@@ -419,7 +419,7 @@ VolumeSnapshot successfully deleted.
 
 #### List All Snapshots
 
-The NetApp DataOps Toolkit can be used to list all existing JupyterLab workspace snapshots in a specific namespace. The command for listing all existing snapshots is `./netapp_dataops_k8s_cli.py list jupyterlab-snapshots`.
+The NetApp DataOps Toolkit can be used to list all existing JupyterLab workspace snapshots in a specific namespace. The command for listing all existing snapshots is `netapp_dataops_k8s_cli.py list jupyterlab-snapshots`.
 
 Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/latest/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots within a Kubernetes cluster.
 
@@ -438,7 +438,7 @@ The following options/arguments are optional:
 List all VolumeSnapshots for the JupyterLab workspace named 'dave' in namespace 'default'.
 
 ```sh
-./netapp_dataops_k8s_cli.py list jupyterlab-snapshots --workspace-name=dave
+netapp_dataops_k8s_cli.py list jupyterlab-snapshots --workspace-name=dave
 VolumeSnapshot Name         Ready to Use    Creation Time         Source PersistentVolumeClaim (PVC)    Source JupyterLab workspace    VolumeSnapshotClass
 --------------------------  --------------  --------------------  ------------------------------------  -----------------------------  ---------------------
 dave-snap1                  True            2021-03-11T16:24:03Z  ntap-dsutil-jupyterlab-dave           dave                           csi-snapclass
@@ -450,7 +450,7 @@ ntap-dsutil.20210310145815  True            2021-03-11T16:29:49Z  ntap-dsutil-ju
 
 #### Restore a Snapshot
 
-The NetApp DataOps Toolkit can be used to near-instantaneously restore a specific snapshot for a JupyterLab workspace. This action will restore the corresponding workspace to its exact state at the time that the snapshot was created. The command for restoring an existing snapshot is `./netapp_dataops_k8s_cli.py restore jupyterlab-snapshot`.
+The NetApp DataOps Toolkit can be used to near-instantaneously restore a specific snapshot for a JupyterLab workspace. This action will restore the corresponding workspace to its exact state at the time that the snapshot was created. The command for restoring an existing snapshot is `netapp_dataops_k8s_cli.py restore jupyterlab-snapshot`.
 
 The following options/arguments are required:
 
@@ -470,7 +470,7 @@ The following options/arguments are optional:
 Restore VolumeSnapshot 'ntap-dsutil.20210311164904' (for JupyterLab workspace 'mike') in namespace 'default'.
 
 ```sh
-./netapp_dataops_k8s_cli.py restore jupyterlab-snapshot --snapshot-name=ntap-dsutil.20210311164904
+netapp_dataops_k8s_cli.py restore jupyterlab-snapshot --snapshot-name=ntap-dsutil.20210311164904
 Restoring VolumeSnapshot 'ntap-dsutil.20210311164904' for JupyterLab workspace 'mike' in namespace 'default'...
 Scaling Deployment 'ntap-dsutil-jupyterlab-mike' in namespace 'default' to 0 pod(s).
 Restoring VolumeSnapshot 'ntap-dsutil.20210311164904' for PersistentVolumeClaim 'ntap-dsutil-jupyterlab-mike' in namespace 'default'.
@@ -486,7 +486,7 @@ JupyterLab workspace snapshot successfully restored.
 
 #### Clone a Persistent Volume
 
-The NetApp DataOps Toolkit can be used to near-instantaneously provision a new persistent volume (within a Kubernetes cluster) that is an exact copy of an existing persistent volume or snapshot. In other words, the NetApp DataOps Toolkit can be used to near-instantaneously clone a persistent volume. The command for cloning a persistent volume is `./netapp_dataops_k8s_cli.py clone volume`.
+The NetApp DataOps Toolkit can be used to near-instantaneously provision a new persistent volume (within a Kubernetes cluster) that is an exact copy of an existing persistent volume or snapshot. In other words, the NetApp DataOps Toolkit can be used to near-instantaneously clone a persistent volume. The command for cloning a persistent volume is `netapp_dataops_k8s_cli.py clone volume`.
 
 Note: Either -s/--source-snapshot-name or -v/--source-pvc-name must be specified. However, only one of these flags (not both) should be specified for a given operation. If -v/--source-pvc-name is specified, then the clone will be created from the current state of the volume. If -s/--source-snapshot-name is specified, then the clone will be created from a specific snapshot related the source volume.
 
@@ -513,7 +513,7 @@ The following options/arguments are optional:
 Near-instantaneously create a new persistent volume that is an exact copy of the current contents of the persistent volume attached to Kubernetes PersistentVolumeClaim (PVC) 'test2' in namespace 'default', and attach the new persistent volume to a PVC named 'test2-clone1' in namespace 'default'.
 
 ```sh
-./netapp_dataops_k8s_cli.py clone volume --new-pvc-name=test2-clone1 --source-pvc-name=test2
+netapp_dataops_k8s_cli.py clone volume --new-pvc-name=test2-clone1 --source-pvc-name=test2
 Creating new PersistentVolumeClaim (PVC) 'test2-clone1' from source PVC 'test2' in namespace 'default'...
 Creating PersistentVolumeClaim (PVC) 'test2-clone1' in namespace 'default'.
 PersistentVolumeClaim (PVC) 'test2-clone1' created. Waiting for Kubernetes to bind volume to PVC.
@@ -524,7 +524,7 @@ Volume successfully cloned.
 Near-instantaneously create a new persistent volume that is an exact copy of the contents of VolumeSnapshot 'ntap-dsutil.20210304170930' in namespace 'dst-test', and attach the new persistent volume to a PVC named 'test1-clone1' in namespace 'dst-test'.
 
 ```sh
-./netapp_dataops_k8s_cli.py clone volume --new-pvc-name=test1-clone1 --source-snapshot-name=ntap-dsutil.20210304170930 --namespace=dst-test
+netapp_dataops_k8s_cli.py clone volume --new-pvc-name=test1-clone1 --source-snapshot-name=ntap-dsutil.20210304170930 --namespace=dst-test
 Creating new PersistentVolumeClaim (PVC) 'test1-clone1' from VolumeSnapshot 'ntap-dsutil.20210304170930' in namespace 'dst-test'...
 Creating PersistentVolumeClaim (PVC) 'test1-clone1' in namespace 'dst-test'.
 PersistentVolumeClaim (PVC) 'test1-clone1' created. Waiting for Kubernetes to bind volume to PVC.
@@ -536,7 +536,7 @@ Volume successfully cloned.
 
 #### Create a New Persistent Volume
 
-The NetApp DataOps Toolkit can be used to rapidly provision a new persistent volume within a Kubernetes cluster. The command for provisioning a new persistent volume is `./netapp_dataops_k8s_cli.py create volume`.
+The NetApp DataOps Toolkit can be used to rapidly provision a new persistent volume within a Kubernetes cluster. The command for provisioning a new persistent volume is `netapp_dataops_k8s_cli.py create volume`.
 
 Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/) for more information on StorageClasses.
 
@@ -560,7 +560,7 @@ The following options/arguments are optional:
 Provision a new persistent volume of size 1GB and attach it to a Kubernetes PersistentVolumeClaim (PVC) named 'project1' in namespace 'default'.
 
 ```sh
-./netapp_dataops_k8s_cli.py create volume --pvc-name=project1 --size=1Gi
+netapp_dataops_k8s_cli.py create volume --pvc-name=project1 --size=1Gi
 Creating PersistentVolumeClaim (PVC) 'project1' in namespace 'default'.
 PersistentVolumeClaim (PVC) 'project1' created. Waiting for Kubernetes to bind volume to PVC.
 Volume successfully created and bound to PersistentVolumeClaim (PVC) 'project1' in namespace 'default'.
@@ -569,7 +569,7 @@ Volume successfully created and bound to PersistentVolumeClaim (PVC) 'project1' 
 Provision a new persistent volume of size 2TB, using the Kubernetes StorageClass 'ontap-flexgroup', and attach the volume to a Kubernetes PersistentVolumeClaim (PVC) named 'test1' in namespace 'dst-test'
 
 ```sh
-./netapp_dataops_k8s_cli.py create volume --pvc-name=test1 --size=2Ti --storage-class=ontap-flexgroup --namespace=dst-test
+netapp_dataops_k8s_cli.py create volume --pvc-name=test1 --size=2Ti --storage-class=ontap-flexgroup --namespace=dst-test
 Creating volume 'test1' in namespace 'dst-test'.
 PersistentVolumeClaim (PVC) 'test1' created. Waiting for Kubernetes to bind volume to PVC.
 Volume successfully created and bound to PersistentVolumeClaim (PVC) 'test1' in namespace 'dst-test'.
@@ -579,7 +579,7 @@ Volume successfully created and bound to PersistentVolumeClaim (PVC) 'test1' in 
 
 #### Delete an Existing Persistent Volume
 
-The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing persistent volume within a Kubernetes cluster. The command for deleting an existing persistent volume is `./netapp_dataops_k8s_cli.py delete volume`.
+The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing persistent volume within a Kubernetes cluster. The command for deleting an existing persistent volume is `netapp_dataops_k8s_cli.py delete volume`.
 
 The following options/arguments are required:
 
@@ -601,7 +601,7 @@ The following options/arguments are optional:
 Delete PersistentVolumeClaim (PVC) 'test1' in namespace 'dst-test'.
 
 ```sh
-./netapp_dataops_k8s_cli.py delete volume --pvc-name=test1 --namespace=dst-test
+netapp_dataops_k8s_cli.py delete volume --pvc-name=test1 --namespace=dst-test
 Warning: All data and snapshots associated with the volume will be permanently deleted.
 Are you sure that you want to proceed? (yes/no): yes
 Deleting PersistentVolumeClaim (PVC) 'test1' in namespace 'dst-test' and associated volume.
@@ -612,7 +612,7 @@ PersistentVolumeClaim (PVC) successfully deleted.
 
 #### List All Persistent Volumes
 
-The NetApp DataOps Toolkit can be used to print a list of all existing persistent volumes in a specific namespace within a Kubernetes cluster. The command for printing a list of all existing persistent volumes is `./netapp_dataops_k8s_cli.py list volumes`.
+The NetApp DataOps Toolkit can be used to print a list of all existing persistent volumes in a specific namespace within a Kubernetes cluster. The command for printing a list of all existing persistent volumes is `netapp_dataops_k8s_cli.py list volumes`.
 
 No options/arguments are required for this command.
 
@@ -626,7 +626,7 @@ The following options/arguments are optional:
 ##### Example Usage
 
 ```sh
-./netapp_dataops_k8s_cli.py list volumes --namespace=dst-test
+netapp_dataops_k8s_cli.py list volumes --namespace=dst-test
 PersistentVolumeClaim (PVC) Name    Status    Size    StorageClass     Clone    Source PVC    Source VolumeSnapshot
 ----------------------------------  --------  ------  ---------------  -------  ------------  -----------------------
 test                                Bound     10Gi    ontap-flexvol    No
@@ -641,7 +641,7 @@ test2-clone1                        Bound     10Gi    ontap-flexvol    Yes      
 
 #### Create a New Snapshot for a Persistent Volume
 
-The NetApp DataOps Toolkit can be used to near-instantaneously save a space-efficient, read-only copy of an existing persistent volume. These read-only copies are called snapshots, and are represented within a Kubernetes cluster by VolumeSnapshot objects. This functionality can be used to version datasets and/or implement dataset-to-model traceability. The command for creating a new snapshot for a specific persistent volume is `./netapp_dataops_k8s_cli.py create volume-snapshot`.
+The NetApp DataOps Toolkit can be used to near-instantaneously save a space-efficient, read-only copy of an existing persistent volume. These read-only copies are called snapshots, and are represented within a Kubernetes cluster by VolumeSnapshot objects. This functionality can be used to version datasets and/or implement dataset-to-model traceability. The command for creating a new snapshot for a specific persistent volume is `netapp_dataops_k8s_cli.py create volume-snapshot`.
 
 Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/latest/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots within a Kubernetes cluster.
 
@@ -665,7 +665,7 @@ The following options/arguments are optional:
 Create a VolumeSnapshot for the volume attached to the PersistentVolumeClaim (PVC) named 'project1' in namespace 'default'.
 
 ```sh
-./netapp_dataops_k8s_cli.py create volume-snapshot --pvc-name=project1
+netapp_dataops_k8s_cli.py create volume-snapshot --pvc-name=project1
 Creating VolumeSnapshot 'ntap-dsutil.20210218184654' for PersistentVolumeClaim (PVC) 'project1' in namespace 'default'.
 VolumeSnapshot 'ntap-dsutil.20210218184654' created. Waiting for Trident to create snapshot on backing storage.
 Snapshot successfully created.
@@ -674,7 +674,7 @@ Snapshot successfully created.
 Create a VolumeSnapshot named 'snap1, for the volume attached to the PersistentVolumeClaim (PVC) named 'test1', in namespace 'dst-test'.
 
 ```sh
-./netapp_dataops_k8s_cli.py create volume-snapshot --pvc-name=test1 --snapshot-name=snap1 --namespace=dst-test
+netapp_dataops_k8s_cli.py create volume-snapshot --pvc-name=test1 --snapshot-name=snap1 --namespace=dst-test
 Creating VolumeSnapshot 'snap1' for PersistentVolumeClaim (PVC) 'test1' in namespace 'dst-test'.
 VolumeSnapshot 'snap1' created. Waiting for Trident to create snapshot on backing storage.
 Snapshot successfully created.
@@ -684,7 +684,7 @@ Snapshot successfully created.
 
 #### Delete an Existing Snapshot
 
-The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing persistent volume snapshot. The command for deleting an existing snapshot is `./netapp_dataops_k8s_cli.py delete volume-snapshot`.
+The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing persistent volume snapshot. The command for deleting an existing snapshot is `netapp_dataops_k8s_cli.py delete volume-snapshot`.
 
 The following options/arguments are required:
 
@@ -705,7 +705,7 @@ The following options/arguments are optional:
 Delete VolumeSnapshot 'ntap-dsutil.20210304151544' in namespace 'dst-test'.
 
 ```sh
-./netapp_dataops_k8s_cli.py delete volume-snapshot --snapshot-name=ntap-dsutil.20210304151544 --namespace=dst-test
+netapp_dataops_k8s_cli.py delete volume-snapshot --snapshot-name=ntap-dsutil.20210304151544 --namespace=dst-test
 Warning: This snapshot will be permanently deleted.
 Are you sure that you want to proceed? (yes/no): yes
 Deleting VolumeSnapshot 'ntap-dsutil.20210304151544' in namespace 'dst-test'.
@@ -716,7 +716,7 @@ VolumeSnapshot successfully deleted.
 
 #### List All Snapshots
 
-The NetApp DataOps Toolkit can be used to list all existing persistent volume snapshots in a specific namespace. The command for listing all existing snapshots is `./netapp_dataops_k8s_cli.py list volume-snapshots`.
+The NetApp DataOps Toolkit can be used to list all existing persistent volume snapshots in a specific namespace. The command for listing all existing snapshots is `netapp_dataops_k8s_cli.py list volume-snapshots`.
 
 Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/latest/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots within a Kubernetes cluster.
 
@@ -735,7 +735,7 @@ The following options/arguments are optional:
 List all VolumeSnapshots in namespace 'default'.
 
 ```sh
-./netapp_dataops_k8s_cli.py list volume-snapshots
+netapp_dataops_k8s_cli.py list volume-snapshots
 VolumeSnapshot Name         Ready to Use    Creation Time         Source PersistentVolumeClaim (PVC)    Source JupyterLab workspace    VolumeSnapshotClass
 --------------------------  --------------  --------------------  ------------------------------------  -----------------------------  ---------------------
 ntap-dsutil.20210309141230  True            2021-03-11T16:24:03Z  ntap-dsutil-jupyterlab-mike           mike                           csi-snapclass
@@ -747,7 +747,7 @@ snap2                       True            2021-03-11T16:29:49Z  test          
 
 #### Restore a Snapshot
 
-The NetApp DataOps Toolkit can be used to near-instantaneously restore a specific snapshot for a persistent volume. This action will restore the corresponding volume to its exact state at the time that the snapshot was created. The command for restoring an existing snapshot is `./netapp_dataops_k8s_cli.py restore volume-snapshot`.
+The NetApp DataOps Toolkit can be used to near-instantaneously restore a specific snapshot for a persistent volume. This action will restore the corresponding volume to its exact state at the time that the snapshot was created. The command for restoring an existing snapshot is `netapp_dataops_k8s_cli.py restore volume-snapshot`.
 
 Warning: In order to restore a snapshot, the PersistentVolumeClaim (PVC) associated the snapshot must NOT be mounted to any pods.
 Tip: If the PVC associated with the snapshot is currently mounted to a pod that is managed by a deployment, you can scale the deployment to 0 pods using the command `kubectl scale --replicas=0 deployment/<deployment_name>`. After scaling the deployment to 0 pods, you will be able to restore the snapshot. After restoring the snapshot, you can use the `kubectl scale` command to scale the deployment back to the desired number of pods.
@@ -771,7 +771,7 @@ The following options/arguments are optional:
 Restore VolumeSnapshot 'snap1' (for PersistentVolumeClaim 'project1') in namespace 'default'.
 
 ```sh
-./netapp_dataops_k8s_cli.py restore volume-snapshot --snapshot-name=snap1
+netapp_dataops_k8s_cli.py restore volume-snapshot --snapshot-name=snap1
 Warning: In order to restore a snapshot, the PersistentVolumeClaim (PVC) associated the snapshot must NOT be mounted to any pods.
 Are you sure that you want to proceed? (yes/no): yes
 Restoring VolumeSnapshot 'snap1' for PersistentVolumeClaim 'project1' in namespace 'default'.
