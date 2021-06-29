@@ -1557,7 +1557,7 @@ def sync_snap_mirror_relationship(uuid: str, wait_until_complete: bool = False, 
                     transferState = None
 
                 # if transfer is complete, end execution
-                if not transferState:
+                if (not transferState) or (transferState == "success"):
                     healthy = relationship.healthy
                     if healthy:
                         if print_output:
