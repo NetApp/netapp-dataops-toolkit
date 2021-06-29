@@ -960,7 +960,7 @@ if __name__ == '__main__':
                     print(helpTextListVolumes)
                     sys.exit(0)
                 elif opt in ("-f", "--include-footprint"):
-                    includeFootprint
+                    includeFootprint = True
 
             # List volumes
             try:
