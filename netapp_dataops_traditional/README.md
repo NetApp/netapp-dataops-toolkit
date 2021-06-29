@@ -252,7 +252,7 @@ The following options/arguments are optional:
 
 ```
     -h, --help                  Print help text.
-    -f, --include-footprint	    Include physical storage space footprint in output.
+    -f, --include-footprint     Include physical storage space footprint in output.
 ```
 
 ##### Example Usage
