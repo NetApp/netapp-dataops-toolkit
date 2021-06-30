@@ -31,7 +31,7 @@ from tabulate import tabulate
 import yaml
 
 
-__version__ = "2.0.0alpha23"
+__version__ = "2.0.0alpha24"
 
 
 # Using this decorator in lieu of using a dependency to manage deprecation
@@ -1049,12 +1049,14 @@ def list_volumes(check_local_mounts: bool = False, include_footprint: bool = Fal
             # Construct list of volumes; do not include SVM root volume
             volumesList = list()
             for volume in volumes:
-                volumeFields = "nas.path,size,style,clone,flexcache_endpoint_type"
+                baseVolumeFields = "nas.path,size,style,clone,flexcache_endpoint_type"
                 try :
+                    volumeFields = baseVolumeFields
                     if include_footprint :
                         volumeFields += ",space,constituents"
                     volume.get(fields=volumeFields)
-                except :
+                except NetAppRestError as err :
+                    volumeFields = baseVolumeFields
                     if include_footprint :
                         volumeFields += ",space"
                     volume.get(fields=volumeFields)
@@ -1102,7 +1104,7 @@ def list_volumes(check_local_mounts: bool = False, include_footprint: bool = Fal
                                 for constituentVolume in volume.constituents :
                                     totalFootprint += float(constituentVolume["space"]["total_footprint"])
                             else :
-                                totalFootprint = float(volume.space.total_footprint)
+                                totalFootprint = float(volume.space.footprint) + float(volume.space.metadata)
                             prettyFootprint = _convert_bytes_to_pretty_size(size_in_bytes=totalFootprint)
                         except :
                             prettyFootprint = "Unknown"
