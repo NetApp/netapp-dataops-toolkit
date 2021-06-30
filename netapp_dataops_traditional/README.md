@@ -980,7 +980,7 @@ def list_volumes(
 
 If `include_space_usage_details` is set to `True`, then four additional fields will be included on the output. These fields will be labeled with the keys 'Snap. Reserve', 'Capacity', 'Usage', and 'Footprint'. These fields and their relation to the 'Size' field are explained in the table below.
 
-| Column        | Explanation                                                                                                                        |
+| Field         | Explanation                                                                                                                        |
 |---------------|------------------------------------------------------------------------------------------------------------------------------------|
 | Size          | The logical size of the volume.                                                                                                    |
 | Snap. Reserve | The percentage of the volume's logical size that is reserved for snapshot copies.                                                  |
