@@ -257,6 +257,16 @@ The following options/arguments are optional:
     -f, --include-footprint     Include physical storage space footprint in output.
 ```
 
+##### Physical Footprint Explanation
+
+If the -f/--include-footprint option is specified, then a column titled 'Physical Footprint' will be included in the output. The value in this column represents the actual on-disk storage space that is being consumed by the volume after all ONTAP storage efficiencies are taken into account. 
+
+The 'Physical Footprint' value will differ from the "logical size" of the data that is stored on the volume (i.e. the combined "logical size" of all of the files that are stored on the volume). In many cases, the 'Physical Footprint' value will be smaller than the "logical size" due to ONTAP storage efficiencies (for example - FlexClone efficiencies, deduplication, compression, etc.). In this case, the delta represents the space savings that you are receiving from the ONTAP storage efficiencies.
+
+Note that the 'Physical Footprint' value includes the on-disk storage space that is being consumed by all of the volume's snapshot copies in addition to the on-disk storage space that is being consumed by the data that is currently stored on the volume. If a volume has many snapshots, then the snapshots may represent a large portion of the 'Physical Footprint' value.
+
+Also note that if you are using an ONTAP version earlier than 9.9, then the 'Physical Footprint' value will only be reported for 'flexvol' volumes.
+
 ##### Example Usage
 
 Standard usage:
@@ -959,6 +969,16 @@ def list_volumes(
     print_output: bool = False          # Denotes whether or not to print messages to the console during execution.
 ) -> list() :
 ```
+
+##### Physical Footprint Explanation
+
+If 'include_footprint' is set to True, then a field named 'Physical Footprint' will be included in the output for each voume. The value in this field represents the actual on-disk storage space that is being consumed by the volume after all ONTAP storage efficiencies are taken into account. 
+
+The 'Physical Footprint' value will differ from the "logical size" of the data that is stored on the volume (i.e. the combined "logical size" of all of the files that are stored on the volume). In many cases, the 'Physical Footprint' value will be smaller than the "logical size" due to ONTAP storage efficiencies (for example - FlexClone efficiencies, deduplication, compression, etc.). In this case, the delta represents the space savings that you are receiving from the ONTAP storage efficiencies.
+
+Note that the 'Physical Footprint' value includes the on-disk storage space that is being consumed by all of the volume's snapshot copies in addition to the on-disk storage space that is being consumed by the data that is currently stored on the volume. If a volume has many snapshots, then the snapshots may represent a large portion of the 'Physical Footprint' value.
+
+Also note that if you are using an ONTAP version earlier than 9.9, then the 'Physical Footprint' value will only be reported for 'flexvol' volumes.
 
 ##### Return Value
 

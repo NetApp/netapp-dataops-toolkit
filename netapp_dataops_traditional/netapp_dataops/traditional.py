@@ -31,7 +31,7 @@ from tabulate import tabulate
 import yaml
 
 
-__version__ = "2.0.0alpha22"
+__version__ = "2.0.0alpha23"
 
 
 # Using this decorator in lieu of using a dependency to manage deprecation
@@ -1050,9 +1050,14 @@ def list_volumes(check_local_mounts: bool = False, include_footprint: bool = Fal
             volumesList = list()
             for volume in volumes:
                 volumeFields = "nas.path,size,style,clone,flexcache_endpoint_type"
-                if include_footprint :
-                    volumeFields += ",space,constituents"
-                volume.get(fields=volumeFields)
+                try :
+                    if include_footprint :
+                        volumeFields += ",space,constituents"
+                    volume.get(fields=volumeFields)
+                except :
+                    if include_footprint :
+                        volumeFields += ",space"
+                    volume.get(fields=volumeFields)
 
                 # Retrieve volume export path; handle case where volume is not exported
                 if hasattr(volume, "nas"):
@@ -1091,13 +1096,16 @@ def list_volumes(check_local_mounts: bool = False, include_footprint: bool = Fal
                     # Convert size in bytes to "pretty" size (size in KB, MB, GB, or TB)
                     prettySize = _convert_bytes_to_pretty_size(size_in_bytes=volume.size)
                     if include_footprint :
-                        if type == "flexgroup" :
-                            totalFootprint: float = 0.0
-                            for constituentVolume in volume.constituents :
-                                totalFootprint += float(constituentVolume["space"]["total_footprint"])
-                        else :
-                            totalFootprint = float(volume.space.total_footprint)
-                        prettyFootprint = _convert_bytes_to_pretty_size(size_in_bytes=totalFootprint)
+                        try :
+                            if type == "flexgroup" :
+                                totalFootprint: float = 0.0
+                                for constituentVolume in volume.constituents :
+                                    totalFootprint += float(constituentVolume["space"]["total_footprint"])
+                            else :
+                                totalFootprint = float(volume.space.total_footprint)
+                            prettyFootprint = _convert_bytes_to_pretty_size(size_in_bytes=totalFootprint)
+                        except :
+                            prettyFootprint = "Unknown"
 
                     # Construct dict containing volume details; optionally include local mountpoint
                     volumeDict = {
