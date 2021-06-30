@@ -259,7 +259,7 @@ The following options/arguments are optional:
 
 ##### Storage Space Usage Details Explanation
 
-If the -s/--include-space-usage-details  option is specified, then four additional columns will be included on the output. These columns will be titled 'Snap. Reserve', 'Capacity', 'Usage', and 'Footprint'. These columns and their relation to the 'Size' column are explained in the table below.
+If the -s/--include-space-usage-details  option is specified, then four additional columns will be included in the output. These columns will be titled 'Snap. Reserve', 'Capacity', 'Usage', and 'Footprint'. These columns and their relation to the 'Size' column are explained in the table below.
 
 | Column        | Explanation                                                                                                                        |
 |---------------|------------------------------------------------------------------------------------------------------------------------------------|
@@ -978,7 +978,7 @@ def list_volumes(
 
 ##### Storage Space Usage Details Explanation
 
-If `include_space_usage_details` is set to `True`, then four additional fields will be included on the output. These fields will be labeled with the keys 'Snap. Reserve', 'Capacity', 'Usage', and 'Footprint'. These fields and their relation to the 'Size' field are explained in the table below.
+If `include_space_usage_details` is set to `True`, then four additional fields will be included in the output. These fields will be labeled with the keys 'Snap. Reserve', 'Capacity', 'Usage', and 'Footprint'. These fields and their relation to the 'Size' field are explained in the table below.
 
 | Field         | Explanation                                                                                                                        |
 |---------------|------------------------------------------------------------------------------------------------------------------------------------|
