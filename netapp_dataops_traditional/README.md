@@ -980,12 +980,13 @@ def list_volumes(
 
 If `include_space_usage_details` is set to `True`, then four additional fields will be included on the output. These fields will be labeled with the keys 'Snap. Reserve', 'Capacity', 'Usage', and 'Footprint'. These fields and their relation to the 'Size' field are explained in the table below.
 
-| Column | Explanation |
-| Size | The logical size of the volume. |
-| Snap. Reserve | The percentage of the volume's logical size that is reserved for snapshot copies. |
-| Capacity | The logical capacity that is available for users of the volume to store data in. |
-| Usage | The combined logical size of all of the files that are stored on the volume. |
-| Footprint | The actual on-disk storage space that is being consumed by the volume after all ONTAP storage efficiencies are taken into account. |
+| Column        | Explanation                                                                                                                        |
+|---------------|------------------------------------------------------------------------------------------------------------------------------------|
+| Size          | The logical size of the volume.                                                                                                    |
+| Snap. Reserve | The percentage of the volume's logical size that is reserved for snapshot copies.                                                  |
+| Capacity      | The logical capacity that is available for users of the volume to store data in.                                                   |
+| Usage         | The combined logical size of all of the files that are stored on the volume.                                                       |
+| Footprint     | The actual on-disk storage space that is being consumed by the volume after all ONTAP storage efficiencies are taken into account. |
 
 The 'Footprint' value will differ from the 'Usage' value. In some cases, particularly with clone volumes, the 'Footprint' value will be smaller than the 'Usage' value due to ONTAP storage efficiencies. These storage efficiencies include FlexClone technology, deduplication, compression, etc. In the case that the 'Footprint' value is smaller than the 'Usage' value, the delta between the two is a rough representation of the on-disk space savings that you are receiving from ONTAP storage efficiencies.
 
