@@ -40,11 +40,13 @@ A config file must be created before the NetApp Data Management Toolkit for Trad
 netapp_dataops_cli.py config
 ```
 
+Note: The toolkit requires an ONTAP account with API access. The toolkit will use this account to access the ONTAP API. NetApp recommends using an SVM-level account. Usage of a cluster admin account should be avoided for security reasons.
+
 #### Example Usage
 
 ```sh
 netapp_dataops_cli.py config
-Enter ONTAP management LIF hostname or IP address (Note: Can be cluster or SVM management interface): 10.61.188.114
+Enter ONTAP management LIF hostname or IP address (Recommendation: Use SVM management interface): 10.61.188.114
 Enter SVM (Storage VM) name: ailab1
 Enter SVM NFS data LIF hostname or IP address: 10.61.188.119
 Enter default volume type to use when creating new volumes (flexgroup/flexvol) [flexgroup]:        
@@ -54,8 +56,8 @@ Enter unix filesystem user id (uid) to apply by default when creating new volume
 Enter unix filesystem group id (gid) to apply by default when creating new volumes (ex. '0' for root group) [0]: 
 Enter unix filesystem permissions to apply by default when creating new volumes (ex. '0777' for full read/write permissions for all users and groups) [0777]: 
 Enter aggregate to use by default when creating new FlexVol volumes: vsim_ontap97_01_FC_1
-Enter ONTAP API username (Note: Can be cluster or SVM admin account): vsadmin
-Enter ONTAP API password (Note: Can be cluster or SVM admin account): 
+Enter ONTAP API username (Recommendation: Use SVM account): vsadmin
+Enter ONTAP API password (Recommendation: Use SVM account): 
 Verify SSL certificate when calling ONTAP API (true/false): false
 Do you intend to use this toolkit to trigger Cloud Sync operations? (yes/no): yes
 Note: If you do not have a Cloud Central refresh token, visit https://services.cloud.netapp.com/refresh-token to create one.

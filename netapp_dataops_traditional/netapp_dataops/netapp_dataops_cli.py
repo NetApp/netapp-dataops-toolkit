@@ -438,7 +438,7 @@ def createConfig(configDirPath: str = "~/.netapp_dataops", configFilename: str =
         config["connectionType"] = connectionType
 
         # Prompt user to enter config details
-        config["hostname"] = input("Enter ONTAP management LIF hostname or IP address (Note: Can be cluster or SVM management interface): ")
+        config["hostname"] = input("Enter ONTAP management LIF hostname or IP address (Recommendation: Use SVM management interface): ")
         config["svm"] = input("Enter SVM (Storage VM) name: ")
         config["dataLif"] = input("Enter SVM NFS data LIF hostname or IP address: ")
 
@@ -502,8 +502,8 @@ def createConfig(configDirPath: str = "~/.netapp_dataops", configFilename: str =
 
         # Prompt user to enter additional config details
         config["defaultAggregate"] = input("Enter aggregate to use by default when creating new FlexVol volumes: ")
-        config["username"] = input("Enter ONTAP API username (Note: Can be cluster or SVM admin account): ")
-        passwordString = getpass("Enter ONTAP API password (Note: Can be cluster or SVM admin account): ")
+        config["username"] = input("Enter ONTAP API username (Recommendation: Use SVM account): ")
+        passwordString = getpass("Enter ONTAP API password (Recommendation: Use SVM account): ")
 
         # Convert password to base64 enconding
         passwordBytes = passwordString.encode("ascii") 
