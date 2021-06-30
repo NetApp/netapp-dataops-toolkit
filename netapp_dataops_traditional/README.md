@@ -253,19 +253,26 @@ No options/arguments are required for this command.
 The following options/arguments are optional:
 
 ```
-    -h, --help                  Print help text.
-    -f, --include-footprint     Include physical storage space footprint in output.
+    -h, --help                              Print help text.
+    -s, --include-space-usage-details       Include storage space usage details in output (see below for explanation).
 ```
 
-##### Physical Footprint Explanation
+##### Storage Space Usage Details Explanation
 
-If the -f/--include-footprint option is specified, then a column titled 'Physical Footprint' will be included in the output. The value in this column represents the actual on-disk storage space that is being consumed by the volume after all ONTAP storage efficiencies are taken into account. 
+If the -s/--include-space-usage-details  option is specified, then four additional columns will be included on the output. These columns will be titled 'Snap. Reserve', 'Capacity', 'Usage', and 'Footprint'. These columns and their relation to the 'Size' column are explained in the table below.
 
-The 'Physical Footprint' value will differ from the "logical size" of the data that is stored on the volume (i.e. the combined "logical size" of all of the files that are stored on the volume). In many cases, the 'Physical Footprint' value will be smaller than the "logical size" due to ONTAP storage efficiencies (for example - FlexClone efficiencies, deduplication, compression, etc.). In this case, the delta represents the space savings that you are receiving from the ONTAP storage efficiencies.
+| Column | Explanation |
+| Size | The logical size of the volume. |
+| Snap. Reserve | The percentage of the volume's logical size that is reserved for snapshot copies. |
+| Capacity | The logical capacity that is available for users of the volume to store data in. |
+| Usage | The combined logical size of all of the files that are stored on the volume. |
+| Footprint | The actual on-disk storage space that is being consumed by the volume after all ONTAP storage efficiencies are taken into account. |
 
-Note that the 'Physical Footprint' value includes the on-disk storage space that is being consumed by all of the volume's snapshot copies in addition to the on-disk storage space that is being consumed by the data that is currently stored on the volume. If a volume has many snapshots, then the snapshots may represent a large portion of the 'Physical Footprint' value.
+The 'Footprint' value will differ from the 'Usage' value. In some cases, particularly with clone volumes, the 'Footprint' value will be smaller than the 'Usage' value due to ONTAP storage efficiencies. These storage efficiencies include FlexClone technology, deduplication, compression, etc. In the case that the 'Footprint' value is smaller than the 'Usage' value, the delta between the two is a rough representation of the on-disk space savings that you are receiving from ONTAP storage efficiencies.
 
-Also note that if you are using an ONTAP version earlier than 9.9, then the 'Physical Footprint' value will only be reported for 'flexvol' volumes.
+Note that the 'Footprint' value includes the on-disk storage space that is being consumed by all of the volume's snapshot copies in addition to the on-disk storage space that is being consumed by the data that is currently stored on the volume. If a volume has many snapshots, then the snapshots may represent a large portion of the 'Footprint' value.
+
+Also note that if you are using an ONTAP version earlier than 9.9, then the 'Footprint' value will only be reported for 'flexvol' volumes.
 
 ##### Example Usage
 
@@ -290,16 +297,14 @@ test1_clone    10.0TB  flexvol    10.61.188.49:/test1_clone   /home/ai/test1_clo
 Include physical storage space footprint in output:
 
 ```sh
-netapp_dataops_cli.py list volumes --include-footprint
-Volume Name        Logical Size         Physical Footprint    Type       NFS Mount Target                Local Mountpoint    FlexCache    Clone    Source Volume    Source Snapshot
------------------  -------------------  --------------------  ---------  ------------------------------  ------------------  -----------  -------  ---------------  -----------------------------------------
-flexcache_cache    210.5263214111328GB  1.6975440979003906GB  flexgroup  10.61.188.90:/flexcache_cache                       yes          no
-sm01               105.265625MB         1.51953125MB          flexvol    10.61.188.90:/sm01                                  no           no
-vol_sm01_dest      22.0MB               900.0KB               flexvol    <NA>                                                no           no
-project1_clone1    300.0GB              214.69921875MB        flexvol    10.61.188.90:/project1_clone1                       no           yes      project1         clone_project1_clone1.2021-06-29_212353.0
-project1           300.0GB              661.16015625MB        flexvol    10.61.188.90:/project1          /mnt/tmp            no           no
-fg_oss_1624582039  215.5789473950863TB  5.7107696533203125GB  flexgroup  <NA>                                                no           no
-flexcache_source   1.0TB                2.8549232482910156GB  flexgroup  10.61.188.90:/flexcache_source                      no           no
+netapp_dataops_cli.py list volumes --include-space-usage-details
+Volume Name    Size    Snap. Reserve    Capacity    Usage     Footprint    Type       NFS Mount Target            FlexCache    Clone    Source Volume    Source Snapshot
+-------------  ------  ---------------  ----------  --------  -----------  ---------  --------------------------  -----------  -------  ---------------  -----------------
+ailab_data01   10.0TB  5%               9.5TB       548.54GB  656.58GB     flexvol    10.61.188.49:/ailab_data01  no           no
+home           10.0TB  5%               9.5TB       45.21GB   Unknown      flexgroup  10.61.188.49:/home          no           no
+ailab_data02   10.0TB  5%               9.5TB       212.55GB  251.93GB     flexvol    10.61.188.49:/ailab_data02  no           no
+project        2.0TB   5%               1.9TB       134.6GB   135.45GB     flexvol    10.61.188.49:/project       no           no
+imagene        10.0TB  5%               9.5TB       457.65GB  Unknown      flexgroup  10.61.188.49:/imagenet      no           no
 ```
 
 <a name="cli-mount-volume"></a>
@@ -964,25 +969,32 @@ The NetApp DataOps Toolkit can be used to retrieve a list of all existing data v
 
 ```py
 def list_volumes(
-    check_local_mounts: bool = False,   # If set to true, then the local mountpoints of any mounted volumes will be included in the returned list and included in printed output.
-    include_footprint: bool = False,    # Include physical storage space footprint in output.
-    print_output: bool = False          # Denotes whether or not to print messages to the console during execution.
+    check_local_mounts: bool = False,           # If set to true, then the local mountpoints of any mounted volumes will be included in the returned list and included in printed output.
+    include_space_usage_details: bool = False,  # Include storage space usage details in output (see below for explanation).
+    print_output: bool = False                  # Denotes whether or not to print messages to the console during execution.
 ) -> list() :
 ```
 
-##### Physical Footprint Explanation
+##### Storage Space Usage Details Explanation
 
-If 'include_footprint' is set to True, then a field named 'Physical Footprint' will be included in the output for each voume. The value in this field represents the actual on-disk storage space that is being consumed by the volume after all ONTAP storage efficiencies are taken into account. 
+If `include_space_usage_details` is set to `True`, then four additional fields will be included on the output. These fields will be labeled with the keys 'Snap. Reserve', 'Capacity', 'Usage', and 'Footprint'. These fields and their relation to the 'Size' field are explained in the table below.
 
-The 'Physical Footprint' value will differ from the "logical size" of the data that is stored on the volume (i.e. the combined "logical size" of all of the files that are stored on the volume). In many cases, the 'Physical Footprint' value will be smaller than the "logical size" due to ONTAP storage efficiencies (for example - FlexClone efficiencies, deduplication, compression, etc.). In this case, the delta represents the space savings that you are receiving from the ONTAP storage efficiencies.
+| Column | Explanation |
+| Size | The logical size of the volume. |
+| Snap. Reserve | The percentage of the volume's logical size that is reserved for snapshot copies. |
+| Capacity | The logical capacity that is available for users of the volume to store data in. |
+| Usage | The combined logical size of all of the files that are stored on the volume. |
+| Footprint | The actual on-disk storage space that is being consumed by the volume after all ONTAP storage efficiencies are taken into account. |
 
-Note that the 'Physical Footprint' value includes the on-disk storage space that is being consumed by all of the volume's snapshot copies in addition to the on-disk storage space that is being consumed by the data that is currently stored on the volume. If a volume has many snapshots, then the snapshots may represent a large portion of the 'Physical Footprint' value.
+The 'Footprint' value will differ from the 'Usage' value. In some cases, particularly with clone volumes, the 'Footprint' value will be smaller than the 'Usage' value due to ONTAP storage efficiencies. These storage efficiencies include FlexClone technology, deduplication, compression, etc. In the case that the 'Footprint' value is smaller than the 'Usage' value, the delta between the two is a rough representation of the on-disk space savings that you are receiving from ONTAP storage efficiencies.
 
-Also note that if you are using an ONTAP version earlier than 9.9, then the 'Physical Footprint' value will only be reported for 'flexvol' volumes.
+Note that the 'Footprint' value includes the on-disk storage space that is being consumed by all of the volume's snapshot copies in addition to the on-disk storage space that is being consumed by the data that is currently stored on the volume. If a volume has many snapshots, then the snapshots may represent a large portion of the 'Footprint' value.
+
+Also note that if you are using an ONTAP version earlier than 9.9, then the 'Footprint' value will only be reported for 'flexvol' volumes.
 
 ##### Return Value
 
-The function returns a list of all existing volumes. Each item in the list will be a dictionary containing details regarding a specific volume. The keys for the values in this dictionary are "Volume Name", "Logical Size", "Type", "NFS Mount Target", "FlexCache" (yes/no), "Clone" (yes/no), "Source Volume", "Source Snapshot". If `check_local_mounts` is set to `True`, then "Local Mountpoint" will also be included as a key in the dictionary. If `include_footprint` is set to `True`, then "Physical Footprint" will also be included as a key in the dictionary.
+The function returns a list of all existing volumes. Each item in the list will be a dictionary containing details regarding a specific volume. The keys for the values in this dictionary are "Volume Name", "Logical Size", "Type", "NFS Mount Target", "FlexCache" (yes/no), "Clone" (yes/no), "Source Volume", "Source Snapshot". If `check_local_mounts` is set to `True`, then "Local Mountpoint" will also be included as a key in the dictionary. If `include_space_usage_details` is set to `True`, then "Snap. Reserve", "Capacity", "Usage", and "Footprint" will also be included as keys in the dictionary.
 
 ##### Error Handling
 

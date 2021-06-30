@@ -233,12 +233,12 @@ List all data volumes.
 No options/arguments are required.
 
 Optional Options/Arguments:
-\t-h, --help\t\t\tPrint help text.
-\t-f, --include-footprint\t\tInclude physical storage space footprint in output.
+\t-h, --help\t\t\t\tPrint help text.
+\t-s, --include-space-usage-details\tInclude storage space usage details in output (see README for explanation).
 
 Examples:
 \tnetapp_dataops_cli.py list volumes
-\tnetapp_dataops_cli.py list volumes --include-footprint
+\tnetapp_dataops_cli.py list volumes --include-space-usage-details
 '''
 helpTextMountVolume = '''
 Command: mount volume
@@ -946,11 +946,11 @@ if __name__ == '__main__':
                 sys.exit(1)
         
         elif target in ("volume", "vol", "volumes", "vols"):
-            includeFootprint = False
+            includeSpaceUsageDetails = False
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hf", ["help", "include-footprint"])
+                opts, args = getopt.getopt(sys.argv[3:], "hs", ["help", "include-space-usage-details"])
             except:
                 handleInvalidCommand(helpText=helpTextListVolumes, invalidOptArg=True)
 
@@ -959,12 +959,12 @@ if __name__ == '__main__':
                 if opt in ("-h", "--help") :
                     print(helpTextListVolumes)
                     sys.exit(0)
-                elif opt in ("-f", "--include-footprint"):
-                    includeFootprint = True
+                elif opt in ("-s", "--include-space-usage-details"):
+                    includeSpaceUsageDetails = True
 
             # List volumes
             try:
-                list_volumes(check_local_mounts=True, include_footprint=includeFootprint, print_output=True)
+                list_volumes(check_local_mounts=True, include_space_usage_details=includeSpaceUsageDetails, print_output=True)
             except (InvalidConfigError, APIConnectionError) :
                 sys.exit(1)
 

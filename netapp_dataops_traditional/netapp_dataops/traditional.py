@@ -31,7 +31,7 @@ from tabulate import tabulate
 import yaml
 
 
-__version__ = "2.0.0alpha24"
+__version__ = "2.0.0alpha25"
 
 
 # Using this decorator in lieu of using a dependency to manage deprecation
@@ -328,7 +328,7 @@ def _upload_to_s3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s
         raise APIConnectionError(err)
 
 
-def _convert_bytes_to_pretty_size(size_in_bytes: str) -> str :
+def _convert_bytes_to_pretty_size(size_in_bytes: str, num_decimal_points: int = 2) -> str :
     # Convert size in bytes to "pretty" size (size in KB, MB, GB, or TB)
     prettySize = float(size_in_bytes) / 1024
     if prettySize >= 1024:
@@ -337,12 +337,16 @@ def _convert_bytes_to_pretty_size(size_in_bytes: str) -> str :
             prettySize = float(prettySize) / 1024
             if prettySize >= 1024:
                 prettySize = float(prettySize) / 1024
+                prettySize = round(prettySize, 2)
                 prettySize = str(prettySize) + "TB"
             else:
+                prettySize = round(prettySize, 2)
                 prettySize = str(prettySize) + "GB"
         else:
+            prettySize = round(prettySize, 2)
             prettySize = str(prettySize) + "MB"
     else:
+        prettySize = round(prettySize, 2)
         prettySize = str(prettySize) + "KB"
     
     return prettySize
@@ -1018,7 +1022,7 @@ def list_snapshots(volume_name: str, print_output: bool = False) -> list():
         raise ConnectionTypeError()
 
 
-def list_volumes(check_local_mounts: bool = False, include_footprint: bool = False, print_output: bool = False) -> list():
+def list_volumes(check_local_mounts: bool = False, include_space_usage_details: bool = False, print_output: bool = False) -> list():
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -1052,12 +1056,12 @@ def list_volumes(check_local_mounts: bool = False, include_footprint: bool = Fal
                 baseVolumeFields = "nas.path,size,style,clone,flexcache_endpoint_type"
                 try :
                     volumeFields = baseVolumeFields
-                    if include_footprint :
+                    if include_space_usage_details :
                         volumeFields += ",space,constituents"
                     volume.get(fields=volumeFields)
                 except NetAppRestError as err :
                     volumeFields = baseVolumeFields
-                    if include_footprint :
+                    if include_space_usage_details :
                         volumeFields += ",space"
                     volume.get(fields=volumeFields)
 
@@ -1097,7 +1101,17 @@ def list_volumes(check_local_mounts: bool = False, include_footprint: bool = Fal
 
                     # Convert size in bytes to "pretty" size (size in KB, MB, GB, or TB)
                     prettySize = _convert_bytes_to_pretty_size(size_in_bytes=volume.size)
-                    if include_footprint :
+                    if include_space_usage_details :
+                        try :
+                            snapshotReserve = str(volume.space.snapshot.reserve_percent) + "%"
+                            logicalCapacity = float(volume.space.size) * (1 - float(volume.space.snapshot.reserve_percent)/100)
+                            prettyLogicalCapacity = _convert_bytes_to_pretty_size(size_in_bytes=logicalCapacity)
+                            logicalUsage = float(volume.space.used)
+                            prettyLogicalUsage = _convert_bytes_to_pretty_size(size_in_bytes=logicalUsage)
+                        except :
+                            snapshotReserve = "Unknown"
+                            prettyLogicalCapacity = "Unknown"
+                            prettyLogicalUsage = "Unknown"
                         try :
                             if type == "flexgroup" :
                                 totalFootprint: float = 0.0
@@ -1112,10 +1126,13 @@ def list_volumes(check_local_mounts: bool = False, include_footprint: bool = Fal
                     # Construct dict containing volume details; optionally include local mountpoint
                     volumeDict = {
                         "Volume Name": volume.name,
-                        "Logical Size": prettySize
+                        "Size": prettySize
                     }
-                    if include_footprint :
-                        volumeDict["Physical Footprint"] = prettyFootprint
+                    if include_space_usage_details :
+                        volumeDict["Snap Reserve"] = snapshotReserve
+                        volumeDict["Capacity"] = prettyLogicalCapacity
+                        volumeDict["Usage"] = prettyLogicalUsage
+                        volumeDict["Footprint"] = prettyFootprint
                     volumeDict["Type"] = volume.style
                     volumeDict["NFS Mount Target"] = nfsMountTarget
                     if check_local_mounts:
@@ -1666,8 +1683,8 @@ def listSnapshots(volumeName: str, printOutput: bool = False) -> list() :
 
 
 @deprecated
-def listVolumes(checkLocalMounts: bool = False, includeFootprint: bool = False, printOutput: bool = False) -> list() :
-    return list_volumes(check_local_mounts=checkLocalMounts, include_footprint=includeFootprint, print_output=printOutput)
+def listVolumes(checkLocalMounts: bool = False, includeSpaceUsageDetails: bool = False, printOutput: bool = False) -> list() :
+    return list_volumes(check_local_mounts=checkLocalMounts, include_space_usage_details=includeSpaceUsageDetails, print_output=printOutput)
 
 
 @deprecated
