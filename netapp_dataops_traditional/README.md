@@ -298,14 +298,11 @@ test1_clone    10.0TB  flexvol    10.61.188.49:/test1_clone   /home/ai/test1_clo
 Include physical storage space footprint in output:
 
 ```sh
-netapp_dataops_cli.py list volumes --include-space-usage-details
-Volume Name    Size    Snap. Reserve    Capacity    Usage     Footprint    Type       NFS Mount Target            FlexCache    Clone    Source Volume    Source Snapshot
--------------  ------  ---------------  ----------  --------  -----------  ---------  --------------------------  -----------  -------  ---------------  -----------------
-ailab_data01   10.0TB  5%               9.5TB       548.54GB  656.58GB     flexvol    10.61.188.49:/ailab_data01  no           no
-home           10.0TB  5%               9.5TB       45.21GB   Unknown      flexgroup  10.61.188.49:/home          no           no
-ailab_data02   10.0TB  5%               9.5TB       212.55GB  251.93GB     flexvol    10.61.188.49:/ailab_data02  no           no
-project        2.0TB   5%               1.9TB       134.6GB   135.45GB     flexvol    10.61.188.49:/project       no           no
-imagene        10.0TB  5%               9.5TB       457.65GB  Unknown      flexgroup  10.61.188.49:/imagenet      no           no
+netapp_dataops_cli.py list volumes --include-space-usage details
+Volume Name    Size      Snap Reserve    Capacity    Usage     Footprint    Type       NFS Mount Target                Local Mountpoint    FlexCache    Clone    Source Volume    Source Snapshot
+-------------  --------  --------------  ----------  --------  -----------  ---------  ------------------------------  ------------------  -----------  -------  ---------------  -----------------------------------
+team1          300.0GB   5%              285.0GB     12.38GB   12.59GB      flexvol    10.61.188.90:/team1             /home/ai/master     no           no
+team1_ws1      300.0GB   5%              285.0GB     15.04GB   2.87GB       flexvol    10.61.188.90:/team1_ws1         /home/ai/ws1        no           yes      team1            clone_team1_ws1.2021-06-30_204755.0
 ```
 
 <a name="cli-mount-volume"></a>
