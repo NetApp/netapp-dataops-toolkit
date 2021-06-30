@@ -259,12 +259,12 @@ The following options/arguments are optional:
 
 ##### Storage Space Usage Details Explanation
 
-If the -s/--include-space-usage-details  option is specified, then four additional columns will be included in the output. These columns will be titled 'Snap. Reserve', 'Capacity', 'Usage', and 'Footprint'. These columns and their relation to the 'Size' column are explained in the table below.
+If the -s/--include-space-usage-details  option is specified, then four additional columns will be included in the output. These columns will be titled 'Snap Reserve', 'Capacity', 'Usage', and 'Footprint'. These columns and their relation to the 'Size' column are explained in the table below.
 
 | Column        | Explanation                                                                                                                        |
 |---------------|------------------------------------------------------------------------------------------------------------------------------------|
 | Size          | The logical size of the volume.                                                                                                    |
-| Snap. Reserve | The percentage of the volume's logical size that is reserved for snapshot copies.                                                  |
+| Snap Reserve  | The percentage of the volume's logical size that is reserved for snapshot copies.                                                  |
 | Capacity      | The logical capacity that is available for users of the volume to store data in.                                                   |
 | Usage         | The combined logical size of all of the files that are stored on the volume.                                                       |
 | Footprint     | The actual on-disk storage space that is being consumed by the volume after all ONTAP storage efficiencies are taken into account. |
@@ -975,12 +975,12 @@ def list_volumes(
 
 ##### Storage Space Usage Details Explanation
 
-If `include_space_usage_details` is set to `True`, then four additional fields will be included in the output. These fields will be labeled with the keys 'Snap. Reserve', 'Capacity', 'Usage', and 'Footprint'. These fields and their relation to the 'Size' field are explained in the table below.
+If `include_space_usage_details` is set to `True`, then four additional fields will be included in the output. These fields will be labeled with the keys 'Snap Reserve', 'Capacity', 'Usage', and 'Footprint'. These fields and their relation to the 'Size' field are explained in the table below.
 
 | Field         | Explanation                                                                                                                        |
 |---------------|------------------------------------------------------------------------------------------------------------------------------------|
 | Size          | The logical size of the volume.                                                                                                    |
-| Snap. Reserve | The percentage of the volume's logical size that is reserved for snapshot copies.                                                  |
+| Snap Reserve  | The percentage of the volume's logical size that is reserved for snapshot copies.                                                  |
 | Capacity      | The logical capacity that is available for users of the volume to store data in.                                                   |
 | Usage         | The combined logical size of all of the files that are stored on the volume.                                                       |
 | Footprint     | The actual on-disk storage space that is being consumed by the volume after all ONTAP storage efficiencies are taken into account. |
@@ -993,7 +993,7 @@ Also note that if you are using an ONTAP version earlier than 9.9, then the 'Foo
 
 ##### Return Value
 
-The function returns a list of all existing volumes. Each item in the list will be a dictionary containing details regarding a specific volume. The keys for the values in this dictionary are "Volume Name", "Logical Size", "Type", "NFS Mount Target", "FlexCache" (yes/no), "Clone" (yes/no), "Source Volume", "Source Snapshot". If `check_local_mounts` is set to `True`, then "Local Mountpoint" will also be included as a key in the dictionary. If `include_space_usage_details` is set to `True`, then "Snap. Reserve", "Capacity", "Usage", and "Footprint" will also be included as keys in the dictionary.
+The function returns a list of all existing volumes. Each item in the list will be a dictionary containing details regarding a specific volume. The keys for the values in this dictionary are "Volume Name", "Logical Size", "Type", "NFS Mount Target", "FlexCache" (yes/no), "Clone" (yes/no), "Source Volume", "Source Snapshot". If `check_local_mounts` is set to `True`, then "Local Mountpoint" will also be included as a key in the dictionary. If `include_space_usage_details` is set to `True`, then "Snap Reserve", "Capacity", "Usage", and "Footprint" will also be included as keys in the dictionary.
 
 ##### Error Handling
 
