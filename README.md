@@ -12,4 +12,4 @@ The NetApp DataOps Toolkit comes in two different flavors - one for Kubernetes-b
 
 ## Support
 
-Report any issues via GitHub: https://github.com/NetApp/netapp-data-science-toolkit/issues.
+Report any issues via GitHub: https://github.com/NetApp/netapp-dataops-toolkit/issues.
