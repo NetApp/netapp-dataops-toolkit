@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 
 import base64
@@ -97,11 +98,12 @@ Optional Options/Arguments:
 \t-m, --mountpoint=\tLocal mountpoint to mount new volume at after creating. If not specified, new volume will not be mounted locally. On Linux hosts - if specified, must be run as root.
 \t-s, --source-snapshot=\tName of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
 \t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
+\t-x, --readonly\t\tRead-only option for mounting volumes locally.
 
 Examples (basic usage):
 \tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset
 \tnetapp_dataops_cli.py clone volume -n project2 -v gold_dataset -s snap1
-\tsudo -E netapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset --mountpoint=~/project1
+\tsudo -E netapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset --mountpoint=~/project1 -x
 
 Examples (advanced usage):
 \tnetapp_dataops_cli.py clone volume -n testvol -v gold_dataset -u 1000 -g 1000
@@ -150,14 +152,15 @@ Optional Options/Arguments:
 \t-r, --guarantee-space\tGuarantee sufficient storage space for full capacity of the volume (i.e. do not use thin provisioning).
 \t-t, --type=\t\tVolume type to use when creating new volume (flexgroup/flexvol).
 \t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
+\t-x, --readonly\t\tRead-only option for mounting volumes locally.
 
 Examples (basic usage):
 \tnetapp_dataops_cli.py create volume --name=project1 --size=10GB
 \tnetapp_dataops_cli.py create volume -n datasets -s 10TB
-\tsudo -E netapp_dataops_cli.py create volume --name=project2 --size=2TB --mountpoint=~/project2
+\tsudo -E netapp_dataops_cli.py create volume --name=project2 --size=2TB --mountpoint=~/project2 --readonly
 
 Examples (advanced usage):
-\tsudo -E netapp_dataops_cli.py create volume --name=project1 --size=10GB --permissions=0755 --type=flexvol --mountpoint=~/project1
+\tsudo -E netapp_dataops_cli.py create volume --name=project1 --size=10GB --permissions=0755 --type=flexvol --mountpoint=~/project1 -x
 \tsudo -E netapp_dataops_cli.py create volume --name=project2_flexgroup --size=2TB --type=flexgroup --mountpoint=/mnt/project2
 \tnetapp_dataops_cli.py create volume --name=testvol --size=10GB --type=flexvol --aggregate=n2_data
 \tnetapp_dataops_cli.py create volume -n testvol -s 10GB -t flexvol -p 0755 -u 1000 -g 1000
@@ -253,10 +256,11 @@ Required Options/Arguments:
 
 Optional Options/Arguments:
 \t-h, --help\t\tPrint help text.
-
+\t-ro, --readonly\t\tChoose whether to mount volume locally as read-only.
 Examples:
 \tsudo -E netapp_dataops_cli.py mount volume --name=project1 --mountpoint=/mnt/project1
 \tsudo -E netapp_dataops_cli.py mount volume -m ~/testvol -n testvol
+\tsudo -E netapp_dataops_cli.py mount volume --name=project1 --mountpoint=/mnt/project1 --readonly
 '''
 helpTextPullFromS3Bucket = '''
 Command: pull-from-s3 bucket
@@ -430,7 +434,7 @@ def createConfig(configDirPath: str = "~/.netapp_dataops", configFilename: str =
                 sys.exit(0)
             else:
                 print("Invalid value. Must enter 'yes' or 'no'.")
-        
+
     # Instantiate dict for storing connection details
     config = dict()
 
@@ -506,7 +510,7 @@ def createConfig(configDirPath: str = "~/.netapp_dataops", configFilename: str =
         passwordString = getpass("Enter ONTAP API password (Recommendation: Use SVM account): ")
 
         # Convert password to base64 enconding
-        passwordBytes = passwordString.encode("ascii") 
+        passwordBytes = passwordString.encode("ascii")
         passwordBase64Bytes = base64.b64encode(passwordBytes)
         config["password"] = passwordBase64Bytes.decode("ascii")
 
@@ -537,7 +541,7 @@ def createConfig(configDirPath: str = "~/.netapp_dataops", configFilename: str =
             refreshTokenString = getpass("Enter Cloud Central refresh token: ")
 
             # Convert refresh token to base64 enconding
-            refreshTokenBytes = refreshTokenString.encode("ascii") 
+            refreshTokenBytes = refreshTokenString.encode("ascii")
             refreshTokenBase64Bytes = base64.b64encode(refreshTokenBytes)
             config["cloudCentralRefreshToken"] = refreshTokenBase64Bytes.decode("ascii")
 
@@ -563,7 +567,7 @@ def createConfig(configDirPath: str = "~/.netapp_dataops", configFilename: str =
             s3SecretAccessKeyString = getpass("Enter S3 Secret Access Key: ")
 
             # Convert refresh token to base64 enconding
-            s3SecretAccessKeyBytes = s3SecretAccessKeyString.encode("ascii") 
+            s3SecretAccessKeyBytes = s3SecretAccessKeyString.encode("ascii")
             s3SecretAccessKeyBase64Bytes = base64.b64encode(s3SecretAccessKeyBytes)
             config["s3SecretAccessKey"] = s3SecretAccessKeyBase64Bytes.decode("ascii")
 
@@ -595,7 +599,7 @@ def createConfig(configDirPath: str = "~/.netapp_dataops", configFilename: str =
         os.mkdir(configDirPath)
     except FileExistsError :
         pass
-    
+
     # Create config file in config dir
     with open(configFilePath, 'w') as configFile:
         # Write connection details to config file
@@ -644,10 +648,11 @@ if __name__ == '__main__':
             mountpoint = None
             unixUID = None
             unixGID = None
+            readonly = False
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:v:s:m:u:g:", ["help", "name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid="])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:v:s:m:u:g:x", ["help", "name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid=", "readonly"])
             except:
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
 
@@ -668,7 +673,9 @@ if __name__ == '__main__':
                     unixUID = arg
                 elif opt in ("-g", "--gid"):
                     unixGID = arg
-            
+                elif opt in ("-x", "--readonly"):
+                    readonly = True
+
             # Check for required options
             if not newVolumeName or not sourceVolumeName:
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
@@ -679,7 +686,7 @@ if __name__ == '__main__':
             # Clone volume
             try:
                 clone_volume(new_volume_name=newVolumeName, source_volume_name=sourceVolumeName, source_snapshot_name=sourceSnapshotName,
-                             mountpoint=mountpoint, unix_uid=unixUID, unix_gid=unixGID, print_output=True)
+                             mountpoint=mountpoint, unix_uid=unixUID, unix_gid=unixGID, readonly=readonly, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError,
                     MountOperationError):
                 sys.exit(1)
@@ -704,7 +711,7 @@ if __name__ == '__main__':
     elif action == "create":
         # Get desired target from command line args
         target = getTarget(sys.argv)
-        
+
         # Invoke desired action based on target
         if target in ("snapshot", "snap"):
             volumeName = None
@@ -725,7 +732,8 @@ if __name__ == '__main__':
                     snapshotName = arg
                 elif opt in ("-v", "--volume"):
                     volumeName = arg
-            
+
+
             # Check for required options
             if not volumeName:
                 handleInvalidCommand(helpText=helpTextCreateSnapshot, invalidOptArg=True)
@@ -748,10 +756,11 @@ if __name__ == '__main__':
             snapshotPolicy = None
             mountpoint = None
             aggregate = None
+            readonly = False
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:s:rt:p:u:g:e:d:m:a:", ["help", "name=", "size=", "guarantee-space", "type=", "permissions=", "uid=", "gid=", "export-policy=", "snapshot-policy=", "mountpoint=", "aggregate="])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:s:rt:p:u:g:e:d:m:a:x", ["help", "name=", "size=", "guarantee-space", "type=", "permissions=", "uid=", "gid=", "export-policy=", "snapshot-policy=", "mountpoint=", "aggregate=", "readonly"])
             except:
                 handleInvalidCommand(helpText=helpTextCreateVolume, invalidOptArg=True)
 
@@ -782,7 +791,9 @@ if __name__ == '__main__':
                     mountpoint = arg
                 elif opt in ("-a", "--aggregate"):
                     aggregate = arg
-            
+                elif opt in ("-x", "--readonly"):
+                    readonly = True
+
             # Check for required options
             if not volumeName or not volumeSize:
                 handleInvalidCommand(helpText=helpTextCreateVolume, invalidOptArg=True)
@@ -793,7 +804,7 @@ if __name__ == '__main__':
             # Create volume
             try:
                 create_volume(volume_name=volumeName, volume_size=volumeSize, guarantee_space=guaranteeSpace, volume_type=volumeType, unix_permissions=unixPermissions, unix_uid=unixUID,
-                              unix_gid=unixGID, export_policy=exportPolicy, snapshot_policy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, print_output=True)
+                              unix_gid=unixGID, export_policy=exportPolicy, snapshot_policy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, readonly=readonly, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
 
@@ -803,7 +814,7 @@ if __name__ == '__main__':
     elif action in ("delete", "del", "rm"):
         # Get desired target from command line args
         target = getTarget(sys.argv)
-        
+
         # Invoke desired action based on target
         if target in ("snapshot", "snap"):
             volumeName = None
@@ -824,7 +835,7 @@ if __name__ == '__main__':
                     snapshotName = arg
                 elif opt in ("-v", "--volume"):
                     volumeName = arg
-            
+
             # Check for required options
             if not volumeName or not snapshotName:
                 handleInvalidCommand(helpText=helpTextDeleteSnapshot, invalidOptArg=True)
@@ -854,7 +865,7 @@ if __name__ == '__main__':
                     volumeName = arg
                 elif opt in ("-f", "--force"):
                     force = True
-            
+
             # Check for required options
             if not volumeName:
                 handleInvalidCommand(helpText=helpTextDeleteVolume, invalidOptArg=True)
@@ -882,11 +893,11 @@ if __name__ == '__main__':
 
     elif action in ("help", "h", "-h", "--help"):
         print(helpTextStandard)
-        
+
     elif action in ("list", "ls"):
         # Get desired target from command line args
         target = getTarget(sys.argv)
-        
+
         # Invoke desired action based on target
         if target in ("cloud-sync-relationship", "cloud-sync", "cloud-sync-relationships", "cloud-syncs") :
             # Check command line options
@@ -902,7 +913,7 @@ if __name__ == '__main__':
                 list_cloud_sync_relationships(print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
-        
+
         elif target in ("snapmirror-relationship", "snapmirror", "snapmirror-relationships", "snapmirrors"):
             # Check command line options
             if len(sys.argv) > 3:
@@ -917,7 +928,7 @@ if __name__ == '__main__':
                 list_snap_mirror_relationships(print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
-        
+
         elif target in ("snapshot", "snap", "snapshots", "snaps"):
             volumeName = None
 
@@ -934,7 +945,7 @@ if __name__ == '__main__':
                     sys.exit(0)
                 elif opt in ("-v", "--volume"):
                     volumeName = arg
-            
+
             # Check for required options
             if not volumeName:
                 handleInvalidCommand(helpText=helpTextListSnapshots, invalidOptArg=True)
@@ -944,7 +955,7 @@ if __name__ == '__main__':
                 list_snapshots(volume_name=volumeName, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
                 sys.exit(1)
-        
+
         elif target in ("volume", "vol", "volumes", "vols"):
             includeSpaceUsageDetails = False
 
@@ -974,15 +985,15 @@ if __name__ == '__main__':
     elif action == "mount":
         # Get desired target from command line args
         target = getTarget(sys.argv)
-        
+
         # Invoke desired action based on target
         if target in ("volume", "vol"):
             volumeName = None
             mountpoint = None
-
+            readonly = False
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:m:", ["help", "name=", "mountpoint="])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:m:x", ["help", "name=", "mountpoint=", "readonly"])
             except:
                 handleInvalidCommand(helpText=helpTextMountVolume, invalidOptArg=True)
 
@@ -995,20 +1006,23 @@ if __name__ == '__main__':
                     volumeName = arg
                 elif opt in ("-m", "--mountpoint"):
                     mountpoint = arg
+                elif opt in ("-x", "--readonly"):
+                    readonly = True
+            print(readonly)
 
             # Mount volume
             try:
-                mount_volume(volume_name=volumeName, mountpoint=mountpoint, print_output=True)
+                mount_volume(volume_name=volumeName, mountpoint=mountpoint, readonly=readonly, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
 
         else:
             handleInvalidCommand()
-        
+
     elif action in ("prepopulate"):
         # Get desired target from command line args
         target = getTarget(sys.argv)
-        
+
         # Invoke desired action based on target
         if target in ("flexcache", "cache"):
             volumeName = None
@@ -1042,14 +1056,14 @@ if __name__ == '__main__':
                 prepopulate_flex_cache(volume_name=volumeName, paths=pathsList, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
                 sys.exit(1)
-        
+
         else:
             handleInvalidCommand()
 
     elif action in ("pull-from-s3", "pull-s3", "s3-pull"):
         # Get desired target from command line args
         target = getTarget(sys.argv)
-        
+
         # Invoke desired action based on target
         if target in ("bucket"):
             s3Bucket = None
@@ -1073,7 +1087,7 @@ if __name__ == '__main__':
                     s3ObjectKeyPrefix = arg
                 elif opt in ("-d", "--directory"):
                     localDirectory = arg
-            
+
             # Check for required options
             if not s3Bucket or not localDirectory:
                 handleInvalidCommand(helpText=helpTextPullFromS3Bucket, invalidOptArg=True)
@@ -1106,7 +1120,7 @@ if __name__ == '__main__':
                     s3ObjectKey = arg
                 elif opt in ("-f", "--file"):
                     localFile = arg
-            
+
             # Check for required options
             if not s3Bucket or not s3ObjectKey:
                 handleInvalidCommand(helpText=helpTextPullFromS3Object, invalidOptArg=True)
@@ -1123,7 +1137,7 @@ if __name__ == '__main__':
     elif action in ("push-to-s3", "push-s3", "s3-push"):
         # Get desired target from command line args
         target = getTarget(sys.argv)
-        
+
         # Invoke desired action based on target
         if target in ("directory", "dir"):
             s3Bucket = None
@@ -1150,7 +1164,7 @@ if __name__ == '__main__':
                     localDirectory = arg
                 elif opt in ("-e", "--extra-args"):
                     s3ExtraArgs = arg
-            
+
             # Check for required options
             if not s3Bucket or not localDirectory:
                 handleInvalidCommand(helpText=helpTextPushToS3Directory, invalidOptArg=True)
@@ -1186,7 +1200,7 @@ if __name__ == '__main__':
                     localFile = arg
                 elif opt in ("-e", "--extra-args"):
                     s3ExtraArgs = arg
-            
+
             # Check for required options
             if not s3Bucket or not localFile:
                 handleInvalidCommand(helpText=helpTextPushToS3File, invalidOptArg=True)
@@ -1203,7 +1217,7 @@ if __name__ == '__main__':
     elif action in ("restore"):
         # Get desired target from command line args
         target = getTarget(sys.argv)
-        
+
         # Invoke desired action based on target
         if target in ("snapshot", "snap"):
             volumeName = None
@@ -1227,7 +1241,7 @@ if __name__ == '__main__':
                     volumeName = arg
                 elif opt in ("-f", "--force"):
                     force = True
-            
+
             # Check for required options
             if not volumeName or not snapshotName:
                 handleInvalidCommand(helpText=helpTextRestoreSnapshot, invalidOptArg=True)
@@ -1256,7 +1270,7 @@ if __name__ == '__main__':
     elif action == "sync":
         # Get desired target from command line args
         target = getTarget(sys.argv)
-        
+
         # Invoke desired action based on target
         if target in ("cloud-sync-relationship", "cloud-sync"):
             relationshipID = None
@@ -1326,6 +1340,6 @@ if __name__ == '__main__':
     elif action in ("version", "v", "-v", "--version"):
         print("NetApp DataOps Toolkit for Traditional Environments - version "
               + traditional.__version__)
-        
+
     else:
         handleInvalidCommand()

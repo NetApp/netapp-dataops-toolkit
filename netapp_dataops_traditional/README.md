@@ -90,7 +90,7 @@ Data volume management operations:
 - [Create a new data volume.](#cli-create-volume)
 - [Delete an existing data volume.](#cli-delete-volume)
 - [List all data volumes.](#cli-list-volumes)
-- [Mount an existing data volume locally.](#cli-mount-volume)
+- [Mount an existing data volume locally as "read-only" or "read-write".](#cli-mount-volume)
 
 Snapshot management operations:
 - [Create a new snapshot for a data volume.](#cli-create-snapshot)
@@ -134,6 +134,7 @@ The following options/arguments are optional:
     -m, --mountpoint=       Local mountpoint to mount new volume at after creating. If not specified, new volume will not be mounted locally. On Linux hosts - if specified, must be run as root.
     -s, --source-snapshot=  Name of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
     -u, --uid=              Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
+    -x, --readonly          Read-only option for mounting volumes locally.
 ```
 
 ##### Example Usage
@@ -146,7 +147,17 @@ Creating clone volume 'project2' from source volume 'project1'.
 Clone volume created successfully.
 ```
 
-Create a volume named 'project2' that is an exact copy of the contents of volume 'project1' at the time that the snapshot 'snap1' was created, and locally mount the newly created volume at '~/project2'.
+Create a volume named 'project2' that is an exact copy of the volume 'project1' and mount it locally as read-only.
+
+```sh
+netapp_dataops_cli.py clone volume --name=project2 --source-volume=project1 --mountpoint=~/project2 --readonly
+Creating clone volume 'project2' from source volume 'project1'.
+Clone volume created successfully.
+Mounting volume 'project2' at '~/project2' as read-only.
+Volume mounted successfully.
+```
+
+Create a volume named 'project2' that is an exact copy of the contents of volume 'project1' at the time that the snapshot 'snap1' was created, and locally mount the newly created volume at '~/project2' as read-only or read-write.
 
 ```sh
 sudo -E netapp_dataops_cli.py clone volume --name=project2 --source-volume=project1 --source-snapshot=snap1 --mountpoint=~/project2
@@ -186,6 +197,7 @@ The following options/arguments are optional:
     -r, --guarantee-space   Guarantee sufficient storage space for full capacity of the volume (i.e. do not use thin provisioning).
     -t, --type=             Volume type to use when creating new volume (flexgroup/flexvol).
     -u, --uid=              Unix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
+    -x, --readonly          Read-only option for mounting volumes locally.      
 ```
 
 ##### Example Usage
@@ -198,14 +210,14 @@ Creating volume 'project1'.
 Volume created successfully.
 ```
 
-Create a volume named 'project2' of size 2TB, and locally mount the newly created volume at '~/project2'.
+Create a volume named 'project2' of size 2TB, and locally mount the newly created volume at '~/project2' as read-only.
 
 ```sh
-sudo -E netapp_dataops_cli.py create volume --name=project2 --size=2TB --mountpoint=~/project2
+sudo -E netapp_dataops_cli.py create volume --name=project2 --size=2TB --mountpoint=~/project2 -x
 [sudo] password for ai:
 Creating volume 'project2'.
 Volume created successfully.
-Mounting volume 'project2' at '~/project2'.
+Mounting volume 'project2' at '~/project2' as readonly.
 Volume mounted successfully.
 ```
 
