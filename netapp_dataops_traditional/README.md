@@ -50,22 +50,22 @@ Enter ONTAP management LIF hostname or IP address (Recommendation: Use SVM manag
 Enter SVM (Storage VM) name: ailab1
 Enter SVM NFS data LIF hostname or IP address: 10.61.188.119
 Enter default volume type to use when creating new volumes (flexgroup/flexvol) [flexgroup]:        
-Enter export policy to use by default when creating new volumes [default]: 
-Enter snapshot policy to use by default when creating new volumes [none]: 
-Enter unix filesystem user id (uid) to apply by default when creating new volumes (ex. '0' for root user) [0]: 
-Enter unix filesystem group id (gid) to apply by default when creating new volumes (ex. '0' for root group) [0]: 
-Enter unix filesystem permissions to apply by default when creating new volumes (ex. '0777' for full read/write permissions for all users and groups) [0777]: 
+Enter export policy to use by default when creating new volumes [default]:
+Enter snapshot policy to use by default when creating new volumes [none]:
+Enter unix filesystem user id (uid) to apply by default when creating new volumes (ex. '0' for root user) [0]:
+Enter unix filesystem group id (gid) to apply by default when creating new volumes (ex. '0' for root group) [0]:
+Enter unix filesystem permissions to apply by default when creating new volumes (ex. '0777' for full read/write permissions for all users and groups) [0777]:
 Enter aggregate to use by default when creating new FlexVol volumes: vsim_ontap97_01_FC_1
 Enter ONTAP API username (Recommendation: Use SVM account): vsadmin
-Enter ONTAP API password (Recommendation: Use SVM account): 
+Enter ONTAP API password (Recommendation: Use SVM account):
 Verify SSL certificate when calling ONTAP API (true/false): false
 Do you intend to use this toolkit to trigger Cloud Sync operations? (yes/no): yes
 Note: If you do not have a Cloud Central refresh token, visit https://services.cloud.netapp.com/refresh-token to create one.
-Enter Cloud Central refresh token: 
+Enter Cloud Central refresh token:
 Do you intend to use this toolkit to push/pull from S3? (yes/no): yes
 Enter S3 endpoint: http://10.61.188.75:2113
 Enter S3 Access Key ID: TN9ISEC5BDGIOK59LC3I
-Enter S3 Secret Access Key: 
+Enter S3 Secret Access Key:
 Verify SSL certificate when calling S3 API (true/false): false
 Created config file: '/Users/moglesby/.netapp_dataops/config.json'.
 ```
@@ -157,7 +157,7 @@ Mounting volume 'project2' at '~/project2' as read-only.
 Volume mounted successfully.
 ```
 
-Create a volume named 'project2' that is an exact copy of the contents of volume 'project1' at the time that the snapshot 'snap1' was created, and locally mount the newly created volume at '~/project2' as read-only or read-write.
+Create a volume named 'project2' that is an exact copy of the contents of volume 'project1' at the time that the snapshot 'snap1' was created, and locally mount the newly created volume at '~/project2' as read-write.
 
 ```sh
 sudo -E netapp_dataops_cli.py clone volume --name=project2 --source-volume=project1 --source-snapshot=snap1 --mountpoint=~/project2
@@ -213,7 +213,7 @@ Volume created successfully.
 Create a volume named 'project2' of size 2TB, and locally mount the newly created volume at '~/project2' as read-only.
 
 ```sh
-sudo -E netapp_dataops_cli.py create volume --name=project2 --size=2TB --mountpoint=~/project2 -x
+sudo -E netapp_dataops_cli.py create volume --name=project2 --size=2TB --mountpoint=~/project2 --readonly
 [sudo] password for ai:
 Creating volume 'project2'.
 Volume created successfully.
@@ -328,16 +328,17 @@ The following options/arguments are required:
 ```
     -m, --mountpoint=       Local mountpoint to mount volume at.
     -n, --name=             Name of volume.
+    -x, --readonly          Mount volume locally as read-only.
 ```
 
 ##### Example Usage
 
-Locally mount the volume named 'project1' at '~/project1'.
+Locally mount the volume named 'project1' at '~/project1' as read-only.
 
 ```sh
-sudo -E netapp_dataops_cli.py mount volume --name=project1 --mountpoint=~/project1
+sudo -E netapp_dataops_cli.py mount volume --name=project1 --mountpoint=~/project1 --readonly
 [sudo] password for ai:
-Mounting volume 'project1' at '~/project1'.
+Mounting volume 'project1' at '~/project1' as readonly.
 Volume mounted successfully.
 ```
 
@@ -837,7 +838,7 @@ Data volume management operations:
 - [Create a new data volume.](#lib-create-volume)
 - [Delete an existing data volume.](#lib-delete-volume)
 - [List all data volumes.](#lib-list-volumes)
-- [Mount an existing data volume locally.](#lib-mount-volume)
+- [Mount an existing data volume locally as read-only or read-write.](#lib-mount-volume)
 
 Snapshot management operations:
 - [Create a new snapshot for a data volume.](#lib-create-snapshot)
@@ -880,6 +881,7 @@ def clone_volume(
     unix_uid: str = None,             # Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
     unix_gid: str = None,             # Unix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
     mountpoint: str = None,           # Local mountpoint to mount new volume at. If not specified, volume will not be mounted locally. On Linux hosts - if specified, calling program must be run as root.
+    readonly: bool = False,           # Mount volume locally as "read-only. If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
     print_output: bool = False        # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
@@ -921,6 +923,7 @@ def create_volume(
     snapshot_policy: str = "none",   # Snapshot policy to apply for new volume.
     aggregate: str = None,           # Aggregate to use when creating new volume (flexvol volumes only).
     mountpoint: str = None,          # Local mountpoint to mount new volume at. If not specified, volume will not be mounted locally. On Linux hosts - if specified, calling program must be run as root.
+    readonly: bool = False,           # Mount volume locally as "read-only. If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
     print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
@@ -944,7 +947,7 @@ MountOperationError             # The volume was not succesfully mounted locally
 
 #### Delete an Existing Data Volume
 
-The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing data volume as part of any Python program or workflow. 
+The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing data volume as part of any Python program or workflow.
 
 ##### Function Definition
 
@@ -1020,7 +1023,7 @@ APIConnectionError              # The storage system/service API returned an err
 
 #### Mount an Existing Data Volume Locally
 
-The NetApp DataOps Toolkit can be used to mount an existing data volume on your local host as part of any Python program or workflow. On Linux hosts, mounting requires root privileges, so any Python program that invokes this function must be run as root. It is usually not necessary to invoke this function as root on macOS hosts.
+The NetApp DataOps Toolkit can be used to mount an existing data volume as "read-only" or "read-write" on your local host as part of any Python program or workflow. On Linux hosts, mounting requires root privileges, so any Python program that invokes this function must be run as root. It is usually not necessary to invoke this function as root on macOS hosts.
 
 ##### Function Definition
 
@@ -1028,6 +1031,7 @@ The NetApp DataOps Toolkit can be used to mount an existing data volume on your 
 def mount_volume(
     volume_name: str,           # Name of volume (required).
     mountpoint: str,            # Local mountpoint to mount volume at (required).
+    readonly: bool = False,     # Mount volume locally as "read-only. If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
     print_output: bool = False  # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
@@ -1083,7 +1087,7 @@ InvalidVolumeParameterError     # An invalid parameter was specified.
 
 #### Delete an Existing Snapshot for a Data Volume
 
-The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing snapshot for a specific data volume as part of any Python program or workflow. 
+The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing snapshot for a specific data volume as part of any Python program or workflow.
 
 ##### Function Definition
 

@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 
 import base64
@@ -256,7 +255,7 @@ Required Options/Arguments:
 
 Optional Options/Arguments:
 \t-h, --help\t\tPrint help text.
-\t-ro, --readonly\t\tChoose whether to mount volume locally as read-only.
+\t-x, --readonly\t\tChoose whether to mount volume locally as read-only.
 Examples:
 \tsudo -E netapp_dataops_cli.py mount volume --name=project1 --mountpoint=/mnt/project1
 \tsudo -E netapp_dataops_cli.py mount volume -m ~/testvol -n testvol
