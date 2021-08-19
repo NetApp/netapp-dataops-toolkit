@@ -358,7 +358,7 @@ def _convert_bytes_to_pretty_size(size_in_bytes: str, num_decimal_points: int = 
 
 
 def clone_volume(new_volume_name: str, source_volume_name: str, source_snapshot_name: str = None,
-                 unix_uid: str = None, unix_gid: str = None, mountpoint: str = None, readonly: bool = False,
+                 unix_uid: str = None, unix_gid: str = None, mountpoint: str = None, junction: str =None, readonly: bool = False,
                  print_output: bool = False):
     # Retrieve config details from config file
     try:
@@ -419,13 +419,20 @@ def clone_volume(new_volume_name: str, source_volume_name: str, source_snapshot_
                     print("Error: Invalid source volume name.")
                 raise InvalidVolumeParameterError("name")
 
+            # Create option to choose junction path.
+            if junction:
+                if print_output:
+                    print("Mounting Volume at specified junction path: '" + junction + "'.")
+            else:
+                junction = "/"+new_volume_name
+
             # Construct dict representing new volume
             newVolumeDict = {
                 "name": new_volume_name,
                 "comment": "netapp-dataops",
                 "svm": {"name": svm},
                 "nas": {
-                    "path": "/" + new_volume_name
+                    "path": junction
                 },
                 "clone": {
                     "is_flexclone": True,
@@ -555,7 +562,7 @@ def create_snapshot(volume_name: str, snapshot_name: str = None, print_output: b
 def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = False,
                   volume_type: str = "flexvol", unix_permissions: str = "0777",
                   unix_uid: str = "0", unix_gid: str = "0", export_policy: str = "default",
-                  snapshot_policy: str = "none", aggregate: str = None, mountpoint: str = None, readonly: bool = False,
+                  snapshot_policy: str = "none", aggregate: str = None, mountpoint: str = None, junction: str = None, readonly: bool = False,
                   print_output: bool = False):
     # Retrieve config details from config file
     try:
@@ -641,6 +648,13 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
                 print("Error: Invalid volume size specified. Acceptable values are '1024MB', '100GB', '10TB', etc.")
             raise InvalidVolumeParameterError("size")
 
+        # Create option to choose junction path.
+        if junction:
+            if print_output:
+                print("Mounting Volume at specified junction path: '"+ junction +"'.")
+        else:
+            junction = "/"+volume_name
+
 
         # Create dict representing volume
         volumeDict = {
@@ -650,7 +664,7 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
             "size": volumeSizeBytes,
             "style": volume_type,
             "nas": {
-                "path": "/" + volume_name,
+                "path": junction,
                 "export_policy": {"name": export_policy},
                 "security_style": "unix",
                 "unix_permissions": unix_permissions,
@@ -659,8 +673,6 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
             },
             "snapshot_policy": {"name": snapshot_policy}
         }
-
-
 
         # Set space guarantee field
         if guarantee_space:
@@ -684,6 +696,8 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
             if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
+
+
 
         # Optionally mount newly created volume
         if mountpoint:
@@ -1244,6 +1258,30 @@ def mount_volume(volume_name: str, mountpoint: str, readonly: bool = False, prin
             if print_output:
                 print("Error: Error running mount command: ", err)
             raise MountOperationError(err)
+
+
+
+# Function to unmount volume
+def unmount_volume(mountpoint: str, print_output: bool = False):
+    # Confirm that mountpoint value was passed in
+    if not mountpoint:
+        if print_output:
+            print("Error: No mountpoint specified.")
+        raise MountOperationError("No mountpoint")
+
+    # Print message describing action to be understaken
+    if print_output:
+        print("Unmounting volume at '" + mountpoint + "'.")
+
+    # Un-mount volume
+    try:
+        subprocess.check_call(['umount', mountpoint])
+        if print_output:
+            print("Volume unmounted successfully.")
+    except subprocess.CalledProcessError as err:
+        if print_output:
+            print("Error: Error running unmount command: ", err)
+        raise MountOperationError(err)
 
 
 def prepopulate_flex_cache(volume_name: str, paths: list, print_output: bool = False):

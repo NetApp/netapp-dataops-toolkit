@@ -91,6 +91,7 @@ Data volume management operations:
 - [Delete an existing data volume.](#cli-delete-volume)
 - [List all data volumes.](#cli-list-volumes)
 - [Mount an existing data volume locally as "read-only" or "read-write".](#cli-mount-volume)
+- [Unmount an existing data volume.](#cli-unmount-volume)
 
 Snapshot management operations:
 - [Create a new snapshot for a data volume.](#cli-create-snapshot)
@@ -135,14 +136,16 @@ The following options/arguments are optional:
     -s, --source-snapshot=  Name of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
     -u, --uid=              Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
     -x, --readonly          Read-only option for mounting volumes locally.
+    -j, --junction          Specify a custom junction path for the volumes to be mounted at.
 ```
 
 ##### Example Usage
 
-Create a volume named 'project2' that is an exact copy of the volume 'project1'.
+Create a volume named 'project2' that is an exact copy of the volume 'project1' and mount it a custom junction-path.
 
 ```sh
-netapp_dataops_cli.py clone volume --name=project2 --source-volume=project1
+netapp_dataops_cli.py clone volume --name=project2 --source-volume=project1 --junction=/project1
+Mounting Volume at specified junction path: '/project1'
 Creating clone volume 'project2' from source volume 'project1'.
 Clone volume created successfully.
 ```
@@ -197,7 +200,8 @@ The following options/arguments are optional:
     -r, --guarantee-space   Guarantee sufficient storage space for full capacity of the volume (i.e. do not use thin provisioning).
     -t, --type=             Volume type to use when creating new volume (flexgroup/flexvol).
     -u, --uid=              Unix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
-    -x, --readonly          Read-only option for mounting volumes locally.      
+    -x, --readonly          Read-only option for mounting volumes locally.    
+    -j, --junction          Specify a custom junction path for the volumes to be mounted at.  
 ```
 
 ##### Example Usage
@@ -210,11 +214,12 @@ Creating volume 'project1'.
 Volume created successfully.
 ```
 
-Create a volume named 'project2' of size 2TB, and locally mount the newly created volume at '~/project2' as read-only.
+Create a volume named 'project2' of size 2TB, and locally mount the newly created volume at '~/project2' as read-only with a custom junction-path.
 
 ```sh
-sudo -E netapp_dataops_cli.py create volume --name=project2 --size=2TB --mountpoint=~/project2 --readonly
+sudo -E netapp_dataops_cli.py create volume --name=project2 --size=2TB --mountpoint=~/project2 --readonly --junction=/project2
 [sudo] password for ai:
+Mounting Volume at specified junction path: '/project2'
 Creating volume 'project2'.
 Volume created successfully.
 Mounting volume 'project2' at '~/project2' as readonly.
@@ -256,6 +261,30 @@ Volume deleted successfully.
 
 <a name="cli-list-volumes"></a>
 
+#### Unmount an Existing Data Volume
+
+The NetApp DataOps Toolkit can be used to near-instantaneously unmount an existing data volume. The command for unmounting an existing data volume is `netapp_dataops_cli.py unmount volume`.
+
+The following options/arguments are required:
+
+```
+    -m, --mountpoint=     Mountpoint for the volume that needs to be unmounted.
+```
+
+The following options/arguments are optional:
+
+```
+    -h, --help      Print help text.
+```
+##### Example Usage
+
+Unmount the volume at mountpoint '/test1'.
+
+```sh
+netapp_dataops_cli.py unmount volume --mointpoint=/test1
+Unmounting volume at '/test1'.
+Volume unmounted successfully.
+```
 #### List All Data Volumes
 
 The NetApp DataOps Toolkit can be used to print a list of all existing data volumes. The command for printing a list of all existing data volumes is `netapp_dataops_cli.py list volumes`.
@@ -839,6 +868,7 @@ Data volume management operations:
 - [Delete an existing data volume.](#lib-delete-volume)
 - [List all data volumes.](#lib-list-volumes)
 - [Mount an existing data volume locally as read-only or read-write.](#lib-mount-volume)
+- [Unmount an existing data volume.](#cli-unmount-volume)
 
 Snapshot management operations:
 - [Create a new snapshot for a data volume.](#lib-create-snapshot)
@@ -881,7 +911,8 @@ def clone_volume(
     unix_uid: str = None,             # Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
     unix_gid: str = None,             # Unix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
     mountpoint: str = None,           # Local mountpoint to mount new volume at. If not specified, volume will not be mounted locally. On Linux hosts - if specified, calling program must be run as root.
-    readonly: bool = False,           # Mount volume locally as "read-only. If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
+    junction: str =None,              # Specified custom junction-path where volumes will be mounted at. If not specified, a junction path will become: ("/"+Volume Name).
+    readonly: bool = False,           # Option to mount volume locally as "read-only. If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
     print_output: bool = False        # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
@@ -923,6 +954,7 @@ def create_volume(
     snapshot_policy: str = "none",   # Snapshot policy to apply for new volume.
     aggregate: str = None,           # Aggregate to use when creating new volume (flexvol volumes only).
     mountpoint: str = None,          # Local mountpoint to mount new volume at. If not specified, volume will not be mounted locally. On Linux hosts - if specified, calling program must be run as root.
+    junction: str =None,              # Specified custom junction-path where volumes will be mounted at. If not specified, a junction path will become: ("/"+Volume Name).
     readonly: bool = False,           # Mount volume locally as "read-only. If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
     print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
 ) :
@@ -954,6 +986,34 @@ The NetApp DataOps Toolkit can be used to near-instantaneously delete an existin
 ```py
 def delete_volume(
     volume_name: str,            # Name of volume (required).
+    print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
+) :
+```
+
+##### Return Value
+
+None
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops_cli.py`.
+
+```py
+InvalidConfigError              # Config file is missing or contains an invalid value.
+APIConnectionError              # The storage system/service API returned an error.
+InvalidVolumeParameterError     # An invalid parameter was specified.
+```
+<a name="lib-unmount-volume"></a>
+
+#### Unmount an Existing Data Volume
+
+The NetApp DataOps Toolkit can be used to near-instantaneously unmount an existing data volume as part of any Python program or workflow.
+
+##### Function Definition
+
+```py
+def unmount_volume(
+    mountpoint: str,            # Mountpoint location (required).
     print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
 ) :
 ```

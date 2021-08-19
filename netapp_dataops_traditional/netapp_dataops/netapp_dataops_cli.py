@@ -15,6 +15,7 @@ from netapp_dataops.traditional import (
     InvalidSnapshotParameterError,
     APIConnectionError,
     mount_volume,
+    unmount_volume,
     MountOperationError,
     ConnectionTypeError,
     list_volumes,
@@ -56,6 +57,7 @@ Note: To view details regarding options/arguments for a specific command, run th
 \tdelete volume\t\t\tDelete an existing data volume.
 \tlist volumes\t\t\tList all data volumes.
 \tmount volume\t\t\tMount an existing data volume locally. Note: on Linux hosts - must be run as root.
+\tunmount volume\t\t\tUnmount an existing data volume. Note: on Linux hosts - must be run as root.
 
 Snapshot Management Commands:
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
@@ -98,14 +100,15 @@ Optional Options/Arguments:
 \t-s, --source-snapshot=\tName of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
 \t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
 \t-x, --readonly\t\tRead-only option for mounting volumes locally.
+\t-j, --junction\t\t\Specify a custom junction path for volumes to be mounted at.
 
 Examples (basic usage):
-\tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset
+\tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset --junction=/project1
 \tnetapp_dataops_cli.py clone volume -n project2 -v gold_dataset -s snap1
-\tsudo -E netapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset --mountpoint=~/project1 -x
+\tsudo -E netapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset --mountpoint=~/project1 --readonly
 
 Examples (advanced usage):
-\tnetapp_dataops_cli.py clone volume -n testvol -v gold_dataset -u 1000 -g 1000
+\tnetapp_dataops_cli.py clone volume -n testvol -v gold_dataset -u 1000 -g 1000 -x -j /project1
 '''
 helpTextConfig = '''
 Command: config
@@ -152,17 +155,18 @@ Optional Options/Arguments:
 \t-t, --type=\t\tVolume type to use when creating new volume (flexgroup/flexvol).
 \t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
 \t-x, --readonly\t\tRead-only option for mounting volumes locally.
+\t-j, --junction\t\t\Specify a custom junction path for volumes to be mounted at.
 
 Examples (basic usage):
-\tnetapp_dataops_cli.py create volume --name=project1 --size=10GB
+\tnetapp_dataops_cli.py create volume --name=project1 --size=10GB --junction=/project1
 \tnetapp_dataops_cli.py create volume -n datasets -s 10TB
 \tsudo -E netapp_dataops_cli.py create volume --name=project2 --size=2TB --mountpoint=~/project2 --readonly
 
 Examples (advanced usage):
-\tsudo -E netapp_dataops_cli.py create volume --name=project1 --size=10GB --permissions=0755 --type=flexvol --mountpoint=~/project1 -x
+\tsudo -E netapp_dataops_cli.py create volume --name=project1 --size=10GB --permissions=0755 --type=flexvol --mountpoint=~/project1 --readonly --junction=/project1
 \tsudo -E netapp_dataops_cli.py create volume --name=project2_flexgroup --size=2TB --type=flexgroup --mountpoint=/mnt/project2
 \tnetapp_dataops_cli.py create volume --name=testvol --size=10GB --type=flexvol --aggregate=n2_data
-\tnetapp_dataops_cli.py create volume -n testvol -s 10GB -t flexvol -p 0755 -u 1000 -g 1000
+\tnetapp_dataops_cli.py create volume -n testvol -s 10GB -t flexvol -p 0755 -u 1000 -g 1000 -j /project1
 \tsudo -E netapp_dataops_cli.py create volume -n vol1 -s 5GB -t flexvol --export-policy=team1 -m /mnt/vol1
 \tnetapp_dataops_cli.py create vol -n test2 -s 10GB -t flexvol --snapshot-policy=default
 '''
@@ -198,6 +202,23 @@ Examples:
 \tnetapp_dataops_cli.py delete volume --name=project1
 \tnetapp_dataops_cli.py delete volume -n project2
 '''
+
+helpTextUnmountVolume = '''
+Command: unmount volume
+
+Delete an existing data volume.
+
+Required Options/Arguments:
+\t-m, --mountpoint=\tMountpoint where volume is mounted at.
+
+Optional Options/Arguments:
+\t-h, --help\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py unmount volume --mountpoint=/project2
+\tnetapp_dataops_cli.py unmount volume -m /project2
+'''
+
 helpTextListCloudSyncRelationships = '''
 Command: list cloud-sync-relationships
 
@@ -258,7 +279,7 @@ Optional Options/Arguments:
 \t-x, --readonly\t\tChoose whether to mount volume locally as read-only.
 Examples:
 \tsudo -E netapp_dataops_cli.py mount volume --name=project1 --mountpoint=/mnt/project1
-\tsudo -E netapp_dataops_cli.py mount volume -m ~/testvol -n testvol
+\tsudo -E netapp_dataops_cli.py mount volume -m ~/testvol -n testvol -x
 \tsudo -E netapp_dataops_cli.py mount volume --name=project1 --mountpoint=/mnt/project1 --readonly
 '''
 helpTextPullFromS3Bucket = '''
@@ -647,11 +668,12 @@ if __name__ == '__main__':
             mountpoint = None
             unixUID = None
             unixGID = None
+            junction = None
             readonly = False
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:v:s:m:u:g:x", ["help", "name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid=", "readonly"])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:v:s:m:u:g:j:x", ["help", "name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid=", "junction=", "readonly"])
             except:
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
 
@@ -672,6 +694,8 @@ if __name__ == '__main__':
                     unixUID = arg
                 elif opt in ("-g", "--gid"):
                     unixGID = arg
+                elif opt in ("-j", "--junction"):
+                    junction = arg
                 elif opt in ("-x", "--readonly"):
                     readonly = True
 
@@ -685,7 +709,7 @@ if __name__ == '__main__':
             # Clone volume
             try:
                 clone_volume(new_volume_name=newVolumeName, source_volume_name=sourceVolumeName, source_snapshot_name=sourceSnapshotName,
-                             mountpoint=mountpoint, unix_uid=unixUID, unix_gid=unixGID, readonly=readonly, print_output=True)
+                             mountpoint=mountpoint, unix_uid=unixUID, unix_gid=unixGID, junction=junction, readonly=readonly, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError,
                     MountOperationError):
                 sys.exit(1)
@@ -755,11 +779,13 @@ if __name__ == '__main__':
             snapshotPolicy = None
             mountpoint = None
             aggregate = None
+            junction = None
             readonly = False
+
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:s:rt:p:u:g:e:d:m:a:x", ["help", "name=", "size=", "guarantee-space", "type=", "permissions=", "uid=", "gid=", "export-policy=", "snapshot-policy=", "mountpoint=", "aggregate=", "readonly"])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:s:rt:p:u:g:e:d:m:a:j:x", ["help", "name=", "size=", "guarantee-space", "type=", "permissions=", "uid=", "gid=", "export-policy=", "snapshot-policy=", "mountpoint=", "aggregate=", "junction=" ,"readonly"])
             except:
                 handleInvalidCommand(helpText=helpTextCreateVolume, invalidOptArg=True)
 
@@ -790,6 +816,8 @@ if __name__ == '__main__':
                     mountpoint = arg
                 elif opt in ("-a", "--aggregate"):
                     aggregate = arg
+                elif opt in ("-j", "--junction"):
+                    junction = arg
                 elif opt in ("-x", "--readonly"):
                     readonly = True
 
@@ -803,7 +831,7 @@ if __name__ == '__main__':
             # Create volume
             try:
                 create_volume(volume_name=volumeName, volume_size=volumeSize, guarantee_space=guaranteeSpace, volume_type=volumeType, unix_permissions=unixPermissions, unix_uid=unixUID,
-                              unix_gid=unixGID, export_policy=exportPolicy, snapshot_policy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, readonly=readonly, print_output=True)
+                              unix_gid=unixGID, export_policy=exportPolicy, snapshot_policy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, junction=junction, readonly=readonly, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
 
@@ -1007,7 +1035,6 @@ if __name__ == '__main__':
                     mountpoint = arg
                 elif opt in ("-x", "--readonly"):
                     readonly = True
-            print(readonly)
 
             # Mount volume
             try:
@@ -1015,6 +1042,35 @@ if __name__ == '__main__':
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
 
+        else:
+            handleInvalidCommand()
+
+    elif action == "unmount":
+    # Get desired target from command line args
+        target = getTarget(sys.argv)
+
+        # Invoke desired action based on target
+        if target in ("volume", "vol"):
+            mountpoint = None
+            # Get command line options
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hm:", ["help", "mountpoint="])
+            except:
+                handleInvalidCommand(helpText=helpTextUnMountVolume, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextMountVolume)
+                    sys.exit(0)
+                elif opt in ("-m", "--mountpoint"):
+                    mountpoint = arg
+
+            # Unmount volume
+            try:
+                unmount_volume(mountpoint=mountpoint, print_output= True)
+            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
+                sys.exit(1)
         else:
             handleInvalidCommand()
 
