@@ -141,7 +141,7 @@ The following options/arguments are optional:
 
 ##### Example Usage
 
-Create a volume named 'project2' that is an exact copy of the volume 'project1' and mount it a custom junction-path.
+Create a volume named 'project2' that is an exact copy of the volume 'project1' and mount it at custom junction-path.
 
 ```sh
 netapp_dataops_cli.py clone volume --name=project2 --source-volume=project1 --junction=/project1
