@@ -100,7 +100,7 @@ Optional Options/Arguments:
 \t-s, --source-snapshot=\tName of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
 \t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
 \t-x, --readonly\t\tRead-only option for mounting volumes locally.
-\t-j, --junction\t\t\Specify a custom junction path for the volume to be exported at.
+\t-j, --junction\t\tSpecify a custom junction path for the volume to be exported at.
 
 Examples (basic usage):
 \tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset
@@ -155,7 +155,7 @@ Optional Options/Arguments:
 \t-t, --type=\t\tVolume type to use when creating new volume (flexgroup/flexvol).
 \t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
 \t-x, --readonly\t\tRead-only option for mounting volumes locally.
-\t-j, --junction\t\t\Specify a custom junction path for the volume to be exported at.
+\t-j, --junction\t\tSpecify a custom junction path for the volume to be exported at.
 
 
 Examples (basic usage):
@@ -207,13 +207,13 @@ Examples:
 helpTextUnmountVolume = '''
 Command: unmount volume
 
-Delete an existing data volume.
+Unmount an existing data volume that is currently mounted locally.
 
 Required Options/Arguments:
 \t-m, --mountpoint=\tMountpoint where volume is mounted at.
 
 Optional Options/Arguments:
-\t-h, --help\tPrint help text.
+\t-h, --help\t\tPrint help text.
 
 Examples:
 \tnetapp_dataops_cli.py unmount volume --mountpoint=/project2
@@ -277,7 +277,8 @@ Required Options/Arguments:
 
 Optional Options/Arguments:
 \t-h, --help\t\tPrint help text.
-\t-x, --readonly\t\tChoose whether to mount volume locally as read-only.
+\t-x, --readonly\t\tMount volume locally as read-only.
+
 Examples:
 \tsudo -E netapp_dataops_cli.py mount volume --name=project1 --mountpoint=/mnt/project1
 \tsudo -E netapp_dataops_cli.py mount volume -m ~/testvol -n testvol -x
@@ -1057,20 +1058,24 @@ if __name__ == '__main__':
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hm:", ["help", "mountpoint="])
             except:
-                handleInvalidCommand(helpText=helpTextUnMountVolume, invalidOptArg=True)
+                handleInvalidCommand(helpText=helpTextUnmountVolume, invalidOptArg=True)
 
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextMountVolume)
+                    print(helpTextUnmountVolume)
                     sys.exit(0)
                 elif opt in ("-m", "--mountpoint"):
                     mountpoint = arg
 
+            # Check for required options
+            if not mountpoint:
+                handleInvalidCommand(helpText=helpTextUnmountVolume, invalidOptArg=True)
+
             # Unmount volume
             try:
                 unmount_volume(mountpoint=mountpoint, print_output= True)
-            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
+            except (MountOperationError):
                 sys.exit(1)
         else:
             handleInvalidCommand()

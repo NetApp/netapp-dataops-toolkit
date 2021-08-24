@@ -31,7 +31,7 @@ from tabulate import tabulate
 import yaml
 
 
-__version__ = "2.0.0"
+__version__ = "2.1.0_sprint11dev"
 
 
 # Using this decorator in lieu of using a dependency to manage deprecation
@@ -1183,18 +1183,6 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
 
 
 def mount_volume(volume_name: str, mountpoint: str, readonly: bool = False, print_output: bool = False):
-    # Confirm that mountpoint value was passed in
-    if not mountpoint:
-        if print_output:
-            print("Error: No mountpoint specified.")
-        raise MountOperationError("No mountpoint")
-
-    # Confirm that volume name value was passed in
-    if not volume_name:
-        if print_output:
-            print("Error: No volume name specified.")
-        raise InvalidVolumeParameterError("name")
-
     nfsMountTarget = None
 
     # Retrieve list of volumes
@@ -1261,7 +1249,6 @@ def mount_volume(volume_name: str, mountpoint: str, readonly: bool = False, prin
 
 # Function to unmount volume
 def unmount_volume(mountpoint: str, print_output: bool = False):
-    
     # Print message describing action to be understaken
     if print_output:
         print("Unmounting volume at '" + mountpoint + "'.")
