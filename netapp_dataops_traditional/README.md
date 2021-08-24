@@ -136,16 +136,16 @@ The following options/arguments are optional:
     -s, --source-snapshot=  Name of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
     -u, --uid=              Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
     -x, --readonly          Read-only option for mounting volumes locally.
-    -j, --junction          Specify a custom junction path for the volumes to be mounted at.
+    -j, --junction          Specify a custom junction path for the volume to be exported at.
+
 ```
 
 ##### Example Usage
 
-Create a volume named 'project2' that is an exact copy of the volume 'project1' and mount it at custom junction-path.
+Create a volume named 'project2' that is an exact copy of the volume 'project1'.
 
 ```sh
-netapp_dataops_cli.py clone volume --name=project2 --source-volume=project1 --junction=/project1
-Mounting Volume at specified junction path: '/project1'
+netapp_dataops_cli.py clone volume --name=project2 --source-volume=project1
 Creating clone volume 'project2' from source volume 'project1'.
 Clone volume created successfully.
 ```
@@ -153,7 +153,7 @@ Clone volume created successfully.
 Create a volume named 'project2' that is an exact copy of the volume 'project1' and mount it locally as read-only.
 
 ```sh
-netapp_dataops_cli.py clone volume --name=project2 --source-volume=project1 --mountpoint=~/project2 --readonly
+netapp_dataops_cli.py clone volume --name=project2 --source-volume=project1 --mountpoint=~/project2 --readonly --junction=/project2
 Creating clone volume 'project2' from source volume 'project1'.
 Clone volume created successfully.
 Mounting volume 'project2' at '~/project2' as read-only.
@@ -201,7 +201,8 @@ The following options/arguments are optional:
     -t, --type=             Volume type to use when creating new volume (flexgroup/flexvol).
     -u, --uid=              Unix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
     -x, --readonly          Read-only option for mounting volumes locally.    
-    -j, --junction          Specify a custom junction path for the volumes to be mounted at.  
+    -j, --junction         Specify a custom junction path for the volume to be exported at.
+
 ```
 
 ##### Example Usage
@@ -911,7 +912,7 @@ def clone_volume(
     unix_uid: str = None,             # Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
     unix_gid: str = None,             # Unix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
     mountpoint: str = None,           # Local mountpoint to mount new volume at. If not specified, volume will not be mounted locally. On Linux hosts - if specified, calling program must be run as root.
-    junction: str =None,              # Specified custom junction-path where volumes will be mounted at. If not specified, a junction path will become: ("/"+Volume Name).
+    junction: str =None,              # Specified custom junction-path for volume to be exported at. If not specified, junction path will be: ("/"+Volume Name).
     readonly: bool = False,           # Option to mount volume locally as "read-only. If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
     print_output: bool = False        # Denotes whether or not to print messages to the console during execution.
 ) :
@@ -954,7 +955,7 @@ def create_volume(
     snapshot_policy: str = "none",   # Snapshot policy to apply for new volume.
     aggregate: str = None,           # Aggregate to use when creating new volume (flexvol volumes only).
     mountpoint: str = None,          # Local mountpoint to mount new volume at. If not specified, volume will not be mounted locally. On Linux hosts - if specified, calling program must be run as root.
-    junction: str =None,              # Specified custom junction-path where volumes will be mounted at. If not specified, a junction path will become: ("/"+Volume Name).
+    junction: str =None,              # Specified custom junction-path for volume to be exported at. If not specified, junction path will be: ("/"+Volume Name).
     readonly: bool = False,           # Mount volume locally as "read-only. If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
     print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
 ) :

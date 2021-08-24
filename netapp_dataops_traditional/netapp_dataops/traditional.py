@@ -421,8 +421,7 @@ def clone_volume(new_volume_name: str, source_volume_name: str, source_snapshot_
 
             # Create option to choose junction path.
             if junction:
-                if print_output:
-                    print("Mounting Volume at specified junction path: '" + junction + "'.")
+                junction=junction
             else:
                 junction = "/"+new_volume_name
 
@@ -650,8 +649,7 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
 
         # Create option to choose junction path.
         if junction:
-            if print_output:
-                print("Mounting Volume at specified junction path: '"+ junction +"'.")
+            junction=junction
         else:
             junction = "/"+volume_name
 
@@ -1263,12 +1261,7 @@ def mount_volume(volume_name: str, mountpoint: str, readonly: bool = False, prin
 
 # Function to unmount volume
 def unmount_volume(mountpoint: str, print_output: bool = False):
-    # Confirm that mountpoint value was passed in
-    if not mountpoint:
-        if print_output:
-            print("Error: No mountpoint specified.")
-        raise MountOperationError("No mountpoint")
-
+    
     # Print message describing action to be understaken
     if print_output:
         print("Unmounting volume at '" + mountpoint + "'.")

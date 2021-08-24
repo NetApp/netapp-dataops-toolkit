@@ -100,10 +100,10 @@ Optional Options/Arguments:
 \t-s, --source-snapshot=\tName of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
 \t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
 \t-x, --readonly\t\tRead-only option for mounting volumes locally.
-\t-j, --junction\t\t\Specify a custom junction path for volumes to be mounted at.
+\t-j, --junction\t\t\Specify a custom junction path for the volume to be exported at.
 
 Examples (basic usage):
-\tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset --junction=/project1
+\tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset
 \tnetapp_dataops_cli.py clone volume -n project2 -v gold_dataset -s snap1
 \tsudo -E netapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset --mountpoint=~/project1 --readonly
 
@@ -155,10 +155,11 @@ Optional Options/Arguments:
 \t-t, --type=\t\tVolume type to use when creating new volume (flexgroup/flexvol).
 \t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
 \t-x, --readonly\t\tRead-only option for mounting volumes locally.
-\t-j, --junction\t\t\Specify a custom junction path for volumes to be mounted at.
+\t-j, --junction\t\t\Specify a custom junction path for the volume to be exported at.
+
 
 Examples (basic usage):
-\tnetapp_dataops_cli.py create volume --name=project1 --size=10GB --junction=/project1
+\tnetapp_dataops_cli.py create volume --name=project1 --size=10GB
 \tnetapp_dataops_cli.py create volume -n datasets -s 10TB
 \tsudo -E netapp_dataops_cli.py create volume --name=project2 --size=2TB --mountpoint=~/project2 --readonly
 
