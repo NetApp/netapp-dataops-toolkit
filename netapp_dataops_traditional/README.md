@@ -137,7 +137,6 @@ The following options/arguments are optional:
     -u, --uid=              Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
     -x, --readonly          Read-only option for mounting volumes locally.
     -j, --junction          Specify a custom junction path for the volume to be exported at.
-
 ```
 
 ##### Example Usage
@@ -202,7 +201,6 @@ The following options/arguments are optional:
     -u, --uid=              Unix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
     -x, --readonly          Read-only option for mounting volumes locally.    
     -j, --junction          Specify a custom junction path for the volume to be exported at.
-
 ```
 
 ##### Example Usage
