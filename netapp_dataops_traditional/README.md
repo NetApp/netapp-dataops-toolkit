@@ -262,30 +262,6 @@ Volume deleted successfully.
 
 <a name="cli-list-volumes"></a>
 
-#### Unmount an Existing Data Volume
-
-The NetApp DataOps Toolkit can be used to near-instantaneously unmount an existing data volume. The command for unmounting an existing data volume is `netapp_dataops_cli.py unmount volume`.
-
-The following options/arguments are required:
-
-```
-    -m, --mountpoint=     Mountpoint for the volume that needs to be unmounted.
-```
-
-The following options/arguments are optional:
-
-```
-    -h, --help      Print help text.
-```
-##### Example Usage
-
-Unmount the volume at mountpoint '/test1'.
-
-```sh
-netapp_dataops_cli.py unmount volume --mointpoint=/test1
-Unmounting volume at '/test1'.
-Volume unmounted successfully.
-```
 #### List All Data Volumes
 
 The NetApp DataOps Toolkit can be used to print a list of all existing data volumes. The command for printing a list of all existing data volumes is `netapp_dataops_cli.py list volumes`.
@@ -358,13 +334,13 @@ The following options/arguments are required:
 ```
     -m, --mountpoint=       Local mountpoint to mount volume at.
     -n, --name=             Name of volume.
+```
 
 The following options/arguments are optional:
 
 ```
     -h, --help              Print help text.
     -x, --readonly          Mount volume locally as read-only.
-```
 ```
 
 ##### Example Usage
@@ -392,13 +368,13 @@ The following options/arguments are required:
 
 ##### Example Usage
 
-Locally mount the volume named 'project1' at '~/project1' as read-only.
+Unmount the volume that is currently mounted at '/test1' on your local host.
 
 ```sh
-sudo -E netapp_dataops_cli.py mount volume --name=project1 --mountpoint=~/project1 --readonly
+sudo -E netapp_dataops_cli.py unmount volume --mointpoint=/test1
 [sudo] password for ai:
-Mounting volume 'project1' at '~/project1' as readonly.
-Volume mounted successfully.
+Unmounting volume at '/test1'.
+Volume unmounted successfully.
 ```
 
 ### Snapshot Management Operations
