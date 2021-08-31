@@ -4,7 +4,7 @@ This module provides the public functions available to be imported directly
 by applications using the import method of utilizing the toolkit.
 """
 
-__version__ = "2.0.0"
+__version__ = "2.1.0_astra_sprint12dev"
 
 from datetime import datetime
 import functools
@@ -877,7 +877,7 @@ def delete_volume_snapshot(snapshot_name: str, namespace: str = "default", print
         print("VolumeSnapshot successfully deleted.")
 
 
-def list_jupyter_labs(namespace: str = "default", print_output: bool = False) -> list:
+def list_jupyter_labs(namespace: str = "default", include_astra_app_id: bool = False, print_output: bool = False) -> list:
     # Retrieve kubeconfig
     try:
         _load_kube_config()
@@ -957,6 +957,14 @@ def list_jupyter_labs(namespace: str = "default", print_output: bool = False) ->
             workspaceDict["Clone"] = "No"
             workspaceDict["Source Workspace"] = ""
             workspaceDict["Source VolumeSnapshot"] = ""
+
+        # Retrieve Astra details
+        if include_astra_app_id :
+            try :
+                # TODO
+                workspaceDict["Astra Control App ID"] = "TODO"
+            except :
+                workspaceDict["Astra Control App ID"] = ""
 
         # Append dict to list of workspaces
         workspacesList.append(workspaceDict)

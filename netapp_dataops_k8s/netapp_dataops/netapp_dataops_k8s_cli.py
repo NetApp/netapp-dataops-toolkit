@@ -254,8 +254,9 @@ List all JupyterLab workspaces in a specific namespace.
 No options/arguments are required.
 
 Optional Options/Arguments:
-\t-h, --help\t\tPrint help text.
-\t-n, --namespace=\tKubernetes namespace for which to retrieve list of workspaces. If not specified, namespace "default" will be used.
+\t-h, --help\t\t\tPrint help text.
+\t-n, --namespace=\t\tKubernetes namespace for which to retrieve list of workspaces. If not specified, namespace "default" will be used.
+\t-a, --include-astra-app-id\tInclude Astra Control app IDs in the output (requires Astra Control API access).
 
 Examples:
 \tnetapp_dataops_k8s_cli.py list jupyterlabs -n team1
@@ -907,10 +908,11 @@ if __name__ == '__main__':
 
         elif target in ("jupyterlabs", "jupyters", "jupyterlab", "jupyter"):
             namespace = "default"
+            include_astra_app_id = False
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:", ["help", "namespace="])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:a", ["help", "namespace=", "include-astra-app-id"])
             except:
                 handleInvalidCommand(helpText=helpTextListJupyterLabs, invalidOptArg=True)
 
@@ -921,10 +923,12 @@ if __name__ == '__main__':
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
+                elif opt in ("-a", "--include-astra-app-id"):
+                    include_astra_app_id = True
 
             # List JupyterLab workspaces
             try:
-                list_jupyter_labs(namespace=namespace, print_output=True)
+                list_jupyter_labs(namespace=namespace, include_astra_app_id=include_astra_app_id, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 

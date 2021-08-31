@@ -67,6 +67,10 @@ In the [Examples](Examples/) directory, you will find the following examples per
 
 Refer to the [Kubernetes documentation](https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/) for more information on accessing the Kubernetes API from within a pod.
 
+## Extended Functionality with Astra Control
+
+TODO
+
 ## Tips and Tricks
 
 - [Use the NetApp DataOps Toolkit in conjunction with Kubeflow.](Examples/Kubeflow/)
@@ -315,8 +319,9 @@ No options/arguments are required for this command.
 The following options/arguments are optional:
 
 ```
-    -h, --help              Print help text.
-    -n, --namespace=        Kubernetes namespace for which to retrieve list of workspaces. If not specified, namespace "default" will be used.
+    -h, --help			        Print help text.
+	-n, --namespace=		    Kubernetes namespace for which to retrieve list of workspaces. If not specified, namespace "default" will be used.
+	-a, --include-astra-app-id	Include Astra Control app IDs in the output (requires Astra Control API access).
 ```
 
 ##### Example Usage
@@ -932,14 +937,15 @@ The NetApp DataOps Toolkit can be used to retrieve a list of all existing Jupyte
 
 ```py
 def list_jupyter_labs(
-    namespace: str = "default",     # Kubernetes namespace for which to retrieve list of workspaces. If not specified, namespace "default" will be used.
-    print_output: bool = False      # Denotes whether or not to print messages to the console during execution.
+    namespace: str = "default",             # Kubernetes namespace for which to retrieve list of workspaces. If not specified, namespace "default" will be used.
+    include_astra_app_id: bool = False,     # Include Astra Control app IDs in the output (requires Astra Control API access).
+    print_output: bool = False              # Denotes whether or not to print messages to the console during execution.
 ) -> list :
 ```
 
 ##### Return Value
 
-The function returns a list of all existing JupyterLab workspaces. Each item in the list will be a dictionary containing details regarding a specific workspace. The keys for the values in this dictionary are "Workspace Name", "Status", "Size", "StorageClass", "Access URL".
+The function returns a list of all existing JupyterLab workspaces. Each item in the list will be a dictionary containing details regarding a specific workspace. The keys for the values in this dictionary are "Workspace Name", "Status", "Size", "StorageClass", "Access URL", "Clone" (Yes/No), "Source Workspace", and "Source VolumeSnapshot". If `include_astra_app_id` is set to `True`, then "Astra Control App ID" will also be included as a key in the dictionary.
 
 ##### Error Handling
 
@@ -1169,7 +1175,7 @@ def list_volumes(
 
 ##### Return Value
 
-The function returns a list of all existing volumes. Each item in the list will be a dictionary containing details regarding a specific volume. The keys for the values in this dictionary are "PersistentVolumeClaim (PVC) Name", "Status", "Size", "StorageClass", "Clone" (yes/no), "Source PVC", "Source VolumeSnapshot".
+The function returns a list of all existing volumes. Each item in the list will be a dictionary containing details regarding a specific volume. The keys for the values in this dictionary are "PersistentVolumeClaim (PVC) Name", "Status", "Size", "StorageClass", "Clone" (Yes/No), "Source PVC", "Source VolumeSnapshot".
 
 ##### Error Handling
 
