@@ -209,20 +209,21 @@ Tip: Refer to the [Trident](https://netapp-trident.readthedocs.io/) or [BeeGFS C
 The following options/arguments are required:
 
 ```
-    -w, --workspace-name=   Name of new JupyterLab workspace.
-    -s, --size=             Size new workspace (i.e. size of backing persistent volume to be created). Format: '1024Mi', '100Gi', '10Ti', etc.
+    -w, --workspace-name=       Name of new JupyterLab workspace.
+    -s, --size=                 Size new workspace (i.e. size of backing persistent volume to be created). Format: '1024Mi', '100Gi', '10Ti', etc.
 ```
 
 The following options/arguments are optional:
 
 ```
-    -c, --storage-class=    Kubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
-    -g, --nvidia-gpu=       Number of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
-    -h, --help              Print help text.
-    -i, --image=            Container image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.
-    -m, --memory=           Amount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
-    -n, --namespace=        Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
-    -p, --cpu=              Number of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+    -c, --storage-class=	    Kubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
+	-g, --nvidia-gpu=		    Number of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
+	-h, --help			        Print help text.
+	-i, --image=			    Container image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.
+	-m, --memory=			    Amount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
+	-n, --namespace=		    Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
+	-p, --cpu=			        Number of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+	-a, --register-with-astra	Register new workspace with Astra Control (requires Astra Control).
 ```
 
 ##### Example Usage
@@ -913,6 +914,7 @@ def create_jupyter_lab(
     request_cpu: str = None,                                 # Number of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
     request_memory: str = None,                              # Amount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
     request_nvidia_gpu: str = None,                          # Number of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
+    register_with_astra: bool = False,                       # Register new workspace with Astra Control (requires Astra Control).
     print_output: bool = False                               # Denotes whether or not to print messages to the console during execution.
 ) -> str :
 ```

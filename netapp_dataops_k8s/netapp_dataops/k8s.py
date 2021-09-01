@@ -402,7 +402,7 @@ def clone_volume(new_pvc_name: str, source_pvc_name: str, source_snapshot_name: 
 
 def create_jupyter_lab(workspace_name: str, workspace_size: str, storage_class: str = None, namespace: str = "default",
                        workspace_password: str = None, workspace_image: str = "jupyter/tensorflow-notebook",
-                       request_cpu: str = None, request_memory: str = None, request_nvidia_gpu: str = None,
+                       request_cpu: str = None, request_memory: str = None, request_nvidia_gpu: str = None, register_with_astra: bool = False,
                        print_output: bool = False, pvc_already_exists: bool = False, labels: dict = None) -> str:
     # Retrieve kubeconfig
     try:
@@ -588,6 +588,11 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, storage_class: 
     if print_output:
         print("\nWorkspace successfully created.")
         print("To access workspace, navigate to " + url)
+
+    # (Optional) Step 5 - Register workspace with Astra Control
+    if register_with_astra :
+        # TODO
+        print("TODO")
 
     return url
 
