@@ -1135,6 +1135,13 @@ def list_volume_snapshots(pvc_name: str = None, namespace: str = "default", prin
     return snapshotsList
 
 
+# TODO
+def register_jupyter_lab_with_astra(workspace_name: str, namespace: str = "default", print_output: bool = False) :
+    print("TODO")
+    if print_output :
+        print("workspace:", workspace_name, "; namespace:", namespace)
+
+
 def restore_jupyter_lab_snapshot(snapshot_name: str = None, namespace: str = "default", print_output: bool = False):
     # Retrieve source PVC name
     sourcePvcName = _retrieve_source_volume_details_for_volume_snapshot(snapshotName=snapshot_name, namespace=namespace,

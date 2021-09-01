@@ -17,6 +17,7 @@ from netapp_dataops.k8s import (
     list_volume_snapshots,
     list_jupyter_lab_snapshots,
     list_volumes,
+    register_jupyter_lab_with_astra,
     restore_jupyter_lab_snapshot,
     restore_volume_snapshot
 )
@@ -41,6 +42,7 @@ Note: To view details regarding options/arguments for a specific command, run th
 \tcreate jupyterlab-snapshot\tCreate a new snapshot for a JupyterLab workspace.
 \tlist jupyterlab-snapshots\tList all snapshots.
 \trestore jupyterlab-snapshot\tRestore a snapshot.
+\tregister-with-astra jupyterlab\tRegister an existing JupyterLab workspace with Astra Control.
 
 Kubernetes Persistent Volume Management Commands (for advanced Kubernetes users):
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
@@ -256,7 +258,7 @@ No options/arguments are required.
 Optional Options/Arguments:
 \t-h, --help\t\t\tPrint help text.
 \t-n, --namespace=\t\tKubernetes namespace for which to retrieve list of workspaces. If not specified, namespace "default" will be used.
-\t-a, --include-astra-app-id\tInclude Astra Control app IDs in the output (requires Astra Control API access).
+\t-a, --include-astra-app-id\tInclude Astra Control app IDs in the output (requires Astra Control).
 
 Examples:
 \tnetapp_dataops_k8s_cli.py list jupyterlabs -n team1
@@ -308,6 +310,24 @@ Optional Options/Arguments:
 Examples:
 \tnetapp_dataops_k8s_cli.py list volumes -n team1
 \tnetapp_dataops_k8s_cli.py list volumes --namespace=team2
+'''
+helpTextRegisterJupyterLab = '''
+Command: register-with-astra jupyterlab
+
+Register an existing JupyterLab workspace with Astra Control.
+
+Note: This command requires Astra Control.
+
+Required Options/Arguments:
+\t-w, --workspace-name=\tName of JupyterLab workspace to be registered.
+
+Optional Options/Arguments:
+\t-h, --help\t\tPrint help text.
+\t-n, --namespace=\tKubernetes namespace that the workspace is located in. If not specified, namespace "default" will be used.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py register-with-astra jupyterlab --workspace-name=mike
+\tnetapp_dataops_k8s_cli.py register-with-astra jupyterlab -w dave -n dst-test
 '''
 helpTextRestoreJupyterLabSnapshot = '''
 Command: restore jupyterlab-snapshot
@@ -929,6 +949,45 @@ if __name__ == '__main__':
             # List JupyterLab workspaces
             try:
                 list_jupyter_labs(namespace=namespace, include_astra_app_id=include_astra_app_id, print_output=True)
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
+        else:
+            handleInvalidCommand()
+
+    elif action in ("register-with-astra", "register", "reg"):
+        # Get desired target from command line args
+        target = getTarget(sys.argv)
+
+        # Invoke desired action based on target
+        if target in ("jupyterlab", "jupyter"):
+            workspaceName = None
+            namespace = "default"
+
+            # Get command line options
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hw:n:",
+                                           ["help", "workspace-name=", "namespace="])
+            except:
+                handleInvalidCommand(helpText=helpTextRegisterJupyterLab, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextRegisterJupyterLab)
+                    sys.exit(0)
+                elif opt in ("-w", "--workspace-name"):
+                    workspaceName = arg
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+
+            # Check for required options
+            if not workspaceName:
+                handleInvalidCommand(helpText=helpTextRegisterJupyterLab, invalidOptArg=True)
+
+            # Register JupyterLab workspace
+            try:
+                register_jupyter_lab_with_astra(workspace_name=workspaceName, namespace=namespace, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
