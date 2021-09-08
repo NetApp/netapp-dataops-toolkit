@@ -127,28 +127,33 @@ def _retrieve_jupyter_lab_url(workspaceName: str, namespace: str = "default", pr
             _print_invalid_config_error()
         raise InvalidConfigError()
 
-    # Retrieve node IP (random node)
-    try:
-        api = client.CoreV1Api()
-        nodes = api.list_node()
-        ip = nodes.items[0].status.addresses[0].address
-    except:
-        ip = "<IP address of Kubernetes node>"
-        pass
-
     # Retrieve access port
     try:
         api = client.CoreV1Api()
         serviceStatus = api.read_namespaced_service(namespace=namespace,
                                                     name=_get_jupyter_lab_service(workspaceName=workspaceName))
         port = serviceStatus.spec.ports[0].node_port
+        loadBalancerIP = serviceStatus.status.load_balancer.ingress[0].ip
+
+        # Check if service type is LoadBalancer
+        if serviceStatus.spec.type == "LoadBalancer":
+            # Construct and return url
+            return "http://" + loadBalancerIP
+        else:
+        # Retrieve node IP (random node)
+            try:
+                api = client.CoreV1Api()
+                nodes = api.list_node()
+                ip = nodes.items[0].status.addresses[0].address
+            except:
+                ip = "<IP address of Kubernetes node>"
+                pass
+            # Construct and return url
+            return "http://" + ip + ":" + str(port)
     except ApiException as err:
         if printOutput:
             print("Error: Kubernetes API Error: ", err)
         raise APIConnectionError(err)
-
-    # Construct and return url
-    return "http://" + ip + ":" + str(port)
 
 
 def _retrieve_jupyter_lab_workspace_for_pvc(pvcName: str, namespace: str = "default", printOutput: bool = False) -> str:
@@ -400,7 +405,7 @@ def clone_volume(new_pvc_name: str, source_pvc_name: str, source_snapshot_name: 
         print("Volume successfully cloned.")
 
 
-def create_jupyter_lab(workspace_name: str, workspace_size: str, storage_class: str = None, namespace: str = "default",
+def create_jupyter_lab(workspace_name: str, workspace_size: str, storage_class: str = None, service_type: str = None, namespace: str = "default",
                        workspace_password: str = None, workspace_image: str = "jupyter/tensorflow-notebook",
                        request_cpu: str = None, request_memory: str = None, request_nvidia_gpu: str = None,
                        print_output: bool = False, pvc_already_exists: bool = False, labels: dict = None) -> str:
@@ -442,26 +447,49 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, storage_class: 
     # Step 2 - Create service for workspace
 
     # Construct service
-    service = client.V1Service(
-        metadata=client.V1ObjectMeta(
-            name=_get_jupyter_lab_service(workspaceName=workspace_name),
-            labels=labels
-        ),
-        spec=client.V1ServiceSpec(
-            type="NodePort",
-            selector={
-                "app": labels["app"]
-            },
-            ports=[
-                client.V1ServicePort(
-                    name="http",
-                    port=8888,
-                    target_port=8888,
-                    protocol="TCP"
-                )
-            ]
+    if service_type:
+        service = client.V1Service(
+            metadata=client.V1ObjectMeta(
+                name=_get_jupyter_lab_service(workspaceName=workspace_name),
+                labels=labels
+            ),
+            spec=client.V1ServiceSpec(
+                type="LoadBalancer",
+                selector={
+                    "app": labels["app"]
+                },
+                ports=[
+                    client.V1ServicePort(
+                        name="http",
+                        port=80,
+                        target_port=8888,
+                        protocol="TCP"
+                    )
+                ]
+            )
         )
-    )
+    else:
+        service = client.V1Service(
+            metadata=client.V1ObjectMeta(
+                name=_get_jupyter_lab_service(workspaceName=workspace_name),
+                labels=labels
+            ),
+            spec=client.V1ServiceSpec(
+                type="NodePort",
+                selector={
+                    "app": labels["app"]
+                },
+                ports=[
+                    client.V1ServicePort(
+                        name="http",
+                        port=8888,
+                        target_port=8888,
+                        protocol="TCP"
+                    )
+                ]
+            )
+        )
+
 
     # Create service
     if print_output:

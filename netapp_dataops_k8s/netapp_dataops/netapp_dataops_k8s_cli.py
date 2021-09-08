@@ -116,10 +116,12 @@ Optional Options/Arguments:
 \t-m, --memory=\t\tAmount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
 \t-n, --namespace=\tKubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
 \t-p, --cpu=\t\tNumber of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+\t-b, --load-balancer\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
+
 
 Examples:
 \tnetapp_dataops_k8s_cli.py create jupyterlab --workspace-name=mike --size=10Gi --nvidia-gpu=2
-\tnetapp_dataops_k8s_cli.py create jupyterlab -n dst-test -w dave -i jupyter/scipy-notebook:latest -s 2Ti -c ontap-flexgroup -g 1 -p 0.5 -m 1Gi
+\tnetapp_dataops_k8s_cli.py create jupyterlab -n dst-test -w dave -i jupyter/scipy-notebook:latest -s 2Ti -c ontap-flexgroup -g 1 -p 0.5 -m 1Gi -b
 '''
 helpTextCreateJupyterLabSnapshot = '''
 Command: create jupyterlab-snapshot
@@ -579,12 +581,13 @@ if __name__ == '__main__':
             requestNvidiaGpu = None
             requestMemory = None
             requestCpu = None
+            service_type = False
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hw:s:n:c:i:g:m:p:",
+                opts, args = getopt.getopt(sys.argv[3:], "hw:s:n:c:i:g:m:p:b",
                                            ["help", "workspace-name=", "size=", "namespace=", "storage-class=",
-                                            "image=", "nvidia-gpu=", "memory=", "cpu="])
+                                            "image=", "nvidia-gpu=", "memory=", "cpu=", "load-balancer"])
             except:
                 handleInvalidCommand(helpText=helpTextCreateJupyterLab, invalidOptArg=True)
 
@@ -609,6 +612,9 @@ if __name__ == '__main__':
                     requestMemory = arg
                 elif opt in ("-p", "--cpu"):
                     requestCpu = arg
+                elif opt in ("-b", "--load-balancer"):
+                    service_type = True
+
 
             # Check for required options
             if not workspaceName or not workspaceSize:
@@ -617,7 +623,7 @@ if __name__ == '__main__':
             # Create JupyterLab workspace
             try:
                 create_jupyter_lab(workspace_name=workspaceName, workspace_size=workspaceSize, storage_class=storageClass,
-                                   namespace=namespace, workspace_image=workspaceImage, request_cpu=requestCpu,
+                                   service_type=service_type, namespace=namespace, workspace_image=workspaceImage, request_cpu=requestCpu,
                                    request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)

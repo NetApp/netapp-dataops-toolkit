@@ -7,7 +7,7 @@ The NetApp DataOps Toolkit for Kubernetes is a Python library that makes it simp
 
 The NetApp DataOps Toolkit for Kubernetes supports Linux and macOS hosts.
 
-The toolkit must be used in conjunction with a Kubernetes cluster in order to be useful. Additionally, [Trident](https://netapp.io/persistent-storage-provisioner-for-kubernetes/), NetApp's dynamic storage orchestrator for Kubernetes, and/or the [BeeGFS CSI driver](https://github.com/NetApp/beegfs-csi-driver/) must be installed within the Kubernetes cluster. The toolkit simplifies performing of various data management tasks that are actually executed by a NetApp maintained CSI driver. In order to facilitate this, the toolkit communicates with the appropriate driver via the Kubernetes API. 
+The toolkit must be used in conjunction with a Kubernetes cluster in order to be useful. Additionally, [Trident](https://netapp.io/persistent-storage-provisioner-for-kubernetes/), NetApp's dynamic storage orchestrator for Kubernetes, and/or the [BeeGFS CSI driver](https://github.com/NetApp/beegfs-csi-driver/) must be installed within the Kubernetes cluster. The toolkit simplifies performing of various data management tasks that are actually executed by a NetApp maintained CSI driver. In order to facilitate this, the toolkit communicates with the appropriate driver via the Kubernetes API.
 
 The toolkit is currently compatible with Kubernetes versions 1.17 and above, and OpenShift versions 4.4 and above.
 
@@ -149,8 +149,8 @@ PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment3' create
 Volume successfully created and bound to PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment3' in namespace 'default'.
 Volume successfully cloned.
 
-Set workspace password (this password will be required in order to access the workspace): 
-Re-enter password: 
+Set workspace password (this password will be required in order to access the workspace):
+Re-enter password:
 
 Creating Service 'ntap-dsutil-jupyterlab-project1-experiment3' in namespace 'default'.
 Service successfully created.
@@ -177,8 +177,8 @@ PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment2' create
 Volume successfully created and bound to PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment2' in namespace 'default'.
 Volume successfully cloned.
 
-Set workspace password (this password will be required in order to access the workspace): 
-Re-enter password: 
+Set workspace password (this password will be required in order to access the workspace):
+Re-enter password:
 
 Creating Service 'ntap-dsutil-jupyterlab-project1-experiment2' in namespace 'default'.
 Service successfully created.
@@ -218,6 +218,7 @@ The following options/arguments are optional:
     -m, --memory=           Amount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
     -n, --namespace=        Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
     -p, --cpu=              Number of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+    -b, --load-balancer     Option to choose a LoadBalancer service instead of using NodePort service. If not specified, NodePort service will be utilized.
 ```
 
 ##### Example Usage
@@ -226,8 +227,8 @@ Provision a new JupyterLab workspace named 'mike' of size 10GB in namespace 'def
 
 ```sh
 netapp_dataops_k8s_cli.py create jupyterlab --workspace-name=mike --size=10Gi --nvidia-gpu=1
-Set workspace password (this password will be required in order to access the workspace): 
-Re-enter password: 
+Set workspace password (this password will be required in order to access the workspace):
+Re-enter password:
 
 Creating persistent volume for workspace...
 Creating PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-mike' in namespace 'default'.
@@ -245,12 +246,12 @@ Workspace successfully created.
 To access workspace, navigate to http://10.61.188.112:31082
 ```
 
-Provision a new JupyterLab workspace named 'dave', of size 2TB, in the namespace 'dst-test', using the container image 'jupyter/scipy-notebook:latest', and use Kubernetes StorageClass 'ontap-flexgroup' when provisioning the backing volume for the workspace.
+Provision a new JupyterLab workspace named 'dave', of size 2TB, in the namespace 'dst-test', using the container image 'jupyter/scipy-notebook:latest', use the Load Balancer service and Kubernetes StorageClass 'ontap-flexgroup' when provisioning the backing volume for the workspace.
 
 ```sh
-netapp_dataops_k8s_cli.py create jupyterlab --namespace=dst-test --workspace-name=dave --image=jupyter/scipy-notebook:latest --size=2Ti --storage-class=ontap-flexgroup
-Set workspace password (this password will be required in order to access the workspace): 
-Re-enter password: 
+netapp_dataops_k8s_cli.py create jupyterlab --namespace=dst-test --workspace-name=dave --image=jupyter/scipy-notebook:latest --size=2Ti --load-balancer --storage-class=ontap-flexgroup
+Set workspace password (this password will be required in order to access the workspace):
+Re-enter password:
 
 Creating persistent volume for workspace...
 Creating PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-dave' in namespace 'dst-test'.
@@ -265,7 +266,7 @@ Deployment 'ntap-dsutil-jupyterlab-dave' created. Waiting for Deployment to reac
 Deployment successfully created.
 
 Workspace successfully created.
-To access workspace, navigate to http://10.61.188.112:32275
+To access workspace, navigate to http://10.61.188.110
 ```
 
 <a name="cli-delete-jupyterlab"></a>
@@ -869,6 +870,7 @@ def create_jupyter_lab(
     workspace_name: str,                                     # Name of new JupyterLab workspace (required).
     workspace_size: str,                                     # Size new workspace (i.e. size of backing persistent volume to be created) (required). Format: '1024Mi', '100Gi', '10Ti', etc.
     storage_class: str = None,                               # Kubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
+    service_type: str = None,                                # Option to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
     namespace: str = "default",                              # Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
     workspace_password: str = None,                          # Workspace password (this password will be required in order to access the workspace). If not specified, you will be prompted to enter a password via the console.
     workspace_image: str = "jupyter/tensorflow-notebook",    # Container image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.
@@ -987,7 +989,7 @@ APIConnectionError              # The Kubernetes API returned an error.
 
 #### Delete an Existing Snapshot
 
-The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing JupyterLab workspace snapshot as part of any Python program or workflow. 
+The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing JupyterLab workspace snapshot as part of any Python program or workflow.
 
 ##### Function Definition
 
@@ -1126,7 +1128,7 @@ APIConnectionError              # The Kubernetes API returned an error.
 
 #### Delete an Existing Persistent Volume
 
-The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing persistent volume within a Kubernetes cluster as part of any Python program or workflow. 
+The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing persistent volume within a Kubernetes cluster as part of any Python program or workflow.
 
 ##### Function Definition
 
@@ -1217,7 +1219,7 @@ APIConnectionError              # The Kubernetes API returned an error.
 
 #### Delete an Existing Snapshot
 
-The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing snapshot as part of any Python program or workflow. 
+The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing snapshot as part of any Python program or workflow.
 
 ##### Function Definition
 
