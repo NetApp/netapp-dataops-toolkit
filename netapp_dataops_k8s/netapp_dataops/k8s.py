@@ -405,7 +405,7 @@ def clone_volume(new_pvc_name: str, source_pvc_name: str, source_snapshot_name: 
         print("Volume successfully cloned.")
 
 
-def create_jupyter_lab(workspace_name: str, workspace_size: str, storage_class: str = None, service_type: str = None, namespace: str = "default",
+def create_jupyter_lab(workspace_name: str, workspace_size: str, storage_class: str = None, load_balancer_service: bool = False, namespace: str = "default",
                        workspace_password: str = None, workspace_image: str = "jupyter/tensorflow-notebook",
                        request_cpu: str = None, request_memory: str = None, request_nvidia_gpu: str = None,
                        print_output: bool = False, pvc_already_exists: bool = False, labels: dict = None) -> str:
@@ -447,7 +447,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, storage_class: 
     # Step 2 - Create service for workspace
 
     # Construct service
-    if service_type:
+    if load_balancer_service:
         service = client.V1Service(
             metadata=client.V1ObjectMeta(
                 name=_get_jupyter_lab_service(workspaceName=workspace_name),

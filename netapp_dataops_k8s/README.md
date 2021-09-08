@@ -870,7 +870,7 @@ def create_jupyter_lab(
     workspace_name: str,                                     # Name of new JupyterLab workspace (required).
     workspace_size: str,                                     # Size new workspace (i.e. size of backing persistent volume to be created) (required). Format: '1024Mi', '100Gi', '10Ti', etc.
     storage_class: str = None,                               # Kubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
-    service_type: str = None,                                # Option to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
+    load_balancer_service: bool = False,                                # Option to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
     namespace: str = "default",                              # Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
     workspace_password: str = None,                          # Workspace password (this password will be required in order to access the workspace). If not specified, you will be prompted to enter a password via the console.
     workspace_image: str = "jupyter/tensorflow-notebook",    # Container image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.

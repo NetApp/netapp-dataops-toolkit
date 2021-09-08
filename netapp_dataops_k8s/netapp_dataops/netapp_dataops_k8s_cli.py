@@ -581,7 +581,7 @@ if __name__ == '__main__':
             requestNvidiaGpu = None
             requestMemory = None
             requestCpu = None
-            service_type = False
+            load_balancer_service = False
 
             # Get command line options
             try:
@@ -613,7 +613,7 @@ if __name__ == '__main__':
                 elif opt in ("-p", "--cpu"):
                     requestCpu = arg
                 elif opt in ("-b", "--load-balancer"):
-                    service_type = True
+                    load_balancer_service = True
 
 
             # Check for required options
@@ -623,7 +623,7 @@ if __name__ == '__main__':
             # Create JupyterLab workspace
             try:
                 create_jupyter_lab(workspace_name=workspaceName, workspace_size=workspaceSize, storage_class=storageClass,
-                                   service_type=service_type, namespace=namespace, workspace_image=workspaceImage, request_cpu=requestCpu,
+                                   load_balancer_service=load_balancer_service, namespace=namespace, workspace_image=workspaceImage, request_cpu=requestCpu,
                                    request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
