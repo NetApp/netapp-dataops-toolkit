@@ -611,14 +611,15 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, storage_class: 
             print("Aborting workspace creation...")
         raise
 
+    # (Optional) Step 5 - Register workspace with Astra Control
+    if register_with_astra :
+        if print_output :
+            print()
+        register_jupyter_lab_with_astra(workspace_name=workspace_name, namespace=namespace, print_output=print_output)
+
     if print_output:
         print("\nWorkspace successfully created.")
         print("To access workspace, navigate to " + url)
-
-    # (Optional) Step 5 - Register workspace with Astra Control
-    if register_with_astra :
-        # TODO
-        print("TODO")
 
     return url
 
@@ -1195,11 +1196,14 @@ def register_jupyter_lab_with_astra(workspace_name: str, namespace: str = "defau
 
     # Wait until app has a status of "running" in Astraa
     while True :
-        if astra_apps_unmanaged[astra_app_id][4] == "running" :
-            break
+        try :
+            if astra_apps_unmanaged[astra_app_id][4] == "running" :
+                break
+        except KeyError :
+            pass
 
         if print_output :
-            print("It appears that Astra Control is still discovering the JupyterLab workspace. Sleeping for 60 seconds...")
+            print("It appears that Astra Control is still discovering the JupyterLab workspace. If this persists, confirm that you typed the workspace name correctly and/or check your Astra Control setup. Sleeping for 60 seconds before checking again...")
         sleep(60)
 
         # Retrieve list of unmanaged Astra apps again

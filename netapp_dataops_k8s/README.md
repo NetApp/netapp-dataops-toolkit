@@ -69,7 +69,20 @@ Refer to the [Kubernetes documentation](https://kubernetes.io/docs/tasks/run-app
 
 ## Extended Functionality with Astra Control
 
-TODO
+The NetApp DataOps Toolkit provides several extended capabilities that require [Astra Control](https://cloud.netapp.com/astra). Any operation that requires Astra Control is specifically noted within this README as requiring Astra Control. The prerequisites outlined in this section are required in order to perform any operation that requires Astra Control.
+
+The toolkit uses the Astra Control Python SDK to interface with the Astra Control API. To install the Astra Control Python SDK, run the following commands.
+
+```sh
+python3 -m pip install netapp-astra-toolkits
+python3 -m pip install $(curl https://raw.githubusercontent.com/NetApp/netapp-astra-toolkits/main/requirements.txt)
+```
+
+Additionally, you must set the environment variable 'ASTRA_K8S_CLUSTER_NAME' to the name of your specific Kubernetes cluster in Astra Control.
+
+```sh
+export ASTRA_K8S_CLUSTER_NAME="<Kubernetes_cluster_name_in_Astra_Control"
+```
 
 ## Tips and Tricks
 
@@ -513,9 +526,9 @@ The following options/arguments are optional:
 Register the workspace 'mike' in namespace 'project1' with Astra Control.
 
 ```sh
-netapp_dataops_k8s_cli.py register-with-astra jupyterlab --workspace-name=mike --namespace=project1
-TODO
-workspace: mike ; namespace: project1
+netapp_dataops_k8s_cli.py register-with-astra jupyterlab -n project1 -w mike
+Registering JupyterLab workspace 'mike' in namespace 'project1' with Astra Control...
+JupyterLab workspace is now managed by Astra Control.
 ```
 
 ### Kubernetes Persistent Volume Management Operations
