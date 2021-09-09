@@ -929,7 +929,7 @@ def list_jupyter_labs(namespace: str = "default", include_astra_app_id: bool = F
     # Retrieve list of Astra apps
     if include_astra_app_id :
         try :
-            astra_apps = astraSDK.getApps(namespace="default").main()
+            astra_apps = astraSDK.getApps(namespace=namespace).main()
         except Exception as err :
             if print_output:
                 print("Error: Astra Control API Error: ", err)
@@ -1176,11 +1176,59 @@ def list_volume_snapshots(pvc_name: str = None, namespace: str = "default", prin
     return snapshotsList
 
 
-# TODO
 def register_jupyter_lab_with_astra(workspace_name: str, namespace: str = "default", print_output: bool = False) :
-    print("TODO")
+    # Retrieve list of unmanaged Astra apps
+    try :
+        astra_apps_unmanaged = astraSDK.getApps(discovered=True, namespace=namespace).main()
+    except Exception as err :
+        if print_output:
+            print("Error: Astra Control API Error: ", err)
+        raise APIConnectionError(err)
+
+    # Determine Astra App ID for workspace
+    try :
+        astra_app_id = _retrieve_astra_app_id_for_jupyter_lab(astra_apps=astra_apps_unmanaged, workspace_name=workspace_name)
+    except InvalidConfigError :
+        if print_output :
+            _print_astra_k8s_cluster_name_error()
+        raise InvalidConfigError()
+
+    # Wait until app has a status of "running" in Astraa
+    while True :
+        if astra_apps_unmanaged[astra_app_id][4] == "running" :
+            break
+
+        if print_output :
+            print("It appears that Astra Control is still discovering the JupyterLab workspace. Sleeping for 60 seconds...")
+        sleep(60)
+
+        # Retrieve list of unmanaged Astra apps again
+        try :
+            astra_apps_unmanaged = astraSDK.getApps(discovered=True, namespace=namespace).main()
+        except Exception as err :
+            if print_output:
+                print("Error: Astra Control API Error: ", err)
+            raise APIConnectionError(err)
+
+    # Manage app (i.e. register app with Astra)
     if print_output :
-        print("workspace:", workspace_name, "; namespace:", namespace)
+        print("Registering JupyterLab workspace '" + workspace_name + "' in namespace '" + namespace + "' with Astra Control...")
+    try :
+        managed = astraSDK.manageApp(appID=astra_app_id).main()
+    except Exception as err :
+        if print_output:
+            print("Error: Astra Control API Error: ", err)
+        raise APIConnectionError(err)
+
+    # Determine success or error
+    if managed :
+        if print_output :
+            print("JupyterLab workspace is now managed by Astra Control.")
+    else :
+        if print_output :
+            print("Error: Astra Control API Error.")
+        raise APIConnectionError()
+    
 
 
 def restore_jupyter_lab_snapshot(snapshot_name: str = None, namespace: str = "default", print_output: bool = False):
