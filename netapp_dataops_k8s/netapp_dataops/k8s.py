@@ -11,6 +11,7 @@ import functools
 from getpass import getpass
 from time import sleep
 import warnings
+import os
 
 import IPython
 from kubernetes import client, config
@@ -18,6 +19,7 @@ from kubernetes.client.models.v1_object_meta import V1ObjectMeta
 from kubernetes.client.rest import ApiException
 from tabulate import tabulate
 import pandas as pd
+import astraSDK
 
 
 # Using this decorator in lieu of using a dependency to manage deprecation
@@ -90,9 +92,17 @@ def _load_kube_config():
         config.load_kube_config()
 
 
+def _get_astra_k8s_cluster_name() -> str :
+    return os.environ['ASTRA_K8S_CLUSTER_NAME']
+
+
 def _print_invalid_config_error():
     print(
         "Error: Missing or invalid kubeconfig file. The NetApp DataOps Toolkit for Kubernetes requires that a valid kubeconfig file be present on the host, located at $HOME/.kube or at another path specified by the KUBECONFIG environment variable.")
+
+
+def _print_astra_k8s_cluster_name_error() :
+    print("Error: ASTRA_K8S_CLUSTER_NAME environment variable is not set. This environment variable should be set to the name of your Kubernetes cluster within Astra Control.")
 
 
 def _retrieve_image_for_jupyter_lab_deployment(workspaceName: str, namespace: str = "default",
@@ -307,6 +317,22 @@ def _wait_for_jupyter_lab_deployment_ready(workspaceName: str, namespace: str = 
         if deploymentStatus.status.ready_replicas == 1:
             break
         sleep(5)
+
+
+def _retrieve_astra_app_id_for_jupyter_lab(astra_apps: dict, workspace_name: str) -> str :
+    # Get Astra K8s cluster name
+    try :
+        astra_k8s_cluster_name = _get_astra_k8s_cluster_name()
+    except KeyError :
+        raise InvalidConfigError()
+
+    # Parse Astra Apps
+    for app_id,app_details in astra_apps.items() :
+        workspace_app_label = _get_jupyter_lab_labels(workspaceName=workspace_name)["app"]
+        if (app_details[0] == workspace_app_label) and (app_details[1] == astra_k8s_cluster_name) :
+            return app_id
+    
+    return ""
 
 
 #
@@ -900,6 +926,15 @@ def list_jupyter_labs(namespace: str = "default", include_astra_app_id: bool = F
             print("Error: Kubernetes API Error: ", err)
         raise APIConnectionError(err)
 
+    # Retrieve list of Astra apps
+    if include_astra_app_id :
+        try :
+            astra_apps = astraSDK.getApps(namespace="default").main()
+        except Exception as err :
+            if print_output:
+                print("Error: Astra Control API Error: ", err)
+            raise APIConnectionError(err)
+
     # Construct list of workspaces
     workspacesList = list()
     for deployment in deployments.items:
@@ -963,13 +998,14 @@ def list_jupyter_labs(namespace: str = "default", include_astra_app_id: bool = F
             workspaceDict["Source Workspace"] = ""
             workspaceDict["Source VolumeSnapshot"] = ""
 
-        # Retrieve Astra details
+        # Retrieve Astra App ID
         if include_astra_app_id :
             try :
-                # TODO
-                workspaceDict["Astra Control App ID"] = "TODO"
-            except :
-                workspaceDict["Astra Control App ID"] = ""
+                workspaceDict["Astra Control App ID"] = _retrieve_astra_app_id_for_jupyter_lab(astra_apps=astra_apps, workspace_name=workspaceName)
+            except InvalidConfigError :
+                if print_output :
+                    _print_astra_k8s_cluster_name_error()
+                raise InvalidConfigError()
 
         # Append dict to list of workspaces
         workspacesList.append(workspaceDict)
