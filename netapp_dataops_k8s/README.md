@@ -853,6 +853,7 @@ If an error is encountered, the function will raise an exception of one of the f
 ```py
 InvalidConfigError              # kubeconfig file is missing or is invalid.
 APIConnectionError              # The Kubernetes API returned an error.
+ServiceUnavailableError         # A Kubernetes service is not available.
 ```
 
 <a name="lib-create-jupyterlab"></a>
@@ -892,6 +893,7 @@ If an error is encountered, the function will raise an exception of one of the f
 ```py
 InvalidConfigError              # kubeconfig file is missing or is invalid.
 APIConnectionError              # The Kubernetes API returned an error.
+ServiceUnavailableError         # A Kubernetes service is not available.
 ```
 
 <a name="lib-delete-jupyterlab"></a>

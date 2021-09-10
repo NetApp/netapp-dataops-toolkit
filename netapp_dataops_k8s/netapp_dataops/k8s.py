@@ -46,6 +46,11 @@ class InvalidConfigError(Exception):
     pass
 
 
+class ServiceUnavailableError(Exception):
+    '''Error that will be raised when a service is not available'''
+    pass
+
+
 #
 # Private functions
 #
@@ -127,20 +132,26 @@ def _retrieve_jupyter_lab_url(workspaceName: str, namespace: str = "default", pr
             _print_invalid_config_error()
         raise InvalidConfigError()
 
-    # Retrieve access port
     try:
         api = client.CoreV1Api()
         serviceStatus = api.read_namespaced_service(namespace=namespace,
                                                     name=_get_jupyter_lab_service(workspaceName=workspaceName))
-        port = serviceStatus.spec.ports[0].node_port
-        loadBalancerIP = serviceStatus.status.load_balancer.ingress[0].ip
 
         # Check if service type is LoadBalancer
         if serviceStatus.spec.type == "LoadBalancer":
             # Construct and return url
+            try :
+                loadBalancerIP = serviceStatus.status.load_balancer.ingress[0].ip
+            except :
+                if printOutput :
+                    print("Error: Kubernetes Service for workspace is not available.")
+                raise ServiceUnavailableError()
             return "http://" + loadBalancerIP
         else:
-        # Retrieve node IP (random node)
+            # Retrieve access port
+            port = serviceStatus.spec.ports[0].node_port
+
+            # Retrieve node IP (random node)
             try:
                 api = client.CoreV1Api()
                 nodes = api.list_node()
@@ -608,7 +619,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, storage_class: 
     # Step 4 - Retrieve access URL
     try:
         url = _retrieve_jupyter_lab_url(workspaceName=workspace_name, namespace=namespace, printOutput=print_output)
-    except APIConnectionError as err:
+    except (APIConnectionError, ServiceUnavailableError) as err:
         if print_output:
             print("Aborting workspace creation...")
         raise
@@ -951,8 +962,14 @@ def list_jupyter_labs(namespace: str = "default", print_output: bool = False) ->
             workspaceDict["StorageClass"] = ""
 
         # Retrieve access URL
-        workspaceDict["Access URL"] = _retrieve_jupyter_lab_url(workspaceName=workspaceName, namespace=namespace,
-                                                            printOutput=print_output)
+        try :
+            workspaceDict["Access URL"] = _retrieve_jupyter_lab_url(workspaceName=workspaceName, namespace=namespace, printOutput=False)
+        except ServiceUnavailableError :
+            workspaceDict["Access URL"] = "unavailable"
+        except APIConnectionError as err:
+            if print_output:
+                print("Error: Kubernetes API Error: ", err)
+            raise APIConnectionError(err)
 
         # Retrieve clone details
         try:
