@@ -331,7 +331,7 @@ def _wait_for_jupyter_lab_deployment_ready(workspaceName: str, namespace: str = 
 
 
 def clone_jupyter_lab(new_workspace_name: str, source_workspace_name: str, source_snapshot_name: str = None,
-                      new_workspace_password: str = None, volume_snapshot_class: str = "csi-snapclass",
+                      load_balancer_service: bool = False, new_workspace_password: str = None, volume_snapshot_class: str = "csi-snapclass",
                       namespace: str = "default", request_cpu: str = None, request_memory: str = None,
                       request_nvidia_gpu: str = None, print_output: bool = False):
     # Determine source PVC details
@@ -374,7 +374,7 @@ def clone_jupyter_lab(new_workspace_name: str, source_workspace_name: str, sourc
     print()
     create_jupyter_lab(workspace_name=new_workspace_name, workspace_size=workspaceSize, namespace=namespace,
                        workspace_password=new_workspace_password, workspace_image=sourceWorkspaceImage, request_cpu=request_cpu,
-                       request_memory=request_memory, request_nvidia_gpu=request_nvidia_gpu, print_output=print_output,
+                       load_balancer_service=load_balancer_service, request_memory=request_memory, request_nvidia_gpu=request_nvidia_gpu, print_output=print_output,
                        pvc_already_exists=True, labels=labels)
 
     if print_output:

@@ -73,10 +73,12 @@ Optional Options/Arguments:
 \t-n, --namespace=\t\tKubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
 \t-p, --cpu=\t\t\tNumber of CPUs to reserve for new JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
 \t-s, --source-snapshot-name=\tName of Kubernetes VolumeSnapshot to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
+\t-b, --source-snapshot-name=\tName of Kubernetes VolumeSnapshot to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
+\t-b, --load-balancer\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
 
 Examples:
-\tnetapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment1 --source-workspace-name=project1 --nvidia-gpu=1
-\tnetapp_dataops_k8s_cli.py clone jupyterlab -w project2-mike -s project2-snap1 -n team1 -g 1 -p 0.5 -m 1Gi
+\tnetapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment1 --source-workspace-name=project1 --nvidia-gpu=1 
+\tnetapp_dataops_k8s_cli.py clone jupyterlab -w project2-mike -s project2-snap1 -n team1 -g 1 -p 0.5 -m 1Gi -b
 '''
 helpTextCloneVolume = '''
 Command: clone volume
@@ -438,13 +440,14 @@ if __name__ == '__main__':
             requestNvidiaGpu = None
             requestMemory = None
             requestCpu = None
+            load_balancer_service= False
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hw:c:n:s:j:g:m:p:",
+                opts, args = getopt.getopt(sys.argv[3:], "hw:c:n:s:j:g:m:p:b",
                                            ["help", "new-workspace-name=", "volume-snapshot-class=", "namespace=",
                                             "source-snapshot-name=", "source-workspace-name=", "nvidia-gpu=", "memory=",
-                                            "cpu="])
+                                            "cpu=", "load-balancer"])
             except:
                 handleInvalidCommand(helpText=helpTextCloneJupyterLab, invalidOptArg=True)
 
@@ -469,6 +472,8 @@ if __name__ == '__main__':
                     requestMemory = arg
                 elif opt in ("-p", "--cpu"):
                     requestCpu = arg
+                elif opt in ("-b", "--load-balancer"):
+                    load_balancer_service = True
 
             # Check for required options
             if not newWorkspaceName or (not sourceSnapshotName and not sourceWorkspaceName):
@@ -480,7 +485,7 @@ if __name__ == '__main__':
 
             # Clone volume
             try:
-                clone_jupyter_lab(new_workspace_name=newWorkspaceName, source_workspace_name=sourceWorkspaceName,
+                clone_jupyter_lab(new_workspace_name=newWorkspaceName, source_workspace_name=sourceWorkspaceName, load_balancer_service=load_balancer_service,
                                   source_snapshot_name=sourceSnapshotName, volume_snapshot_class=volumeSnapshotClass,
                                   namespace=namespace, request_cpu=requestCpu, request_memory=requestMemory,
                                   request_nvidia_gpu=requestNvidiaGpu, print_output=True)

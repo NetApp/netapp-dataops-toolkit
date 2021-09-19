@@ -129,14 +129,15 @@ The following options/arguments are optional:
     -n, --namespace=                Kubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
     -p, --cpu=                      Number of CPUs to reserve for new JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
     -s, --source-snapshot-name=     Name of Kubernetes VolumeSnapshot to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
+    -b, --load-balancer     Option to choose a LoadBalancer service instead of using NodePort service. If not specified, NodePort service will be utilized.
 ```
 
 ##### Example Usage
 
-Near-instantaneously create a new JupyterLab workspace, named 'project1-experiment3', that is an exact copy of the current contents of existing JupyterLab workspace 'project1' in namespace 'default'. Allocate 2 NVIDIA GPUs to the new workspace.
+Near-instantaneously create a new JupyterLab workspace, named 'project1-experiment3', that is an exact copy of the current contents of existing JupyterLab workspace 'project1' in namespace 'default'. Allocate 2 NVIDIA GPUs to the new workspace and use LoadBalancer service instead of NodePort.
 
 ```sh
-netapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment3 --source-workspace-name=project1 --nvidia-gpu=2
+netapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment3 --source-workspace-name=project1 --nvidia-gpu=2 --load-balancer
 Creating new JupyterLab workspace 'project1-experiment3' from source workspace 'project1' in namespace 'default'...
 
 Creating new VolumeSnapshot 'ntap-dsutil.for-clone.20210315185504' for source PVC 'ntap-dsutil-jupyterlab-project1' in namespace 'default' to use as source for clone...
@@ -161,7 +162,7 @@ Waiting for Deployment 'ntap-dsutil-jupyterlab-project1-experiment3' to reach Re
 Deployment successfully created.
 
 Workspace successfully created.
-To access workspace, navigate to http://10.61.188.112:30993
+To access workspace, navigate to http://10.61.188.110
 JupyterLab workspace successfully cloned.
 ```
 
@@ -832,6 +833,7 @@ def clone_jupyter_lab(
     new_workspace_name: str,                          # Name of new workspace (name to be applied to new JupyterLab workspace) (required).
     source_workspace_name: str,                       # Name of JupyterLab workspace to use as source for clone. (required).
     source_snapshot_name: str = None,                 # Name of Kubernetes VolumeSnapshot to use as source for clone.
+    load_balancer_service: bool = False,              # Option to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
     new_workspace_password: str = None,               # Workspace password (this password will be required in order to access the workspace). If not specified, you will be prompted to enter a password via the console.
     volume_snapshot_class: str = "csi-snapclass",     # Kubernetes VolumeSnapshotClass to use when creating clone. If not specified, "csi-snapclass" will be used. Note: VolumeSnapshotClass must be configured to use Trident.
     namespace: str = "default",                      # Kubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
