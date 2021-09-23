@@ -129,7 +129,7 @@ The following options/arguments are optional:
     -n, --namespace=                Kubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
     -p, --cpu=                      Number of CPUs to reserve for new JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
     -s, --source-snapshot-name=     Name of Kubernetes VolumeSnapshot to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
-    -b, --load-balancer     Option to choose a LoadBalancer service instead of using NodePort service. If not specified, NodePort service will be utilized.
+    -b, --load-balancer             Option to choose a LoadBalancer service instead of using NodePort service. If not specified, NodePort service will be utilized.
 ```
 
 ##### Example Usage
@@ -836,11 +836,11 @@ def clone_jupyter_lab(
     load_balancer_service: bool = False,              # Option to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
     new_workspace_password: str = None,               # Workspace password (this password will be required in order to access the workspace). If not specified, you will be prompted to enter a password via the console.
     volume_snapshot_class: str = "csi-snapclass",     # Kubernetes VolumeSnapshotClass to use when creating clone. If not specified, "csi-snapclass" will be used. Note: VolumeSnapshotClass must be configured to use Trident.
-    namespace: str = "default",                      # Kubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
-    request_cpu: str = None,                         # Number of CPUs to reserve for new JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
-    request_memory: str = None,                      # Amount of memory to reserve for newe JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
-    request_nvidia_gpu: str = None,                  # Number of NVIDIA GPUs to allocate to new JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
-    print_output: bool = False                       # Denotes whether or not to print messages to the console during execution.
+    namespace: str = "default",                       # Kubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
+    request_cpu: str = None,                          # Number of CPUs to reserve for new JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+    request_memory: str = None,                       # Amount of memory to reserve for newe JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
+    request_nvidia_gpu: str = None,                   # Number of NVIDIA GPUs to allocate to new JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
+    print_output: bool = False                        # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
