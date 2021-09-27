@@ -343,7 +343,13 @@ def _retrieve_astra_app_id_for_jupyter_lab(astra_apps: dict, workspace_name: str
 def clone_jupyter_lab(new_workspace_name: str, source_workspace_name: str, source_snapshot_name: str = None,
                       new_workspace_password: str = None, volume_snapshot_class: str = "csi-snapclass",
                       namespace: str = "default", request_cpu: str = None, request_memory: str = None,
-                      request_nvidia_gpu: str = None, print_output: bool = False):
+                      request_nvidia_gpu: str = None, new_namespace: str = None, print_output: bool = False):
+    # TODO
+    # Determine whether or not to clone to new namespace using Astra
+    if new_namespace :
+        print("new namespace:", new_namespace)
+        return
+
     # Determine source PVC details
     if source_snapshot_name:
         sourcePvcName, workspaceSize = _retrieve_source_volume_details_for_volume_snapshot(snapshotName=source_snapshot_name,
