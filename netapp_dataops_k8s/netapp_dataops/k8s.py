@@ -1240,6 +1240,10 @@ def register_jupyter_lab_with_astra(workspace_name: str, namespace: str = "defau
         raise APIConnectionError()
     
 
+def backup_jupyter_lab_with_astra(workspace_name: str, backup_name: str, namespace: str = "default", print_output: bool = False) :
+    # TODO
+    print("workspace:", workspace_name, "; backup:", backup_name, "; namespace:", namespace)
+
 
 def restore_jupyter_lab_snapshot(snapshot_name: str = None, namespace: str = "default", print_output: bool = False):
     # Retrieve source PVC name

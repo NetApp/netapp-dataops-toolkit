@@ -2,6 +2,7 @@
 """NetApp DataOps Toolkit for Kubernetes Script Interface."""
 from netapp_dataops import k8s
 from netapp_dataops.k8s import (
+    backup_jupyter_lab_with_astra,
     clone_volume,
     create_volume_snapshot,
     InvalidConfigError,
@@ -43,6 +44,7 @@ Note: To view details regarding options/arguments for a specific command, run th
 \tlist jupyterlab-snapshots\tList all snapshots.
 \trestore jupyterlab-snapshot\tRestore a snapshot.
 \tregister-with-astra jupyterlab\tRegister an existing JupyterLab workspace with Astra Control.
+\tbackup-with-astra jupyterlab\tBackup an existing JupyterLab workspace using Astra Control.
 
 Kubernetes Persistent Volume Management Commands (for advanced Kubernetes users):
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
@@ -55,6 +57,25 @@ Note: To view details regarding options/arguments for a specific command, run th
 \tdelete volume-snapshot\t\tDelete an existing snapshot.
 \tlist volume-snapshots\t\tList all snapshots.
 \trestore volume-snapshot\t\tRestore a snapshot.
+'''
+helpTextBackupJupyterLab = '''
+Command: backup-with-astra jupyterlab
+
+Backup an existing JupyterLab workspace using Astra Control.
+
+Note: This command requires Astra Control.
+
+Required Options/Arguments:
+\t-w, --workspace-name=\tName of JupyterLab workspace to be backed up.
+\t-b, --backup-name=\tName to be applied to new backup.
+
+Optional Options/Arguments:
+\t-h, --help\t\tPrint help text.
+\t-n, --namespace=\tKubernetes namespace that the workspace is located in. If not specified, namespace "default" will be used.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py backup-with-astra jupyterlab --workspace-name=mike --backup-name=backup1
+\tnetapp_dataops_k8s_cli.py register-with-astra jupyterlab -w dave -n dst-test -b backup2
 '''
 helpTextCloneJupyterLab = '''
 Command: clone jupyterlab
@@ -399,7 +420,49 @@ if __name__ == '__main__':
         handleInvalidCommand()
 
     # Invoke desired action
-    if action == "clone":
+    if action in ("backup-with-astra", "backup"):
+        # Get desired target from command line args
+        target = getTarget(sys.argv)
+
+        # Invoke desired action based on target
+        if target in ("jupyterlab", "jupyter"):
+            workspace_name = None
+            backup_name = None
+            namespace = "default"
+
+            # Get command line options
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hw:b:n:",
+                                           ["help", "workspace-name=", "backup-name=", "namespace="])
+            except:
+                handleInvalidCommand(helpText=helpTextBackupJupyterLab, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextBackupJupyterLab)
+                    sys.exit(0)
+                elif opt in ("-w", "--workspace-name"):
+                    workspace_name = arg
+                elif opt in ("-b", "--backup-name"):
+                    backup_name = arg
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+
+            # Check for required options
+            if not workspace_name or not backup_name:
+                handleInvalidCommand(helpText=helpTextBackupJupyterLab, invalidOptArg=True)
+
+            # Register JupyterLab workspace
+            try:
+                backup_jupyter_lab_with_astra(workspace_name=workspace_name, backup_name=backup_name, namespace=namespace, print_output=True)
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
+        else:
+            handleInvalidCommand()
+
+    elif action == "clone":
         # Get desired target from command line args
         target = getTarget(sys.argv)
 

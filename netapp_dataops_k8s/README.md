@@ -106,6 +106,7 @@ The simplest way to use the NetApp DataOps Toolkit for Kubernetes is as a comman
 | [List all snapshots.](#cli-list-jupyterlab-snapshots)                                | No                  | Yes                  | No                     |
 | [Restore a snapshot.](#cli-restore-jupyterlab-snapshot)                              | No                  | Yes                  | No                     |
 | [Register a JupyterLab workspace with Astra Control.](#cli-register-jupyterlab)      | No                  | Yes                  | Yes                    |
+| [Backup a JupyterLab workspace using Astra Control.](#cli-backup-jupyterlab)         | No                  | Yes                  | Yes                    |
 
 | Kubernetes persistent volume management operations (for advanced Kubernetes users)   | Supported by BeeGFS | Supported by Trident | Requires Astra Control |
 | ------------------------------------------------------------------------------------ | ------------------- | -------------------- | ---------------------- |
@@ -532,6 +533,37 @@ Registering JupyterLab workspace 'mike' in namespace 'project1' with Astra Contr
 JupyterLab workspace is now managed by Astra Control.
 ```
 
+<a name="cli-backup-jupyterlab"></a>
+
+#### Backup a JupyterLab Workspace Using Astra Control
+
+The NetApp DataOps Toolkit can be used to trigger a backup of an existing JupyterLab workspace using Astra Control. The command for triggering a backup of an existing JupyterLab workspace using Astra Control is `netapp_dataops_k8s_cli.py backup-with-astra jupyterlab`.
+
+Note: This command requires Astra Control.
+
+The following options/arguments are required:
+
+```
+    -w, --workspace-name=   Name of JupyterLab workspace to be backed up.
+    -b, --backup-name=      Name to be applied to new backup.
+```
+
+The following options/arguments are optional:
+
+```
+	-h, --help		        Print help text.
+	-n, --namespace=        Kubernetes namespace that the workspace is located in. If not specified, namespace "default" will be used.
+```
+
+##### Example Usage
+
+Backup the workspace 'mike' in namespace 'project1' using Astra Control.
+
+```sh
+netapp_dataops_k8s_cli.py backup-with-astra jupyterlab -n project1 -w mike -b backup1
+TODO
+```
+
 ### Kubernetes Persistent Volume Management Operations
 
 <a name="cli-clone-volume"></a>
@@ -855,6 +887,7 @@ When being utilized as an importable library of functions, the toolkit supports 
 | [List all snapshots.](#lib-list-jupyterlab-snapshots)                                | No                  | Yes                  | No                     |
 | [Restore a snapshot.](#lib-restore-jupyterlab-snapshot)                              | No                  | Yes                  | No                     |
 | [Register a JupyterLab workspace with Astra Control.](#lib-register-jupyterlab)      | No                  | Yes                  | Yes                    |
+| [Backup a JupyterLab workspace using Astra Control.](#lib-backup-jupyterlab)         | No                  | Yes                  | Yes                    |
 
 | Kubernetes persistent volume management operations (for advanced Kubernetes users)   | Supported by BeeGFS | Supported by Trident | Requires Astra Control |
 | ------------------------------------------------------------------------------------ | ------------------- | -------------------- | ---------------------- |
@@ -1115,7 +1148,7 @@ APIConnectionError              # The Kubernetes API returned an error.
 
 The NetApp DataOps Toolkit can be used to register an existing JupyterLab workspace with Astra Control as part of any Python program or workflow.
 
-Note: This command requires Astra Control.
+Note: This function requires Astra Control.
 
 ##### Function Definition
 
@@ -1137,7 +1170,39 @@ If an error is encountered, the function will raise an exception of one of the f
 
 ```py
 InvalidConfigError              # kubeconfig or AstraSDK config file is missing or is invalid.
-APIConnectionError              # The Kubernetes API returned an error.
+APIConnectionError              # The Kubernetes or Astra Control API returned an error.
+```
+
+<a name="lib-backup-jupyterlab"></a>
+
+#### Backup a JupyterLab Workspace Using Astra Control
+
+The NetApp DataOps Toolkit can be used to trigger a backup of an existing JupyterLab workspace using Astra Control as part of any Python program or workflow.
+
+Note: This function requires Astra Control.
+
+##### Function Definition
+
+```py
+def backup_jupyter_lab_with_astra(
+    workspace_name: str,            # Name of JupyterLab workspace to be backed up (required).
+    backup_name: str,               # Name to be applied to new backup (required)
+    namespace: str = "default",     # Kubernetes namespace that the workspace is located in. If not specified, namespace "default" will be used.
+    print_output: bool = False      # Denotes whether or not to print messages to the console during execution.
+) :
+```
+
+##### Return Value
+
+None
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.k8s`.
+
+```py
+InvalidConfigError              # kubeconfig or AstraSDK config file is missing or is invalid.
+APIConnectionError              # The Kubernetes or Astra Control API returned an error.
 ```
 
 ### Kubernetes Persistent Volume Management Operations
