@@ -96,7 +96,6 @@ Optional Options/Arguments:
 \t-n, --namespace=\t\tKubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
 \t-p, --cpu=\t\t\tNumber of CPUs to reserve for new JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
 \t-s, --source-snapshot-name=\tName of Kubernetes VolumeSnapshot to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
-\t-a, --new-namespace=\t\tName of new namespace to create new workspace in (requires Astra Control). If not specified, new workspace will be created in same namespace as source workspace.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment1 --source-workspace-name=project1 --nvidia-gpu=1
@@ -522,14 +521,13 @@ if __name__ == '__main__':
             requestNvidiaGpu = None
             requestMemory = None
             requestCpu = None
-            new_namespace = None
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hw:c:n:s:j:g:m:p:a:",
+                opts, args = getopt.getopt(sys.argv[3:], "hw:c:n:s:j:g:m:p:",
                                            ["help", "new-workspace-name=", "volume-snapshot-class=", "namespace=",
                                             "source-snapshot-name=", "source-workspace-name=", "nvidia-gpu=", "memory=",
-                                            "cpu=", "new-namespace="])
+                                            "cpu="])
             except:
                 handleInvalidCommand(helpText=helpTextCloneJupyterLab, invalidOptArg=True)
 
@@ -554,8 +552,6 @@ if __name__ == '__main__':
                     requestMemory = arg
                 elif opt in ("-p", "--cpu"):
                     requestCpu = arg
-                elif opt in ("-a", "--new-namespace"):
-                    new_namespace = arg
 
             # Check for required options
             if not newWorkspaceName or (not sourceSnapshotName and not sourceWorkspaceName):
@@ -570,7 +566,7 @@ if __name__ == '__main__':
                 clone_jupyter_lab(new_workspace_name=newWorkspaceName, source_workspace_name=sourceWorkspaceName,
                                   source_snapshot_name=sourceSnapshotName, volume_snapshot_class=volumeSnapshotClass,
                                   namespace=namespace, request_cpu=requestCpu, request_memory=requestMemory,
-                                  request_nvidia_gpu=requestNvidiaGpu, new_namespace=new_namespace, print_output=True)
+                                  request_nvidia_gpu=requestNvidiaGpu, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
