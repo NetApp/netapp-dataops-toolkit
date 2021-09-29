@@ -78,7 +78,12 @@ python3 -m pip install netapp-astra-toolkits
 python3 -m pip install $(curl https://raw.githubusercontent.com/NetApp/netapp-astra-toolkits/main/requirements.txt)
 ```
 
-Additionally, you must set the environment variable 'ASTRA_K8S_CLUSTER_NAME' to the name of your specific Kubernetes cluster in Astra Control.
+After the Astra Control Python SDK has been installed, you must create an 'config.yaml' file containing your Astra Control API connection details. Refer to the [Astra Control Python SDK README](https://github.com/NetApp/netapp-astra-toolkits) for formatting details. Once you have created the 'config.yaml' file, you must store it in one of the following locations:
+- ~/.config/astra-toolkits/
+- /etc/astra-toolkits/
+- The directory pointed to by the shell environment variable 'ASTRATOOLKITS_CONF'
+
+Additionally, you must set the shell environment variable 'ASTRA_K8S_CLUSTER_NAME' to the name of your specific Kubernetes cluster in Astra Control.
 
 ```sh
 export ASTRA_K8S_CLUSTER_NAME="<Kubernetes_cluster_name_in_Astra_Control"
@@ -97,7 +102,8 @@ The simplest way to use the NetApp DataOps Toolkit for Kubernetes is as a comman
 
 | JupyterLab workspace management operations                                           | Supported by BeeGFS | Supported by Trident | Requires Astra Control |
 | ------------------------------------------------------------------------------------ | ------------------- | -------------------- | ---------------------- |
-| [Clone a JupyterLab workspace.](#cli-clone-jupyterlab)                               | No                  | Yes                  | No                     |
+| [Clone a JupyterLab workspace within the same namespace.](#cli-clone-jupyterlab)     | No                  | Yes                  | No                     |
+| [Clone a JupyterLab workspace to a brand new namespace.](#cli-clone-new-jupyterlab)  | No                  | Yes                  | Yes                    |
 | [Create a new JupyterLab workspace.](#cli-create-jupyterlab)                         | Yes                 | Yes                  | No                     |
 | [Delete an existing JupyterLab workspace.](#cli-delete-jupyterlab)                   | Yes                 | Yes                  | No                     |
 | [List all JupyterLab workspaces.](#cli-list-jupyterlabs)                             | Yes                 | Yes                  | No                     |
@@ -123,9 +129,9 @@ The simplest way to use the NetApp DataOps Toolkit for Kubernetes is as a comman
 
 <a name="cli-clone-jupyterlab"></a>
 
-#### Clone a JupyterLab Workspace
+#### Clone a JupyterLab Workspace Within the same Namespace
 
-The NetApp DataOps Toolkit can be used to near-instantaneously provision a new JupyterLab workspace (within a Kubernetes cluster) that is an exact copy of an existing JupyterLab workspace or JupyterLab workspace snapshot. In other words, the NetApp DataOps Toolkit can be used to near-instantaneously clone a JupyterLab workspace. The command for cloning a JupyterLab workspace is `netapp_dataops_k8s_cli.py clone jupyterlab`.
+The NetApp DataOps Toolkit can be used to near-instantaneously provision a new JupyterLab workspace (within the same Kubernetes namespace) that is an exact copy of an existing JupyterLab workspace or JupyterLab workspace snapshot. In other words, the NetApp DataOps Toolkit can be used to near-instantaneously clone a JupyterLab workspace. The command for cloning a JupyterLab workspace is `netapp_dataops_k8s_cli.py clone jupyterlab`.
 
 Note: Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified. However, only one of these flags (not both) should be specified for a given operation. If -j/--source-workspace-name is specified, then the clone will be created from the current state of the workspace. If -s/--source-snapshot-name is specified, then the clone will be created from a specific snapshot related the source workspace.
 
@@ -151,6 +157,93 @@ The following options/arguments are optional:
 ```
 
 ##### Example Usage
+
+Near-instantaneously create a new JupyterLab workspace, named 'project1-experiment3', that is an exact copy of the current contents of existing JupyterLab workspace 'project1' in namespace 'default'. Allocate 2 NVIDIA GPUs to the new workspace.
+
+```sh
+netapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment3 --source-workspace-name=project1 --nvidia-gpu=2
+Creating new JupyterLab workspace 'project1-experiment3' from source workspace 'project1' in namespace 'default'...
+
+Creating new VolumeSnapshot 'ntap-dsutil.for-clone.20210315185504' for source PVC 'ntap-dsutil-jupyterlab-project1' in namespace 'default' to use as source for clone...
+Creating VolumeSnapshot 'ntap-dsutil.for-clone.20210315185504' for PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1' in namespace 'default'.
+VolumeSnapshot 'ntap-dsutil.for-clone.20210315185504' created. Waiting for Trident to create snapshot on backing storage.
+Snapshot successfully created.
+Creating new PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment3' from VolumeSnapshot 'ntap-dsutil.for-clone.20210315185504' in namespace 'default'...
+Creating PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment3' in namespace 'default'.
+PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment3' created. Waiting for Kubernetes to bind volume to PVC.
+Volume successfully created and bound to PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment3' in namespace 'default'.
+Volume successfully cloned.
+
+Set workspace password (this password will be required in order to access the workspace): 
+Re-enter password: 
+
+Creating Service 'ntap-dsutil-jupyterlab-project1-experiment3' in namespace 'default'.
+Service successfully created.
+
+Creating Deployment 'ntap-dsutil-jupyterlab-project1-experiment3' in namespace 'default'.
+Deployment 'ntap-dsutil-jupyterlab-project1-experiment3' created.
+Waiting for Deployment 'ntap-dsutil-jupyterlab-project1-experiment3' to reach Ready state.
+Deployment successfully created.
+
+Workspace successfully created.
+To access workspace, navigate to http://10.61.188.112:30993
+JupyterLab workspace successfully cloned.
+```
+
+Near-instantaneously create a new JupyterLab workspace, named 'project1-experiment2', that is an exact copy of the contents of JupyterLab workspace VolumeSnapshot 'project1-snap1' in namespace 'default'.
+
+```sh
+netapp_dataops_k8s_cli.py clone jupyterlab -s project1-snap1 -w project1-experiment2
+Creating new JupyterLab workspace 'project1-experiment2' from VolumeSnapshot 'project1-snap1' in namespace 'default'...
+
+Creating new PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment2' from VolumeSnapshot 'project1-snap1' in namespace 'default'...
+Creating PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment2' in namespace 'default'.
+PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment2' created. Waiting for Kubernetes to bind volume to PVC.
+Volume successfully created and bound to PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment2' in namespace 'default'.
+Volume successfully cloned.
+
+Set workspace password (this password will be required in order to access the workspace): 
+Re-enter password: 
+
+Creating Service 'ntap-dsutil-jupyterlab-project1-experiment2' in namespace 'default'.
+Service successfully created.
+
+Creating Deployment 'ntap-dsutil-jupyterlab-project1-experiment2' in namespace 'default'.
+Deployment 'ntap-dsutil-jupyterlab-project1-experiment2' created.
+Waiting for Deployment 'ntap-dsutil-jupyterlab-project1-experiment2' to reach Ready state.
+Deployment successfully created.
+
+Workspace successfully created.
+To access workspace, navigate to http://10.61.188.112:30677
+JupyterLab workspace successfully cloned.
+```
+
+<a name="cli-clone-new-jupyterlab"></a>
+
+#### Clone a JupyterLab Workspace to a Brand New Namespace
+
+The NetApp DataOps Toolkit can be used to rapidly provision a new JupyterLab workspace (within a brand new Kubernetes namespace) that is an exact copy of an existing JupyterLab workspace. In other words, the NetApp DataOps Toolkit can be used to rapidly clone a JupyterLab workspace to a brand new namespace. The command for cloning a JupyterLab workspace to a brand new namespace is `netapp_dataops_k8s_cli.py clone-to-new-ns jupyterlab`.
+
+Note: This command requires Astra Control.
+
+The following options/arguments are required:
+
+```
+    -j, --source-workspace-name=	Name of JupyterLab workspace to use as source for clone.
+	-n, --new-namespace=		    Kubernetes namespace to create new workspace in. This namespace must not exist; it will be created during this operation.
+```
+
+The following options/arguments are optional:
+
+```
+    -c, --clone-to-cluster-name=	Name of destination Kubernetes cluster within Astra Control. Workspace will be cloned a to a new namespace in this cluster. If not specified, then the workspace will be cloned to a new namespace within the user's current cluster.
+	-h, --help			            Print help text.
+	-s, --source-namespace=		    Kubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
+```
+
+##### Example Usage
+
+# !! TODO - update below
 
 Near-instantaneously create a new JupyterLab workspace, named 'project1-experiment3', that is an exact copy of the current contents of existing JupyterLab workspace 'project1' in namespace 'default'. Allocate 2 NVIDIA GPUs to the new workspace.
 
@@ -877,7 +970,8 @@ When being utilized as an importable library of functions, the toolkit supports 
 
 | JupyterLab workspace management operations                                           | Supported by BeeGFS | Supported by Trident | Requires Astra Control |
 | ------------------------------------------------------------------------------------ | ------------------- | -------------------- | ---------------------- |
-| [Clone a JupyterLab workspace.](#lib-clone-jupyterlab)                               | No                  | Yes                  | No                     |
+| [Clone a JupyterLab workspace within the same namespace.](#lib-clone-jupyterlab)     | No                  | Yes                  | No                     |
+| [Clone a JupyterLab workspace to a brand new namespace.](#lib-clone-new-jupyterlab)  | No                  | Yes                  | Yes                    |
 | [Create a new JupyterLab workspace.](#lib-create-jupyterlab)                         | Yes                 | Yes                  | No                     |
 | [Delete an existing JupyterLab workspace.](#lib-delete-jupyterlab)                   | Yes                 | Yes                  | No                     |
 | [List all JupyterLab workspaces.](#lib-list-jupyterlabs)                             | Yes                 | Yes                  | No                     |
@@ -903,9 +997,9 @@ When being utilized as an importable library of functions, the toolkit supports 
 
 <a name="lib-clone-jupyterlab"></a>
 
-#### Clone a JupyterLab Workspace
+#### Clone a JupyterLab Workspace Within the same Namespace
 
-The NetApp DataOps Toolkit can be used to near-instantaneously provision a new JupyterLab workspace (within a Kubernetes cluster), that is an exact copy of an existing JupyterLab workspace or JupyterLab workspace snapshot, as part of any Python program or workflow. In other words, the NetApp DataOps Toolkit can be used to near-instantaneously clone a JupyterLab workspace as part of any Python program or workflow.
+The NetApp DataOps Toolkit can be used to near-instantaneously provision a new JupyterLab workspace (within the same Kubernetes namespace), that is an exact copy of an existing JupyterLab workspace or JupyterLab workspace snapshot, as part of any Python program or workflow. In other words, the NetApp DataOps Toolkit can be used to near-instantaneously clone a JupyterLab workspace as part of any Python program or workflow.
 
 Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/en/latest/kubernetes/operations/tasks/volumes/snapshots.html) for more information on VolumeSnapshots and PVC cloning. There are often a few prerequisite tasks that need to be performed in order to enable VolumeSnapshots and PVC cloning within a Kubernetes cluster.
 
@@ -937,6 +1031,41 @@ If an error is encountered, the function will raise an exception of one of the f
 ```py
 InvalidConfigError              # kubeconfig file is missing or is invalid.
 APIConnectionError              # The Kubernetes API returned an error.
+```
+
+<a name="lib-clone-new-jupyterlab"></a>
+
+#### Clone a JupyterLab Workspace to a Brand New Naamespace
+
+The NetApp DataOps Toolkit can be used to rapidly provision a new JupyterLab workspace (within a brand new Kubernetes namespace) that is an exact copy of an existing JupyterLab workspace, as part of any Python program or workflow. In other words, the NetApp DataOps Toolkit can be used to rapidly clone a JupyterLab workspace to a brand new namespace.
+
+Note: This function requires Astra Control.
+
+##### Function Definition
+
+```py
+def clone_jupyter_lab_to_new_namespace(
+    source_workspace_name: str,                     # Name of JupyterLab workspace to use as source for clone (required).
+    new_namespace: str,                             # Kubernetes namespace to create new workspace in (required). This namespace must not exist; it will be created during this operation.
+    source_workspace_namespace: str = "default",    # Kubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
+    clone_to_cluster_name: str = None,              # Name of destination Kubernetes cluster within Astra Control. Workspace will be cloned a to a new namespace in this cluster. If not specified, then the workspace will be cloned to a new namespace within the user's current cluster.
+    print_output: bool = False                      # Denotes whether or not to print messages to the console during execution.
+) :
+```
+
+##### Return Value
+
+None
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.k8s`.
+
+```py
+InvalidConfigError              # kubeconfig file is missing or is invalid.
+APIConnectionError              # The Kubernetes or Astra API returned an error.
+AstraAppNotManagedError         # The source JupyterLab workspace has not been registered with Astra Control.
+AstraClusterDoesNotExistError   # The destination cluster does not exist in Astra Control.
 ```
 
 <a name="lib-create-jupyterlab"></a>

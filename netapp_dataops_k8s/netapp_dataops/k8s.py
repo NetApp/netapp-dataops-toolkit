@@ -4,7 +4,7 @@ This module provides the public functions available to be imported directly
 by applications using the import method of utilizing the toolkit.
 """
 
-__version__ = "2.1.0_astra_sprint12dev"
+__version__ = "2.1.0_astra_sprint14dev"
 
 from datetime import datetime
 import functools
@@ -45,6 +45,16 @@ class APIConnectionError(Exception):
 
 class InvalidConfigError(Exception):
     '''Error that will be raised when the config file is invalid or missing'''
+    pass
+
+
+class AstraAppNotManagedError(Exception):
+    '''Error that will be raised when an application hasn't been registered with Astra'''
+    pass
+
+
+class AstraClusterDoesNotExistError(Exception):
+    '''Error that will be raised when a cluster doesn't exist within Astra Control'''
     pass
 
 
@@ -389,6 +399,79 @@ def clone_jupyter_lab(new_workspace_name: str, source_workspace_name: str, sourc
 
     if print_output:
         print("JupyterLab workspace successfully cloned.")
+
+
+def clone_jupyter_lab_to_new_namespace(source_workspace_name: str, new_namespace: str, source_workspace_namespace: str = "default", clone_to_cluster_name: str = None, print_output: bool = False) :
+    # Retrieve list of unmanaged Astra apps
+    try :
+        astra_apps = astraSDK.getApps(namespace=source_workspace_namespace).main()
+    except Exception as err :
+        if print_output :
+            print("Error: Astra Control API Error: ", err)
+        raise APIConnectionError(err)
+
+    # Determine Astra App ID for source workspace
+    try :
+        source_astra_app_id = _retrieve_astra_app_id_for_jupyter_lab(astra_apps=astra_apps, workspace_name=source_workspace_name)
+    except InvalidConfigError :
+        if print_output :
+            _print_astra_k8s_cluster_name_error()
+        raise InvalidConfigError()
+
+    # Handle situation where workspace has not been registered with Astra.
+    if not source_astra_app_id :
+        error_message = "Source JupyterLab workspace has not been registered with Astra Control."
+        if print_output :
+            print("Error:", error_message)
+            print("Hint: use the 'netapp_dataops_k8s_cli.py register-with-astra jupyterlab' command to register a JupyterLab workspace with Astra Control.")
+        raise AstraAppNotManagedError(error_message)
+
+    # Determine Astra cluster ID for source workspace
+    source_astra_cluster_id = astra_apps[source_astra_app_id][2]
+
+    # Determine Astra cluster ID for "clone-to" cluster
+    if clone_to_cluster_name :
+        clone_to_cluster_id = None
+        try :
+            astra_clusters = astraSDK.getClusters(hideUnmanaged=True).main()
+        except Exception as err :
+            if print_output :
+                print("Error: Astra Control API Error: ", err)
+            raise APIConnectionError(err)
+
+        for cluster_id,cluster_info in astra_clusters.items() :
+            if cluster_info[0] == clone_to_cluster_name :
+                clone_to_cluster_id = cluster_id
+
+        if not clone_to_cluster_id :
+            error_message = "Cluster '" + clone_to_cluster_name + "' does not exist in Astra Control."
+            if print_output :
+                print("Error:", error_message)
+            raise AstraClusterDoesNotExistError(error_message)
+
+        print("Creating new JupyterLab workspace '" + source_workspace_name + "' in namespace '" + new_namespace + "' within cluster '" + clone_to_cluster_name + "' using Astra Control...")
+    else :
+        clone_to_cluster_id = source_astra_cluster_id
+        print("Creating new JupyterLab workspace '" + source_workspace_name + "' in namespace '" + new_namespace + "' within your cluster using Astra Control...")
+
+    # Clone workspace to new namespace using Astra
+    print("New workspace is being cloned from source workspace '" + source_workspace_name + "' in namespace '" + source_workspace_namespace + "' within your cluster...")
+    print("\nAstra SDK output:")
+    try :
+        ret = astraSDK.cloneApp(quiet=False).main(cloneName=_get_jupyter_lab_deployment(source_workspace_name), clusterID=clone_to_cluster_id, sourceClusterID=source_astra_cluster_id, namespace=new_namespace, sourceAppID=source_astra_app_id)
+    except Exception as err :
+        if print_output :
+            print("\nError: Astra Control API Error: ", err)
+        raise APIConnectionError(err)
+
+    if ret == False :
+        if print_output :
+            print("\nError: Astra Control API error. See Astra SDK output above for details")
+        raise APIConnectionError("Astra Control API error.")
+
+    if print_output :
+        print("\nClone operation has been initiated. The operation may take several minutes to complete.")
+        print("If the new workspace is being created within your cluster, run 'netapp_dataops_k8s_cli.py list jupyterlabs -n " + new_namespace + "' to check the status of the new workspace.")
 
 
 def clone_volume(new_pvc_name: str, source_pvc_name: str, source_snapshot_name: str = None,
