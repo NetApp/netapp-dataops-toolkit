@@ -79,7 +79,6 @@ Optional Options/Arguments:
 
 Examples:
 \tnetapp_dataops_k8s_cli.py backup-with-astra jupyterlab --workspace-name=mike --backup-name=backup1
-\tnetapp_dataops_k8s_cli.py register-with-astra jupyterlab -w dave -n dst-test -b backup2
 '''
 helpTextCloneJupyterLab = '''
 Command: clone jupyterlab

@@ -402,7 +402,7 @@ def clone_jupyter_lab(new_workspace_name: str, source_workspace_name: str, sourc
 
 
 def clone_jupyter_lab_to_new_namespace(source_workspace_name: str, new_namespace: str, source_workspace_namespace: str = "default", clone_to_cluster_name: str = None, print_output: bool = False) :
-    # Retrieve list of unmanaged Astra apps
+    # Retrieve list of Astra apps
     try :
         astra_apps = astraSDK.getApps().main(namespace=source_workspace_namespace)
     except Exception as err :
@@ -1318,8 +1318,48 @@ def register_jupyter_lab_with_astra(workspace_name: str, namespace: str = "defau
     
 
 def backup_jupyter_lab_with_astra(workspace_name: str, backup_name: str, namespace: str = "default", print_output: bool = False) :
-    # TODO
-    print("workspace:", workspace_name, "; backup:", backup_name, "; namespace:", namespace)
+    # Retrieve list of Astra apps
+    try :
+        astra_apps = astraSDK.getApps().main(namespace=namespace)
+    except Exception as err :
+        if print_output :
+            print("Error: Astra Control API Error: ", err)
+        raise APIConnectionError(err)
+
+    # Determine Astra App ID for source workspace
+    try :
+        astra_app_id = _retrieve_astra_app_id_for_jupyter_lab(astra_apps=astra_apps, workspace_name=workspace_name)
+    except InvalidConfigError :
+        if print_output :
+            _print_astra_k8s_cluster_name_error()
+        raise InvalidConfigError()
+
+    # Handle situation where workspace has not been registered with Astra.
+    if not astra_app_id :
+        error_message = "JupyterLab workspace has not been registered with Astra Control."
+        if print_output :
+            print("Error:", error_message)
+            print("Hint: use the 'netapp_dataops_k8s_cli.py register-with-astra jupyterlab' command to register a JupyterLab workspace with Astra Control.")
+        raise AstraAppNotManagedError(error_message)
+    
+    # Trigger backup
+    print("Trigerring backup of workspace '" + workspace_name + "' in namespace '" + namespace + "' using Astra Control...")
+    print("\nAstra SDK output:")
+    try :
+        ret = astraSDK.takeBackup(quiet=False).main(appID=astra_app_id, backupName=backup_name)
+    except Exception as err :
+        if print_output :
+            print("\nError: Astra Control API Error: ", err)
+        raise APIConnectionError(err)
+
+    if ret == False :
+        if print_output :
+            print("\nError: Astra Control API error. See Astra SDK output above for details")
+        raise APIConnectionError("Astra Control API error.")
+
+    if print_output :
+        print("\nBackup operation has been initiated. The operation may take several minutes to complete.")
+        print("Access the Astra Control dashboard to check the status of the backup operation.")
 
 
 def restore_jupyter_lab_snapshot(snapshot_name: str = None, namespace: str = "default", print_output: bool = False):
