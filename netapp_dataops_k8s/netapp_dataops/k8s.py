@@ -404,7 +404,7 @@ def clone_jupyter_lab(new_workspace_name: str, source_workspace_name: str, sourc
 def clone_jupyter_lab_to_new_namespace(source_workspace_name: str, new_namespace: str, source_workspace_namespace: str = "default", clone_to_cluster_name: str = None, print_output: bool = False) :
     # Retrieve list of unmanaged Astra apps
     try :
-        astra_apps = astraSDK.getApps(namespace=source_workspace_namespace).main()
+        astra_apps = astraSDK.getApps().main(namespace=source_workspace_namespace)
     except Exception as err :
         if print_output :
             print("Error: Astra Control API Error: ", err)
@@ -433,7 +433,7 @@ def clone_jupyter_lab_to_new_namespace(source_workspace_name: str, new_namespace
     if clone_to_cluster_name :
         clone_to_cluster_id = None
         try :
-            astra_clusters = astraSDK.getClusters(hideUnmanaged=True).main()
+            astra_clusters = astraSDK.getClusters().main(hideUnmanaged=True)
         except Exception as err :
             if print_output :
                 print("Error: Astra Control API Error: ", err)
@@ -1013,7 +1013,7 @@ def list_jupyter_labs(namespace: str = "default", include_astra_app_id: bool = F
     # Retrieve list of Astra apps
     if include_astra_app_id :
         try :
-            astra_apps = astraSDK.getApps(namespace=namespace).main()
+            astra_apps = astraSDK.getApps().main(namespace=namespace)
         except Exception as err :
             if print_output:
                 print("Error: Astra Control API Error: ", err)
@@ -1263,7 +1263,7 @@ def list_volume_snapshots(pvc_name: str = None, namespace: str = "default", prin
 def register_jupyter_lab_with_astra(workspace_name: str, namespace: str = "default", print_output: bool = False) :
     # Retrieve list of unmanaged Astra apps
     try :
-        astra_apps_unmanaged = astraSDK.getApps(discovered=True, namespace=namespace).main()
+        astra_apps_unmanaged = astraSDK.getApps().main(discovered=True, namespace=namespace)
     except Exception as err :
         if print_output:
             print("Error: Astra Control API Error: ", err)
@@ -1291,7 +1291,7 @@ def register_jupyter_lab_with_astra(workspace_name: str, namespace: str = "defau
 
         # Retrieve list of unmanaged Astra apps again
         try :
-            astra_apps_unmanaged = astraSDK.getApps(discovered=True, namespace=namespace).main()
+            astra_apps_unmanaged = astraSDK.getApps().main(discovered=True, namespace=namespace)
         except Exception as err :
             if print_output:
                 print("Error: Astra Control API Error: ", err)
@@ -1301,7 +1301,7 @@ def register_jupyter_lab_with_astra(workspace_name: str, namespace: str = "defau
     if print_output :
         print("Registering JupyterLab workspace '" + workspace_name + "' in namespace '" + namespace + "' with Astra Control...")
     try :
-        managed = astraSDK.manageApp(appID=astra_app_id).main()
+        managed = astraSDK.manageApp().main(appID=astra_app_id)
     except Exception as err :
         if print_output:
             print("Error: Astra Control API Error: ", err)
