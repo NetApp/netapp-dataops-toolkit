@@ -230,15 +230,15 @@ The following options/arguments are required:
 
 ```
     -j, --source-workspace-name=	Name of JupyterLab workspace to use as source for clone.
-	-n, --new-namespace=		    Kubernetes namespace to create new workspace in. This namespace must not exist; it will be created during this operation.
+    -n, --new-namespace=		    Kubernetes namespace to create new workspace in. This namespace must not exist; it will be created during this operation.
 ```
 
 The following options/arguments are optional:
 
 ```
     -c, --clone-to-cluster-name=	Name of destination Kubernetes cluster within Astra Control. Workspace will be cloned a to a new namespace in this cluster. If not specified, then the workspace will be cloned to a new namespace within the user's current cluster.
-	-h, --help			            Print help text.
-	-s, --source-namespace=		    Kubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
+    -h, --help			            Print help text.
+    -s, --source-namespace=		    Kubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
 ```
 
 ##### Example Usage
@@ -324,13 +324,13 @@ The following options/arguments are optional:
 
 ```
     -c, --storage-class=	    Kubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
-	-g, --nvidia-gpu=		    Number of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
-	-h, --help			        Print help text.
-	-i, --image=			    Container image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.
-	-m, --memory=			    Amount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
-	-n, --namespace=		    Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
-	-p, --cpu=			        Number of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
-	-a, --register-with-astra	Register new workspace with Astra Control (requires Astra Control).
+    -g, --nvidia-gpu=		    Number of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
+    -h, --help			        Print help text.
+    -i, --image=			    Container image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.
+    -m, --memory=			    Amount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
+    -n, --namespace=		    Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
+    -p, --cpu=			        Number of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+    -a, --register-with-astra	Register new workspace with Astra Control (requires Astra Control).
 ```
 
 ##### Example Usage
@@ -429,8 +429,8 @@ The following options/arguments are optional:
 
 ```
     -h, --help			        Print help text.
-	-n, --namespace=		    Kubernetes namespace for which to retrieve list of workspaces. If not specified, namespace "default" will be used.
-	-a, --include-astra-app-id	Include Astra Control app IDs in the output (requires Astra Control API access).
+    -n, --namespace=		    Kubernetes namespace for which to retrieve list of workspaces. If not specified, namespace "default" will be used.
+    -a, --include-astra-app-id	Include Astra Control app IDs in the output (requires Astra Control API access).
 ```
 
 ##### Example Usage
@@ -611,8 +611,8 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
-	-h, --help		        Print help text.
-	-n, --namespace=        Kubernetes namespace that the workspace is located in. If not specified, namespace "default" will be used.
+    -h, --help		        Print help text.
+    -n, --namespace=        Kubernetes namespace that the workspace is located in. If not specified, namespace "default" will be used.
 ```
 
 ##### Example Usage
@@ -643,8 +643,8 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
-	-h, --help		        Print help text.
-	-n, --namespace=        Kubernetes namespace that the workspace is located in. If not specified, namespace "default" will be used.
+    -h, --help		        Print help text.
+    -n, --namespace=        Kubernetes namespace that the workspace is located in. If not specified, namespace "default" will be used.
 ```
 
 ##### Example Usage
