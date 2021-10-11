@@ -471,7 +471,7 @@ def clone_jupyter_lab_to_new_namespace(source_workspace_name: str, new_namespace
 
     if print_output :
         print("\nClone operation has been initiated. The operation may take several minutes to complete.")
-        print("If the new workspace is being created within your cluster, run 'netapp_dataops_k8s_cli.py list jupyterlabs -n " + new_namespace + "' to check the status of the new workspace.")
+        print("If the new workspace is being created within your cluster, run 'netapp_dataops_k8s_cli.py list jupyterlabs -n " + new_namespace + " -a' to check the status of the new workspace.")
 
 
 def clone_volume(new_pvc_name: str, source_pvc_name: str, source_snapshot_name: str = None,
@@ -1215,8 +1215,13 @@ def list_volume_snapshots(pvc_name: str = None, namespace: str = "default", prin
     snapshotsList = list()
     # return volumeSnapshotList
     for volumeSnapshot in volumeSnapshotList["items"]:
+        # Retrieve source PVC for snapshot
+        try :
+            source_pvc_name = volumeSnapshot["spec"]["source"]["persistentVolumeClaimName"]
+        except :
+            source_pvc_name = None
         # Construct dict containing snapshot details
-        if (not pvc_name) or (volumeSnapshot["spec"]["source"]["persistentVolumeClaimName"] == pvc_name):
+        if (not pvc_name) or (source_pvc_name == pvc_name):
             snapshotDict = dict()
             snapshotDict["VolumeSnapshot Name"] = volumeSnapshot["metadata"]["name"]
             snapshotDict["Ready to Use"] = volumeSnapshot["status"]["readyToUse"]
@@ -1224,19 +1229,23 @@ def list_volume_snapshots(pvc_name: str = None, namespace: str = "default", prin
                 snapshotDict["Creation Time"] = volumeSnapshot["status"]["creationTime"]
             except:
                 snapshotDict["Creation Time"] = ""
-            snapshotDict["Source PersistentVolumeClaim (PVC)"] = volumeSnapshot["spec"]["source"][
-                "persistentVolumeClaimName"]
-            try:
-                api = client.CoreV1Api()
-                api.read_namespaced_persistent_volume_claim(name=snapshotDict["Source PersistentVolumeClaim (PVC)"],
-                                                            namespace=namespace)  # Confirm that source PVC still exists
-            except:
-                snapshotDict["Source PersistentVolumeClaim (PVC)"] = "*deleted*"
-            try:
-                snapshotDict["Source JupyterLab workspace"] = _retrieve_jupyter_lab_workspace_for_pvc(
-                    pvcName=snapshotDict["Source PersistentVolumeClaim (PVC)"], namespace=namespace, printOutput=False)
-                jupyterLabWorkspace = True
-            except:
+            if source_pvc_name :
+                snapshotDict["Source PersistentVolumeClaim (PVC)"] = source_pvc_name
+                try:
+                    api = client.CoreV1Api()
+                    api.read_namespaced_persistent_volume_claim(name=snapshotDict["Source PersistentVolumeClaim (PVC)"],
+                                                                namespace=namespace)  # Confirm that source PVC still exists
+                except:
+                    snapshotDict["Source PersistentVolumeClaim (PVC)"] = "*deleted*"
+                try:
+                    snapshotDict["Source JupyterLab workspace"] = _retrieve_jupyter_lab_workspace_for_pvc(
+                        pvcName=snapshotDict["Source PersistentVolumeClaim (PVC)"], namespace=namespace, printOutput=False)
+                    jupyterLabWorkspace = True
+                except:
+                    snapshotDict["Source JupyterLab workspace"] = ""
+                    jupyterLabWorkspace = False
+            else :
+                snapshotDict["Source PersistentVolumeClaim (PVC)"] = ""
                 snapshotDict["Source JupyterLab workspace"] = ""
                 jupyterLabWorkspace = False
             try:

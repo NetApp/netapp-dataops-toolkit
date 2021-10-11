@@ -452,6 +452,8 @@ rick                  Ready     2Ti     ontap-flexvol    http://10.61.188.112:31
 sathish               Ready     2Ti     ontap-flexvol    http://10.61.188.112:31820  No
 ```
 
+Note: The value of the "Clone" field will be "Yes" only if the workspace was cloned, using the DataOps Toolkit, from a source workspace within the same namespace.
+
 <a name="cli-create-jupyterlab-snapshot"></a>
 
 #### Create a New Snapshot for a JupyterLab Workspace
@@ -1156,6 +1158,8 @@ def list_jupyter_labs(
 ##### Return Value
 
 The function returns a list of all existing JupyterLab workspaces. Each item in the list will be a dictionary containing details regarding a specific workspace. The keys for the values in this dictionary are "Workspace Name", "Status", "Size", "StorageClass", "Access URL", "Clone" (Yes/No), "Source Workspace", and "Source VolumeSnapshot". If `include_astra_app_id` is set to `True`, then "Astra Control App ID" will also be included as a key in the dictionary.
+
+Note: The value of the "Clone" field will be "Yes" only if the workspace was cloned, using the DataOps Toolkit, from a source workspace within the same namespace.
 
 ##### Error Handling
 
