@@ -230,14 +230,14 @@ Note: This command requires Astra Control.
 The following options/arguments are required:
 
 ```
-    -j, --source-workspace-name=	Name of JupyterLab workspace to use as source for clone.
+    -j, --source-workspace-name=    Name of JupyterLab workspace to use as source for clone.
     -n, --new-namespace=            Kubernetes namespace to create new workspace in. This namespace must not exist; it will be created during this operation.
 ```
 
 The following options/arguments are optional:
 
 ```
-    -c, --clone-to-cluster-name=	Name of destination Kubernetes cluster within Astra Control. Workspace will be cloned a to a new namespace in this cluster. If not specified, then the workspace will be cloned to a new namespace within the user's current cluster.
+    -c, --clone-to-cluster-name=    Name of destination Kubernetes cluster within Astra Control. Workspace will be cloned a to a new namespace in this cluster. If not specified, then the workspace will be cloned to a new namespace within the user's current cluster.
     -h, --help                      Print help text.
     -s, --source-namespace=         Kubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
 ```
