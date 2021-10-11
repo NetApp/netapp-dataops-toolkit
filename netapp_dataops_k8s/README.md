@@ -244,66 +244,18 @@ The following options/arguments are optional:
 
 ##### Example Usage
 
-# !! TODO - update below
-
-Near-instantaneously create a new JupyterLab workspace, named 'project1-experiment3', that is an exact copy of the current contents of existing JupyterLab workspace 'project1' in namespace 'default'. Allocate 2 NVIDIA GPUs to the new workspace.
+Clone the JupyterLab workspace 'ws1' in namespace 'default' to a brand new namespace named 'team2'.
 
 ```sh
-netapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment3 --source-workspace-name=project1 --nvidia-gpu=2
-Creating new JupyterLab workspace 'project1-experiment3' from source workspace 'project1' in namespace 'default'...
+netapp_dataops_k8s_cli.py clone-to-new-ns jupyterlab --source-workspace-name=ws1 --new-namespace=team2
+Creating new JupyterLab workspace 'ws1' in namespace 'team2' within your cluster using Astra Control...
+New workspace is being cloned from source workspace 'ws1' in namespace 'default' within your cluster...
 
-Creating new VolumeSnapshot 'ntap-dsutil.for-clone.20210315185504' for source PVC 'ntap-dsutil-jupyterlab-project1' in namespace 'default' to use as source for clone...
-Creating VolumeSnapshot 'ntap-dsutil.for-clone.20210315185504' for PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1' in namespace 'default'.
-VolumeSnapshot 'ntap-dsutil.for-clone.20210315185504' created. Waiting for Trident to create snapshot on backing storage.
-Snapshot successfully created.
-Creating new PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment3' from VolumeSnapshot 'ntap-dsutil.for-clone.20210315185504' in namespace 'default'...
-Creating PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment3' in namespace 'default'.
-PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment3' created. Waiting for Kubernetes to bind volume to PVC.
-Volume successfully created and bound to PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment3' in namespace 'default'.
-Volume successfully cloned.
+Astra SDK output:
+{'type': 'application/astra-managedApp', 'version': '1.1', 'id': '9949c21c-8c36-44e8-b3cf-317eb393177f', 'name': 'ntap-dsutil-jupyterlab-ws1', 'state': 'provisioning', 'stateUnready': [], 'managedState': 'managed', 'managedStateUnready': [], 'managedTimestamp': '2021-10-11T20:36:09Z', 'protectionState': '', 'protectionStateUnready': [], 'appDefnSource': 'other', 'appLabels': [], 'system': 'false', 'namespace': 'team2', 'clusterName': 'ocp1', 'clusterID': '50b1e635-075f-42bb-bf81-3a6fd5518d2b', 'clusterType': 'openshift', 'sourceAppID': 'e6ac2e92-6abf-43c9-ac94-0437dc543149', 'sourceClusterID': '50b1e635-075f-42bb-bf81-3a6fd5518d2b', 'backupID': 'ee24afec-93c7-4226-9da3-006b2a870458', 'metadata': {'labels': [{'name': 'astra.netapp.io/labels/read-only/appType', 'value': 'clone'}], 'creationTimestamp': '2021-10-11T20:36:09Z', 'modificationTimestamp': '2021-10-11T20:36:09Z', 'createdBy': '946d8bb0-0d88-4469-baf4-8cfef52a7a90'}}
 
-Set workspace password (this password will be required in order to access the workspace): 
-Re-enter password: 
-
-Creating Service 'ntap-dsutil-jupyterlab-project1-experiment3' in namespace 'default'.
-Service successfully created.
-
-Creating Deployment 'ntap-dsutil-jupyterlab-project1-experiment3' in namespace 'default'.
-Deployment 'ntap-dsutil-jupyterlab-project1-experiment3' created.
-Waiting for Deployment 'ntap-dsutil-jupyterlab-project1-experiment3' to reach Ready state.
-Deployment successfully created.
-
-Workspace successfully created.
-To access workspace, navigate to http://10.61.188.112:30993
-JupyterLab workspace successfully cloned.
-```
-
-Near-instantaneously create a new JupyterLab workspace, named 'project1-experiment2', that is an exact copy of the contents of JupyterLab workspace VolumeSnapshot 'project1-snap1' in namespace 'default'.
-
-```sh
-netapp_dataops_k8s_cli.py clone jupyterlab -s project1-snap1 -w project1-experiment2
-Creating new JupyterLab workspace 'project1-experiment2' from VolumeSnapshot 'project1-snap1' in namespace 'default'...
-
-Creating new PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment2' from VolumeSnapshot 'project1-snap1' in namespace 'default'...
-Creating PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment2' in namespace 'default'.
-PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment2' created. Waiting for Kubernetes to bind volume to PVC.
-Volume successfully created and bound to PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment2' in namespace 'default'.
-Volume successfully cloned.
-
-Set workspace password (this password will be required in order to access the workspace): 
-Re-enter password: 
-
-Creating Service 'ntap-dsutil-jupyterlab-project1-experiment2' in namespace 'default'.
-Service successfully created.
-
-Creating Deployment 'ntap-dsutil-jupyterlab-project1-experiment2' in namespace 'default'.
-Deployment 'ntap-dsutil-jupyterlab-project1-experiment2' created.
-Waiting for Deployment 'ntap-dsutil-jupyterlab-project1-experiment2' to reach Ready state.
-Deployment successfully created.
-
-Workspace successfully created.
-To access workspace, navigate to http://10.61.188.112:30677
-JupyterLab workspace successfully cloned.
+Clone operation has been initiated. The operation may take several minutes to complete.
+If the new workspace is being created within your cluster, run 'netapp_dataops_k8s_cli.py list jupyterlabs -n team2 -a' to check the status of the new workspace.
 ```
 
 <a name="cli-create-jupyterlab"></a>
@@ -653,11 +605,17 @@ The following options/arguments are optional:
 
 ##### Example Usage
 
-Backup the workspace 'mike' in namespace 'project1' using Astra Control.
+Backup the workspace 'ws1' in namespace 'default' using Astra Control; name the backup 'backup1'.
 
 ```sh
-netapp_dataops_k8s_cli.py backup-with-astra jupyterlab -n project1 -w mike -b backup1
-TODO
+netapp_dataops_k8s_cli.py backup-with-astra jupyterlab --workspace-name=ws1 --backup-name=backup1
+Trigerring backup of workspace 'ws1' in namespace 'default' using Astra Control...
+
+Astra SDK output:
+{'type': 'application/astra-appBackup', 'version': '1.1', 'id': 'bd4ee39e-a3f6-4cf4-a75e-2a09d71b2b03', 'name': 'backup1', 'bucketID': '1e547cee-fbb9-4097-9a64-f542a79d6e80', 'state': 'pending', 'stateUnready': [], 'metadata': {'labels': [], 'creationTimestamp': '2021-10-11T20:39:59Z', 'modificationTimestamp': '2021-10-11T20:39:59Z', 'createdBy': '946d8bb0-0d88-4469-baf4-8cfef52a7a90'}}
+
+Backup operation has been initiated. The operation may take several minutes to complete.
+Access the Astra Control dashboard to check the status of the backup operation.
 ```
 
 ### Kubernetes Persistent Volume Management Operations
