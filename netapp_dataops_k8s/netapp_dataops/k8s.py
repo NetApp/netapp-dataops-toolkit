@@ -4,7 +4,7 @@ This module provides the public functions available to be imported directly
 by applications using the import method of utilizing the toolkit.
 """
 
-__version__ = "2.1.0_astra_sprint14dev"
+__version__ = "2.1.0beta1"
 
 from datetime import datetime
 import functools
@@ -55,6 +55,10 @@ class AstraAppNotManagedError(Exception):
 
 class AstraClusterDoesNotExistError(Exception):
     '''Error that will be raised when a cluster doesn't exist within Astra Control'''
+
+    
+class ServiceUnavailableError(Exception):
+    '''Error that will be raised when a service is not available'''
     pass
 
 
@@ -147,28 +151,39 @@ def _retrieve_jupyter_lab_url(workspaceName: str, namespace: str = "default", pr
             _print_invalid_config_error()
         raise InvalidConfigError()
 
-    # Retrieve node IP (random node)
-    try:
-        api = client.CoreV1Api()
-        nodes = api.list_node()
-        ip = nodes.items[0].status.addresses[0].address
-    except:
-        ip = "<IP address of Kubernetes node>"
-        pass
-
-    # Retrieve access port
     try:
         api = client.CoreV1Api()
         serviceStatus = api.read_namespaced_service(namespace=namespace,
                                                     name=_get_jupyter_lab_service(workspaceName=workspaceName))
-        port = serviceStatus.spec.ports[0].node_port
+
+        # Check if service type is LoadBalancer
+        if serviceStatus.spec.type == "LoadBalancer":
+            # Construct and return url
+            try :
+                loadBalancerIP = serviceStatus.status.load_balancer.ingress[0].ip
+            except :
+                if printOutput :
+                    print("Error: Kubernetes Service for workspace is not available.")
+                raise ServiceUnavailableError()
+            return "http://" + loadBalancerIP
+        else:
+            # Retrieve access port
+            port = serviceStatus.spec.ports[0].node_port
+
+            # Retrieve node IP (random node)
+            try:
+                api = client.CoreV1Api()
+                nodes = api.list_node()
+                ip = nodes.items[0].status.addresses[0].address
+            except:
+                ip = "<IP address of Kubernetes node>"
+                pass
+            # Construct and return url
+            return "http://" + ip + ":" + str(port)
     except ApiException as err:
         if printOutput:
             print("Error: Kubernetes API Error: ", err)
         raise APIConnectionError(err)
-
-    # Construct and return url
-    return "http://" + ip + ":" + str(port)
 
 
 def _retrieve_jupyter_lab_workspace_for_pvc(pvcName: str, namespace: str = "default", printOutput: bool = False) -> str:
@@ -351,7 +366,7 @@ def _retrieve_astra_app_id_for_jupyter_lab(astra_apps: dict, workspace_name: str
 
 
 def clone_jupyter_lab(new_workspace_name: str, source_workspace_name: str, source_snapshot_name: str = None,
-                      new_workspace_password: str = None, volume_snapshot_class: str = "csi-snapclass",
+                      load_balancer_service: bool = False, new_workspace_password: str = None, volume_snapshot_class: str = "csi-snapclass",
                       namespace: str = "default", request_cpu: str = None, request_memory: str = None,
                       request_nvidia_gpu: str = None, print_output: bool = False):
     # Determine source PVC details
@@ -394,7 +409,7 @@ def clone_jupyter_lab(new_workspace_name: str, source_workspace_name: str, sourc
     print()
     create_jupyter_lab(workspace_name=new_workspace_name, workspace_size=workspaceSize, namespace=namespace,
                        workspace_password=new_workspace_password, workspace_image=sourceWorkspaceImage, request_cpu=request_cpu,
-                       request_memory=request_memory, request_nvidia_gpu=request_nvidia_gpu, print_output=print_output,
+                       load_balancer_service=load_balancer_service, request_memory=request_memory, request_nvidia_gpu=request_nvidia_gpu, print_output=print_output,
                        pvc_already_exists=True, labels=labels)
 
     if print_output:
@@ -509,7 +524,7 @@ def clone_volume(new_pvc_name: str, source_pvc_name: str, source_snapshot_name: 
         print("Volume successfully cloned.")
 
 
-def create_jupyter_lab(workspace_name: str, workspace_size: str, storage_class: str = None, namespace: str = "default",
+def create_jupyter_lab(workspace_name: str, workspace_size: str, storage_class: str = None, load_balancer_service: bool = False, namespace: str = "default",
                        workspace_password: str = None, workspace_image: str = "jupyter/tensorflow-notebook",
                        request_cpu: str = None, request_memory: str = None, request_nvidia_gpu: str = None, register_with_astra: bool = False,
                        print_output: bool = False, pvc_already_exists: bool = False, labels: dict = None) -> str:
@@ -551,26 +566,49 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, storage_class: 
     # Step 2 - Create service for workspace
 
     # Construct service
-    service = client.V1Service(
-        metadata=client.V1ObjectMeta(
-            name=_get_jupyter_lab_service(workspaceName=workspace_name),
-            labels=labels
-        ),
-        spec=client.V1ServiceSpec(
-            type="NodePort",
-            selector={
-                "app": labels["app"]
-            },
-            ports=[
-                client.V1ServicePort(
-                    name="http",
-                    port=8888,
-                    target_port=8888,
-                    protocol="TCP"
-                )
-            ]
+    if load_balancer_service:
+        service = client.V1Service(
+            metadata=client.V1ObjectMeta(
+                name=_get_jupyter_lab_service(workspaceName=workspace_name),
+                labels=labels
+            ),
+            spec=client.V1ServiceSpec(
+                type="LoadBalancer",
+                selector={
+                    "app": labels["app"]
+                },
+                ports=[
+                    client.V1ServicePort(
+                        name="http",
+                        port=80,
+                        target_port=8888,
+                        protocol="TCP"
+                    )
+                ]
+            )
         )
-    )
+    else:
+        service = client.V1Service(
+            metadata=client.V1ObjectMeta(
+                name=_get_jupyter_lab_service(workspaceName=workspace_name),
+                labels=labels
+            ),
+            spec=client.V1ServiceSpec(
+                type="NodePort",
+                selector={
+                    "app": labels["app"]
+                },
+                ports=[
+                    client.V1ServicePort(
+                        name="http",
+                        port=8888,
+                        target_port=8888,
+                        protocol="TCP"
+                    )
+                ]
+            )
+        )
+
 
     # Create service
     if print_output:
@@ -689,7 +727,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, storage_class: 
     # Step 4 - Retrieve access URL
     try:
         url = _retrieve_jupyter_lab_url(workspaceName=workspace_name, namespace=namespace, printOutput=print_output)
-    except APIConnectionError as err:
+    except (APIConnectionError, ServiceUnavailableError) as err:
         if print_output:
             print("Aborting workspace creation...")
         raise
@@ -1047,8 +1085,14 @@ def list_jupyter_labs(namespace: str = "default", include_astra_app_id: bool = F
             workspaceDict["StorageClass"] = ""
 
         # Retrieve access URL
-        workspaceDict["Access URL"] = _retrieve_jupyter_lab_url(workspaceName=workspaceName, namespace=namespace,
-                                                            printOutput=print_output)
+        try :
+            workspaceDict["Access URL"] = _retrieve_jupyter_lab_url(workspaceName=workspaceName, namespace=namespace, printOutput=False)
+        except ServiceUnavailableError :
+            workspaceDict["Access URL"] = "unavailable"
+        except APIConnectionError as err:
+            if print_output:
+                print("Error: Kubernetes API Error: ", err)
+            raise APIConnectionError(err)
 
         # Retrieve clone details
         try:

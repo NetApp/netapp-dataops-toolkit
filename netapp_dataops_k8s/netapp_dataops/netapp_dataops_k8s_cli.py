@@ -99,10 +99,11 @@ Optional Options/Arguments:
 \t-n, --namespace=\t\tKubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
 \t-p, --cpu=\t\t\tNumber of CPUs to reserve for new JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
 \t-s, --source-snapshot-name=\tName of Kubernetes VolumeSnapshot to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
+\t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
 
 Examples:
-\tnetapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment1 --source-workspace-name=project1 --nvidia-gpu=1
-\tnetapp_dataops_k8s_cli.py clone jupyterlab -w project2-mike -s project2-snap1 -n team1 -g 1 -p 0.5 -m 1Gi
+\tnetapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment1 --source-workspace-name=project1 --nvidia-gpu=1 
+\tnetapp_dataops_k8s_cli.py clone jupyterlab -w project2-mike -s project2-snap1 -n team1 -g 1 -p 0.5 -m 1Gi -b
 '''
 helpTextCloneToNewNsJupyterLab = '''
 Command: clone-to-new-ns jupyterlab
@@ -162,11 +163,12 @@ Optional Options/Arguments:
 \t-m, --memory=\t\t\tAmount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
 \t-n, --namespace=\t\tKubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
 \t-p, --cpu=\t\t\tNumber of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+\t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
 \t-a, --register-with-astra\tRegister new workspace with Astra Control (requires Astra Control).
 
 Examples:
 \tnetapp_dataops_k8s_cli.py create jupyterlab --workspace-name=mike --size=10Gi --nvidia-gpu=2
-\tnetapp_dataops_k8s_cli.py create jupyterlab -n dst-test -w dave -i jupyter/scipy-notebook:latest -s 2Ti -c ontap-flexgroup -g 1 -p 0.5 -m 1Gi
+\tnetapp_dataops_k8s_cli.py create jupyterlab -n dst-test -w dave -i jupyter/scipy-notebook:latest -s 2Ti -c ontap-flexgroup -g 1 -p 0.5 -m 1Gi -b
 '''
 helpTextCreateJupyterLabSnapshot = '''
 Command: create jupyterlab-snapshot
@@ -544,13 +546,14 @@ if __name__ == '__main__':
             requestNvidiaGpu = None
             requestMemory = None
             requestCpu = None
+            load_balancer_service= False
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hw:c:n:s:j:g:m:p:",
+                opts, args = getopt.getopt(sys.argv[3:], "hw:c:n:s:j:g:m:p:b",
                                            ["help", "new-workspace-name=", "volume-snapshot-class=", "namespace=",
                                             "source-snapshot-name=", "source-workspace-name=", "nvidia-gpu=", "memory=",
-                                            "cpu="])
+                                            "cpu=", "load-balancer"])
             except:
                 handleInvalidCommand(helpText=helpTextCloneJupyterLab, invalidOptArg=True)
 
@@ -575,6 +578,8 @@ if __name__ == '__main__':
                     requestMemory = arg
                 elif opt in ("-p", "--cpu"):
                     requestCpu = arg
+                elif opt in ("-b", "--load-balancer"):
+                    load_balancer_service = True
 
             # Check for required options
             if not newWorkspaceName or (not sourceSnapshotName and not sourceWorkspaceName):
@@ -586,7 +591,7 @@ if __name__ == '__main__':
 
             # Clone volume
             try:
-                clone_jupyter_lab(new_workspace_name=newWorkspaceName, source_workspace_name=sourceWorkspaceName,
+                clone_jupyter_lab(new_workspace_name=newWorkspaceName, source_workspace_name=sourceWorkspaceName, load_balancer_service=load_balancer_service,
                                   source_snapshot_name=sourceSnapshotName, volume_snapshot_class=volumeSnapshotClass,
                                   namespace=namespace, request_cpu=requestCpu, request_memory=requestMemory,
                                   request_nvidia_gpu=requestNvidiaGpu, print_output=True)
@@ -733,12 +738,13 @@ if __name__ == '__main__':
             requestMemory = None
             requestCpu = None
             register_with_astra = False
+            load_balancer_service = False
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hw:s:n:c:i:g:m:p:a",
+                opts, args = getopt.getopt(sys.argv[3:], "hw:s:n:c:i:g:m:p:ab",
                                            ["help", "workspace-name=", "size=", "namespace=", "storage-class=",
-                                            "image=", "nvidia-gpu=", "memory=", "cpu=", "register-with-astra"])
+                                            "image=", "nvidia-gpu=", "memory=", "cpu=", "register-with-astra", "load-balancer"])
             except:
                 handleInvalidCommand(helpText=helpTextCreateJupyterLab, invalidOptArg=True)
 
@@ -765,6 +771,9 @@ if __name__ == '__main__':
                     requestCpu = arg
                 elif opt in ("-a", "--register-with-astra"):
                     register_with_astra = True
+                elif opt in ("-b", "--load-balancer"):
+                    load_balancer_service = True
+
 
             # Check for required options
             if not workspaceName or not workspaceSize:
@@ -773,7 +782,7 @@ if __name__ == '__main__':
             # Create JupyterLab workspace
             try:
                 create_jupyter_lab(workspace_name=workspaceName, workspace_size=workspaceSize, storage_class=storageClass,
-                                   namespace=namespace, workspace_image=workspaceImage, request_cpu=requestCpu,
+                                   load_balancer_service=load_balancer_service, namespace=namespace, workspace_image=workspaceImage, request_cpu=requestCpu,
                                    request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu, register_with_astra=register_with_astra, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)

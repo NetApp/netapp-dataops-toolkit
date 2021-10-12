@@ -7,7 +7,7 @@ The NetApp DataOps Toolkit for Kubernetes is a Python library that makes it simp
 
 The NetApp DataOps Toolkit for Kubernetes supports Linux and macOS hosts.
 
-The toolkit must be used in conjunction with a Kubernetes cluster in order to be useful. Additionally, [Trident](https://netapp.io/persistent-storage-provisioner-for-kubernetes/), NetApp's dynamic storage orchestrator for Kubernetes, and/or the [BeeGFS CSI driver](https://github.com/NetApp/beegfs-csi-driver/) must be installed within the Kubernetes cluster. The toolkit simplifies performing of various data management tasks that are actually executed by a NetApp maintained CSI driver. In order to facilitate this, the toolkit communicates with the appropriate driver via the Kubernetes API. 
+The toolkit must be used in conjunction with a Kubernetes cluster in order to be useful. Additionally, [Trident](https://netapp.io/persistent-storage-provisioner-for-kubernetes/), NetApp's dynamic storage orchestrator for Kubernetes, and/or the [BeeGFS CSI driver](https://github.com/NetApp/beegfs-csi-driver/) must be installed within the Kubernetes cluster. The toolkit simplifies performing of various data management tasks that are actually executed by a NetApp maintained CSI driver. In order to facilitate this, the toolkit communicates with the appropriate driver via the Kubernetes API.
 
 The toolkit is currently compatible with Kubernetes versions 1.17 and above, and OpenShift versions 4.4 and above.
 
@@ -154,14 +154,15 @@ The following options/arguments are optional:
     -n, --namespace=                Kubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
     -p, --cpu=                      Number of CPUs to reserve for new JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
     -s, --source-snapshot-name=     Name of Kubernetes VolumeSnapshot to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
+    -b, --load-balancer             Option to choose a LoadBalancer service instead of using NodePort service. If not specified, NodePort service will be utilized.
 ```
 
 ##### Example Usage
 
-Near-instantaneously create a new JupyterLab workspace, named 'project1-experiment3', that is an exact copy of the current contents of existing JupyterLab workspace 'project1' in namespace 'default'. Allocate 2 NVIDIA GPUs to the new workspace.
+Near-instantaneously create a new JupyterLab workspace, named 'project1-experiment3', that is an exact copy of the current contents of existing JupyterLab workspace 'project1' in namespace 'default'. Allocate 2 NVIDIA GPUs to the new workspace and use LoadBalancer service instead of NodePort.
 
 ```sh
-netapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment3 --source-workspace-name=project1 --nvidia-gpu=2
+netapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment3 --source-workspace-name=project1 --nvidia-gpu=2 --load-balancer
 Creating new JupyterLab workspace 'project1-experiment3' from source workspace 'project1' in namespace 'default'...
 
 Creating new VolumeSnapshot 'ntap-dsutil.for-clone.20210315185504' for source PVC 'ntap-dsutil-jupyterlab-project1' in namespace 'default' to use as source for clone...
@@ -174,8 +175,8 @@ PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment3' create
 Volume successfully created and bound to PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment3' in namespace 'default'.
 Volume successfully cloned.
 
-Set workspace password (this password will be required in order to access the workspace): 
-Re-enter password: 
+Set workspace password (this password will be required in order to access the workspace):
+Re-enter password:
 
 Creating Service 'ntap-dsutil-jupyterlab-project1-experiment3' in namespace 'default'.
 Service successfully created.
@@ -186,7 +187,7 @@ Waiting for Deployment 'ntap-dsutil-jupyterlab-project1-experiment3' to reach Re
 Deployment successfully created.
 
 Workspace successfully created.
-To access workspace, navigate to http://10.61.188.112:30993
+To access workspace, navigate to http://10.61.188.110
 JupyterLab workspace successfully cloned.
 ```
 
@@ -202,8 +203,8 @@ PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment2' create
 Volume successfully created and bound to PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-project1-experiment2' in namespace 'default'.
 Volume successfully cloned.
 
-Set workspace password (this password will be required in order to access the workspace): 
-Re-enter password: 
+Set workspace password (this password will be required in order to access the workspace):
+Re-enter password:
 
 Creating Service 'ntap-dsutil-jupyterlab-project1-experiment2' in namespace 'default'.
 Service successfully created.
@@ -330,6 +331,7 @@ The following options/arguments are optional:
     -m, --memory=			    Amount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
     -n, --namespace=		    Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
     -p, --cpu=			        Number of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+    -b, --load-balancer     Option to choose a LoadBalancer service instead of using NodePort service. If not specified, NodePort service will be utilized.
     -a, --register-with-astra	Register new workspace with Astra Control (requires Astra Control).
 ```
 
@@ -339,8 +341,8 @@ Provision a new JupyterLab workspace named 'mike' of size 10GB in namespace 'def
 
 ```sh
 netapp_dataops_k8s_cli.py create jupyterlab --workspace-name=mike --size=10Gi --nvidia-gpu=1
-Set workspace password (this password will be required in order to access the workspace): 
-Re-enter password: 
+Set workspace password (this password will be required in order to access the workspace):
+Re-enter password:
 
 Creating persistent volume for workspace...
 Creating PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-mike' in namespace 'default'.
@@ -358,12 +360,12 @@ Workspace successfully created.
 To access workspace, navigate to http://10.61.188.112:31082
 ```
 
-Provision a new JupyterLab workspace named 'dave', of size 2TB, in the namespace 'dst-test', using the container image 'jupyter/scipy-notebook:latest', and use Kubernetes StorageClass 'ontap-flexgroup' when provisioning the backing volume for the workspace.
+Provision a new JupyterLab workspace named 'dave', of size 2TB, in the namespace 'dst-test', using the container image 'jupyter/scipy-notebook:latest', use the Load Balancer service and Kubernetes StorageClass 'ontap-flexgroup' when provisioning the backing volume for the workspace.
 
 ```sh
-netapp_dataops_k8s_cli.py create jupyterlab --namespace=dst-test --workspace-name=dave --image=jupyter/scipy-notebook:latest --size=2Ti --storage-class=ontap-flexgroup
-Set workspace password (this password will be required in order to access the workspace): 
-Re-enter password: 
+netapp_dataops_k8s_cli.py create jupyterlab --namespace=dst-test --workspace-name=dave --image=jupyter/scipy-notebook:latest --size=2Ti --load-balancer --storage-class=ontap-flexgroup
+Set workspace password (this password will be required in order to access the workspace):
+Re-enter password:
 
 Creating persistent volume for workspace...
 Creating PersistentVolumeClaim (PVC) 'ntap-dsutil-jupyterlab-dave' in namespace 'dst-test'.
@@ -378,7 +380,7 @@ Deployment 'ntap-dsutil-jupyterlab-dave' created. Waiting for Deployment to reac
 Deployment successfully created.
 
 Workspace successfully created.
-To access workspace, navigate to http://10.61.188.112:32275
+To access workspace, navigate to http://10.61.188.110
 ```
 
 <a name="cli-delete-jupyterlab"></a>
@@ -1012,13 +1014,14 @@ def clone_jupyter_lab(
     new_workspace_name: str,                          # Name of new workspace (name to be applied to new JupyterLab workspace) (required).
     source_workspace_name: str,                       # Name of JupyterLab workspace to use as source for clone. (required).
     source_snapshot_name: str = None,                 # Name of Kubernetes VolumeSnapshot to use as source for clone.
+    load_balancer_service: bool = False,              # Option to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
     new_workspace_password: str = None,               # Workspace password (this password will be required in order to access the workspace). If not specified, you will be prompted to enter a password via the console.
     volume_snapshot_class: str = "csi-snapclass",     # Kubernetes VolumeSnapshotClass to use when creating clone. If not specified, "csi-snapclass" will be used. Note: VolumeSnapshotClass must be configured to use Trident.
-    namespace: str = "default",                      # Kubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
-    request_cpu: str = None,                         # Number of CPUs to reserve for new JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
-    request_memory: str = None,                      # Amount of memory to reserve for newe JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
-    request_nvidia_gpu: str = None,                  # Number of NVIDIA GPUs to allocate to new JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
-    print_output: bool = False                       # Denotes whether or not to print messages to the console during execution.
+    namespace: str = "default",                       # Kubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
+    request_cpu: str = None,                          # Number of CPUs to reserve for new JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+    request_memory: str = None,                       # Amount of memory to reserve for newe JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
+    request_nvidia_gpu: str = None,                   # Number of NVIDIA GPUs to allocate to new JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
+    print_output: bool = False                        # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
 
@@ -1033,6 +1036,7 @@ If an error is encountered, the function will raise an exception of one of the f
 ```py
 InvalidConfigError              # kubeconfig file is missing or is invalid.
 APIConnectionError              # The Kubernetes API returned an error.
+ServiceUnavailableError         # A Kubernetes service is not available.
 ```
 
 <a name="lib-clone-new-jupyterlab"></a>
@@ -1085,6 +1089,7 @@ def create_jupyter_lab(
     workspace_name: str,                                     # Name of new JupyterLab workspace (required).
     workspace_size: str,                                     # Size new workspace (i.e. size of backing persistent volume to be created) (required). Format: '1024Mi', '100Gi', '10Ti', etc.
     storage_class: str = None,                               # Kubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
+    load_balancer_service: bool = False,                     # Option to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
     namespace: str = "default",                              # Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
     workspace_password: str = None,                          # Workspace password (this password will be required in order to access the workspace). If not specified, you will be prompted to enter a password via the console.
     workspace_image: str = "jupyter/tensorflow-notebook",    # Container image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.
@@ -1107,6 +1112,7 @@ If an error is encountered, the function will raise an exception of one of the f
 ```py
 InvalidConfigError              # kubeconfig file is missing or is invalid.
 APIConnectionError              # The Kubernetes API returned an error.
+ServiceUnavailableError         # A Kubernetes service is not available.
 ```
 
 <a name="lib-delete-jupyterlab"></a>
@@ -1207,7 +1213,7 @@ APIConnectionError              # The Kubernetes API returned an error.
 
 #### Delete an Existing Snapshot
 
-The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing JupyterLab workspace snapshot as part of any Python program or workflow. 
+The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing JupyterLab workspace snapshot as part of any Python program or workflow.
 
 ##### Function Definition
 
@@ -1409,7 +1415,7 @@ APIConnectionError              # The Kubernetes API returned an error.
 
 #### Delete an Existing Persistent Volume
 
-The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing persistent volume within a Kubernetes cluster as part of any Python program or workflow. 
+The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing persistent volume within a Kubernetes cluster as part of any Python program or workflow.
 
 ##### Function Definition
 
@@ -1500,7 +1506,7 @@ APIConnectionError              # The Kubernetes API returned an error.
 
 #### Delete an Existing Snapshot
 
-The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing snapshot as part of any Python program or workflow. 
+The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing snapshot as part of any Python program or workflow.
 
 ##### Function Definition
 
