@@ -2,12 +2,12 @@
 """NetApp DataOps Toolkit for Kubernetes Script Interface."""
 from netapp_dataops import k8s
 from netapp_dataops.k8s import (
+    backup_jupyter_lab_with_astra,
     clone_volume,
     create_volume_snapshot,
-    InvalidConfigError,
-    APIConnectionError,
     create_volume,
     clone_jupyter_lab,
+    clone_jupyter_lab_to_new_namespace,
     create_jupyter_lab,
     create_jupyter_lab_snapshot,
     delete_volume_snapshot,
@@ -17,8 +17,13 @@ from netapp_dataops.k8s import (
     list_volume_snapshots,
     list_jupyter_lab_snapshots,
     list_volumes,
+    register_jupyter_lab_with_astra,
     restore_jupyter_lab_snapshot,
-    restore_volume_snapshot
+    restore_volume_snapshot,
+    APIConnectionError,
+    AstraAppNotManagedError,
+    AstraClusterDoesNotExistError,
+    InvalidConfigError
 )
 
 
@@ -34,13 +39,16 @@ Basic Commands:
 JupyterLab Management Commands:
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
 
-\tclone jupyterlab\t\tCreate a new JupyterLab workspace that is an exact copy of an existing workspace.
+\tclone jupyterlab\t\tClone a JupyterLab workspace within the same namespace.
+\tclone-to-new-ns jupyterlab\tClone a JupyterLab workspace to a brand new namespace.
 \tcreate jupyterlab\t\tProvision a JupyterLab workspace.
 \tdelete jupyterlab\t\tDelete an existing JupyterLab workspace.
 \tlist jupyterlabs\t\tList all JupyterLab workspaces.
 \tcreate jupyterlab-snapshot\tCreate a new snapshot for a JupyterLab workspace.
 \tlist jupyterlab-snapshots\tList all snapshots.
 \trestore jupyterlab-snapshot\tRestore a snapshot.
+\tregister-with-astra jupyterlab\tRegister an existing JupyterLab workspace with Astra Control.
+\tbackup-with-astra jupyterlab\tBackup an existing JupyterLab workspace using Astra Control.
 
 Kubernetes Persistent Volume Management Commands (for advanced Kubernetes users):
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
@@ -54,10 +62,28 @@ Note: To view details regarding options/arguments for a specific command, run th
 \tlist volume-snapshots\t\tList all snapshots.
 \trestore volume-snapshot\t\tRestore a snapshot.
 '''
+helpTextBackupJupyterLab = '''
+Command: backup-with-astra jupyterlab
+
+Backup an existing JupyterLab workspace using Astra Control.
+
+Note: This command requires Astra Control.
+
+Required Options/Arguments:
+\t-w, --workspace-name=\tName of JupyterLab workspace to be backed up.
+\t-b, --backup-name=\tName to be applied to new backup.
+
+Optional Options/Arguments:
+\t-h, --help\t\tPrint help text.
+\t-n, --namespace=\tKubernetes namespace that the workspace is located in. If not specified, namespace "default" will be used.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py backup-with-astra jupyterlab --workspace-name=mike --backup-name=backup1
+'''
 helpTextCloneJupyterLab = '''
 Command: clone jupyterlab
 
-Create a new JupyterLab workspace that is an exact copy of an existing workspace.
+Clone a JupyterLab workspace within the same namespace.
 
 Note: Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified. However, only one of these flags (not both) should be specified for a given operation. If -j/--source-workspace-name is specified, then the clone will be created from the current state of the workspace. If -s/--source-snapshot-name is specified, then the clone will be created from a specific snapshot related the source workspace.
 
@@ -78,6 +104,26 @@ Optional Options/Arguments:
 Examples:
 \tnetapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment1 --source-workspace-name=project1 --nvidia-gpu=1 
 \tnetapp_dataops_k8s_cli.py clone jupyterlab -w project2-mike -s project2-snap1 -n team1 -g 1 -p 0.5 -m 1Gi -b
+'''
+helpTextCloneToNewNsJupyterLab = '''
+Command: clone-to-new-ns jupyterlab
+
+Clone a JupyterLab workspace to a brand new namespace.
+
+Note: This command requires Astra Control.
+
+Required Options/Arguments:
+\t-j, --source-workspace-name=\tName of JupyterLab workspace to use as source for clone.
+\t-n, --new-namespace=\t\tKubernetes namespace to create new workspace in. This namespace must not exist; it will be created during this operation.
+
+Optional Options/Arguments:
+\t-c, --clone-to-cluster-name=\tName of destination Kubernetes cluster within Astra Control. Workspace will be cloned a to a new namespace in this cluster. If not specified, then the workspace will be cloned to a new namespace within the user's current cluster.
+\t-h, --help\t\t\tPrint help text.
+\t-s, --source-namespace=\t\tKubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py clone-to-new-ns jupyterlab --source-workspace-name=ws1 --new-namespace=project1
+\tnetapp_dataops_k8s_cli.py clone-to-new-ns jupyterlab -j ws1 -n team2 -s team1 -c ocp1
 '''
 helpTextCloneVolume = '''
 Command: clone volume
@@ -106,19 +152,19 @@ Command: create jupyterlab
 Provision a JupyterLab workspace.
 
 Required Options/Arguments:
-\t-w, --workspace-name=\tName of new JupyterLab workspace.
-\t-s, --size=\t\tSize new workspace (i.e. size of backing persistent volume to be created). Format: '1024Mi', '100Gi', '10Ti', etc.
+\t-w, --workspace-name=\t\tName of new JupyterLab workspace.
+\t-s, --size=\t\t\tSize new workspace (i.e. size of backing persistent volume to be created). Format: '1024Mi', '100Gi', '10Ti', etc.
 
 Optional Options/Arguments:
-\t-c, --storage-class=\tKubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
-\t-g, --nvidia-gpu=\tNumber of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
-\t-h, --help\t\tPrint help text.
-\t-i, --image=\t\tContainer image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.
-\t-m, --memory=\t\tAmount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
-\t-n, --namespace=\tKubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
-\t-p, --cpu=\t\tNumber of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
-\t-b, --load-balancer\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
-
+\t-c, --storage-class=\t\tKubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
+\t-g, --nvidia-gpu=\t\tNumber of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
+\t-h, --help\t\t\tPrint help text.
+\t-i, --image=\t\t\tContainer image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.
+\t-m, --memory=\t\t\tAmount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
+\t-n, --namespace=\t\tKubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
+\t-p, --cpu=\t\t\tNumber of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+\t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
+\t-a, --register-with-astra\tRegister new workspace with Astra Control (requires Astra Control).
 
 Examples:
 \tnetapp_dataops_k8s_cli.py create jupyterlab --workspace-name=mike --size=10Gi --nvidia-gpu=2
@@ -257,8 +303,9 @@ List all JupyterLab workspaces in a specific namespace.
 No options/arguments are required.
 
 Optional Options/Arguments:
-\t-h, --help\t\tPrint help text.
-\t-n, --namespace=\tKubernetes namespace for which to retrieve list of workspaces. If not specified, namespace "default" will be used.
+\t-h, --help\t\t\tPrint help text.
+\t-n, --namespace=\t\tKubernetes namespace for which to retrieve list of workspaces. If not specified, namespace "default" will be used.
+\t-a, --include-astra-app-id\tInclude Astra Control app IDs in the output (requires Astra Control).
 
 Examples:
 \tnetapp_dataops_k8s_cli.py list jupyterlabs -n team1
@@ -310,6 +357,24 @@ Optional Options/Arguments:
 Examples:
 \tnetapp_dataops_k8s_cli.py list volumes -n team1
 \tnetapp_dataops_k8s_cli.py list volumes --namespace=team2
+'''
+helpTextRegisterJupyterLab = '''
+Command: register-with-astra jupyterlab
+
+Register an existing JupyterLab workspace with Astra Control.
+
+Note: This command requires Astra Control.
+
+Required Options/Arguments:
+\t-w, --workspace-name=\tName of JupyterLab workspace to be registered.
+
+Optional Options/Arguments:
+\t-h, --help\t\tPrint help text.
+\t-n, --namespace=\tKubernetes namespace that the workspace is located in. If not specified, namespace "default" will be used.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py register-with-astra jupyterlab --workspace-name=mike
+\tnetapp_dataops_k8s_cli.py register-with-astra jupyterlab -w dave -n dst-test
 '''
 helpTextRestoreJupyterLabSnapshot = '''
 Command: restore jupyterlab-snapshot
@@ -379,7 +444,49 @@ if __name__ == '__main__':
         handleInvalidCommand()
 
     # Invoke desired action
-    if action == "clone":
+    if action in ("backup-with-astra", "backup"):
+        # Get desired target from command line args
+        target = getTarget(sys.argv)
+
+        # Invoke desired action based on target
+        if target in ("jupyterlab", "jupyter"):
+            workspace_name = None
+            backup_name = None
+            namespace = "default"
+
+            # Get command line options
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hw:b:n:",
+                                           ["help", "workspace-name=", "backup-name=", "namespace="])
+            except:
+                handleInvalidCommand(helpText=helpTextBackupJupyterLab, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextBackupJupyterLab)
+                    sys.exit(0)
+                elif opt in ("-w", "--workspace-name"):
+                    workspace_name = arg
+                elif opt in ("-b", "--backup-name"):
+                    backup_name = arg
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+
+            # Check for required options
+            if not workspace_name or not backup_name:
+                handleInvalidCommand(helpText=helpTextBackupJupyterLab, invalidOptArg=True)
+
+            # Register JupyterLab workspace
+            try:
+                backup_jupyter_lab_with_astra(workspace_name=workspace_name, backup_name=backup_name, namespace=namespace, print_output=True)
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
+        else:
+            handleInvalidCommand()
+
+    elif action == "clone":
         # Get desired target from command line args
         target = getTarget(sys.argv)
 
@@ -494,6 +601,51 @@ if __name__ == '__main__':
         else:
             handleInvalidCommand()
 
+    elif action == "clone-to-new-ns":
+        # Get desired target from command line args
+        target = getTarget(sys.argv)
+
+        # Invoke desired action based on target
+        if target in ("jupyterlab", "jupyter"):
+            source_workspace_name = None
+            new_namespace = None
+            clone_to_cluster_name = None
+            source_namespace = "default"
+
+            # Get command line options
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hj:n:c:s:",
+                                           ["help", "source-workspace-name=", "new-namespace=", "clone-to-cluster-name=", "source-namespace="])
+            except:
+                handleInvalidCommand(helpText=helpTextCloneToNewNsJupyterLab, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextCloneToNewNsJupyterLab)
+                    sys.exit(0)
+                elif opt in ("-j", "--source-workspace-name"):
+                    source_workspace_name = arg
+                elif opt in ("-n", "--new-namespace"):
+                    new_namespace = arg
+                elif opt in ("-c", "--clone-to-cluster-name"):
+                    clone_to_cluster_name = arg
+                elif opt in ("-s", "--source-namespace"):
+                    source_namespace = arg
+
+            # Check for required options
+            if not source_workspace_name or not new_namespace :
+                handleInvalidCommand(helpText=helpTextCloneToNewNsJupyterLab, invalidOptArg=True)
+
+            # Clone JupyterLab to new namespace
+            try:
+                clone_jupyter_lab_to_new_namespace(source_workspace_name=source_workspace_name, new_namespace=new_namespace, source_workspace_namespace=source_namespace, clone_to_cluster_name=clone_to_cluster_name, print_output=True)
+            except (InvalidConfigError, APIConnectionError, AstraAppNotManagedError, AstraClusterDoesNotExistError):
+                sys.exit(1)
+
+        else:
+            handleInvalidCommand()
+
     elif action == "create":
         # Get desired target from command line args
         target = getTarget(sys.argv)
@@ -585,13 +737,14 @@ if __name__ == '__main__':
             requestNvidiaGpu = None
             requestMemory = None
             requestCpu = None
+            register_with_astra = False
             load_balancer_service = False
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hw:s:n:c:i:g:m:p:b",
+                opts, args = getopt.getopt(sys.argv[3:], "hw:s:n:c:i:g:m:p:ab",
                                            ["help", "workspace-name=", "size=", "namespace=", "storage-class=",
-                                            "image=", "nvidia-gpu=", "memory=", "cpu=", "load-balancer"])
+                                            "image=", "nvidia-gpu=", "memory=", "cpu=", "register-with-astra", "load-balancer"])
             except:
                 handleInvalidCommand(helpText=helpTextCreateJupyterLab, invalidOptArg=True)
 
@@ -616,6 +769,8 @@ if __name__ == '__main__':
                     requestMemory = arg
                 elif opt in ("-p", "--cpu"):
                     requestCpu = arg
+                elif opt in ("-a", "--register-with-astra"):
+                    register_with_astra = True
                 elif opt in ("-b", "--load-balancer"):
                     load_balancer_service = True
 
@@ -628,7 +783,7 @@ if __name__ == '__main__':
             try:
                 create_jupyter_lab(workspace_name=workspaceName, workspace_size=workspaceSize, storage_class=storageClass,
                                    load_balancer_service=load_balancer_service, namespace=namespace, workspace_image=workspaceImage, request_cpu=requestCpu,
-                                   request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu, print_output=True)
+                                   request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu, register_with_astra=register_with_astra, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -917,10 +1072,11 @@ if __name__ == '__main__':
 
         elif target in ("jupyterlabs", "jupyters", "jupyterlab", "jupyter"):
             namespace = "default"
+            include_astra_app_id = False
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:", ["help", "namespace="])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:a", ["help", "namespace=", "include-astra-app-id"])
             except:
                 handleInvalidCommand(helpText=helpTextListJupyterLabs, invalidOptArg=True)
 
@@ -931,10 +1087,51 @@ if __name__ == '__main__':
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
+                elif opt in ("-a", "--include-astra-app-id"):
+                    include_astra_app_id = True
 
             # List JupyterLab workspaces
             try:
-                list_jupyter_labs(namespace=namespace, print_output=True)
+                list_jupyter_labs(namespace=namespace, include_astra_app_id=include_astra_app_id, print_output=True)
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
+        else:
+            handleInvalidCommand()
+
+    elif action in ("register-with-astra", "register", "reg"):
+        # Get desired target from command line args
+        target = getTarget(sys.argv)
+
+        # Invoke desired action based on target
+        if target in ("jupyterlab", "jupyter"):
+            workspaceName = None
+            namespace = "default"
+
+            # Get command line options
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hw:n:",
+                                           ["help", "workspace-name=", "namespace="])
+            except:
+                handleInvalidCommand(helpText=helpTextRegisterJupyterLab, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextRegisterJupyterLab)
+                    sys.exit(0)
+                elif opt in ("-w", "--workspace-name"):
+                    workspaceName = arg
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+
+            # Check for required options
+            if not workspaceName:
+                handleInvalidCommand(helpText=helpTextRegisterJupyterLab, invalidOptArg=True)
+
+            # Register JupyterLab workspace
+            try:
+                register_jupyter_lab_with_astra(workspace_name=workspaceName, namespace=namespace, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 

@@ -4,13 +4,14 @@ This module provides the public functions available to be imported directly
 by applications using the import method of utilizing the toolkit.
 """
 
-__version__ = "2.1.0_sprint12dev"
+__version__ = "2.1.0beta1"
 
 from datetime import datetime
 import functools
 from getpass import getpass
 from time import sleep
 import warnings
+import os
 
 import IPython
 from kubernetes import client, config
@@ -18,6 +19,7 @@ from kubernetes.client.models.v1_object_meta import V1ObjectMeta
 from kubernetes.client.rest import ApiException
 from tabulate import tabulate
 import pandas as pd
+import astraSDK
 
 
 # Using this decorator in lieu of using a dependency to manage deprecation
@@ -46,6 +48,15 @@ class InvalidConfigError(Exception):
     pass
 
 
+class AstraAppNotManagedError(Exception):
+    '''Error that will be raised when an application hasn't been registered with Astra'''
+    pass
+
+
+class AstraClusterDoesNotExistError(Exception):
+    '''Error that will be raised when a cluster doesn't exist within Astra Control'''
+
+    
 class ServiceUnavailableError(Exception):
     '''Error that will be raised when a service is not available'''
     pass
@@ -95,9 +106,17 @@ def _load_kube_config():
         config.load_kube_config()
 
 
+def _get_astra_k8s_cluster_name() -> str :
+    return os.environ['ASTRA_K8S_CLUSTER_NAME']
+
+
 def _print_invalid_config_error():
     print(
         "Error: Missing or invalid kubeconfig file. The NetApp DataOps Toolkit for Kubernetes requires that a valid kubeconfig file be present on the host, located at $HOME/.kube or at another path specified by the KUBECONFIG environment variable.")
+
+
+def _print_astra_k8s_cluster_name_error() :
+    print("Error: ASTRA_K8S_CLUSTER_NAME environment variable is not set. This environment variable should be set to the name of your Kubernetes cluster within Astra Control.")
 
 
 def _retrieve_image_for_jupyter_lab_deployment(workspaceName: str, namespace: str = "default",
@@ -325,6 +344,22 @@ def _wait_for_jupyter_lab_deployment_ready(workspaceName: str, namespace: str = 
         sleep(5)
 
 
+def _retrieve_astra_app_id_for_jupyter_lab(astra_apps: dict, workspace_name: str) -> str :
+    # Get Astra K8s cluster name
+    try :
+        astra_k8s_cluster_name = _get_astra_k8s_cluster_name()
+    except KeyError :
+        raise InvalidConfigError()
+
+    # Parse Astra Apps
+    for app_id,app_details in astra_apps.items() :
+        workspace_app_label = _get_jupyter_lab_labels(workspaceName=workspace_name)["app"]
+        if (app_details[0] == workspace_app_label) and (app_details[1] == astra_k8s_cluster_name) :
+            return app_id
+    
+    return ""
+
+
 #
 # Public functions used for imports
 #
@@ -381,6 +416,79 @@ def clone_jupyter_lab(new_workspace_name: str, source_workspace_name: str, sourc
         print("JupyterLab workspace successfully cloned.")
 
 
+def clone_jupyter_lab_to_new_namespace(source_workspace_name: str, new_namespace: str, source_workspace_namespace: str = "default", clone_to_cluster_name: str = None, print_output: bool = False) :
+    # Retrieve list of Astra apps
+    try :
+        astra_apps = astraSDK.getApps().main(namespace=source_workspace_namespace)
+    except Exception as err :
+        if print_output :
+            print("Error: Astra Control API Error: ", err)
+        raise APIConnectionError(err)
+
+    # Determine Astra App ID for source workspace
+    try :
+        source_astra_app_id = _retrieve_astra_app_id_for_jupyter_lab(astra_apps=astra_apps, workspace_name=source_workspace_name)
+    except InvalidConfigError :
+        if print_output :
+            _print_astra_k8s_cluster_name_error()
+        raise InvalidConfigError()
+
+    # Handle situation where workspace has not been registered with Astra.
+    if not source_astra_app_id :
+        error_message = "Source JupyterLab workspace has not been registered with Astra Control."
+        if print_output :
+            print("Error:", error_message)
+            print("Hint: use the 'netapp_dataops_k8s_cli.py register-with-astra jupyterlab' command to register a JupyterLab workspace with Astra Control.")
+        raise AstraAppNotManagedError(error_message)
+
+    # Determine Astra cluster ID for source workspace
+    source_astra_cluster_id = astra_apps[source_astra_app_id][2]
+
+    # Determine Astra cluster ID for "clone-to" cluster
+    if clone_to_cluster_name :
+        clone_to_cluster_id = None
+        try :
+            astra_clusters = astraSDK.getClusters().main(hideUnmanaged=True)
+        except Exception as err :
+            if print_output :
+                print("Error: Astra Control API Error: ", err)
+            raise APIConnectionError(err)
+
+        for cluster_id,cluster_info in astra_clusters.items() :
+            if cluster_info[0] == clone_to_cluster_name :
+                clone_to_cluster_id = cluster_id
+
+        if not clone_to_cluster_id :
+            error_message = "Cluster '" + clone_to_cluster_name + "' does not exist in Astra Control."
+            if print_output :
+                print("Error:", error_message)
+            raise AstraClusterDoesNotExistError(error_message)
+
+        print("Creating new JupyterLab workspace '" + source_workspace_name + "' in namespace '" + new_namespace + "' within cluster '" + clone_to_cluster_name + "' using Astra Control...")
+    else :
+        clone_to_cluster_id = source_astra_cluster_id
+        print("Creating new JupyterLab workspace '" + source_workspace_name + "' in namespace '" + new_namespace + "' within your cluster using Astra Control...")
+
+    # Clone workspace to new namespace using Astra
+    print("New workspace is being cloned from source workspace '" + source_workspace_name + "' in namespace '" + source_workspace_namespace + "' within your cluster...")
+    print("\nAstra SDK output:")
+    try :
+        ret = astraSDK.cloneApp(quiet=False).main(cloneName=_get_jupyter_lab_deployment(source_workspace_name), clusterID=clone_to_cluster_id, sourceClusterID=source_astra_cluster_id, namespace=new_namespace, sourceAppID=source_astra_app_id)
+    except Exception as err :
+        if print_output :
+            print("\nError: Astra Control API Error: ", err)
+        raise APIConnectionError(err)
+
+    if ret == False :
+        if print_output :
+            print("\nError: Astra Control API error. See Astra SDK output above for details")
+        raise APIConnectionError("Astra Control API error.")
+
+    if print_output :
+        print("\nClone operation has been initiated. The operation may take several minutes to complete.")
+        print("If the new workspace is being created within your cluster, run 'netapp_dataops_k8s_cli.py list jupyterlabs -n " + new_namespace + " -a' to check the status of the new workspace.")
+
+
 def clone_volume(new_pvc_name: str, source_pvc_name: str, source_snapshot_name: str = None,
                  volume_snapshot_class: str = "csi-snapclass", namespace: str = "default", print_output: bool = False,
                  pvc_labels: dict = None):
@@ -418,7 +526,7 @@ def clone_volume(new_pvc_name: str, source_pvc_name: str, source_snapshot_name: 
 
 def create_jupyter_lab(workspace_name: str, workspace_size: str, storage_class: str = None, load_balancer_service: bool = False, namespace: str = "default",
                        workspace_password: str = None, workspace_image: str = "jupyter/tensorflow-notebook",
-                       request_cpu: str = None, request_memory: str = None, request_nvidia_gpu: str = None,
+                       request_cpu: str = None, request_memory: str = None, request_nvidia_gpu: str = None, register_with_astra: bool = False,
                        print_output: bool = False, pvc_already_exists: bool = False, labels: dict = None) -> str:
     # Retrieve kubeconfig
     try:
@@ -623,6 +731,12 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, storage_class: 
         if print_output:
             print("Aborting workspace creation...")
         raise
+
+    # (Optional) Step 5 - Register workspace with Astra Control
+    if register_with_astra :
+        if print_output :
+            print()
+        register_jupyter_lab_with_astra(workspace_name=workspace_name, namespace=namespace, print_output=print_output)
 
     if print_output:
         print("\nWorkspace successfully created.")
@@ -916,7 +1030,7 @@ def delete_volume_snapshot(snapshot_name: str, namespace: str = "default", print
         print("VolumeSnapshot successfully deleted.")
 
 
-def list_jupyter_labs(namespace: str = "default", print_output: bool = False) -> list:
+def list_jupyter_labs(namespace: str = "default", include_astra_app_id: bool = False, print_output: bool = False) -> list:
     # Retrieve kubeconfig
     try:
         _load_kube_config()
@@ -933,6 +1047,15 @@ def list_jupyter_labs(namespace: str = "default", print_output: bool = False) ->
         if print_output:
             print("Error: Kubernetes API Error: ", err)
         raise APIConnectionError(err)
+
+    # Retrieve list of Astra apps
+    if include_astra_app_id :
+        try :
+            astra_apps = astraSDK.getApps().main(namespace=namespace)
+        except Exception as err :
+            if print_output:
+                print("Error: Astra Control API Error: ", err)
+            raise APIConnectionError(err)
 
     # Construct list of workspaces
     workspacesList = list()
@@ -1002,6 +1125,15 @@ def list_jupyter_labs(namespace: str = "default", print_output: bool = False) ->
             workspaceDict["Clone"] = "No"
             workspaceDict["Source Workspace"] = ""
             workspaceDict["Source VolumeSnapshot"] = ""
+
+        # Retrieve Astra App ID
+        if include_astra_app_id :
+            try :
+                workspaceDict["Astra Control App ID"] = _retrieve_astra_app_id_for_jupyter_lab(astra_apps=astra_apps, workspace_name=workspaceName)
+            except InvalidConfigError :
+                if print_output :
+                    _print_astra_k8s_cluster_name_error()
+                raise InvalidConfigError()
 
         # Append dict to list of workspaces
         workspacesList.append(workspaceDict)
@@ -1127,8 +1259,13 @@ def list_volume_snapshots(pvc_name: str = None, namespace: str = "default", prin
     snapshotsList = list()
     # return volumeSnapshotList
     for volumeSnapshot in volumeSnapshotList["items"]:
+        # Retrieve source PVC for snapshot
+        try :
+            source_pvc_name = volumeSnapshot["spec"]["source"]["persistentVolumeClaimName"]
+        except :
+            source_pvc_name = None
         # Construct dict containing snapshot details
-        if (not pvc_name) or (volumeSnapshot["spec"]["source"]["persistentVolumeClaimName"] == pvc_name):
+        if (not pvc_name) or (source_pvc_name == pvc_name):
             snapshotDict = dict()
             snapshotDict["VolumeSnapshot Name"] = volumeSnapshot["metadata"]["name"]
             snapshotDict["Ready to Use"] = volumeSnapshot["status"]["readyToUse"]
@@ -1136,19 +1273,23 @@ def list_volume_snapshots(pvc_name: str = None, namespace: str = "default", prin
                 snapshotDict["Creation Time"] = volumeSnapshot["status"]["creationTime"]
             except:
                 snapshotDict["Creation Time"] = ""
-            snapshotDict["Source PersistentVolumeClaim (PVC)"] = volumeSnapshot["spec"]["source"][
-                "persistentVolumeClaimName"]
-            try:
-                api = client.CoreV1Api()
-                api.read_namespaced_persistent_volume_claim(name=snapshotDict["Source PersistentVolumeClaim (PVC)"],
-                                                            namespace=namespace)  # Confirm that source PVC still exists
-            except:
-                snapshotDict["Source PersistentVolumeClaim (PVC)"] = "*deleted*"
-            try:
-                snapshotDict["Source JupyterLab workspace"] = _retrieve_jupyter_lab_workspace_for_pvc(
-                    pvcName=snapshotDict["Source PersistentVolumeClaim (PVC)"], namespace=namespace, printOutput=False)
-                jupyterLabWorkspace = True
-            except:
+            if source_pvc_name :
+                snapshotDict["Source PersistentVolumeClaim (PVC)"] = source_pvc_name
+                try:
+                    api = client.CoreV1Api()
+                    api.read_namespaced_persistent_volume_claim(name=snapshotDict["Source PersistentVolumeClaim (PVC)"],
+                                                                namespace=namespace)  # Confirm that source PVC still exists
+                except:
+                    snapshotDict["Source PersistentVolumeClaim (PVC)"] = "*deleted*"
+                try:
+                    snapshotDict["Source JupyterLab workspace"] = _retrieve_jupyter_lab_workspace_for_pvc(
+                        pvcName=snapshotDict["Source PersistentVolumeClaim (PVC)"], namespace=namespace, printOutput=False)
+                    jupyterLabWorkspace = True
+                except:
+                    snapshotDict["Source JupyterLab workspace"] = ""
+                    jupyterLabWorkspace = False
+            else :
+                snapshotDict["Source PersistentVolumeClaim (PVC)"] = ""
                 snapshotDict["Source JupyterLab workspace"] = ""
                 jupyterLabWorkspace = False
             try:
@@ -1170,6 +1311,108 @@ def list_volume_snapshots(pvc_name: str = None, namespace: str = "default", prin
         print(tabulate(snapshotsDF, showindex=False, headers=snapshotsDF.columns))
 
     return snapshotsList
+
+
+def register_jupyter_lab_with_astra(workspace_name: str, namespace: str = "default", print_output: bool = False) :
+    # Retrieve list of unmanaged Astra apps
+    try :
+        astra_apps_unmanaged = astraSDK.getApps().main(discovered=True, namespace=namespace)
+    except Exception as err :
+        if print_output:
+            print("Error: Astra Control API Error: ", err)
+        raise APIConnectionError(err)
+
+    # Determine Astra App ID for workspace
+    try :
+        astra_app_id = _retrieve_astra_app_id_for_jupyter_lab(astra_apps=astra_apps_unmanaged, workspace_name=workspace_name)
+    except InvalidConfigError :
+        if print_output :
+            _print_astra_k8s_cluster_name_error()
+        raise InvalidConfigError()
+
+    # Wait until app has a status of "running" in Astraa
+    while True :
+        try :
+            if astra_apps_unmanaged[astra_app_id][4] == "running" :
+                break
+        except KeyError :
+            pass
+
+        if print_output :
+            print("It appears that Astra Control is still discovering the JupyterLab workspace. If this persists, confirm that you typed the workspace name correctly and/or check your Astra Control setup. Sleeping for 60 seconds before checking again...")
+        sleep(60)
+
+        # Retrieve list of unmanaged Astra apps again
+        try :
+            astra_apps_unmanaged = astraSDK.getApps().main(discovered=True, namespace=namespace)
+        except Exception as err :
+            if print_output:
+                print("Error: Astra Control API Error: ", err)
+            raise APIConnectionError(err)
+
+    # Manage app (i.e. register app with Astra)
+    if print_output :
+        print("Registering JupyterLab workspace '" + workspace_name + "' in namespace '" + namespace + "' with Astra Control...")
+    try :
+        managed = astraSDK.manageApp().main(appID=astra_app_id)
+    except Exception as err :
+        if print_output:
+            print("Error: Astra Control API Error: ", err)
+        raise APIConnectionError(err)
+
+    # Determine success or error
+    if managed :
+        if print_output :
+            print("JupyterLab workspace is now managed by Astra Control.")
+    else :
+        if print_output :
+            print("Error: Astra Control API Error.")
+        raise APIConnectionError()
+    
+
+def backup_jupyter_lab_with_astra(workspace_name: str, backup_name: str, namespace: str = "default", print_output: bool = False) :
+    # Retrieve list of Astra apps
+    try :
+        astra_apps = astraSDK.getApps().main(namespace=namespace)
+    except Exception as err :
+        if print_output :
+            print("Error: Astra Control API Error: ", err)
+        raise APIConnectionError(err)
+
+    # Determine Astra App ID for source workspace
+    try :
+        astra_app_id = _retrieve_astra_app_id_for_jupyter_lab(astra_apps=astra_apps, workspace_name=workspace_name)
+    except InvalidConfigError :
+        if print_output :
+            _print_astra_k8s_cluster_name_error()
+        raise InvalidConfigError()
+
+    # Handle situation where workspace has not been registered with Astra.
+    if not astra_app_id :
+        error_message = "JupyterLab workspace has not been registered with Astra Control."
+        if print_output :
+            print("Error:", error_message)
+            print("Hint: use the 'netapp_dataops_k8s_cli.py register-with-astra jupyterlab' command to register a JupyterLab workspace with Astra Control.")
+        raise AstraAppNotManagedError(error_message)
+    
+    # Trigger backup
+    print("Trigerring backup of workspace '" + workspace_name + "' in namespace '" + namespace + "' using Astra Control...")
+    print("\nAstra SDK output:")
+    try :
+        ret = astraSDK.takeBackup(quiet=False).main(appID=astra_app_id, backupName=backup_name)
+    except Exception as err :
+        if print_output :
+            print("\nError: Astra Control API Error: ", err)
+        raise APIConnectionError(err)
+
+    if ret == False :
+        if print_output :
+            print("\nError: Astra Control API error. See Astra SDK output above for details")
+        raise APIConnectionError("Astra Control API error.")
+
+    if print_output :
+        print("\nBackup operation has been initiated. The operation may take several minutes to complete.")
+        print("Access the Astra Control dashboard to check the status of the backup operation.")
 
 
 def restore_jupyter_lab_snapshot(snapshot_name: str = None, namespace: str = "default", print_output: bool = False):
