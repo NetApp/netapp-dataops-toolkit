@@ -57,6 +57,7 @@ class AstraClusterDoesNotExistError(Exception):
     '''Error that will be raised when a cluster doesn't exist within Astra Control'''
     pass
 
+
 class ServiceUnavailableError(Exception):
     '''Error that will be raised when a service is not available'''
     pass
