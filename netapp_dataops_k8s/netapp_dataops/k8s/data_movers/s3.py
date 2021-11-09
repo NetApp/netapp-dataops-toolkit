@@ -119,6 +119,24 @@ class S3DataMover(DataMoverJob):
         :param ca_config_maps: A list of names of config maps containing trusted CA certificates to use with the data
             mover. This is only needed if the S3 service is using a certificate signed by a CA that is not trusted by
             default. For example if the S3 service is using a self-signed certificate.
+        :param cpu_request: The amount of cpu to request for the container associated with a job. The request
+            is used to help schedule the job's pod placement and reserves resources for the job. The value is
+            the Kubernetes cpu unit as a string. An example would be "200m". If the cpu_request parameter is not
+            set then no cpu request is used with the jobs.
+        :param cpu_limit: The amount of cpu to use as a maximum limit for the container associated with a job.
+            The job will not be allowed to use more cpu than what is specified here. The value is the Kubernetes
+            cpu unit as a string. An example would be "500m". If the cpu_limit parameter is not set then no cpu
+            limit is used with the jobs.
+        :param memory_request: The amount of memory to request for use for the container associated with a job.
+            The request is used to help schedule the job's pod placement and reserve resources for the job. The
+            value is a string representing the amount of memory in bytes, or in the unit specified by the suffix
+            used. An example would be "100M". If the memory_request parameter is not set then no memory request
+            is used with the jobs.
+        :param memory_limit: The amount of memory to set as the limit of memory used by a job. The job will not
+            be allowed to use more memory than what is specified as the memory limit. The value is a string
+            representing the amount of memory in bytes, or in the unit specified by the suffux used. An
+            example would be "500M". If the memory_limit parameter is not set then no memory limit is used
+            with the jobs.
         :param print_output: If True enable information to be printed to the console. Default value is False.
         """
         self.data_volume_name = "s3mc-data-volume"
@@ -338,14 +356,14 @@ class S3DataMover(DataMoverJob):
         job = self.create_job(job_metadata=job_metadata, job_spec=job_spec)
         return job.metadata.name
 
-    def get_object(self, bucket: str, pvc: str, object_: str, file_location: str = None) -> str:
+    def get_object(self, bucket: str, pvc: str, object_key: str, file_location: str = None) -> str:
         """Start a job to transfer an object from a bucket to a PVC.
 
         This will transfer the specified object from the S3 bucket to the PVC.
 
-        :param bucket: The name of the bucket where the object is located
+        :param bucket: The name of the bucket where the object is located.
         :param pvc: The name of the Persistent Volume Claim where the object will be copied to.
-        :param object_: The value of the object key to copy from the bucket to the PVC.
+        :param object_key: The value of the object key to copy from the bucket to the PVC.
         :param file_location: The location within the PVC to save the file, including the file name.
          If no location is specified the object will be copied to the PVC relative to the root of the PVC
          with any pathing retained from the object's key name. The default is None.
@@ -361,7 +379,7 @@ class S3DataMover(DataMoverJob):
         if not file_location:
             file_location = object_
 
-        command = f"mc cp {verify_flag} {self.s3_alias}/{bucket}/{object_} {self.data_volume_path}/{file_location}"
+        command = f"mc cp {verify_flag} {self.s3_alias}/{bucket}/{object_key} {self.data_volume_path}/{file_location}"
         job_spec = self.job_spec
         job_spec.template = self._get_pod_template_spec(container_command=command, pvc=pvc, operation=operation)
         job_metadata = V1ObjectMeta(generate_name="s3mover-{}-".format(operation),
