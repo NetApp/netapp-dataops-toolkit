@@ -84,6 +84,15 @@ Additionally, you must set the shell environment variable 'ASTRA_K8S_CLUSTER_NAM
 export ASTRA_K8S_CLUSTER_NAME="<Kubernetes_cluster_name_in_Astra_Control"
 ```
 
+## Data Movement
+
+The NetApp DataOps Toolkit provides the ability to facilitate data movement between Kubernetes persistent volumes
+and external services. The following services are supported.
+
+- Amazon S3 and S3 compatible services
+
+Refer to the [NetApp DataOps Toolkit for Kubernetes Data Movement](docs/data_movement.md) documentation for more details.
+
 ## Tips and Tricks
 
 - [Use the NetApp DataOps Toolkit in conjunction with Kubeflow.](Examples/Kubeflow/)
