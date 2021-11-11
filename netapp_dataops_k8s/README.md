@@ -1,7 +1,7 @@
 NetApp DataOps Toolkit for Kubernetes
 =========
 
-The NetApp DataOps Toolkit for Kubernetes is a Python library that makes it simple for developers, data scientists, DevOps engineers, and data engineers to perform various data management tasks within a Kubernetes cluster, such as provisioning a new Kubernetes persistent volume or JupyterLab workspace, near-instantaneously cloning a Kubernetes persistent volume or JupterLab workspace, and near-instantaneously snapshotting a Kubernetes persistent volume or JupyterLab workspace for traceability/baselining. This Python library can function as either a [command line utility](#command-line-functionality) or a [library of functions](#library-of-functions) that can be imported into any Python program or Jupyter Notebook.
+The NetApp DataOps Toolkit for Kubernetes is a Python library that makes it simple for developers, data scientists, DevOps engineers, and data engineers to perform various data management tasks within a Kubernetes cluster. Some of the key capabilities that the toolkit provides are the ability to provision a new persistent volume or data science workspace, the ability to almost instantaneously clone a volume or workspace, the ability to almost instantaneously save off a snapshot of a volume or workspace for traceability/baselining, and the ability to move data between S3 compatible object storage and a Kubernetes persistent volume.
 
 ## Compatibility
 
