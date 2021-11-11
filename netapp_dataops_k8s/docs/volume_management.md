@@ -327,8 +327,6 @@ The NetApp DataOps Toolkit for Kubernetes provides a set of functions that can b
 from netapp_dataops.k8s import clone_volume, create_volume, delete_volume, list_volumes, create_volume_snapshot, delete_volume_snapshot, list_volume_snapshots, restore_volume_snapshot
 ```
 
-Note: The prerequisite steps outlined in the [Getting Started](#getting-started) section still apply when the toolkit is being utilized as an importable library of functions.
-
 The following volume management operations are available within the set of functions.
 
 | Kubernetes persistent volume management operations                                   | Supported by BeeGFS | Supported by Trident | Requires Astra Control |

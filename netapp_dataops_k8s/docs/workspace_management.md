@@ -761,7 +761,7 @@ The NetApp DataOps Toolkit can be used to near-instantaneously delete an existin
 
 ##### Function Definition
 
-To delete a JupyterLab workspace snapshot, use the [delete_volume_snapshot() function](#lib-delete-volume-snapshot).
+To delete a JupyterLab workspace snapshot, use the [delete_volume_snapshot() function](volume_management.md#lib-delete-volume-snapshot).
 
 <a name="lib-list-jupyterlab-snapshots"></a>
 
