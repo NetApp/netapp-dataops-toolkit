@@ -63,6 +63,24 @@ Create a Kubernetes job.
 
 The V1Job object representing the created job.
 
+<a id="netapp_dataops.k8s.data_movers.DataMoverJob.delete_job"></a>
+
+#### delete\_job
+
+```python
+def delete_job(job: str)
+```
+
+Delete the Kubernetes job with the provided name.
+
+This will delete the job with the provided name regardless of the status of the job.
+If you want to avoid deleting a job that has not completed then make sure to check
+the status of the job before using this function.
+
+**Arguments**:
+
+- `job`: The name of the job to delete.
+
 <a id="netapp_dataops.k8s.data_movers.DataMoverJob.did_job_fail"></a>
 
 #### did\_job\_fail

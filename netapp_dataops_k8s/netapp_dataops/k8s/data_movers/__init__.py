@@ -81,6 +81,23 @@ class DataMoverJob:
             raise APIConnectionError(error)
         return job
 
+    def delete_job(self, job: str):
+        """Delete the Kubernetes job with the provided name.
+
+        This will delete the job with the provided name regardless of the status of the job.
+        If you want to avoid deleting a job that has not completed then make sure to check
+        the status of the job before using this function.
+
+        :param job: The name of the job to delete.
+        """
+        _load_kube_config2(print_output=self.print_output)
+
+        batch_api = client.BatchV1Api()
+        try:
+            batch_api.delete_namespaced_job(name=job, namespace=self.namespace)
+        except ApiException as error:
+            raise APIConnectionError(error)
+
     def did_job_fail(self, job: str) -> bool:
         """Get an indication if the job failed or not.
 

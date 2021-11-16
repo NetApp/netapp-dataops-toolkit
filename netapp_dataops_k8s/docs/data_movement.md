@@ -116,6 +116,15 @@ mover_job_status = data_mover.get_job_status(job=mover_job)
 See the [Kubernetes JobStatus Reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/job-v1/#JobStatus)
 for details on this response.
 
+Once the job is completed it will remain in Kubernetes as a job object. If you would like to cleanup
+jobs that you no longer need to reference you can use the data mover's `delete_job` method to remove
+a job from Kubernetes. Note, this will remove the job regardless of the job status, so make sure the 
+targeted job is complete before using this function.
+
+```python
+data_mover.delete_job(job=mover_job)
+```
+
 ### S3 Data Mover Advanced Usage
 
 #### Providing CA certificates for trusting HTTPS connections to S3
