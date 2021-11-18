@@ -220,6 +220,8 @@ The following options/arguments are optional:
     -n, --namespace=        Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
     -p, --cpu=              Number of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
     -b, --load-balancer     Option to choose a LoadBalancer service instead of using NodePort service. If not specified, NodePort service will be utilized.
+    -r, --mount-pvc         Option to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: -r/--mount-pvc=existing_pvc_name:mount_point. If not specified, no additional PVC will be attached.
+
 ```
 
 ##### Example Usage
@@ -872,6 +874,9 @@ Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/
 def create_jupyter_lab(
     workspace_name: str,                                     # Name of new JupyterLab workspace (required).
     workspace_size: str,                                     # Size new workspace (i.e. size of backing persistent volume to be created) (required). Format: '1024Mi', '100Gi', '10Ti', etc.
+    user_pvc_name: str,                                      # Name of the existing PVC that is to be attached and mounted at a specific point in the container.
+    user_pvc_mountpoint: str,                                # The mount path at which the existing PVC will be mounted at when creating the JupyterLab workspace.
+    mount_pvc: str,                                          # Option to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: -r/--mount-pvc=existing_pvc_name:mount_point. If not specified, no additional PVC will be attached.    
     storage_class: str = None,                               # Kubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
     load_balancer_service: bool = False,                     # Option to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
     namespace: str = "default",                              # Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
