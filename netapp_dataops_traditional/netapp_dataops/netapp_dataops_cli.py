@@ -6,6 +6,9 @@ import os
 import re
 from getpass import getpass
 
+import sys
+sys.path.insert(0, "/root/netapp-dataops-toolkit/netapp_dataops_traditional/netapp_dataops")
+
 from netapp_dataops import traditional
 from netapp_dataops.traditional import (
     clone_volume,
@@ -94,6 +97,8 @@ Required Options/Arguments:
 \t-v, --source-volume=\tName of volume to be cloned.
 
 Optional Options/Arguments:
+\t-c, --source-svm=\tnon default source svm name 
+\t-t, --target-svm=\tnon default target svm name 
 \t-g, --gid=\t\tUnix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
 \t-h, --help\t\tPrint help text.
 \t-m, --mountpoint=\tLocal mountpoint to mount new volume at after creating. If not specified, new volume will not be mounted locally. On Linux hosts - if specified, must be run as root.
@@ -144,6 +149,7 @@ Required Options/Arguments:
 \t-s, --size=\t\tSize of new volume. Format: '1024MB', '100GB', '10TB', etc.
 
 Optional Options/Arguments:
+\t-v, --svm=\t\tnon default svm name 
 \t-a, --aggregate=\tAggregate to use when creating new volume (flexvol volumes only).
 \t-d, --snapshot-policy=\tSnapshot policy to apply for new volume.
 \t-e, --export-policy=\tNFS export policy to use when exporting new volume.
@@ -665,6 +671,8 @@ if __name__ == '__main__':
         # Invoke desired action based on target
         if target in ("volume", "vol"):
             newVolumeName = None
+            sourceSVM = None 
+            targetSVM = None 
             sourceVolumeName = None
             sourceSnapshotName = None
             mountpoint = None
@@ -675,7 +683,7 @@ if __name__ == '__main__':
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:v:s:m:u:g:j:x", ["help", "name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid=", "junction=", "readonly"])
+                opts, args = getopt.getopt(sys.argv[3:], "hc:t:n:v:s:m:u:g:j:x", ["help", "source-svm=","target-svm=","name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid=", "junction=", "readonly"])
             except:
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
 
@@ -686,8 +694,12 @@ if __name__ == '__main__':
                     sys.exit(0)
                 elif opt in ("-n", "--name"):
                     newVolumeName = arg
+                elif opt in ("-c", "--source-svm"):
+                    sourceSVM = arg
+                elif opt in ("-t", "--target-svm"):
+                    targetSVM = arg                    
                 elif opt in ("-v", "--source-volume"):
-                    sourceVolumeName = arg
+                    sourceVolumeName = arg                   
                 elif opt in ("-s", "--source-snapshot"):
                     sourceSnapshotName = arg
                 elif opt in ("-m", "--mountpoint"):
@@ -711,6 +723,7 @@ if __name__ == '__main__':
             # Clone volume
             try:
                 clone_volume(new_volume_name=newVolumeName, source_volume_name=sourceVolumeName, source_snapshot_name=sourceSnapshotName,
+                             source_svm=sourceSVM, target_svm=targetSVM,
                              mountpoint=mountpoint, unix_uid=unixUID, unix_gid=unixGID, junction=junction, readonly=readonly, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError,
                     MountOperationError):
@@ -758,7 +771,6 @@ if __name__ == '__main__':
                 elif opt in ("-v", "--volume"):
                     volumeName = arg
 
-
             # Check for required options
             if not volumeName:
                 handleInvalidCommand(helpText=helpTextCreateSnapshot, invalidOptArg=True)
@@ -770,6 +782,7 @@ if __name__ == '__main__':
                 sys.exit(1)
 
         elif target in ("volume", "vol"):
+            svmName = None 
             volumeName = None
             volumeSize = None
             guaranteeSpace = False
@@ -787,7 +800,7 @@ if __name__ == '__main__':
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:s:rt:p:u:g:e:d:m:a:j:x", ["help", "name=", "size=", "guarantee-space", "type=", "permissions=", "uid=", "gid=", "export-policy=", "snapshot-policy=", "mountpoint=", "aggregate=", "junction=" ,"readonly"])
+                opts, args = getopt.getopt(sys.argv[3:], "hv:n:s:rt:p:u:g:e:d:m:a:j:x", ["help", "svm=", "name=", "size=", "guarantee-space", "type=", "permissions=", "uid=", "gid=", "export-policy=", "snapshot-policy=", "mountpoint=", "aggregate=", "junction=" ,"readonly"])
             except:
                 handleInvalidCommand(helpText=helpTextCreateVolume, invalidOptArg=True)
 
@@ -796,6 +809,8 @@ if __name__ == '__main__':
                 if opt in ("-h", "--help"):
                     print(helpTextCreateVolume)
                     sys.exit(0)
+                elif opt in ("-v", "--svm"):
+                    svmName = arg                    
                 elif opt in ("-n", "--name"):
                     volumeName = arg
                 elif opt in ("-s", "--size"):
@@ -832,7 +847,7 @@ if __name__ == '__main__':
 
             # Create volume
             try:
-                create_volume(volume_name=volumeName, volume_size=volumeSize, guarantee_space=guaranteeSpace, volume_type=volumeType, unix_permissions=unixPermissions, unix_uid=unixUID,
+                create_volume(svm_name=svmName, volume_name=volumeName, volume_size=volumeSize, guarantee_space=guaranteeSpace, volume_type=volumeType, unix_permissions=unixPermissions, unix_uid=unixUID,
                               unix_gid=unixGID, export_policy=exportPolicy, snapshot_policy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, junction=junction, readonly=readonly, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
