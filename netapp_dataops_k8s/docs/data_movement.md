@@ -14,6 +14,18 @@ either in to the PVC or out of the PVC, and the job will be completed.
 
 The S3 data mover provides the mechanisms to transfer files and objects between a Kubernetes PVC and S3 buckets.
 
+### Supported Services
+
+The S3 data mover should work with most S3 compatible services. The implementation currently uses the minio mc docker
+image for data movement, so any service compatible with that client should work with the S3 Data Mover.
+
+The following is a support matrix based on compatibility testing.
+
+| Service            |  Supported |
+| ------------------ | ---------- |
+| NetApp StorageGRID | Yes        |
+| ONTAP S3           | No         |
+
 ### API Documentation
 See the [NetApp DataOps Toolkit for Kubernetes API Documentation](api.md) for full details on the
 API parameters.

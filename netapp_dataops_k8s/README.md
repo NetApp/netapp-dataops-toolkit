@@ -103,9 +103,7 @@ Refer to the [NetApp DataOps Toolkit for Kubernetes Volume Management](docs/volu
 ### Data Movement
 
 The NetApp DataOps Toolkit provides the ability to facilitate data movement between Kubernetes persistent volumes
-and external services. The following services are supported.
-
-- Amazon S3 and S3 compatible services
+and external services. The data movement operations currently provided are for use with S3 compatible services.
 
 Refer to the [NetApp DataOps Toolkit for Kubernetes Data Movement](docs/data_movement.md) documentation for more details.
 
