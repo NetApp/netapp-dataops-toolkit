@@ -377,7 +377,7 @@ class S3DataMover(DataMoverJob):
         operation = "get-object"
 
         if not file_location:
-            file_location = object_
+            file_location = object_key
 
         command = f"mc cp {verify_flag} {self.s3_alias}/{bucket}/{object_key} {self.data_volume_path}/{file_location}"
         job_spec = self.job_spec
