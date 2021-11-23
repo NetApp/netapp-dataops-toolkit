@@ -202,6 +202,7 @@ Required Options/Arguments:
 \t-n, --name=\tName of volume to be deleted.
 
 Optional Options/Arguments:
+\t-v, --svm \tnon default SVM name
 \t-f, --force\tDo not prompt user to confirm operation.
 \t-h, --help\tPrint help text.
 
@@ -893,11 +894,12 @@ if __name__ == '__main__':
 
         elif target in ("volume", "vol"):
             volumeName = None
+            svmName = None
             force = False
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:f", ["help", "name=", "force"])
+                opts, args = getopt.getopt(sys.argv[3:], "hv:n:f", ["help", "svm=", "name=", "force"])
             except:
                 handleInvalidCommand(helpText=helpTextDeleteVolume, invalidOptArg=True)
 
@@ -906,6 +908,8 @@ if __name__ == '__main__':
                 if opt in ("-h", "--help"):
                     print(helpTextDeleteVolume)
                     sys.exit(0)
+                elif opt in ("-n", "--svm"):
+                    svmName = arg
                 elif opt in ("-n", "--name"):
                     volumeName = arg
                 elif opt in ("-f", "--force"):
@@ -929,7 +933,7 @@ if __name__ == '__main__':
 
             # Delete volume
             try:
-                delete_volume(volume_name=volumeName, print_output=True)
+                delete_volume(volume_name=volumeName, svm_name=svmName, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
                 sys.exit(1)
 

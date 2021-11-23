@@ -782,7 +782,7 @@ def delete_snapshot(volume_name: str, snapshot_name: str, print_output: bool = F
         raise ConnectionTypeError()
 
 
-def delete_volume(volume_name: str, print_output: bool = False):
+def delete_volume(volume_name: str, svm_name: str = None, print_output: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -805,13 +805,15 @@ def delete_volume(volume_name: str, print_output: bool = False):
         # Retrieve svm from config file
         try:
             svm = config["svm"]
+            if svm_name:
+                svm = svm_name
         except:
             if print_output :
                 _print_invalid_config_error()
             raise InvalidConfigError()
 
         if print_output:
-            print("Deleting volume '" + volume_name + "'.")
+            print("Deleting volume '" + svm+':'+volume_name + "'.")
 
         try:
             # Retrieve volume
