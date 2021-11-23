@@ -263,6 +263,7 @@ List all data volumes.
 No options/arguments are required.
 
 Optional Options/Arguments:
+\t-v, --svm\t\t\t\tlist volume on non default svm
 \t-h, --help\t\t\t\tPrint help text.
 \t-s, --include-space-usage-details\tInclude storage space usage details in output (see README for explanation).
 
@@ -1002,10 +1003,11 @@ if __name__ == '__main__':
 
         elif target in ("volume", "vol", "volumes", "vols"):
             includeSpaceUsageDetails = False
+            svmName = None
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hs", ["help", "include-space-usage-details"])
+                opts, args = getopt.getopt(sys.argv[3:], "hsv:", ["help", "include-space-usage-details","svm="])
             except:
                 handleInvalidCommand(helpText=helpTextListVolumes, invalidOptArg=True)
 
@@ -1014,12 +1016,14 @@ if __name__ == '__main__':
                 if opt in ("-h", "--help") :
                     print(helpTextListVolumes)
                     sys.exit(0)
+                elif opt in ("-v", "--svm") :
+                    svmName = arg
                 elif opt in ("-s", "--include-space-usage-details"):
                     includeSpaceUsageDetails = True
 
             # List volumes
             try:
-                list_volumes(check_local_mounts=True, include_space_usage_details=includeSpaceUsageDetails, print_output=True)
+                list_volumes(check_local_mounts=True, include_space_usage_details=includeSpaceUsageDetails, print_output=True, svm_name=svmName)
             except (InvalidConfigError, APIConnectionError) :
                 sys.exit(1)
 
