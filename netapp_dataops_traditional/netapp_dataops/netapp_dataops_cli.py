@@ -284,6 +284,8 @@ Required Options/Arguments:
 \t-n, --name=\t\tName of volume.
 
 Optional Options/Arguments:
+\t-v, --svm \tnon default SVM name
+\t-l, --lif \tnon default lif (nfs server ip/name)
 \t-h, --help\t\tPrint help text.
 \t-x, --readonly\t\tMount volume locally as read-only.
 
@@ -1041,11 +1043,13 @@ if __name__ == '__main__':
         # Invoke desired action based on target
         if target in ("volume", "vol"):
             volumeName = None
+            svmName = None 
+            lifName = None 
             mountpoint = None
             readonly = False
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:m:x", ["help", "name=", "mountpoint=", "readonly"])
+                opts, args = getopt.getopt(sys.argv[3:], "hv:n:l:m:x", ["help", "lif=","svm=", "name=", "mountpoint=", "readonly"])
             except:
                 handleInvalidCommand(helpText=helpTextMountVolume, invalidOptArg=True)
 
@@ -1054,16 +1058,20 @@ if __name__ == '__main__':
                 if opt in ("-h", "--help"):
                     print(helpTextMountVolume)
                     sys.exit(0)
+                elif opt in ("-v", "--svm"):
+                    svmName = arg
+                elif opt in ("-l", "--lif"):
+                    lifName = arg                    
                 elif opt in ("-n", "--name"):
                     volumeName = arg
                 elif opt in ("-m", "--mountpoint"):
                     mountpoint = arg
                 elif opt in ("-x", "--readonly"):
                     readonly = True
-
+                    
             # Mount volume
             try:
-                mount_volume(volume_name=volumeName, mountpoint=mountpoint, readonly=readonly, print_output=True)
+                mount_volume(svm_name = svmName, lif_name = lifName, volume_name=volumeName, mountpoint=mountpoint, readonly=readonly, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
 

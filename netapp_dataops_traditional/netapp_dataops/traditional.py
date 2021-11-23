@@ -1206,12 +1206,26 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
         raise ConnectionTypeError()
 
 
-def mount_volume(volume_name: str, mountpoint: str, readonly: bool = False, print_output: bool = False):
+def mount_volume(volume_name: str, mountpoint: str, svm_name: str = None, lif_name: str = None, readonly: bool = False, print_output: bool = False):
     nfsMountTarget = None
+    
+    svm = None
+    try:
+        config = _retrieve_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+    try:
+        svm = config["svm"]
+        if svm_name:
+            svm = svm_name
+    except:
+        if print_output:
+            _print_invalid_config_error()
+        raise InvalidConfigError()
 
     # Retrieve list of volumes
     try:
-        volumes = list_volumes(check_local_mounts=True)
+        volumes = list_volumes(check_local_mounts=True, svm_name = svm)
     except (InvalidConfigError, APIConnectionError):
         if print_output:
             print("Error: Error retrieving NFS mount target for volume.")
@@ -1234,13 +1248,21 @@ def mount_volume(volume_name: str, mountpoint: str, readonly: bool = False, prin
         if print_output:
             print("Error: Invalid volume name specified.")
         raise InvalidVolumeParameterError("name")
+    
+    try:
+        if lif_name:
+            nfsMountTarget = lif_name+':'+nfsMountTarget.split(':')[1]
+    except:
+        if print_output:
+            print("Error: Error retrieving NFS mount target for volume.")
+        raise
 
     # Print message describing action to be understaken
     if print_output:
         if readonly:
-            print("Mounting volume '" + volume_name + "' at '" + mountpoint + "' as read-only.")
+            print("Mounting volume '" + svm+':'+volume_name + "' as '"+nfsMountTarget+"' at '" + mountpoint + "' as read-only.")
         else:
-            print("Mounting volume '" + volume_name + "' at '" + mountpoint + "'.")
+            print("Mounting volume '" + svm+':'+volume_name + "' as '"+nfsMountTarget+"' at '" + mountpoint + "'.")
 
     # Create mountpoint if it doesn't already exist
     mountpoint = os.path.expanduser(mountpoint)
