@@ -466,19 +466,46 @@ def clone_volume(new_volume_name: str, source_volume_name: str, source_snapshot_
                     print("Warning: Cannot apply gid of '0' when creating clone; gid of source volume will be retained.")
 
             # Add source snapshot details to volume dict if specified
-            if source_snapshot_name:
+            if source_snapshot_name and not source_snapshot_name.endswith("*"):
                 # Retrieve source snapshot
                 sourceSnapshot = NetAppSnapshot.find(sourceVolume.uuid, name=source_snapshot_name)
                 if not sourceSnapshot:
                     if print_output:
                         print("Error: Invalid source snapshot name.")
                     raise InvalidSnapshotParameterError("name")
+              
 
                 # Append source snapshot details to volume dict
                 newVolumeDict["clone"]["parent_snapshot"] = {
                     "name": sourceSnapshot.name,
                     "uuid": sourceSnapshot.uuid
                 }
+            
+            if source_snapshot_name and source_snapshot_name.endswith("*"):
+                source_snapshot_prefix = source_snapshot_name[:-1]
+                latest_source_snapshot = None 
+                latest_source_snapshot_uuid = None 
+
+                # Retrieve all source snapshot from last to 1st 
+                for snapshot in NetAppSnapshot.get_collection(sourceVolume.uuid):
+                    snapshot.get()
+                    if snapshot.name.startswith(source_snapshot_prefix):
+                        latest_source_snapshot = snapshot.name
+                        latest_source_snapshot_uuid = snapshot.uuid
+
+
+                if not latest_source_snapshot:
+                    if print_output:
+                        print("Error: Could not find snapshot prefixed by '"+source_snapshot_prefix+"'.")
+                    raise InvalidSnapshotParameterError("name")
+                # Append source snapshot details to volume dict
+                newVolumeDict["clone"]["parent_snapshot"] = {
+                    "name": latest_source_snapshot,
+                    "uuid": latest_source_snapshot_uuid
+                }
+                print("Snapshot '" + latest_source_snapshot+ "' will be used to create the clone.")
+
+                
 
             # Create new volume
             newVolume = NetAppVolume.from_dict(newVolumeDict)
