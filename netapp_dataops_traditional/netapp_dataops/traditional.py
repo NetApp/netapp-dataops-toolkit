@@ -750,7 +750,7 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
         raise ConnectionTypeError()
 
 
-def delete_snapshot(volume_name: str, snapshot_name: str, print_output: bool = False):
+def delete_snapshot(volume_name: str, snapshot_name: str, svm_name: str = None, print_output: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -773,6 +773,8 @@ def delete_snapshot(volume_name: str, snapshot_name: str, print_output: bool = F
         # Retrieve svm from config file
         try:
             svm = config["svm"]
+            if svm_name: 
+                svm = svm_name 
         except:
             if print_output:
                 _print_invalid_config_error()
@@ -1013,7 +1015,7 @@ def list_snap_mirror_relationships(print_output: bool = False) -> list():
         raise ConnectionTypeError()
 
 
-def list_snapshots(volume_name: str, print_output: bool = False) -> list():
+def list_snapshots(volume_name: str, svm_name: str = None, print_output: bool = False) -> list():
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -1036,6 +1038,8 @@ def list_snapshots(volume_name: str, print_output: bool = False) -> list():
         # Retrieve svm from config file
         try:
             svm = config["svm"]
+            if svm_name:
+                svm = svm_name
         except:
             if print_output:
                 _print_invalid_config_error()
@@ -1510,7 +1514,7 @@ def push_file_to_s3(s3_bucket: str, local_file: str, s3_object_key: str = None, 
     print("Upload complete.")
 
 
-def restore_snapshot(volume_name: str, snapshot_name: str, print_output: bool = False):
+def restore_snapshot(volume_name: str, snapshot_name: str, svm_name : str = None, print_output: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -1533,6 +1537,8 @@ def restore_snapshot(volume_name: str, snapshot_name: str, print_output: bool = 
         # Retrieve svm from config file
         try:
             svm = config["svm"]
+            if svm_name:
+                svm = svm_name
         except:
             if print_output:
                 _print_invalid_config_error()

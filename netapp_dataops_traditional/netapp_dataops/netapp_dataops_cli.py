@@ -191,6 +191,7 @@ Required Options/Arguments:
 \t-v, --volume=\tName of volume.
 
 Optional Options/Arguments:
+\t-s, --svm\tNon default svm
 \t-h, --help\tPrint help text.
 
 Examples:
@@ -254,6 +255,7 @@ Required Options/Arguments:
 \t-v, --volume=\tName of volume.
 
 Optional Options/Arguments:
+\t-s, --svm\tNon default svm.
 \t-h, --help\tPrint help text.
 
 Examples:
@@ -408,6 +410,7 @@ Required Options/Arguments:
 \t-v, --volume=\tName of volume.
 
 Optional Options/Arguments:
+\t-s, --svm\tNon default svm.
 \t-f, --force\tDo not prompt user to confirm operation.
 \t-h, --help\tPrint help text.
 
@@ -874,10 +877,11 @@ if __name__ == '__main__':
         if target in ("snapshot", "snap"):
             volumeName = None
             snapshotName = None
+            svmName = None 
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:v:", ["help", "name=", "volume="])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:v:s:", ["help", "svm=", "name=", "volume="])
             except:
                 handleInvalidCommand(helpText=helpTextDeleteSnapshot, invalidOptArg=True)
 
@@ -888,6 +892,8 @@ if __name__ == '__main__':
                     sys.exit(0)
                 elif opt in ("-n", "--name"):
                     snapshotName = arg
+                elif opt in ("-s", "--svm"):
+                    svmName = arg
                 elif opt in ("-v", "--volume"):
                     volumeName = arg
 
@@ -897,7 +903,7 @@ if __name__ == '__main__':
 
             # Delete snapshot
             try:
-                delete_snapshot(volume_name=volumeName, snapshot_name=snapshotName, print_output=True)
+                delete_snapshot(volume_name=volumeName, svm_name = svmName, snapshot_name=snapshotName, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError):
                 sys.exit(1)
 
@@ -989,10 +995,11 @@ if __name__ == '__main__':
 
         elif target in ("snapshot", "snap", "snapshots", "snaps"):
             volumeName = None
+            svmName = None 
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hv:", ["help", "volume="])
+                opts, args = getopt.getopt(sys.argv[3:], "hv:s:", ["help", "volume=","svm="])
             except:
                 handleInvalidCommand(helpText=helpTextListSnapshots, invalidOptArg=True)
 
@@ -1003,6 +1010,8 @@ if __name__ == '__main__':
                     sys.exit(0)
                 elif opt in ("-v", "--volume"):
                     volumeName = arg
+                elif opt in ("-s", "--svm"):
+                    svmName = arg
 
             # Check for required options
             if not volumeName:
@@ -1010,7 +1019,7 @@ if __name__ == '__main__':
 
             # List volumes
             try:
-                list_snapshots(volume_name=volumeName, print_output=True)
+                list_snapshots(volume_name=volumeName, svm_name=svmName, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
                 sys.exit(1)
 
@@ -1321,11 +1330,12 @@ if __name__ == '__main__':
         if target in ("snapshot", "snap"):
             volumeName = None
             snapshotName = None
+            svmName = None 
             force = False
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:v:f", ["help", "name=", "volume=", "force"])
+                opts, args = getopt.getopt(sys.argv[3:], "hs:n:v:f", ["help", "svm=", "name=", "volume=", "force"])
             except:
                 handleInvalidCommand(helpText=helpTextRestoreSnapshot, invalidOptArg=True)
 
@@ -1336,6 +1346,8 @@ if __name__ == '__main__':
                     sys.exit(0)
                 elif opt in ("-n", "--name"):
                     snapshotName = arg
+                elif opt in ("-s", "--svm"):
+                    svmName = arg                    
                 elif opt in ("-v", "--volume"):
                     volumeName = arg
                 elif opt in ("-f", "--force"):
@@ -1359,7 +1371,7 @@ if __name__ == '__main__':
 
             # Restore snapshot
             try:
-                restore_snapshot(volume_name=volumeName, snapshot_name=snapshotName, print_output=True)
+                restore_snapshot(volume_name=volumeName, snapshot_name=snapshotName, svm_name=svmName, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError):
                 sys.exit(1)
 
