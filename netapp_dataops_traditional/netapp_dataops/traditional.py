@@ -531,7 +531,7 @@ def clone_volume(new_volume_name: str, source_volume_name: str, source_snapshot_
         raise ConnectionTypeError()
 
 
-def create_snapshot(volume_name: str, snapshot_name: str = None, print_output: bool = False):
+def create_snapshot(volume_name: str, svm_name: str = None, snapshot_name: str = None, print_output: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -554,6 +554,8 @@ def create_snapshot(volume_name: str, snapshot_name: str = None, print_output: b
         # Retrieve svm from config file
         try:
             svm = config["svm"]
+            if svm_name:
+                svm = svm_name 
         except:
             if print_output:
                 _print_invalid_config_error()

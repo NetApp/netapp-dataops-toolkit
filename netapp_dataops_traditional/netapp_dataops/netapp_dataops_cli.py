@@ -103,6 +103,7 @@ Optional Options/Arguments:
 \t-h, --help\t\tPrint help text.
 \t-m, --mountpoint=\tLocal mountpoint to mount new volume at after creating. If not specified, new volume will not be mounted locally. On Linux hosts - if specified, must be run as root.
 \t-s, --source-snapshot=\tName of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
+\t\t\t\twhen snapshot name suffixed with * the latest snapshot will be used (hourly* will use the latest snapshot prefixed with hourly )
 \t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
 \t-x, --readonly\t\tRead-only option for mounting volumes locally.
 \t-j, --junction\t\tSpecify a custom junction path for the volume to be exported at.
@@ -110,10 +111,12 @@ Optional Options/Arguments:
 Examples (basic usage):
 \tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset
 \tnetapp_dataops_cli.py clone volume -n project2 -v gold_dataset -s snap1
-\tsudo -E netapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset --mountpoint=~/project1 --readonly
+\tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset --mountpoint=~/project1 --readonly
+
 
 Examples (advanced usage):
 \tnetapp_dataops_cli.py clone volume -n testvol -v gold_dataset -u 1000 -g 1000 -x -j /project1
+\tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset --source-svm=svm1 --target-svm=svm2 --source-snapshot=daily*
 '''
 helpTextConfig = '''
 Command: config
@@ -131,6 +134,7 @@ Required Options/Arguments:
 \t-v, --volume=\tName of volume.
 
 Optional Options/Arguments:
+\t-s, --svm\tNon defaul svm name.
 \t-h, --help\tPrint help text.
 \t-n, --name=\tName of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
 
@@ -758,10 +762,11 @@ if __name__ == '__main__':
         if target in ("snapshot", "snap"):
             volumeName = None
             snapshotName = None
+            svmName = None 
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:v:", ["help", "name=", "volume="])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:v:s:", ["help", "svm=", "name=", "volume="])
             except:
                 handleInvalidCommand(helpText=helpTextCreateSnapshot, invalidOptArg=True)
 
@@ -772,6 +777,8 @@ if __name__ == '__main__':
                     sys.exit(0)
                 elif opt in ("-n", "--name"):
                     snapshotName = arg
+                elif opt in ("-s", "--svm"):
+                    svmName = arg                    
                 elif opt in ("-v", "--volume"):
                     volumeName = arg
 
@@ -781,7 +788,7 @@ if __name__ == '__main__':
 
             # Create snapshot
             try:
-                create_snapshot(volume_name=volumeName, snapshot_name=snapshotName, print_output=True)
+                create_snapshot(volume_name=volumeName, snapshot_name=snapshotName, svm_name=svmName, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
                 sys.exit(1)
 
@@ -1068,7 +1075,7 @@ if __name__ == '__main__':
                     mountpoint = arg
                 elif opt in ("-x", "--readonly"):
                     readonly = True
-                    
+
             # Mount volume
             try:
                 mount_volume(svm_name = svmName, lif_name = lifName, volume_name=volumeName, mountpoint=mountpoint, readonly=readonly, print_output=True)
