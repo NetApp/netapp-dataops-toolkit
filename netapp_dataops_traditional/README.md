@@ -130,10 +130,13 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
+    -c, --source-svm=       non default source svm name
+    -t, --target-svm=       non default target svm name
     -g, --gid=              Unix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
     -h, --help              Print help text.
     -m, --mountpoint=       Local mountpoint to mount new volume at after creating. If not specified, new volume will not be mounted locally. On Linux hosts - if specified, must be run as root.
     -s, --source-snapshot=  Name of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
+                            when snapshot name suffixed with * the latest snapshot will be used (hourly* will use the latest snapshot prefixed with hourly )
     -u, --uid=              Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
     -x, --readonly          Read-only option for mounting volumes locally.
     -j, --junction          Specify a custom junction path for the volume to be exported at.
@@ -189,6 +192,7 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
+    -v, --svm=              non default svm name
     -a, --aggregate=        Aggregate to use when creating new volume (flexvol volumes only).
     -d, --snapshot-policy=  Snapshot policy to apply for new volume.
     -e, --export-policy=    NFS export policy to use when exporting new volume.
@@ -242,6 +246,7 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
+    -v, --svm       non default SVM name
     -f, --force     Do not prompt user to confirm operation.
     -h, --help      Print help text.
 ```
@@ -330,6 +335,7 @@ The NetApp DataOps Toolkit can be used to mount an existing data volume on your 
 The following options/arguments are required:
 
 ```
+    -v, --svm       non default SVM name
     -m, --mountpoint=       Local mountpoint to mount volume at.
     -n, --name=             Name of volume.
 ```
@@ -392,6 +398,7 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
+    -s, --svm       Non defaul svm name.
     -h, --help      Print help text.
     -n, --name=     Name of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
 ```
@@ -430,6 +437,7 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
+    -s, --svm       Non defaul svm name.
     -h, --help      Print help text.
 ```
 
@@ -454,6 +462,9 @@ The following options/arguments are required:
 ```
     -v, --volume=   Name of volume.
 ```
+Optional Options/Arguments:
+    -s, --svm       Non default svm.
+    -h, --help      Print help text.
 
 ##### Example Usage
 
@@ -488,6 +499,7 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
+    -s, --svm       Non default svm.
     -f, --force     Do not prompt user to confirm operation.
     -h, --help      Print help text.
 ```
