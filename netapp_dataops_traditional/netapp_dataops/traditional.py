@@ -521,7 +521,7 @@ def clone_volume(new_volume_name: str, source_volume_name: str, source_snapshot_
         # Optionally mount newly created volume
         if mountpoint:
             try:
-                mount_volume(volume_name=new_volume_name, mountpoint=mountpoint, readonly=readonly, print_output=True)
+                mount_volume(volume_name=new_volume_name, svm_name=targetsvm, mountpoint=mountpoint, readonly=readonly, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 if print_output:
                     print("Error: Error mounting clone volume.")
@@ -740,7 +740,7 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
         # Optionally mount newly created volume
         if mountpoint:
             try:
-                mount_volume(volume_name=volume_name, mountpoint=mountpoint, readonly=readonly, print_output=True)
+                mount_volume(volume_name=volume_name, svm_name=svm, mountpoint=mountpoint, readonly=readonly, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 if print_output:
                     print("Error: Error mounting volume.")
