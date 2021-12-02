@@ -25,6 +25,7 @@ The following is a support matrix based on compatibility testing.
 | ------------------ | ---------- |
 | NetApp StorageGRID | Yes        |
 | ONTAP S3           | No         |
+| Amazon S3          | Yes        |
 
 ### API Documentation
 See the [NetApp DataOps Toolkit for Kubernetes API Documentation](api.md) for full details on the
