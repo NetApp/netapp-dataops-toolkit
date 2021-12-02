@@ -416,7 +416,7 @@ def clone_volume(new_pvc_name: str, source_pvc_name: str, source_snapshot_name: 
         print("Volume successfully cloned.")
 
 
-def create_jupyter_lab(workspace_name: str, workspace_size: str, user_pvc_name: str, user_pvc_mountpoint: str,  mount_pvc: str, storage_class: str = None,
+def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str, storage_class: str = None,
                        load_balancer_service: bool = False, namespace: str = "default",
                        workspace_password: str = None, workspace_image: str = "jupyter/tensorflow-notebook",
                        request_cpu: str = None, request_memory: str = None, request_nvidia_gpu: str = None,
@@ -456,7 +456,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, user_pvc_name: 
                 print("Aborting workspace creation...")
             raise
 
-    # Step 2 - Create service for worgkspace
+    # Step 2 - Create service for workspace
 
     # Construct service
     if load_balancer_service:
@@ -590,14 +590,14 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, user_pvc_name: 
     # Mount Additional pvc if needed
     if mount_pvc:
 
-
         divider_index = mount_pvc.find(":")
         user_pvc_name = mount_pvc[:divider_index]
         user_pvc_mountpoint = mount_pvc[divider_index+1:]
-        
+
         if print_output:
             print("\nAttaching Additional PVC: '" + user_pvc_name + "' at mount_path: '" + user_pvc_mountpoint + "'.")
-    # Add user-specified PVC
+            
+        # Add user-specified PVC
         deployment.spec.template.spec.volumes.append(
             client.V1Volume(
                 name="uservol",
@@ -607,7 +607,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, user_pvc_name: 
                 )
             )
 
-    # Add mountpoint for user-specified PVC
+        # Add mountpoint for user-specified PVC
         deployment.spec.template.spec.containers[0].volume_mounts.append(
             client.V1VolumeMount(
                 name="uservol",
