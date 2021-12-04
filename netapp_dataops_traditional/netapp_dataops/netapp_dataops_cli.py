@@ -137,11 +137,13 @@ Optional Options/Arguments:
 \t-s, --svm\tNon defaul svm name.
 \t-h, --help\tPrint help text.
 \t-n, --name=\tName of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
+\t-r, --retention=\tif provided snapshot name will be suffixed by <timestamp> and excesive snapshots will be deleted
 
 Examples:
 \tnetapp_dataops_cli.py create snapshot --volume=project1 --name=snap1
 \tnetapp_dataops_cli.py create snapshot -v project2 -n final_dataset
 \tnetapp_dataops_cli.py create snapshot --volume=test1
+\tnetapp_dataops_cli.py create snapshot -v project2 -n daily_consistent -r 7 
 '''
 helpTextCreateVolume = '''
 Command: create volume
@@ -766,10 +768,11 @@ if __name__ == '__main__':
             volumeName = None
             snapshotName = None
             svmName = None 
+            retentionCount = 0
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:v:s:", ["help", "svm=", "name=", "volume="])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:v:s:r:p:", ["help", "svm=", "name=", "volume=", "retention=", "prefix="])
             except:
                 handleInvalidCommand(helpText=helpTextCreateSnapshot, invalidOptArg=True)
 
@@ -781,7 +784,9 @@ if __name__ == '__main__':
                 elif opt in ("-n", "--name"):
                     snapshotName = arg
                 elif opt in ("-s", "--svm"):
-                    svmName = arg                    
+                    svmName = arg
+                elif opt in ("-r", "--retention"):
+                    retentionCount = arg                                                           
                 elif opt in ("-v", "--volume"):
                     volumeName = arg
 
@@ -791,7 +796,7 @@ if __name__ == '__main__':
 
             # Create snapshot
             try:
-                create_snapshot(volume_name=volumeName, snapshot_name=snapshotName, svm_name=svmName, print_output=True)
+                create_snapshot(volume_name=volumeName, snapshot_name=snapshotName, retention_count=retentionCount, svm_name=svmName, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
                 sys.exit(1)
 

@@ -398,9 +398,10 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
-    -s, --svm       Non defaul svm name.
-    -h, --help      Print help text.
-    -n, --name=     Name of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
+    -s, --svm         Non defaul svm name.
+    -n, --name=       Name of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
+    -r, --retention=  if provided snapshot name will be suffixed by <timestamp> and excesive snapshots will be deleted
+    -h, --help        Print help text.    
 ```
 
 ##### Example Usage

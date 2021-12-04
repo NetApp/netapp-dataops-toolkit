@@ -531,7 +531,7 @@ def clone_volume(new_volume_name: str, source_volume_name: str, source_snapshot_
         raise ConnectionTypeError()
 
 
-def create_snapshot(volume_name: str, svm_name: str = None, snapshot_name: str = None, print_output: bool = False):
+def create_snapshot(volume_name: str, svm_name: str = None, snapshot_name: str = None, retention_count: int = 0, print_output: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -561,10 +561,13 @@ def create_snapshot(volume_name: str, svm_name: str = None, snapshot_name: str =
                 _print_invalid_config_error()
             raise InvalidConfigError()
 
-        # Set snapshot name if not passed into function
-        if not snapshot_name:
-            timestamp = datetime.today().strftime("%Y%m%d_%H%M%S")
-            snapshot_name = "netapp_dataops_" + timestamp
+        snapshot_name_original = snapshot_name
+        # Set snapshot name if not passed into function or retention provided 
+        if not snapshot_name or int(retention_count) > 0:
+            timestamp = '_'+datetime.today().strftime("%Y%m%d_%H%M%S")
+            if not snapshot_name:
+                snapshot_name = "netapp_dataops"
+            snapshot_name += timestamp
 
         if print_output:
             print("Creating snapshot '" + snapshot_name + "'.")
@@ -591,6 +594,38 @@ def create_snapshot(volume_name: str, svm_name: str = None, snapshot_name: str =
             if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
+
+        #delete snapshots exceeding retention count if provided
+        retention_count = int(retention_count)  
+        if retention_count > 0:
+            try:  
+                # Retrieve all source snapshot from last to 1st 
+                # Retrieve volume
+                volume = NetAppVolume.find(name=volume_name, svm=svm)
+                if not volume:
+                    if print_output:
+                        print("Error: Invalid volume name.")
+                    raise InvalidVolumeParameterError("name")    
+                
+                last_snapshot_list = []          
+                snapshot_list = []
+                for snapshot in NetAppSnapshot.get_collection(volume.uuid):
+                    snapshot.get()
+                    if snapshot.name.startswith(snapshot_name_original+'_'):
+                        snapshot_list.append(snapshot.name)   
+                        last_snapshot_list.append(snapshot.name)
+                        if len(last_snapshot_list) > retention_count:
+                            last_snapshot_list.pop(0)
+                
+                #delete snapshots not in retention 
+                for snap in snapshot_list:
+                    if snap not in last_snapshot_list:
+                        delete_snapshot(volume_name=volume_name, svm_name = svm, snapshot_name=snap, print_output=True)
+
+            except NetAppRestError as err:
+                if print_output:
+                    print("Error: ONTAP Rest API Error: ", err)
+                raise APIConnectionError(err)                                   
 
     else:
         raise ConnectionTypeError()
