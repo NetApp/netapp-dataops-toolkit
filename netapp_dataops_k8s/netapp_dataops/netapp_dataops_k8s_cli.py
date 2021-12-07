@@ -119,7 +119,7 @@ Optional Options/Arguments:
 \t-n, --namespace=\tKubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
 \t-p, --cpu=\t\tNumber of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
 \t-b, --load-balancer\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
-\t-v, --mount-pvc\tOption to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: -r/--mount-pvc=existing_pvc_name:mount_point. If not specified, no additional PVC will be attached.
+\t-v, --mount-pvc\tOption to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: -v/--mount-pvc=existing_pvc_name:mount_point. If not specified, no additional PVC will be attached.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py create jupyterlab --workspace-name=mike --size=10Gi --nvidia-gpu=2
@@ -592,7 +592,7 @@ if __name__ == '__main__':
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hw:s:n:c:i:g:m:p:b:v:",
+                opts, args = getopt.getopt(sys.argv[3:], "hw:s:n:c:i:g:m:p:bv:",
                                            ["help", "workspace-name=", "size=", "namespace=", "storage-class=",
                                             "image=", "nvidia-gpu=", "memory=", "cpu=", "load-balancer", "mount-pvc="])
             except:
