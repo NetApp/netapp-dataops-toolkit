@@ -18,7 +18,11 @@ The toolkit is currently compatible with Trident versions 20.07 and above. Addit
 - gcp-cvs
 - azure-netapp-files
 
-The toolkit is also compatible with all versions of the BeeGFS CSI driver, though not all functionality is supported by BeeGFS. See the table under [Command Line Functionality](#command-line-functionality) for details.
+The toolkit is also compatible with all versions of the BeeGFS CSI driver, though not all functionality is supported by BeeGFS.
+For details on supported BeeGFS CSI driver functionality refer to the following documentation.
+- [Volume Management Command Line Operations](docs/volume_management.md#command-line-functionality)
+- [Workspace Management Command Line Operations](docs/workspace_management.md#command-line-functionality)
+
 
 ## Installation
 
@@ -86,7 +90,7 @@ export ASTRA_K8S_CLUSTER_NAME="<Kubernetes_cluster_name_in_Astra_Control"
 
 ## Capabilities
 
-The NetApp DataOps Toolkit for Kubernetes provides the following capabilites.
+The NetApp DataOps Toolkit for Kubernetes provides the following capabilities.
 
 ### Workspace Management
 
