@@ -89,7 +89,7 @@ class S3DataMover(DataMoverJob):
                  s3_port: str = None,
                  use_https: bool = True,
                  verify_certificates: bool = True,
-                 image_tag: str = None,
+                 image_name: str = None,
                  job_spec_template=None,
                  namespace: str = "default",
                  ca_config_maps: list = None,
@@ -108,9 +108,10 @@ class S3DataMover(DataMoverJob):
             True.
         :param verify_certificates: If True then the certificates will be verified when connecting to the S3 service.
             If False then the SSL/TLS certificates will not be verified. Defaults to True.
-        :param image_tag: This is a string representing the tag for the image to pull. The S3DataMover uses the
-            minio/mc docker image to transfer data. This value must be a valid tag for this image. See hub.docker.com
-            for a list of valid tags.
+        :param image_name: The name of the image to use. By default the latest minio/mc image is used. This
+            parameter may be used to specify a specific image tag or if the image needs to be found in a non-default
+            repository. The specified image should be based on the minio/mc image or contain the minio client in order
+            to work with the S3DataMover.
         :param job_spec_template: An optional V1JobSpec object to be used with any job created by the object. This
             is to be used to provide default values for an optional V1JobSpec properties. This should generally not
             be needed.
@@ -169,10 +170,10 @@ class S3DataMover(DataMoverJob):
         else:
             self.s3_port = s3_port
 
-        if image_tag is None:
+        if image_name is None:
             self.image = "minio/mc"
         else:
-            self.image = f"minio/mc:{image_tag}"
+            self.image = f"{image_name}"
 
         super().__init__(namespace=namespace, job_spec_template=job_spec_template, print_output=print_output)
 
