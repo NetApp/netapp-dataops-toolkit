@@ -111,14 +111,14 @@ Required Options/Arguments:
 \t-s, --size=\t\tSize new workspace (i.e. size of backing persistent volume to be created). Format: '1024Mi', '100Gi', '10Ti', etc.
 
 Optional Options/Arguments:
-\t-c, --storage-class=\tKubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
-\t-g, --nvidia-gpu=\tNumber of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
-\t-h, --help\t\tPrint help text.
-\t-i, --image=\t\tContainer image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.
-\t-m, --memory=\t\tAmount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
-\t-n, --namespace=\tKubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
-\t-p, --cpu=\t\tNumber of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
-\t-b, --load-balancer\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
+\t-c, --storage-class=\t\tKubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
+\t-g, --nvidia-gpu=\t\tNumber of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
+\t-h, --help\t\t\tPrint help text.
+\t-i, --image=\t\t\tContainer image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.
+\t-m, --memory=\t\t\tAmount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
+\t-n, --namespace=\t\tKubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
+\t-p, --cpu=\t\t\tNumber of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+\t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
 \t-a, --register-with-astra\tRegister new workspace with Astra Control (requires Astra Control).
 \t-v, --mount-pvc\t\tOption to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: -v/--mount-pvc=existing_pvc_name:mount_point. If not specified, no additional PVC will be attached.
 
@@ -595,7 +595,7 @@ if __name__ == '__main__':
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hw:s:n:c:i:g:m:p:abv:",
                                            ["help", "workspace-name=", "size=", "namespace=", "storage-class=",
-                                            "image=", "nvidia-gpu=", "memory=", "cpu=", "load-balancer", "mount-pvc="])
+                                            "image=", "nvidia-gpu=", "memory=", "cpu=", "register-with-astra", "load-balancer", "mount-pvc="])
             except:
                 handleInvalidCommand(helpText=helpTextCreateJupyterLab, invalidOptArg=True)
 
@@ -632,7 +632,7 @@ if __name__ == '__main__':
             # Create JupyterLab workspace
             try:
                 create_jupyter_lab(workspace_name=workspaceName, workspace_size=workspaceSize, storage_class=storageClass,
-                                   load_balancer_service=load_balancer_service, namespace=namespace, workspace_image=workspaceImage,  request_cpu=requestCpu, mount_pvc=mount_pvc,
+                                   load_balancer_service=load_balancer_service, namespace=namespace, workspace_image=workspaceImage, request_cpu=requestCpu, mount_pvc=mount_pvc,
                                    request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu, register_with_astra=register_with_astra, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
