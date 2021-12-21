@@ -119,6 +119,7 @@ Optional Options/Arguments:
 \t-n, --namespace=\tKubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
 \t-p, --cpu=\t\tNumber of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
 \t-b, --load-balancer\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
+\t-a, --register-with-astra\tRegister new workspace with Astra Control (requires Astra Control).
 \t-v, --mount-pvc\t\tOption to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: -v/--mount-pvc=existing_pvc_name:mount_point. If not specified, no additional PVC will be attached.
 
 Examples:
@@ -592,7 +593,7 @@ if __name__ == '__main__':
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hw:s:n:c:i:g:m:p:bv:",
+                opts, args = getopt.getopt(sys.argv[3:], "hw:s:n:c:i:g:m:p:abv:",
                                            ["help", "workspace-name=", "size=", "namespace=", "storage-class=",
                                             "image=", "nvidia-gpu=", "memory=", "cpu=", "load-balancer", "mount-pvc="])
             except:
@@ -632,7 +633,7 @@ if __name__ == '__main__':
             try:
                 create_jupyter_lab(workspace_name=workspaceName, workspace_size=workspaceSize, storage_class=storageClass,
                                    load_balancer_service=load_balancer_service, namespace=namespace, workspace_image=workspaceImage,  request_cpu=requestCpu, mount_pvc=mount_pvc,
-                                   request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu, print_output=True)
+                                   request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu, register_with_astra=register_with_astra, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
