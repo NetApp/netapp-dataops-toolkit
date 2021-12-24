@@ -4,7 +4,7 @@ This module provides the public functions available to be imported directly
 by applications using the import method of utilizing the toolkit.
 """
 
-__version__ = "2.1.1"
+__version__ = "2.2.0beta1"
 
 import base64
 from datetime import datetime
@@ -807,7 +807,6 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
                 mount_path=user_pvc_mountpoint
                 )
             )
-
 
     # Apply resource requests
     if request_cpu:
