@@ -99,7 +99,6 @@ Optional Options/Arguments:
 \t-n, --namespace=\t\tKubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
 \t-p, --cpu=\t\t\tNumber of CPUs to reserve for new JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
 \t-s, --source-snapshot-name=\tName of Kubernetes VolumeSnapshot to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
-\t-b, --source-snapshot-name=\tName of Kubernetes VolumeSnapshot to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
 \t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
 
 Examples:
