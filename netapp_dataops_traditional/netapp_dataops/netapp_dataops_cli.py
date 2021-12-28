@@ -156,7 +156,7 @@ Required Options/Arguments:
 
 Optional Options/Arguments:
 \t-v, --svm=\t\tnon default svm name 
-\t-a, --aggregate=\tAggregate to use when creating new volume (flexvol volumes only).
+\t-a, --aggregate=\tAggregate to use when creating new volume (flexvol) or optional comma seperated aggrlist when specific aggregates are required for FG.
 \t-d, --snapshot-policy=\tSnapshot policy to apply for new volume.
 \t-e, --export-policy=\tNFS export policy to use when exporting new volume.
 \t-g, --gid=\t\tUnix filesystem group id (gid) to apply when creating new volume (ex. '0' for root group).
@@ -168,6 +168,7 @@ Optional Options/Arguments:
 \t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
 \t-x, --readonly\t\tRead-only option for mounting volumes locally.
 \t-j, --junction\t\tSpecify a custom junction path for the volume to be exported at.
+\t-f, --tiering-policy\t\tSpecify tiering policy for fabric-pool enabled systems (default is 'none').
 
 
 Examples (basic usage):
@@ -181,7 +182,7 @@ Examples (advanced usage):
 \tnetapp_dataops_cli.py create volume --name=testvol --size=10GB --type=flexvol --aggregate=n2_data
 \tnetapp_dataops_cli.py create volume -n testvol -s 10GB -t flexvol -p 0755 -u 1000 -g 1000 -j /project1
 \tsudo -E netapp_dataops_cli.py create volume -n vol1 -s 5GB -t flexvol --export-policy=team1 -m /mnt/vol1
-\tnetapp_dataops_cli.py create vol -n test2 -s 10GB -t flexvol --snapshot-policy=default
+\tnetapp_dataops_cli.py create vol -n test2 -s 10GB -t flexvol --snapshot-policy=default --tiering-policy=auto
 '''
 helpTextDeleteSnapshot = '''
 Command: delete snapshot
@@ -815,11 +816,12 @@ if __name__ == '__main__':
             aggregate = None
             junction = None
             readonly = False
+            tieringPolicy = None 
 
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hv:n:s:rt:p:u:g:e:d:m:a:j:x", ["help", "svm=", "name=", "size=", "guarantee-space", "type=", "permissions=", "uid=", "gid=", "export-policy=", "snapshot-policy=", "mountpoint=", "aggregate=", "junction=" ,"readonly"])
+                opts, args = getopt.getopt(sys.argv[3:], "hv:t:n:s:rt:p:u:g:e:d:m:a:j:x", ["help", "svm=", "name=", "size=", "guarantee-space", "type=", "permissions=", "uid=", "gid=", "export-policy=", "snapshot-policy=", "mountpoint=", "aggregate=", "junction=" ,"readonly","tiering-policy="])
             except:
                 handleInvalidCommand(helpText=helpTextCreateVolume, invalidOptArg=True)
 
@@ -856,6 +858,8 @@ if __name__ == '__main__':
                     junction = arg
                 elif opt in ("-x", "--readonly"):
                     readonly = True
+                elif opt in ("-f", "--tiering-policy"):
+                    tieringPolicy = arg
 
             # Check for required options
             if not volumeName or not volumeSize:
@@ -867,7 +871,7 @@ if __name__ == '__main__':
             # Create volume
             try:
                 create_volume(svm_name=svmName, volume_name=volumeName, volume_size=volumeSize, guarantee_space=guaranteeSpace, volume_type=volumeType, unix_permissions=unixPermissions, unix_uid=unixUID,
-                              unix_gid=unixGID, export_policy=exportPolicy, snapshot_policy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, junction=junction, readonly=readonly, print_output=True)
+                              unix_gid=unixGID, export_policy=exportPolicy, snapshot_policy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, junction=junction, readonly=readonly, print_output=True, tiering_policy=tieringPolicy)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
 

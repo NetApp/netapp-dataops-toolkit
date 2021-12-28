@@ -635,7 +635,7 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
                   volume_type: str = "flexvol", unix_permissions: str = "0777",
                   unix_uid: str = "0", unix_gid: str = "0", export_policy: str = "default",
                   snapshot_policy: str = "none", aggregate: str = None, mountpoint: str = None, junction: str = None, readonly: bool = False,
-                  print_output: bool = False):
+                  print_output: bool = False, tiering_policy=None):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -672,7 +672,7 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
                 export_policy = config["defaultExportPolicy"]
             if not snapshot_policy :
                 snapshot_policy = config["defaultSnapshotPolicy"]
-            if not aggregate :
+            if not aggregate and volume_type == 'flexvol' :
                 aggregate = config["defaultAggregate"]
         except:
             if print_output :
@@ -729,6 +729,12 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
             junction = "/"+volume_name
 
 
+        #check tiering policy        
+        if not tiering_policy in ['none','auto','snapshot-only','all', None]:
+            if print_output:
+                print("Error: tiering policy can be: none,auto,snapshot-only or all")
+            raise InvalidVolumeParameterError("tieringPolicy")        
+
         # Create dict representing volume
         volumeDict = {
             "name": volume_name,
@@ -744,7 +750,7 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
                 "uid": unix_uid,
                 "gid": unix_gid
             },
-            "snapshot_policy": {"name": snapshot_policy}
+            "snapshot_policy": {"name": snapshot_policy},          
         }
 
         # Set space guarantee field
@@ -756,6 +762,14 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
         # If flexvol -> set aggregate field
         if volume_type == "flexvol":
             volumeDict["aggregates"] = [{'name': aggregate}]
+        else:
+            if aggregate:
+                volumeDict["aggregates"] = []
+                for aggr in aggregate.split(','):
+                    volumeDict["aggregates"].append({'name': aggr}) 
+        #if tiering policy provided 
+        if tiering_policy:
+            volumeDict['tiering'] = {'policy': tiering_policy}
 
         # Create volume
         if print_output:
