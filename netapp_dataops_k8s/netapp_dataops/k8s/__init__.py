@@ -4,7 +4,7 @@ This module provides the public functions available to be imported directly
 by applications using the import method of utilizing the toolkit.
 """
 
-__version__ = "2.1.1"
+__version__ = "2.2.0beta1"
 
 import base64
 from datetime import datetime
@@ -609,7 +609,8 @@ def clone_volume(new_pvc_name: str, source_pvc_name: str, source_snapshot_name: 
         print("Volume successfully cloned.")
 
 
-def create_jupyter_lab(workspace_name: str, workspace_size: str, storage_class: str = None, load_balancer_service: bool = False, namespace: str = "default",
+def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str = None, storage_class: str = None,
+                       load_balancer_service: bool = False, namespace: str = "default",
                        workspace_password: str = None, workspace_image: str = "jupyter/tensorflow-notebook",
                        request_cpu: str = None, request_memory: str = None, request_nvidia_gpu: str = None, register_with_astra: bool = False,
                        print_output: bool = False, pvc_already_exists: bool = False, labels: dict = None) -> str:
@@ -778,6 +779,34 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, storage_class: 
             )
         )
     )
+
+    # Mount Additional pvc if needed
+    if mount_pvc:
+
+        divider_index = mount_pvc.find(":")
+        user_pvc_name = mount_pvc[:divider_index]
+        user_pvc_mountpoint = mount_pvc[divider_index+1:]
+
+        if print_output:
+            print("\nAttaching Additional PVC: '" + user_pvc_name + "' at mount_path: '" + user_pvc_mountpoint + "'.")
+            
+        # Add user-specified PVC
+        deployment.spec.template.spec.volumes.append(
+            client.V1Volume(
+                name="uservol",
+                persistent_volume_claim={
+                    "claimName": user_pvc_name
+                    }
+                )
+            )
+
+        # Add mountpoint for user-specified PVC
+        deployment.spec.template.spec.containers[0].volume_mounts.append(
+            client.V1VolumeMount(
+                name="uservol",
+                mount_path=user_pvc_mountpoint
+                )
+            )
 
     # Apply resource requests
     if request_cpu:
