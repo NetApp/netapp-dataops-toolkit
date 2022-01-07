@@ -927,7 +927,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops_cli.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -970,7 +970,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops_cli.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1000,7 +1000,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops_cli.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1048,7 +1048,7 @@ The function returns a list of all existing volumes. Each item in the list will 
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops_cli.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1078,7 +1078,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops_cli.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1108,7 +1108,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops_cli.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1140,7 +1140,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops_cli.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1170,7 +1170,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops_cli.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1200,7 +1200,7 @@ The function returns a list of all existing snapshots for the specific data volu
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops_cli.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1232,7 +1232,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops_cli.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1265,7 +1265,7 @@ The function returns a list of all existing Cloud Sync relationships. Each item 
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops_cli.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1305,7 +1305,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops_cli.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1340,7 +1340,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops_cli.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1372,7 +1372,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops_cli.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1407,7 +1407,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops_cli.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1440,7 +1440,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops_cli.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1473,7 +1473,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops_cli.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1503,7 +1503,7 @@ The function returns a list of all existing SnapMirror relationships for which t
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops_cli.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
 
 ```py
 InvalidConfigError              # Config file is missing or contains an invalid value.
@@ -1536,7 +1536,7 @@ None
 
 ##### Error Handling
 
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops_cli.py`.
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
 
 ```py
 InvalidConfigError                  # Config file is missing or contains an invalid value.
