@@ -6,6 +6,7 @@ by applications using the import method of utilizing the toolkit.
 
 __version__ = "2.1.1"
 
+import base64
 from datetime import datetime
 import functools
 from getpass import getpass
@@ -15,6 +16,10 @@ import os
 
 import IPython
 from kubernetes import client, config
+from kubernetes.client import (
+    V1ConfigMap,
+    V1Secret,
+)
 from kubernetes.client.models.v1_object_meta import V1ObjectMeta
 from kubernetes.client.rest import ApiException
 from tabulate import tabulate
@@ -100,11 +105,38 @@ def _get_jupyter_lab_workspace_pvc_name(workspaceName: str) -> str:
     return _get_jupyter_lab_prefix() + workspaceName
 
 
+def _get_labels(operation: str) -> dict:
+    """Get the labels to apply to a K8s object for the given operation.
+
+    :param operation: The name of the operation used to create the object.
+    :return: A dictionary containing the default labels.
+    """
+    return {
+        "created-by": "ntap-dsutil",
+        "created-by-operation": operation
+    }
+
+
 def _load_kube_config():
     try:
         config.load_incluster_config()
     except:
         config.load_kube_config()
+
+
+def _load_kube_config2(print_output: bool = False):
+    try:
+        config.load_incluster_config()
+        configured = True
+    except:
+        configured = False
+    if not configured:
+        try:
+            config.load_kube_config()
+        except:
+            if print_output:
+                _print_invalid_config_error()
+            raise InvalidConfigError()
 
 
 def _get_astra_k8s_cluster_name() -> str :
@@ -360,6 +392,58 @@ def _retrieve_astra_app_id_for_jupyter_lab(astra_apps: dict, workspace_name: str
     
     return ""
 
+
+#
+# Public classes
+#
+class CAConfigMap:
+    """Manage a Config Map for a CA certificate.
+
+    The config map containing the CA certificate may be used by the S3DataMover or potentially
+    other objects in the Kubernetes cluster.
+    """
+
+    def __init__(self, name: str, certificate_file: str, namespace: str = 'default', print_output: bool = False):
+        """Initialize the CAConfigMap object.
+
+        :param name: The name of the config map.
+        :param certificate_file: The path to the CA certificate file to use.
+        :param namespace: The Kubernetes namespace to use for the config map.
+        :param print_output: If True enable information to be printed to the console. Default value is False.
+        """
+        if name is None:
+            raise ValueError("Invalid value of None for parameter name.")
+        else:
+            self.name = name
+
+        if certificate_file is None:
+            raise ValueError("Invalid value of None for parameter certificate_file.")
+        else:
+            self.certificate_file = certificate_file
+
+        if namespace is None:
+            self.namespace = 'default'
+        else:
+            self.namespace = namespace
+
+        self.print_output = print_output
+
+    def create(self):
+        """Create the config map for this CA certificate file.
+
+        The created config map object uses the key 'ca_cert' which will then hold the
+        contents of the CA certificate as the value.
+        """
+        labels = _get_labels(operation="caconfigmap-create")
+        with open(self.certificate_file, 'r') as data_file:
+            content = data_file.read()
+        map_data = {'ca_cert': content}
+        return create_k8s_config_map(name=self.name, namespace=self.namespace,
+                                     data=map_data, labels=labels, print_output=self.print_output)
+
+    def delete(self):
+        """Delete the config map from Kubernetes"""
+        delete_k8s_config_map(name=self.name, namespace=self.namespace, print_output=self.print_output)
 
 #
 # Public functions used for imports
@@ -756,6 +840,73 @@ def create_jupyter_lab_snapshot(workspace_name: str, snapshot_name: str = None, 
                            volume_snapshot_class=volume_snapshot_class, namespace=namespace, print_output=print_output)
 
 
+def create_k8s_config_map(name: str, data: dict, namespace: str = 'default', labels: dict = None,
+                          print_output: bool = False):
+    """Create a K8s config map with the provided data.
+
+    :param name: The name of the config map object.
+    :param data: The data to be held by the config map.
+    :param namespace: The namespace the config map will be associated with.
+    :param labels: Labels for the config map.
+    :param print_output: If True enable information to be printed to the console. Default value is False.
+    :return The V1ConfigMap object representing the created config map.
+    """
+    if labels is None:
+        labels = _get_labels(operation="create_k8s_config_map")
+
+    body = V1ConfigMap(
+        metadata=V1ObjectMeta(name=name, namespace=namespace, labels=labels),
+        data=data
+    )
+
+    _load_kube_config2(print_output=print_output)
+
+    try:
+        api = client.CoreV1Api()
+        config_map = api.create_namespaced_config_map(namespace=namespace, body=body)
+    except ApiException as error:
+        raise APIConnectionError(error)
+    return config_map
+
+
+def create_k8s_opaque_secret(name: str, data: dict, namespace: str = 'default', labels: dict = None,
+                             print_output: bool = False) -> V1Secret:
+    """Create a K8s secret with the provided data.
+
+    :param name: The name of the secret to be created.
+    :param data: A dictionary of key-value pairs to be set as the data in the secret.
+    :param namespace: The namespace for which the secret should be associated.
+    :param labels: A dictionary of labels to apply to the metadata for the secret.
+    :param print_output: If True enable information to be printed to the console. Default value is False.
+    :return: The V1Secret object representing the created secret.
+    """
+    secret_data = {}
+    for key, value in data.items():
+        # This will error if a value is None
+        # Should we error or skip the key?
+        value_bytes = value.encode("ascii")
+        encoded_value = base64.b64encode(value_bytes).decode("ascii")
+        secret_data[key] = encoded_value
+
+    if labels is None:
+        labels = _get_labels(operation="generic")
+
+    secret_body = V1Secret(
+        api_version='v1',
+        kind='Secret',
+        metadata=V1ObjectMeta(name=name, labels=labels),
+        data=secret_data
+    )
+
+    _load_kube_config2(print_output=print_output)
+
+    try:
+        api = client.CoreV1Api()
+        secret = api.create_namespaced_secret(namespace=namespace, body=secret_body)
+    except ApiException as error:
+        raise APIConnectionError(error)
+    return secret
+
 def create_volume(pvc_name: str, volume_size: str, storage_class: str = None, namespace: str = "default",
                   print_output: bool = False,
                   pvc_labels: dict = {"created-by": "ntap-dsutil", "created-by-operation": "create-volume"},
@@ -939,6 +1090,38 @@ def delete_jupyter_lab(workspace_name: str, namespace: str = "default", preserve
 
     if print_output:
         print("Workspace successfully deleted.")
+
+
+def delete_k8s_config_map(name: str, namespace: str, print_output: bool = False):
+    """Delete a Kubernetes config map with the provided name from the provided namespace.
+
+    :param name: The name of the config map to delete.
+    :param namespace: The namespace the config map is in.
+    :param print_output: If True enable information to be printed to the console. Default value is False.
+    """
+    _load_kube_config2(print_output=print_output)
+
+    try:
+        api = client.CoreV1Api()
+        api.delete_namespaced_config_map(name=name, namespace=namespace)
+    except ApiException as error:
+        raise APIConnectionError(error)
+
+
+def delete_k8s_secret(name: str, namespace: str, print_output: bool = False):
+    """Delete a Kubernetes secret with the provided name from the provided namespace.
+
+    :param name: The name of the secret to be deleted.
+    :param namespace: The namespace to which the secret is associated with.
+    :param print_output: If True enable information to be printed to the console. Default value is False.
+    """
+    _load_kube_config2(print_output=print_output)
+
+    try:
+        api = client.CoreV1Api()
+        api.delete_namespaced_secret(name=name, namespace=namespace)
+    except ApiException as error:
+        raise APIConnectionError(error)
 
 
 def delete_volume(pvc_name: str, namespace: str = "default", preserve_snapshots: bool = False, print_output: bool = False):
