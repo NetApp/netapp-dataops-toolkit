@@ -182,7 +182,7 @@ The following options/arguments are optional:
     -p, --cpu=                  Number of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
     -b, --load-balancer         Option to choose a LoadBalancer service instead of using NodePort service. If not specified, NodePort service will be utilized.
     -a, --register-with-astra   Register new workspace with Astra Control (requires Astra Control).
-    -v, --mount-pvc         Option to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: -v/--mount-pvc=existing_pvc_name:mount_point. If not specified, no additional PVC will be attached.
+    -v, --mount-pvc         	Option to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: -v/--mount-pvc=existing_pvc_name:mount_point. If not specified, no additional PVC will be attached.
 ```
 
 ##### Example Usage
