@@ -102,7 +102,7 @@ Optional Options/Arguments:
 \t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
 
 Examples:
-\tnetapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment1 --source-workspace-name=project1 --nvidia-gpu=1 
+\tnetapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment1 --source-workspace-name=project1 --nvidia-gpu=1
 \tnetapp_dataops_k8s_cli.py clone jupyterlab -w project2-mike -s project2-snap1 -n team1 -g 1 -p 0.5 -m 1Gi -b
 '''
 helpTextCloneToNewNsJupyterLab = '''
@@ -169,6 +169,29 @@ Optional Options/Arguments:
 Examples:
 \tnetapp_dataops_k8s_cli.py create jupyterlab --workspace-name=mike --size=10Gi --nvidia-gpu=2
 \tnetapp_dataops_k8s_cli.py create jupyterlab -n dst-test -w dave -i jupyter/scipy-notebook:latest -s 2Ti -c ontap-flexgroup -g 1 -p 0.5 -m 1Gi -b
+'''
+
+helpTextDeployTritonServer = '''
+Command: deploy triton inference server
+
+Deploy a Triton Inference Server.
+
+Required Options/Arguments:
+\t-s, --server-name=\t\tName of a new Triton Server.
+\t-v, --model-repo-pvc-name=\t\tName of the PVC containing the model repository.
+
+Optional Options/Arguments:
+\t-g, --nvidia-gpu=\t\tNumber of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
+\t-h, --help\t\t\tPrint help text.
+\t-i, --image=\t\t\tContainer image to use when creating instance. If not specified, "nvcr.io/nvidia/tritonserver:21.11-py3" will be used.
+\t-m, --memory=\t\t\tAmount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
+\t-n, --namespace=\t\tKubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
+\t-p, --cpu=\t\t\tNumber of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+\t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py create triton-server --server-name=Test --model-repo-pvc-name=model-pvc
+\tnetapp_dataops_k8s_cli.py reate triton-server -s Test -v model-pvc -g 1 -p 0.5 -m 1Gi -b
 '''
 helpTextCreateJupyterLabSnapshot = '''
 Command: create jupyterlab-snapshot
@@ -784,6 +807,60 @@ if __name__ == '__main__':
                 create_jupyter_lab(workspace_name=workspaceName, workspace_size=workspaceSize, storage_class=storageClass,
                                    load_balancer_service=load_balancer_service, namespace=namespace, workspace_image=workspaceImage, request_cpu=requestCpu,
                                    request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu, register_with_astra=register_with_astra, print_output=True)
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
+
+        elif target in ("triton-server", "triton"):
+            server_name = None
+            model_pvc_name = None
+            namespace = "default"
+            server_image = "nvcr.io/nvidia/tritonserver:21.11-py3"
+            requestNvidiaGpu = None
+            requestMemory = None
+            requestCpu = None
+            load_balancer_service = False
+
+            # Get command line options
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hs:v:n:i:g:m:p:b",
+                                           ["help", "server-name=", "model-repo-pvc-name", "namespace=", "image=", "nvidia-gpu=", "memory=", "cpu=", "load-balancer"])
+            except:
+                handleInvalidCommand(helpText=helpTextCreateJupyterLab, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextCreateJupyterLab)
+                    sys.exit(0)
+                elif opt in ("-s", "--server-name"):
+                    server_name = arg
+                elif opt in ("-v", "--model-repo-pvc-name"):
+                    model_pvc_name = arg
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+                elif opt in ("-i", "--image"):
+                    server_image = arg
+                elif opt in ("-g", "--nvidia-gpu"):
+                    requestNvidiaGpu = arg
+                elif opt in ("-m", "--memory"):
+                    requestMemory = arg
+                elif opt in ("-p", "--cpu"):
+                    requestCpu = arg
+                elif opt in ("-b", "--load-balancer"):
+                    load_balancer_service = True
+
+
+            # Check for required options
+            if not server_name or not model_pvc_name:
+                handleInvalidCommand(helpText=helpTextCreateT, invalidOptArg=True)
+
+            # Create JupyterLab workspace
+            try:
+                create_triton_server(server_name=server_name,  model_pvc_name= model_pvc_name,
+                                   load_balancer_service=load_balancer_service, namespace=namespace, server_image=server_image, request_cpu=requestCpu,
+                                   request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu,
+                                   print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
