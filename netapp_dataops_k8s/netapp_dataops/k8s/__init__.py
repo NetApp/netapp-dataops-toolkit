@@ -229,17 +229,45 @@ def _retrieve_triton_dev_url(server_name: str, namespace: str = "default", print
 
         # Check if service type is LoadBalancer
         if serviceStatus.spec.type == "LoadBalancer":
-            # Construct and return url
             try :
+                # retrieve IP
                 loadBalancerIP = serviceStatus.status.load_balancer.ingress[0].ip
+
+                # retrieve ports
+                # set default port values
+                http_port = "8000"
+                grpc_port = "8001"
+                metrics_port = "8002"
+
+                # handle non-default port values
+                # note: the user currently has no way to set non-default port values, but we will likely want to add this in the future, so we should handle it.
+                for port in serviceStatus.spec.ports :
+                    if port["target_port"] == "http" :
+                        http_port = str(port["port"])
+                    if port["target_port"] == "grpc" :
+                        grpc_port = str(port["port"])
+                    if port["target_port"] == "metrics" :
+                        metrics_port = str(port["port"])
             except :
                 if printOutput :
                     print("Error: Kubernetes Service for workspace is not available.")
                 raise ServiceUnavailableError()
-            return "http://" + loadBalancerIP
+
+            # Construct and return urls
+            http_url = loadBalancerIP + ":" + http_port
+            grpc_url = loadBalancerIP + ":" + grpc_port
+            metrics_url = loadBalancerIP + ":" + metrics_port
+
+            return [http_url, grpc_url, metrics_url]
         else:
             # Retrieve access port
-            port = serviceStatus.spec.ports[0].node_port
+            for port in serviceStatus.spec.ports :
+                if port["target_port"] == "http" :
+                    http_port = str(port["port"])
+                if port["target_port"] == "grpc" :
+                    grpc_port = str(port["port"])
+                if port["target_port"] == "metrics" :
+                    metrics_port = str(port["port"])
 
             # Retrieve node IP (random node)
             try:
@@ -249,12 +277,19 @@ def _retrieve_triton_dev_url(server_name: str, namespace: str = "default", print
             except:
                 ip = "<IP address of Kubernetes node>"
                 pass
-            # Construct and return url
-            return "http://" + ip + ":" + str(port)
+
+            # Construct and return urls
+            http_url = ip + ":" + http_port
+            grpc_url = ip + ":" + grpc_port
+            metrics_url = ip + ":" + metrics_port
+
+            return [http_url, grpc_url, metrics_url]
+
     except ApiException as err:
         if printOutput:
             print("Error: Kubernetes API Error: ", err)
         raise APIConnectionError(err)
+
 
 def _retrieve_jupyter_lab_workspace_for_pvc(pvcName: str, namespace: str = "default", printOutput: bool = False) -> str:
     # Retrieve kubeconfig
@@ -1009,24 +1044,20 @@ def create_triton_server(server_name: str, model_pvc_name: str, storage_class: s
                                     mount_path="/models"
                                 )
                             ],
-                            liveness_probe=[
-                                http_get=[
-                                    client.V1HTTPGetAction(
-                                        path="/v2/health/live",
-                                        port=http
-                                    )
-                                ]
-                            ],
-                            readiness_probe=[
-                                initial_delay_seconds=5,
-                                period_seconds=5,
-                                http_get=[
-                                    client.V1HTTPGetAction(
-                                        path="/v2/health/ready",
-                                        port=http
-                                    )
-                                ]
-                            ],
+                            liveness_probe ={
+                                http_get = {
+                                    path = "/v2/health/live",
+                                    port = http
+                                }
+                            },
+                            readiness_probe ={
+                                initial_delay_seconds = 5,
+                                period_seconds = 5,
+                                http_get ={
+                                    path = "/v2/health/ready",
+                                    port = http
+                                }
+                            },
                             resources={
                                 "limits": dict(),
                                 "requests": dict()
