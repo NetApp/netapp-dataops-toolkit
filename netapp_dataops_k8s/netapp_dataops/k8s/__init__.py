@@ -1022,7 +1022,6 @@ def create_triton_server(server_name: str, model_pvc_name: str, storage_class: s
                         client.V1Container(
                             name="triton-server",
                             image=server_image,
-                            ],
                             args=["tritonserver", "--model-store=/models", "--model-control-mode=poll", "--repository-poll-secs=5"],
                             ports=[
                                 client.V1ContainerPort(
@@ -1045,29 +1044,32 @@ def create_triton_server(server_name: str, model_pvc_name: str, storage_class: s
                                 )
                             ],
                             liveness_probe ={
-                                http_get = {
+                                http_get =(
                                     path = "/v2/health/live",
-                                    port = http
-                                }
+                                    port = "http"
+                                )
                             },
                             readiness_probe ={
                                 initial_delay_seconds = 5,
                                 period_seconds = 5,
-                                http_get ={
+                                http_get = (
                                     path = "/v2/health/ready",
                                     port = http
-                                }
+                                )
                             },
                             resources={
                                 "limits": dict(),
                                 "requests": dict()
                             }
                         )
+
                     ]
+
                 )
+
             )
         )
-    )
+
 
     # Apply resource requests
     if request_cpu:
