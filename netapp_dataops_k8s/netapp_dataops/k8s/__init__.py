@@ -19,7 +19,7 @@ from kubernetes.client.models.v1_object_meta import V1ObjectMeta
 from kubernetes.client.rest import ApiException
 from tabulate import tabulate
 import pandas as pd
-import astraSDK
+
 
 
 # Using this decorator in lieu of using a dependency to manage deprecation
@@ -1044,18 +1044,18 @@ def create_triton_server(server_name: str, model_pvc_name: str, storage_class: s
                                 )
                             ],
                             liveness_probe ={
-                                http_get =(
-                                    path = "/v2/health/live",
-                                    port = "http"
-                                )
+                                "http_get" : {
+                                    "path" : "/v2/health/live",
+                                    "port" : http
+                                }
                             },
                             readiness_probe ={
-                                initial_delay_seconds = 5,
-                                period_seconds = 5,
-                                http_get = (
-                                    path = "/v2/health/ready",
-                                    port = http
-                                )
+                                "initial_delay_seconds" : 5,
+                                "period_seconds" : 5,
+                                "http_get" : {
+                                    "path" : "/v2/health/ready",
+                                    "port" : http
+                                }
                             },
                             resources={
                                 "limits": dict(),
@@ -1069,6 +1069,8 @@ def create_triton_server(server_name: str, model_pvc_name: str, storage_class: s
 
             )
         )
+
+    )
 
 
     # Apply resource requests
