@@ -957,17 +957,17 @@ def create_triton_server(server_name: str, model_pvc_name: str, storage_class: s
                     client.V1ServicePort(
                         name="http-inference-server",
                         port=8000,
-                        target_port=http,
+                        target_port="http",
                     ),
                     client.V1ServicePort(
                         name="grpc-inference-server",
                         port=8001,
-                        target_port=grpc,
+                        target_port="grpc",
                     ),
                     client.V1ServicePort(
                         name="metrics-inference-server",
                         port=8002,
-                        target_port=metrics,
+                        target_port="metrics",
                     )
                 ]
             )
@@ -1025,15 +1025,15 @@ def create_triton_server(server_name: str, model_pvc_name: str, storage_class: s
                             args=["tritonserver", "--model-store=/models", "--model-control-mode=poll", "--repository-poll-secs=5"],
                             ports=[
                                 client.V1ContainerPort(
-                                    name=http,
+                                    name="http",
                                     container_port=8000
                                     ),
                                 client.V1ContainerPort(
-                                    name=grpc,
+                                    name="grpc",
                                     container_port=8001
                                     ),
                                 client.V1ContainerPort(
-                                    name=metrics,
+                                    name="metrics",
                                     container_port=8002
                                     ),
                             ],
@@ -1046,7 +1046,7 @@ def create_triton_server(server_name: str, model_pvc_name: str, storage_class: s
                             liveness_probe ={
                                 "http_get" : {
                                     "path" : "/v2/health/live",
-                                    "port" : http
+                                    "port" : "http"
                                 }
                             },
                             readiness_probe ={
@@ -1054,7 +1054,7 @@ def create_triton_server(server_name: str, model_pvc_name: str, storage_class: s
                                 "period_seconds" : 5,
                                 "http_get" : {
                                     "path" : "/v2/health/ready",
-                                    "port" : http
+                                    "port" : "http"
                                 }
                             },
                             resources={

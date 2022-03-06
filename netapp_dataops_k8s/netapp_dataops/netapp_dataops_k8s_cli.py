@@ -8,6 +8,7 @@ from netapp_dataops.k8s import (
     create_volume,
     clone_jupyter_lab,
     clone_jupyter_lab_to_new_namespace,
+    create_triton_server,
     create_jupyter_lab,
     create_jupyter_lab_snapshot,
     delete_volume_snapshot,
@@ -178,7 +179,7 @@ Deploy a Triton Inference Server.
 
 Required Options/Arguments:
 \t-s, --server-name=\t\tName of a new Triton Server.
-\t-v, --model-repo-pvc-name=\t\tName of the PVC containing the model repository.
+\t-v, --model-repo-pvc-name=\tName of the PVC containing the model repository.
 
 Optional Options/Arguments:
 \t-g, --nvidia-gpu=\t\tNumber of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
@@ -191,7 +192,7 @@ Optional Options/Arguments:
 
 Examples:
 \tnetapp_dataops_k8s_cli.py create triton-server --server-name=Test --model-repo-pvc-name=model-pvc
-\tnetapp_dataops_k8s_cli.py reate triton-server -s Test -v model-pvc -g 1 -p 0.5 -m 1Gi -b
+\tnetapp_dataops_k8s_cli.py create triton-server -s Test -v model-pvc -g 1 -p 0.5 -m 1Gi -b
 '''
 helpTextCreateJupyterLabSnapshot = '''
 Command: create jupyterlab-snapshot
@@ -826,12 +827,12 @@ if __name__ == '__main__':
                 opts, args = getopt.getopt(sys.argv[3:], "hs:v:n:i:g:m:p:b",
                                            ["help", "server-name=", "model-repo-pvc-name", "namespace=", "image=", "nvidia-gpu=", "memory=", "cpu=", "load-balancer"])
             except:
-                handleInvalidCommand(helpText=helpTextCreateJupyterLab, invalidOptArg=True)
+                handleInvalidCommand(helpText=helpTextDeployTritonServer, invalidOptArg=True)
 
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextCreateJupyterLab)
+                    print(helpTextDeployTritonServer)
                     sys.exit(0)
                 elif opt in ("-s", "--server-name"):
                     server_name = arg
@@ -853,7 +854,7 @@ if __name__ == '__main__':
 
             # Check for required options
             if not server_name or not model_pvc_name:
-                handleInvalidCommand(helpText=helpTextCreateT, invalidOptArg=True)
+                handleInvalidCommand(helpText=helpTextDeployTritonServer, invalidOptArg=True)
 
             # Create JupyterLab workspace
             try:
