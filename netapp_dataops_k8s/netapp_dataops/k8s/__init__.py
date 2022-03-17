@@ -90,7 +90,6 @@ def _get_jupyter_lab_labels(workspaceName: str) -> dict:
     }
     return labels
   
-
 def _get_triton_dev_labels(server_name: str) -> dict:
     labels = {
         "app": _get_jupyter_lab_prefix() + server_name,
@@ -101,11 +100,9 @@ def _get_triton_dev_labels(server_name: str) -> dict:
     }
     return labels
   
-
 def _get_jupyter_lab_label_selector() -> str:
     labels = _get_jupyter_lab_labels(workspaceName="temp")
     return "created-by=" + labels["created-by"] + ",entity-type=" + labels["entity-type"]
-
 
 def _get_jupyter_lab_service(workspaceName: str) -> str:
     return _get_jupyter_lab_prefix() + workspaceName
@@ -114,7 +111,6 @@ def _get_jupyter_lab_service(workspaceName: str) -> str:
 def _get_triton_dev_service(server_name: str) -> str:
     return _get_triton_dev_prefix() + server_name
   
-
 def _get_jupyter_lab_workspace_pvc_name(workspaceName: str) -> str:
     return _get_jupyter_lab_prefix() + workspaceName
   
@@ -132,7 +128,6 @@ def _get_labels(operation: str) -> dict:
         "created-by": "ntap-dsutil",
         "created-by-operation": operation
     }
-
   
 def _load_kube_config():
     try:
