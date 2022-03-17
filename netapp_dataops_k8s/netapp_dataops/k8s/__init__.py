@@ -4,8 +4,9 @@ This module provides the public functions available to be imported directly
 by applications using the import method of utilizing the toolkit.
 """
 
-__version__ = "2.1.1"
+__version__ = "2.2.0"
 
+import base64
 from datetime import datetime
 import functools
 from getpass import getpass
@@ -15,6 +16,10 @@ import os
 
 import IPython
 from kubernetes import client, config
+from kubernetes.client import (
+    V1ConfigMap,
+    V1Secret,
+)
 from kubernetes.client.models.v1_object_meta import V1ObjectMeta
 from kubernetes.client.rest import ApiException
 from tabulate import tabulate
@@ -70,11 +75,11 @@ class ServiceUnavailableError(Exception):
 
 def _get_jupyter_lab_prefix() -> str:
     return "ntap-dsutil-jupyterlab-"
-  
+
 
 def _get_jupyter_lab_deployment(workspaceName: str) -> str:
     return _get_jupyter_lab_prefix() + workspaceName
-  
+
 
 def _get_jupyter_lab_labels(workspaceName: str) -> dict:
     labels = {
@@ -85,21 +90,21 @@ def _get_jupyter_lab_labels(workspaceName: str) -> dict:
         "jupyterlab-workspace-name": workspaceName
     }
     return labels
-  
-  
+
+
 def _get_jupyter_lab_label_selector() -> str:
     labels = _get_jupyter_lab_labels(workspaceName="temp")
     return "created-by=" + labels["created-by"] + ",entity-type=" + labels["entity-type"]
-  
+
 
 def _get_jupyter_lab_service(workspaceName: str) -> str:
     return _get_jupyter_lab_prefix() + workspaceName
-  
-  
+
+
 def _get_jupyter_lab_workspace_pvc_name(workspaceName: str) -> str:
     return _get_jupyter_lab_prefix() + workspaceName
 
-  
+
 def _get_labels(operation: str) -> dict:
     """Get the labels to apply to a K8s object for the given operation.
 
