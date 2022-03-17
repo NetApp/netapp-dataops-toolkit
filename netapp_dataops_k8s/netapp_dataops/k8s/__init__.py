@@ -89,6 +89,7 @@ def _get_jupyter_lab_labels(workspaceName: str) -> dict:
         "jupyterlab-workspace-name": workspaceName
     }
     return labels
+  
 
 def _get_triton_dev_labels(server_name: str) -> dict:
     labels = {
@@ -99,6 +100,7 @@ def _get_triton_dev_labels(server_name: str) -> dict:
         "triton-server-name": server_name
     }
     return labels
+  
 
 def _get_jupyter_lab_label_selector() -> str:
     labels = _get_jupyter_lab_labels(workspaceName="temp")
@@ -107,13 +109,16 @@ def _get_jupyter_lab_label_selector() -> str:
 
 def _get_jupyter_lab_service(workspaceName: str) -> str:
     return _get_jupyter_lab_prefix() + workspaceName
+  
 
 def _get_triton_dev_service(server_name: str) -> str:
     return _get_triton_dev_prefix() + server_name
+  
 
 def _get_jupyter_lab_workspace_pvc_name(workspaceName: str) -> str:
     return _get_jupyter_lab_prefix() + workspaceName
 
+  
 def _get_labels(operation: str) -> dict:
     """Get the labels to apply to a K8s object for the given operation.
 
