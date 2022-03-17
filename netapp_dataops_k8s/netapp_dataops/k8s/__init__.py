@@ -115,7 +115,6 @@ def _get_labels(operation: str) -> dict:
         "created-by": "ntap-dsutil",
         "created-by-operation": operation
     }
-
   
 def _load_kube_config():
     try:
