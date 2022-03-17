@@ -19,7 +19,7 @@ from kubernetes.client.models.v1_object_meta import V1ObjectMeta
 from kubernetes.client.rest import ApiException
 from tabulate import tabulate
 import pandas as pd
-
+import astraSDK
 
 
 # Using this decorator in lieu of using a dependency to manage deprecation
@@ -123,6 +123,16 @@ def _get_triton_dev_label_selector() -> str:
 def _get_jupyter_dev_service(server_name: str) -> str:
     return _get_triton_dev_prefix() + server_name
 
+def _get_labels(operation: str) -> dict:
+    """Get the labels to apply to a K8s object for the given operation.
+
+    :param operation: The name of the operation used to create the object.
+    :return: A dictionary containing the default labels.
+    """
+    return {
+        "created-by": "ntap-dsutil",
+        "created-by-operation": operation
+    }
 
 def _load_kube_config():
     try:
