@@ -115,36 +115,7 @@ def _get_labels(operation: str) -> dict:
         "created-by": "ntap-dsutil",
         "created-by-operation": operation
     }
-  
-  
-def _get_triton_dev_prefix() -> str:
-    return "ntap-dsutil-triton-"  
-  
 
-def _get_triton_deployment(server_name: str) -> str:
-    return _get_triton_dev_prefix() + server_name
-  
-  
-  
-def _get_triton_dev_labels(server_name: str) -> dict:
-    labels = {
-        "app": _get_jupyter_lab_prefix() + server_name,
-        "created-by": "ntap-dsutil",
-        "entity-type": "triton_server",
-        "created-by-operation": "create-triton-server",
-        "triton-server-name": server_name
-    }
-    return labels
-  
-
-def _get_triton_dev_service(server_name: str) -> str:
-    return _get_triton_dev_prefix() + server_name
-   
-  
-def _get_triton_dev_label_selector() -> str:
-    labels = _get_triton_dev_labels(servername="triton_temp")
-    return "created-by=" + labels["created-by"] + ",entity-type=" + labels["entity-type"]
-   
   
 def _load_kube_config():
     try:
@@ -230,7 +201,38 @@ def _retrieve_jupyter_lab_url(workspaceName: str, namespace: str = "default", pr
         if printOutput:
             print("Error: Kubernetes API Error: ", err)
         raise APIConnectionError(err)
+        
+  
+  
+def _get_triton_dev_prefix() -> str:
+    return "ntap-dsutil-triton-"  
+  
 
+def _get_triton_deployment(server_name: str) -> str:
+    return _get_triton_dev_prefix() + server_name
+  
+  
+  
+def _get_triton_dev_labels(server_name: str) -> dict:
+    labels = {
+        "app": _get_jupyter_lab_prefix() + server_name,
+        "created-by": "ntap-dsutil",
+        "entity-type": "triton_server",
+        "created-by-operation": "create-triton-server",
+        "triton-server-name": server_name
+    }
+    return labels
+  
+
+def _get_triton_dev_service(server_name: str) -> str:
+    return _get_triton_dev_prefix() + server_name
+   
+  
+def _get_triton_dev_label_selector() -> str:
+    labels = _get_triton_dev_labels(servername="triton_temp")
+    return "created-by=" + labels["created-by"] + ",entity-type=" + labels["entity-type"]
+   
+        
 def _retrieve_triton_dev_url(server_name: str, namespace: str = "default", printOutput: bool = False) -> str:
     # Retrieve kubeconfig
     try:
@@ -893,7 +895,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, storage_class: 
 
     # Step 4 - Retrieve access URL
     try:
-        url = _retrieve_jupyter_lab_ur(workspaceName=workspace_name, namespace=namespace, printOutput=print_output)
+        url = _retrieve_jupyter_lab_url(workspaceName=workspace_name, namespace=namespace, printOutput=print_output)
     except (APIConnectionError, ServiceUnavailableError) as err:
         if print_output:
             print("Aborting workspace creation...")
