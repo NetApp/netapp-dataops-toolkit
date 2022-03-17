@@ -124,10 +124,6 @@ def _get_jupyter_dev_service(server_name: str) -> str:
     return _get_triton_dev_prefix() + server_name
 
 
-def _get_triton_dev_pvc_name(server_name: str) -> str:
-    return _get_triton_dev_prefix() + server_name
-
-
 def _load_kube_config():
     try:
         config.load_incluster_config()
@@ -242,32 +238,32 @@ def _retrieve_triton_dev_url(server_name: str, namespace: str = "default", print
                 # handle non-default port values
                 # note: the user currently has no way to set non-default port values, but we will likely want to add this in the future, so we should handle it.
                 for port in serviceStatus.spec.ports :
-                    if port["target_port"] == "http" :
-                        http_port = str(port["port"])
-                    if port["target_port"] == "grpc" :
-                        grpc_port = str(port["port"])
-                    if port["target_port"] == "metrics" :
-                        metrics_port = str(port["port"])
+                    if port.target_port == "http" :
+                        http_port = port.port
+                    if port.target_port == "grpc" :
+                        grpc_port = port.port
+                    if port.target_port == "metrics" :
+                        metrics_port = port.port
             except :
                 if printOutput :
                     print("Error: Kubernetes Service for workspace is not available.")
                 raise ServiceUnavailableError()
 
             # Construct and return urls
-            http_url = loadBalancerIP + ":" + http_port
-            grpc_url = loadBalancerIP + ":" + grpc_port
-            metrics_url = loadBalancerIP + ":" + metrics_port
+            http_url = loadBalancerIP + ":" + str(http_port)
+            grpc_url = loadBalancerIP + ":" + str(grpc_port)
+            metrics_url = loadBalancerIP + ":" + str(metrics_port)
 
             return [http_url, grpc_url, metrics_url]
         else:
             # Retrieve access port
             for port in serviceStatus.spec.ports :
-                if port["target_port"] == "http" :
-                    http_port = str(port["port"])
-                if port["target_port"] == "grpc" :
-                    grpc_port = str(port["port"])
-                if port["target_port"] == "metrics" :
-                    metrics_port = str(port["port"])
+                if port.target_port == "http" :
+                    http_port = port.port
+                if port.target_port == "grpc" :
+                    grpc_port = port.port
+                if port.target_port == "metrics" :
+                    metrics_port = port.port
 
             # Retrieve node IP (random node)
             try:
@@ -279,9 +275,9 @@ def _retrieve_triton_dev_url(server_name: str, namespace: str = "default", print
                 pass
 
             # Construct and return urls
-            http_url = ip + ":" + http_port
-            grpc_url = ip + ":" + grpc_port
-            metrics_url = ip + ":" + metrics_port
+            http_url = ip + ":" + str(http_port)
+            grpc_url = ip + ":" + str(grpc_port)
+            metrics_url = ip + ":" + str(metrics_port)
 
             return [http_url, grpc_url, metrics_url]
 
@@ -893,7 +889,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, storage_class: 
 
     return url
 
-def create_triton_server(server_name: str, model_pvc_name: str, storage_class: str = None, load_balancer_service: bool = False, namespace: str = "default",
+def create_triton_server(server_name: str, model_pvc_name: str, load_balancer_service: bool = False, namespace: str = "default",
                        request_cpu: str = None, request_memory: str = None, server_image: str = "nvcr.io/nvidia/tritonserver:21.11-py3", request_nvidia_gpu: str = None,
                        print_output: bool = False, pvc_already_exists: bool = False, labels: dict = None) -> str:
     # Retrieve kubeconfig
@@ -927,17 +923,17 @@ def create_triton_server(server_name: str, model_pvc_name: str, storage_class: s
                     client.V1ServicePort(
                         name="http-inference-server",
                         port=8000,
-                        target_port=http,
+                        target_port="http",
                     ),
                     client.V1ServicePort(
                         name="grpc-inference-server",
                         port=8001,
-                        target_port=grpc,
+                        target_port="grpc",
                     ),
                     client.V1ServicePort(
                         name="metrics-inference-server",
                         port=8002,
-                        target_port=metrics,
+                        target_port="metrics",
                     )
                 ]
             )
@@ -1014,7 +1010,7 @@ def create_triton_server(server_name: str, model_pvc_name: str, storage_class: s
                         client.V1Volume(
                             name="model-repo",
                             persistent_volume_claim={
-                                "claimName": _get_triton_dev_pvc_name(server_name=server_name)
+                                "claimName": model_pvc_name
                             }
                         )
                     ],
@@ -1044,15 +1040,15 @@ def create_triton_server(server_name: str, model_pvc_name: str, storage_class: s
                                 )
                             ],
                             liveness_probe ={
-                                "http_get" : {
+                                "httpGet" : {
                                     "path" : "/v2/health/live",
                                     "port" : "http"
                                 }
                             },
                             readiness_probe ={
-                                "initial_delay_seconds" : 5,
-                                "period_seconds" : 5,
-                                "http_get" : {
+                                "initialDelaySeconds" : 5,
+                                "periodSeconds" : 5,
+                                "httpGet" : {
                                     "path" : "/v2/health/ready",
                                     "port" : "http"
                                 }
@@ -1113,8 +1109,10 @@ def create_triton_server(server_name: str, model_pvc_name: str, storage_class: s
 
     if print_output:
         print("\nWorkspace successfully created.")
-        print("To access workspace, navigate to " + url)
-
+        print("Server endpoints:")
+        print("http: " + url[0])
+        print("grpc: " + url[1])
+        print("metrics: " + url[2] + "/metrics")
     return url
 
 def create_jupyter_lab_snapshot(workspace_name: str, snapshot_name: str = None, volume_snapshot_class: str = "csi-snapclass",

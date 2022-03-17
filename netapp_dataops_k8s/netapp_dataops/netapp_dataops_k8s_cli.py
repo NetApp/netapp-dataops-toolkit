@@ -178,7 +178,7 @@ Command: deploy triton inference server
 Deploy a Triton Inference Server.
 
 Required Options/Arguments:
-\t-s, --server-name=\t\tName of a new Triton Server.
+\t-s, --server-name=\t\tName of a new Triton Inference Server.
 \t-v, --model-repo-pvc-name=\tName of the PVC containing the model repository.
 
 Optional Options/Arguments:
@@ -825,7 +825,7 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hs:v:n:i:g:m:p:b",
-                                           ["help", "server-name=", "model-repo-pvc-name", "namespace=", "image=", "nvidia-gpu=", "memory=", "cpu=", "load-balancer"])
+                                           ["help", "server-name=", "model-repo-pvc-name=", "namespace=", "image=", "nvidia-gpu=", "memory=", "cpu=", "load-balancer"])
             except:
                 handleInvalidCommand(helpText=helpTextDeployTritonServer, invalidOptArg=True)
 
@@ -834,10 +834,6 @@ if __name__ == '__main__':
                 if opt in ("-h", "--help"):
                     print(helpTextDeployTritonServer)
                     sys.exit(0)
-                elif opt in ("-s", "--server-name"):
-                    server_name = arg
-                elif opt in ("-v", "--model-repo-pvc-name"):
-                    model_pvc_name = arg
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
                 elif opt in ("-i", "--image"):
@@ -848,6 +844,10 @@ if __name__ == '__main__':
                     requestMemory = arg
                 elif opt in ("-p", "--cpu"):
                     requestCpu = arg
+                elif opt in ("-s", "--server-name"):
+                    server_name = arg
+                elif opt in ("-v", "--model-repo-pvc-name"):
+                    model_pvc_name = arg
                 elif opt in ("-b", "--load-balancer"):
                     load_balancer_service = True
 

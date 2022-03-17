@@ -329,7 +329,51 @@ Deployment successfully created.
 Workspace successfully created.
 To access workspace, navigate to http://10.61.188.110
 ```
+<a name="cli-create-triton-server"></a>
 
+#### Deploy a new triton server
+
+The NetApp DataOps Toolkit can enable a user to deploy an NVIDIA Triton Inference Server instance on-demand. The command for deploying an NVIDIA Triton Inference Server instance is `netapp_dataops_k8s_cli.py create triton-server`.
+
+The following options/arguments are required:
+
+```
+    -s, --server-name=          Name of a new Triton Inference Server.
+    -v, --model-repo-pvc-name=  Name of the PVC containing the model repository.
+```
+
+The following options/arguments are optional:
+
+```
+    -g, --nvidia-gpu=           Number of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
+    -h, --help                  Print help text.
+    -i, --image=                Container image to use when creating instance. If not specified, "nvcr.io/nvidia/tritonserver:21.11-py3" will be used.
+    -m, --memory=               Amount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
+    -n, --namespace=            Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
+    -p, --cpu=                  Number of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+    -b, --load-balancer         Option to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
+```
+
+##### Example Usage
+
+Deploy a new Nvidia Triton Infernece Server Instance and use LoadBalancer Service.
+
+```sh
+netapp_dataops_k8s_cli.py create triton-server --server-name=Test --model-repo-pvc-name=model-pvc --load-balancer
+Creating Service 'ntap-dsutil-triton-sufian-lb1' in namespace 'default'.
+Service successfully created.
+
+Creating Deployment 'ntap-dsutil-triton-sufian-lb1' in namespace 'default'.
+Deployment 'ntap-dsutil-triton-sufian-lb1' created.
+Waiting for Deployment 'ntap-dsutil-triton-sufian-lb1' to reach Ready state.
+Deployment successfully created.
+
+Workspace successfully created.
+Server endpoints:
+http: 10.61.188.118:8000
+grpc: 10.61.188.118:8001
+metrics: 10.61.188.118:8002/metrics
+```
 <a name="cli-delete-jupyterlab"></a>
 
 #### Delete an Existing JupyterLab Workspace
@@ -918,7 +962,7 @@ VolumeSnapshot successfully restored.
 The NetApp DataOps Toolkit for Kubernetes can also be utilized as a library of functions that can be imported into any Python program or Jupyter Notebook. In this manner, data scientists and data engineers can easily incorporate Kubernetes-native data management tasks into their existing projects, programs, and workflows. This functionality is only recommended for advanced users who are proficient in Python.
 
 ```py
-from netapp_dataops.k8s import clone_jupyter_lab, create_jupyter_lab, delete_jupyter_lab, list_jupyter_labs, create_jupyter_lab_snapshot, list_jupyter_lab_snapshots, restore_jupyter_lab_snapshot, register_jupyter_lab_with_astra, clone_volume, create_volume, delete_volume, list_volumes, create_volume_snapshot, delete_volume_snapshot, list_volume_snapshots, restore_volume_snapshot
+from netapp_dataops.k8s import clone_jupyter_lab, create_jupyter_lab, delete_jupyter_lab, create_triton_server, list_jupyter_labs, create_jupyter_lab_snapshot, list_jupyter_lab_snapshots, restore_jupyter_lab_snapshot, register_jupyter_lab_with_astra, clone_volume, create_volume, delete_volume, list_volumes, create_volume_snapshot, delete_volume_snapshot, list_volume_snapshots, restore_volume_snapshot
 ```
 
 Note: The prerequisite steps outlined in the [Getting Started](#getting-started) section still apply when the toolkit is being utilized as an importable library of functions.
@@ -949,6 +993,10 @@ When being utilized as an importable library of functions, the toolkit supports 
 | [Delete an existing snapshot.](#lib-delete-volume-snapshot)                          | No                  | Yes                  | No                     |
 | [List all snapshots.](#lib-list-volume-snapshots)                                    | No                  | Yes                  | No                     |
 | [Restore a snapshot.](#lib-restore-volume-snapshot)                                  | No                  | Yes                  | No                     |
+
+| Triton Inference Server operations                                                   | Supported by BeeGFS | Supported by Trident | Requires Astra Control |
+| ------------------------------------------------------------------------------------ | ------------------- | -------------------- | ---------------------- |
+| [Deploy a new Nvidia Triton Inference Server.](#lib-create-triton-server)            | No                  | Yes                  | No                     |
 
 ### JupyterLab Workspace Management Operations
 
@@ -1546,7 +1594,42 @@ If an error is encountered, the function will raise an exception of one of the f
 InvalidConfigError              # kubeconfig file is missing or is invalid.
 APIConnectionError              # The Kubernetes API returned an error.
 ```
+<a name="lib-create-triton-server"></a>
 
+#### Deploy a new Nvidia Triton Inference Server
+
+The NetApp DataOps Toolkit can be used to rapidly provision a new JupyterLab workspace within a Kubernetes cluster as part of any Python program or workflow. Workspaces provisioned using the NetApp DataOps Toolkit will be backed by NetApp persistent storage and, thus, will persist across any shutdowns or outages in the Kubernetes environment.
+
+
+##### Function Definition
+
+```py
+def create_jupyter_lab(
+    server_name: str,                                           # Name of the Triton Infernce Server Instance (required).
+    model_pvc_name: str                                         # Name of the PVC containing the model repository.
+    load_balancer_service: bool = False,                        # Option to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
+    namespace: str = "default",                                 # Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
+    server_image: str = "nvcr.io/nvidia/tritonserver:21.11-py3" # Container image to use when creating instance. If not specified, "nvcr.io/nvidia/tritonserver:21.11-py3" will be used.
+    request_cpu: str = None,                                    # Number of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+    request_memory: str = None,                                 # Amount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
+    request_nvidia_gpu: str = None,                             # Number of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
+    print_output: bool = False                                  # Denotes whether or not to print messages to the console during execution.
+) -> str :
+```
+
+##### Return Value
+
+This function will return server endpoints for the triton inference server.
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.k8s`.
+
+```py
+InvalidConfigError              # kubeconfig file is missing or is invalid.
+APIConnectionError              # The Kubernetes API returned an error.
+ServiceUnavailableError         # A Kubernetes service is not available.
+```
 ## Support
 
 Report any issues via GitHub: https://github.com/NetApp/netapp-data-science-toolkit/issues.
