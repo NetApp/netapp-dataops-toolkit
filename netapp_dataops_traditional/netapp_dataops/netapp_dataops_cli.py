@@ -97,6 +97,7 @@ Required Options/Arguments:
 \t-v, --source-volume=\tName of volume to be cloned.
 
 Optional Options/Arguments:
+\t-u, --cluster-name=\tnon default hosting cluster
 \t-c, --source-svm=\tnon default source svm name 
 \t-t, --target-svm=\tnon default target svm name 
 \t-g, --gid=\t\tUnix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
@@ -107,6 +108,9 @@ Optional Options/Arguments:
 \t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
 \t-x, --readonly\t\tRead-only option for mounting volumes locally.
 \t-j, --junction\t\tSpecify a custom junction path for the volume to be exported at.
+\t-e, --export-hosts\t\t colon(:) seperated hosts/cidrs to to use for export. hosts will be exported for rw and root access
+\t-e, --export-policy\t\t export policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
+\t-s, --split\t\t start clone split after creation
 
 Examples (basic usage):
 \tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset
@@ -116,7 +120,7 @@ Examples (basic usage):
 
 Examples (advanced usage):
 \tnetapp_dataops_cli.py clone volume -n testvol -v gold_dataset -u 1000 -g 1000 -x -j /project1
-\tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset --source-svm=svm1 --target-svm=svm2 --source-snapshot=daily*
+\tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset --source-svm=svm1 --target-svm=svm2 --source-snapshot=daily* --export-hosts 10.5.5.3:host1:10.6.4.0/24 --split
 '''
 helpTextConfig = '''
 Command: config
@@ -134,6 +138,7 @@ Required Options/Arguments:
 \t-v, --volume=\tName of volume.
 
 Optional Options/Arguments:
+\t-u, --cluster-name=\tnon default hosting cluster
 \t-s, --svm\tNon defaul svm name.
 \t-h, --help\tPrint help text.
 \t-n, --name=\tName of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
@@ -155,6 +160,7 @@ Required Options/Arguments:
 \t-s, --size=\t\tSize of new volume. Format: '1024MB', '100GB', '10TB', etc.
 
 Optional Options/Arguments:
+\t-u, --cluster-name=\tnon default hosting cluster
 \t-v, --svm=\t\tnon default svm name 
 \t-a, --aggregate=\tAggregate to use when creating new volume (flexvol) or optional comma seperated aggrlist when specific aggregates are required for FG.
 \t-d, --snapshot-policy=\tSnapshot policy to apply for new volume.
@@ -194,6 +200,7 @@ Required Options/Arguments:
 \t-v, --volume=\tName of volume.
 
 Optional Options/Arguments:
+\t-u, --cluster-name=\tnon default hosting cluster
 \t-s, --svm\tNon default svm
 \t-h, --help\tPrint help text.
 
@@ -210,6 +217,7 @@ Required Options/Arguments:
 \t-n, --name=\tName of volume to be deleted.
 
 Optional Options/Arguments:
+\t-u, --cluster-name=\tnon default hosting cluster
 \t-v, --svm \tnon default SVM name
 \t-f, --force\tDo not prompt user to confirm operation.
 \t-h, --help\tPrint help text.
@@ -247,7 +255,10 @@ Command: list snapmirror-relationships
 
 List all SnapMirror relationships.
 
-No additional options/arguments required.
+Optional Options/Arguments:
+\t-u, --cluster-name=\tnon default hosting cluster
+\t-s, --svm\tNon default svm.
+\t-h, --help\tPrint help text.
 '''
 helpTextListSnapshots = '''
 Command: list snapshots
@@ -258,6 +269,7 @@ Required Options/Arguments:
 \t-v, --volume=\tName of volume.
 
 Optional Options/Arguments:
+\t-u, --cluster-name=\tnon default hosting cluster
 \t-s, --svm\tNon default svm.
 \t-h, --help\tPrint help text.
 
@@ -273,6 +285,7 @@ List all data volumes.
 No options/arguments are required.
 
 Optional Options/Arguments:
+\t-u, --cluster-name=\tnon default hosting cluster
 \t-v, --svm\t\t\t\tlist volume on non default svm
 \t-h, --help\t\t\t\tPrint help text.
 \t-s, --include-space-usage-details\tInclude storage space usage details in output (see README for explanation).
@@ -413,6 +426,7 @@ Required Options/Arguments:
 \t-v, --volume=\tName of volume.
 
 Optional Options/Arguments:
+\t-u, --cluster-name=\tnon default hosting cluster
 \t-s, --svm\tNon default svm.
 \t-f, --force\tDo not prompt user to confirm operation.
 \t-h, --help\tPrint help text.
@@ -685,6 +699,7 @@ if __name__ == '__main__':
         # Invoke desired action based on target
         if target in ("volume", "vol"):
             newVolumeName = None
+            clusterName = None 
             sourceSVM = None 
             targetSVM = None 
             sourceVolumeName = None
@@ -694,10 +709,13 @@ if __name__ == '__main__':
             unixGID = None
             junction = None
             readonly = False
+            split = False
+            exportPolicy = None
+            exportHosts = None
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hc:t:n:v:s:m:u:g:j:x", ["help", "source-svm=","target-svm=","name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid=", "junction=", "readonly"])
+                opts, args = getopt.getopt(sys.argv[3:], "hu:c:t:n:v:s:m:u:g:j:xe:p:s", ["help", "cluster-name=", "source-svm=","target-svm=","name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid=", "junction=", "readonly","export-hosts=","export-policy=","split"])
             except:
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
 
@@ -706,6 +724,8 @@ if __name__ == '__main__':
                 if opt in ("-h", "--help"):
                     print(helpTextCloneVolume)
                     sys.exit(0)
+                elif opt in ("-u", "--cluster-name"):
+                    clusterName = arg                    
                 elif opt in ("-n", "--name"):
                     newVolumeName = arg
                 elif opt in ("-c", "--source-svm"):
@@ -726,6 +746,12 @@ if __name__ == '__main__':
                     junction = arg
                 elif opt in ("-x", "--readonly"):
                     readonly = True
+                elif opt in ("-s", "--split"):
+                    split = True 
+                elif opt in ("-p", "--export-policy"):
+                    exportPolicy = arg    
+                elif opt in ("-e", "--export-hosts"):
+                    exportHosts = arg                                                        
 
             # Check for required options
             if not newVolumeName or not sourceVolumeName:
@@ -733,11 +759,14 @@ if __name__ == '__main__':
             if (unixUID and not unixGID) or (unixGID and not unixUID):
                 print("Error: if either one of -u/--uid or -g/--gid is spefied, then both must be specified.")
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
+            if exportHosts and exportPolicy:
+                print("Error: cannot use both --export-policy and --export-hosts. only one of them can be specified.")
+                handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
 
             # Clone volume
             try:
-                clone_volume(new_volume_name=newVolumeName, source_volume_name=sourceVolumeName, source_snapshot_name=sourceSnapshotName,
-                             source_svm=sourceSVM, target_svm=targetSVM,
+                clone_volume(new_volume_name=newVolumeName, source_volume_name=sourceVolumeName, source_snapshot_name=sourceSnapshotName, cluster_name=clusterName,
+                             source_svm=sourceSVM, target_svm=targetSVM, export_policy=exportPolicy, export_hosts=exportHosts, split=split,
                              mountpoint=mountpoint, unix_uid=unixUID, unix_gid=unixGID, junction=junction, readonly=readonly, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError,
                     MountOperationError):
@@ -768,12 +797,13 @@ if __name__ == '__main__':
         if target in ("snapshot", "snap"):
             volumeName = None
             snapshotName = None
+            clusterName = None             
             svmName = None 
             retentionCount = 0
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:v:s:r:p:", ["help", "svm=", "name=", "volume=", "retention=", "prefix="])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:v:s:r:p:u:", ["cluster-name=","help", "svm=", "name=", "volume=", "retention=", "prefix="])
             except:
                 handleInvalidCommand(helpText=helpTextCreateSnapshot, invalidOptArg=True)
 
@@ -784,6 +814,8 @@ if __name__ == '__main__':
                     sys.exit(0)
                 elif opt in ("-n", "--name"):
                     snapshotName = arg
+                elif opt in ("-u", "--cluster-name"):
+                    clusterName = arg                     
                 elif opt in ("-s", "--svm"):
                     svmName = arg
                 elif opt in ("-r", "--retention"):
@@ -797,7 +829,7 @@ if __name__ == '__main__':
 
             # Create snapshot
             try:
-                create_snapshot(volume_name=volumeName, snapshot_name=snapshotName, retention_count=retentionCount, svm_name=svmName, print_output=True)
+                create_snapshot(volume_name=volumeName, snapshot_name=snapshotName, retention_count=retentionCount, cluster_name=clusterName, svm_name=svmName, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
                 sys.exit(1)
 
