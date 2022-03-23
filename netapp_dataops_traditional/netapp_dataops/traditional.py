@@ -427,7 +427,12 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
             if currentVolume and not refresh:
                 if print_output:
                     print("Error: clone:"+new_volume_name+" already exists.")
-                raise InvalidVolumeParameterError("name")                
+                raise InvalidVolumeParameterError("name") 
+            
+            #for refresh we want to keep the existing export policy
+            if currentVolume and refresh and not export_policy and not export_hosts:
+                export_policy = currentVolume.nas.export_policy.name
+
         except NetAppRestError as err:
             if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
@@ -446,7 +451,6 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
             print("Error: could not delete previous clone")
             raise InvalidVolumeParameterError("name")       
         
-
         # check export policies 
         try:
             if not export_policy and not export_hosts:
@@ -462,9 +466,6 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
                 currentExportPolicy = NetAppExportPolicy.find(name=export_policy, svm=targetsvm)
                 if currentExportPolicy:
                     currentExportPolicy.delete()
-                    # if print_output:
-                    #     print("Error: custom export policy:"+export_policy+" already exists.")
-                    # raise InvalidVolumeParameterError("name")
         except NetAppRestError as err:
             if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
@@ -549,7 +550,6 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
                     if snapshot.name.startswith(source_snapshot_prefix):
                         latest_source_snapshot = snapshot.name
                         latest_source_snapshot_uuid = snapshot.uuid
-
 
                 if not latest_source_snapshot:
                     if print_output:
@@ -1039,19 +1039,7 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
             if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
-        
-        # delete temporary export policy created for clone 
-        try:
-            if volume.nas.export_policy.name == "netapp_dataops_"+volume_name:
-                currentExportPolicy = NetAppExportPolicy.find(name="netapp_dataops_"+volume_name, svm=svm)
-                if currentExportPolicy:                 
-                    currentExportPolicy.delete()
-        except NetAppRestError as err:
-            if print_output:
-                print("Error: ONTAP Rest API Error: ", err)
-            raise APIConnectionError(err)
-
-
+                    
     else:
         raise ConnectionTypeError()
 
