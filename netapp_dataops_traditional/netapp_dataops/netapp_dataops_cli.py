@@ -111,6 +111,7 @@ Optional Options/Arguments:
 \t-e, --export-hosts\t\t colon(:) seperated hosts/cidrs to to use for export. hosts will be exported for rw and root access
 \t-e, --export-policy\t\t export policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
 \t-s, --split\t\t start clone split after creation
+\t-r, --refresh\t\t delete existing clone if exists before creating a new one 
 
 Examples (basic usage):
 \tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset
@@ -715,12 +716,13 @@ if __name__ == '__main__':
             junction = None
             readonly = False
             split = False
+            refresh = False
             exportPolicy = None
             exportHosts = None
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hu:c:t:n:v:s:m:u:g:j:xe:p:s", ["help", "cluster-name=", "source-svm=","target-svm=","name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid=", "junction=", "readonly","export-hosts=","export-policy=","split"])
+                opts, args = getopt.getopt(sys.argv[3:], "hu:c:t:n:v:s:m:u:g:j:xe:p:sr", ["help", "cluster-name=", "source-svm=","target-svm=","name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid=", "junction=", "readonly","export-hosts=","export-policy=","split","refresh"])
             except:
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
 
@@ -753,6 +755,8 @@ if __name__ == '__main__':
                     readonly = True
                 elif opt in ("-s", "--split"):
                     split = True 
+                elif opt in ("-r", "--refresh"):
+                    refresh = True                     
                 elif opt in ("-p", "--export-policy"):
                     exportPolicy = arg    
                 elif opt in ("-e", "--export-hosts"):
@@ -771,7 +775,7 @@ if __name__ == '__main__':
             # Clone volume
             try:
                 clone_volume(new_volume_name=newVolumeName, source_volume_name=sourceVolumeName, source_snapshot_name=sourceSnapshotName, cluster_name=clusterName,
-                             source_svm=sourceSVM, target_svm=targetSVM, export_policy=exportPolicy, export_hosts=exportHosts, split=split,
+                             source_svm=sourceSVM, target_svm=targetSVM, export_policy=exportPolicy, export_hosts=exportHosts, split=split, refresh=refresh,
                              mountpoint=mountpoint, unix_uid=unixUID, unix_gid=unixGID, junction=junction, readonly=readonly, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError,
                     MountOperationError):

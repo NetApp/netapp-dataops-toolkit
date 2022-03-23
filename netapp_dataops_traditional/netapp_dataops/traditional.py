@@ -359,9 +359,9 @@ def _convert_bytes_to_pretty_size(size_in_bytes: str, num_decimal_points: int = 
 
 
 def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: str = None, source_snapshot_name: str = None,
-                 source_svm: str = None, target_svm: str = None, export_hosts: str = None, export_policy: str = None, split: bool = False,
+                 source_svm: str = None, target_svm: str = None, export_hosts: str = None, export_policy: str = None, split: bool = False, 
                  unix_uid: str = None, unix_gid: str = None, mountpoint: str = None, junction: str= None, readonly: bool = False,
-                 print_output: bool = False):
+                 refresh: bool = False, print_output: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -385,8 +385,7 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
             raise
 
         # Retrieve values from config file if not passed into function
-        try:
-            
+        try:            
             sourcesvm = config["svm"]
             if source_svm: 
                 sourcesvm = source_svm 
@@ -422,6 +421,32 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
                 print("Error: Invalid unix gid specified. Value must be an integer. Example: '0' for root group.")
             raise InvalidVolumeParameterError("unixGID")
 
+        #check if clone volume already exists 
+        try:
+            currentVolume = NetAppVolume.find(name=new_volume_name, svm=targetsvm)        
+            if currentVolume and not refresh:
+                if print_output:
+                    print("Error: clone:"+new_volume_name+" already exists.")
+                raise InvalidVolumeParameterError("name")                
+        except NetAppRestError as err:
+            if print_output:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+        
+        #delete existing clone when refresh
+        try:
+            if currentVolume and refresh:
+                if "CLONENAME:" in currentVolume.comment:
+                    delete_volume(volume_name=new_volume_name, cluster_name=cluster_name, svm_name=target_svm, print_output=True)
+                else:
+                    if print_output:
+                        print("Error: refresh clone is only supported when existing clone created using the tool (based on volume comment)")
+                    raise InvalidVolumeParameterError("name")                
+        except:
+            print("Error: could not delete previous clone")
+            raise InvalidVolumeParameterError("name")       
+        
+
         # check export policies 
         try:
             if not export_policy and not export_hosts:
@@ -436,9 +461,10 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
                 export_policy = "netapp_dataops_"+new_volume_name
                 currentExportPolicy = NetAppExportPolicy.find(name=export_policy, svm=targetsvm)
                 if currentExportPolicy:
-                    if print_output:
-                        print("Error: custom export policy:"+export_policy+" already exists.")
-                    raise InvalidVolumeParameterError("name")
+                    currentExportPolicy.delete()
+                    # if print_output:
+                    #     print("Error: custom export policy:"+export_policy+" already exists.")
+                    # raise InvalidVolumeParameterError("name")
         except NetAppRestError as err:
             if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
@@ -463,10 +489,10 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
             else:
                 junction = "/"+new_volume_name
            
+
             # Construct dict representing new volume
             newVolumeDict = {
                 "name": new_volume_name,
-                "comment": "netapp-dataops",
                 "svm": {"name": targetsvm},
                 "nas": {
                     "path": junction
@@ -535,6 +561,13 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
                     "uuid": latest_source_snapshot_uuid
                 }
                 print("Snapshot '" + latest_source_snapshot+ "' will be used to create the clone.")   
+
+            # set clone volume commnet parameter 
+            comment = 'PARENTSVM:'+sourcesvm+',PARENTVOL:'+newVolumeDict["clone"]["parent_volume"]["name"]+',CLONESVM:'+targetsvm+',CLONENAME:'+newVolumeDict["name"]
+            if source_snapshot_name: comment += ' SNAP:'+newVolumeDict["clone"]["parent_snapshot"]["name"] 
+            comment += " netapp-dataops"
+            
+            newVolumeDict["comment"] = comment
 
             # Create new volume clone 
             newVolume = NetAppVolume.from_dict(newVolumeDict)
@@ -1006,6 +1039,18 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
             if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
+        
+        # delete temporary export policy created for clone 
+        try:
+            if volume.nas.export_policy.name == "netapp_dataops_"+volume_name:
+                currentExportPolicy = NetAppExportPolicy.find(name="netapp_dataops_"+volume_name, svm=svm)
+                if currentExportPolicy:                 
+                    currentExportPolicy.delete()
+        except NetAppRestError as err:
+            if print_output:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+
 
     else:
         raise ConnectionTypeError()
