@@ -51,6 +51,11 @@ Note: To view details regarding options/arguments for a specific command, run th
 \tregister-with-astra jupyterlab\tRegister an existing JupyterLab workspace with Astra Control.
 \tbackup-with-astra jupyterlab\tBackup an existing JupyterLab workspace using Astra Control.
 
+NVIDIA Triton Inference Server Management Commands
+Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
+
+\tcreate triton\t\t\tDeploy a new instance of the NVIDIA Triton Inference Server. 
+
 Kubernetes Persistent Volume Management Commands (for advanced Kubernetes users):
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
 
@@ -174,7 +179,7 @@ Examples:
 '''
 
 helpTextDeployTritonServer = '''
-Command: deploy triton inference server
+Command: create triton-server
 
 Deploy a Triton Inference Server.
 
@@ -183,12 +188,12 @@ Required Options/Arguments:
 \t-v, --model-repo-pvc-name=\tName of the PVC containing the model repository.
 
 Optional Options/Arguments:
-\t-g, --nvidia-gpu=\t\tNumber of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
+\t-g, --nvidia-gpu=\t\tNumber of NVIDIA GPUs to allocate to Triton instance. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
 \t-h, --help\t\t\tPrint help text.
 \t-i, --image=\t\t\tContainer image to use when creating instance. If not specified, "nvcr.io/nvidia/tritonserver:21.11-py3" will be used.
-\t-m, --memory=\t\t\tAmount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
+\t-m, --memory=\t\t\tAmount of memory to reserve for Triton instance. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
 \t-n, --namespace=\t\tKubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
-\t-p, --cpu=\t\t\tNumber of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+\t-p, --cpu=\t\t\tNumber of CPUs to reserve for Triton instance. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
 \t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
 
 Examples:
