@@ -248,7 +248,7 @@ def _get_triton_dev_label_selector() -> str:
     return "created-by=" + labels["created-by"] + ",entity-type=" + labels["entity-type"]
    
         
-def _retrieve_triton_dev_url(server_name: str, namespace: str = "default", printOutput: bool = False) -> str:
+def _retrieve_triton_endpoints(server_name: str, namespace: str = "default", printOutput: bool = False) -> str:
     # Retrieve kubeconfig
     try:
         _load_kube_config()
@@ -289,11 +289,11 @@ def _retrieve_triton_dev_url(server_name: str, namespace: str = "default", print
                 raise ServiceUnavailableError()
 
             # Construct and return urls
-            http_url = loadBalancerIP + ":" + str(http_port)
-            grpc_url = loadBalancerIP + ":" + str(grpc_port)
-            metrics_url = loadBalancerIP + ":" + str(metrics_port)
+            http_uri = loadBalancerIP + ":" + str(http_port)
+            grpc_uri = loadBalancerIP + ":" + str(grpc_port)
+            metrics_uri = loadBalancerIP + ":" + str(metrics_port)
 
-            return [http_url, grpc_url, metrics_url]
+            return [http_uri, grpc_uri, metrics_uri]
         else:
             # Retrieve access port
             for port in serviceStatus.spec.ports :
@@ -314,11 +314,11 @@ def _retrieve_triton_dev_url(server_name: str, namespace: str = "default", print
                 pass
 
             # Construct and return urls
-            http_url = ip + ":" + str(http_port)
-            grpc_url = ip + ":" + str(grpc_port)
-            metrics_url = ip + ":" + str(metrics_port)
+            http_uri = ip + ":" + str(http_port)
+            grpc_uri = ip + ":" + str(grpc_port)
+            metrics_uri = ip + ":" + str(metrics_port)
 
-            return [http_url, grpc_url, metrics_url]
+            return [http_uri, grpc_uri, metrics_uri]
 
     except ApiException as err:
         if printOutput:
@@ -482,6 +482,8 @@ def _wait_for_jupyter_lab_deployment_ready(workspaceName: str, namespace: str = 
         if deploymentStatus.status.ready_replicas == 1:
             break
         sleep(5)
+        
+        
 def _wait_for_triton_dev_deployment(server_name: str, namespace: str = "default", printOutput: bool = False):
     # Retrieve kubeconfig
     try:
@@ -1221,7 +1223,7 @@ def create_triton_server(server_name: str, model_pvc_name: str, load_balancer_se
 
     # Step 4 - Retrieve access URL
     try:
-        url = _retrieve_triton_dev_url(server_name=server_name, namespace=namespace, printOutput=print_output)
+        uri = _retrieve_triton_endpoints(server_name=server_name, namespace=namespace, printOutput=print_output)
     except (APIConnectionError, ServiceUnavailableError) as err:
         if print_output:
             print("Aborting workspace creation...")
@@ -1230,10 +1232,10 @@ def create_triton_server(server_name: str, model_pvc_name: str, load_balancer_se
     if print_output:
         print("\nWorkspace successfully created.")
         print("Server endpoints:")
-        print("http: " + url[0])
-        print("grpc: " + url[1])
-        print("metrics: " + url[2] + "/metrics")
-    return url
+        print("http: " + uri[0])
+        print("grpc: " + uri[1])
+        print("metrics: " + uri[2] + "/metrics")
+    return uri
 
 def create_jupyter_lab_snapshot(workspace_name: str, snapshot_name: str = None, volume_snapshot_class: str = "csi-snapclass",
                                 namespace: str = "default", print_output: bool = False):
