@@ -181,7 +181,7 @@ Examples:
 helpTextDeployTritonServer = '''
 Command: create triton-server
 
-Deploy a Triton Inference Server.
+Deploy a new NVIDIA Triton Inference Server instance
 
 Required Options/Arguments:
 \t-s, --server-name=\t\tName of a new Triton Inference Server.
