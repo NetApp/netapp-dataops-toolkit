@@ -1499,6 +1499,45 @@ def delete_jupyter_lab(workspace_name: str, namespace: str = "default", preserve
     if print_output:
         print("Workspace successfully deleted.")
 
+def delete_triton_server(server_name: str, namespace: str = "default",
+                       print_output: bool = False):
+    # Retrieve kubeconfig
+    try:
+        _load_kube_config()
+    except:
+        if print_output:
+            _print_invalid_config_error()
+        raise InvalidConfigError()
+
+    # Delete workspace
+    if print_output:
+        print("Deleting workspace '" + workspace_name + "' in namespace '" + namespace + "'.")
+    try:
+        # Delete deployment
+        if print_output:
+            print("Deleting Deployment...")
+        api = client.AppsV1Api()
+        api.delete_namespaced_deployment(namespace=namespace, name=_get_jupyter_lab_deployment(workspaceName=workspace_name))
+
+        # Delete service
+        if print_output:
+            print("Deleting Service...")
+        api = client.CoreV1Api()
+        api.delete_namespaced_service(namespace=namespace, name=_get_jupyter_lab_service(workspaceName=workspace_name))
+
+    except ApiException as err:
+        if print_output:
+            print("Error: Kubernetes API Error: ", err)
+        raise APIConnectionError(err)
+
+    # Delete PVC
+    if print_output:
+        print("Deleting PVC...")
+    delete_volume(pvc_name=_get_jupyter_lab_workspace_pvc_name(workspaceName=workspace_name), namespace=namespace,
+                  preserve_snapshots=preserve_snapshots, print_output=print_output)
+
+    if print_output:
+        print("Workspace successfully deleted.")
 
 def delete_k8s_config_map(name: str, namespace: str, print_output: bool = False):
     """Delete a Kubernetes config map with the provided name from the provided namespace.
