@@ -829,27 +829,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
             )
         )
 
-    # Construct Service for Triton Inference Server
-    service = client.V1Service(
-        metadata=client.V1ObjectMeta(
-            name=_get_triton_dev_service(server_name=server_name),
-            labels=labels
-        ),
-        spec=client.V1ServiceSpec(
-            type="NodePort",
-            selector={
-                "app": labels["app"]
-            },
-            ports=[
-                client.V1ServicePort(
-                    name="http",
-                    port=8888,
-                    target_port=8888,
-                    protocol="TCP"
-                )
-            ]
-        )
-    )
+
     # Create service
     if print_output:
         print("\nCreating Service '" + _get_jupyter_lab_service(
