@@ -273,6 +273,23 @@ Examples:
 \tnetapp_dataops_k8s_cli.py delete jupyterlab --workspace-name=mike
 \tnetapp_dataops_k8s_cli.py delete jupyterlab -w dave -n dst-test
 '''
+helpTextDeleteTritonServer = '''
+Command: delete triton-server
+
+Delete an existing NVIDIA Triton Inference Server.
+
+Required Options/Arguments:
+\t-s, --server-name=\t\tName of Nvidia Triton Inference Server to be deleted.
+
+Optional Options/Arguments:
+\t-f, --force\t\t\tDo not prompt user to confirm operation.
+\t-h, --help\t\t\tPrint help text.
+\t-n, --namespace=\t\tKubernetes namespace that the workspace is located in. If not specified, namespace "default" will be used.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py delete triton-server --server-name=mike
+\tnetapp_dataops_k8s_cli.py delete triton-server -s dave -n dst-test
+'''
 helpTextDeleteJupyterLabSnapshot = '''
 Command: delete jupyterlab-snapshot
 
@@ -1072,6 +1089,56 @@ if __name__ == '__main__':
         else:
             handleInvalidCommand()
 
+        elif target in ("triton-server", "triton"):
+            server_name = None
+            namespace = "default"
+            force = False
+
+            # Get command line options
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hw:fn:",
+                                           ["help", "workspace-name=", "force", "namespace="])
+            except:
+                handleInvalidCommand(helpText=helpTextDeleteTritonServer, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextDeleteTritonServer)
+                    sys.exit(0)
+                elif opt in ("-s", "--server-name"):
+                    workspaceName = arg
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+                elif opt in ("-f", "--force"):
+                    force = True
+
+            # Check for required options
+            if not workspaceName:
+                handleInvalidCommand(helpText=helpTextDeleteTritonServer, invalidOptArg=True)
+
+            # Confirm delete operation
+            if not force:
+                print("Warning: All data associated with the workspace will be permanently deleted.")
+                while True:
+                    proceed = input("Are you sure that you want to proceed? (yes/no): ")
+                    if proceed in ("yes", "Yes", "YES"):
+                        break
+                    elif proceed in ("no", "No", "NO"):
+                        sys.exit(0)
+                    else:
+                        print("Invalid value. Must enter 'yes' or 'no'.")
+
+            # Delete Triton instance
+            try:
+                delete_triton_server(server_name=server_name, namespace=namespace,
+                                   print_output=True)
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
+        else:
+            handleInvalidCommand()           
+            
     elif action in ("help", "h", "-h", "--help"):
         print(helpTextStandard)
 
