@@ -111,6 +111,13 @@ and external services. The data movement operations currently provided are for u
 
 Refer to the [NetApp DataOps Toolkit for Kubernetes Data Movement](docs/data_movement.md) documentation for more details.
 
+### NVIDIA Triton Inference Server Management
+
+The NetApp DataOps Toolkit provides the ability to manage NVIDIA Triton Inference Server instances whithin a Kubernetes clusters. Some of the key capabilities that the toolkit provides are the ability to deploy a new Triton instance. 
+
+Refer to the [NetApp DataOps Toolkit for NVIDIA Triton Inference Server Management](docs/data_movement.md) documentation for more details.
+
+
 ## Tips and Tricks
 
 - [Use the NetApp DataOps Toolkit in conjunction with Kubeflow.](Examples/Kubeflow/)
