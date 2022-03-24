@@ -2,7 +2,6 @@
 
 The NetApp DataOps Toolkit for Kubernetes can be used to manage data science workspaces and inference servers within a Kubernetes cluster. Some of the key capabilities that the toolkit provides are the ability to provision a new JupyterLab workspace, the ability to almost instantaneously clone a JupyterLab workspace, the ability to almost instantaneously save off a snapshot of a JupyterLab workspace for traceability/baselining, and the ability to provision a new NVIDIA Triton Inference Server. These workspace management capabilities are available within the toolkit's command line utility and as a set of functions that can be imported and used from other Python programs
 
-```
 <a name="command-line-functionality"></a>
 
 ## Command Line Functionality
