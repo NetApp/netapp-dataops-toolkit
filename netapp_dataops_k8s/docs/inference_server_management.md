@@ -105,12 +105,12 @@ def create_triton_server(
 
 This function will return server endpoints for the triton inference server.
 
-Example of Return Values:
+Example of Returned Values:
 
 Server endpoints:
-http: 10.61.188.118:8000
-grpc: 10.61.188.118:8001
-metrics: 10.61.188.118:8002/metrics
+http: 10.61.188.118:8000  
+grpc: 10.61.188.118:8001  
+metrics: 10.61.188.118:8002/metrics  
 
 ##### Error Handling
 
