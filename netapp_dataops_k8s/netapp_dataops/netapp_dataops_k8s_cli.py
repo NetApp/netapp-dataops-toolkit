@@ -1097,7 +1097,7 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hw:fn:",
-                                           ["help", "workspace-name=", "force", "namespace="])
+                                           ["help", "server-name=", "force", "namespace="])
             except:
                 handleInvalidCommand(helpText=helpTextDeleteTritonServer, invalidOptArg=True)
 
@@ -1107,7 +1107,7 @@ if __name__ == '__main__':
                     print(helpTextDeleteTritonServer)
                     sys.exit(0)
                 elif opt in ("-s", "--server-name"):
-                    workspaceName = arg
+                    server_name = arg
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
                 elif opt in ("-f", "--force"):
