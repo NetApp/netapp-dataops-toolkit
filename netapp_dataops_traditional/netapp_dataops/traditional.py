@@ -646,7 +646,7 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
         raise ConnectionTypeError()
 
 
-def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = None, snapshot_name: str = None, retention_count: int = 0, print_output: bool = False):
+def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = None, snapshot_name: str = None, retention_count: int = 0, snapmirror_label: str = None, print_output: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -699,11 +699,16 @@ def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = 
                     print("Error: Invalid volume name.")
                 raise InvalidVolumeParameterError("name")
 
-            # Create snapshot
-            snapshot = NetAppSnapshot.from_dict({
+            # create snapshot dict 
+            snapshotDict = {
                 'name': snapshot_name,
                 'volume': volume.to_dict()
-            })
+            }
+            if snapmirror_label:
+                snapshotDict['snapmirror_label'] = snapmirror_label
+
+            # Create snapshot
+            snapshot = NetAppSnapshot.from_dict(snapshotDict)
             snapshot.post(poll=True)
 
             if print_output:
@@ -1039,7 +1044,7 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
             if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
-                    
+
     else:
         raise ConnectionTypeError()
 
