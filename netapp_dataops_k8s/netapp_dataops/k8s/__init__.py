@@ -24,7 +24,7 @@ from kubernetes.client.models.v1_object_meta import V1ObjectMeta
 from kubernetes.client.rest import ApiException
 from tabulate import tabulate
 import pandas as pd
-import astraSDK
+#import astraSDK
 
 
 # Using this decorator in lieu of using a dependency to manage deprecation
@@ -216,18 +216,18 @@ def _retrieve_jupyter_lab_url(workspaceName: str, namespace: str = "default", pr
         if printOutput:
             print("Error: Kubernetes API Error: ", err)
         raise APIConnectionError(err)
-        
-  
-  
+
+
+
 def _get_triton_dev_prefix() -> str:
-    return "ntap-dsutil-triton-"  
-  
+    return "ntap-dsutil-triton-"
+
 
 def _get_triton_deployment(server_name: str) -> str:
     return _get_triton_dev_prefix() + server_name
-  
-  
-  
+
+
+
 def _get_triton_dev_labels(server_name: str) -> dict:
     labels = {
         "app": _get_jupyter_lab_prefix() + server_name,
@@ -237,17 +237,17 @@ def _get_triton_dev_labels(server_name: str) -> dict:
         "triton-server-name": server_name
     }
     return labels
-  
+
 
 def _get_triton_dev_service(server_name: str) -> str:
     return _get_triton_dev_prefix() + server_name
-   
-  
+
+
 def _get_triton_dev_label_selector() -> str:
     labels = _get_triton_dev_labels(servername="triton_temp")
     return "created-by=" + labels["created-by"] + ",entity-type=" + labels["entity-type"]
-   
-        
+
+
 def _retrieve_triton_endpoints(server_name: str, namespace: str = "default", printOutput: bool = False) -> str:
     # Retrieve kubeconfig
     try:
@@ -482,8 +482,8 @@ def _wait_for_jupyter_lab_deployment_ready(workspaceName: str, namespace: str = 
         if deploymentStatus.status.ready_replicas == 1:
             break
         sleep(5)
-        
-        
+
+
 def _wait_for_triton_dev_deployment(server_name: str, namespace: str = "default", printOutput: bool = False):
     # Retrieve kubeconfig
     try:
@@ -510,7 +510,7 @@ def _wait_for_triton_dev_deployment(server_name: str, namespace: str = "default"
             break
         sleep(5)
 
-        
+
 def _retrieve_astra_app_id_for_jupyter_lab(astra_apps: dict, workspace_name: str) -> str :
     # Get Astra K8s cluster name
     try :
@@ -923,7 +923,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
 
         if print_output:
             print("\nAttaching Additional PVC: '" + user_pvc_name + "' at mount_path: '" + user_pvc_mountpoint + "'.")
-            
+
         # Add user-specified PVC
         deployment.spec.template.spec.volumes.append(
             client.V1Volume(
@@ -1491,7 +1491,7 @@ def delete_triton_server(server_name: str, namespace: str = "default",
 
     # Delete workspace
     if print_output:
-        print("Deleting workspace '" + workspace_name + "' in namespace '" + namespace + "'.")
+        print("Deleting workspace '" + server_name + "' in namespace '" + namespace + "'.")
     try:
         # Delete deployment
         if print_output:

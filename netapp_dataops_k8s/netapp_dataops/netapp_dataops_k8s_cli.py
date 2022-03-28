@@ -14,6 +14,7 @@ from netapp_dataops.k8s import (
     delete_volume_snapshot,
     delete_volume,
     delete_jupyter_lab,
+    delete_triton_server,
     list_jupyter_labs,
     list_volume_snapshots,
     list_jupyter_lab_snapshots,
@@ -54,7 +55,7 @@ Note: To view details regarding options/arguments for a specific command, run th
 NVIDIA Triton Inference Server Management Commands
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
 
-\tcreate triton\t\t\tDeploy a new instance of the NVIDIA Triton Inference Server. 
+\tcreate triton\t\t\tDeploy a new instance of the NVIDIA Triton Inference Server.
 
 Kubernetes Persistent Volume Management Commands (for advanced Kubernetes users):
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
@@ -1086,9 +1087,6 @@ if __name__ == '__main__':
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
-        else:
-            handleInvalidCommand()
-
         elif target in ("triton-server", "triton"):
             server_name = None
             namespace = "default"
@@ -1114,7 +1112,7 @@ if __name__ == '__main__':
                     force = True
 
             # Check for required options
-            if not workspaceName:
+            if not server_name:
                 handleInvalidCommand(helpText=helpTextDeleteTritonServer, invalidOptArg=True)
 
             # Confirm delete operation
@@ -1137,8 +1135,9 @@ if __name__ == '__main__':
                 sys.exit(1)
 
         else:
-            handleInvalidCommand()           
-            
+            handleInvalidCommand()
+
+
     elif action in ("help", "h", "-h", "--help"):
         print(helpTextStandard)
 
