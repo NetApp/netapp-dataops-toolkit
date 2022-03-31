@@ -112,6 +112,7 @@ Optional Options/Arguments:
 \t-e, --export-policy\t\t export policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
 \t-s, --split\t\t start clone split after creation
 \t-r, --refresh\t\t delete existing clone if exists before creating a new one 
+\t-d, --svm-dr-unprotect\t\t disable svm dr protection if svm-dr protection exists 
 
 Examples (basic usage):
 \tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset
@@ -720,10 +721,11 @@ if __name__ == '__main__':
             refresh = False
             exportPolicy = None
             exportHosts = None
+            svmDrUnprotect = False
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hu:c:t:n:v:s:m:u:g:j:xe:p:sr", ["help", "cluster-name=", "source-svm=","target-svm=","name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid=", "junction=", "readonly","export-hosts=","export-policy=","split","refresh"])
+                opts, args = getopt.getopt(sys.argv[3:], "hu:c:t:n:v:s:m:u:g:j:xe:p:srd", ["help", "cluster-name=", "source-svm=","target-svm=","name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid=", "junction=", "readonly","export-hosts=","export-policy=","split","refresh","svm-dr-unprotect"])
             except:
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
 
@@ -757,7 +759,9 @@ if __name__ == '__main__':
                 elif opt in ("-s", "--split"):
                     split = True 
                 elif opt in ("-r", "--refresh"):
-                    refresh = True                     
+                    refresh = True   
+                elif opt in ("-d", "--svm-dr-unprotect"):
+                    svmDrUnprotect = True                    
                 elif opt in ("-p", "--export-policy"):
                     exportPolicy = arg    
                 elif opt in ("-e", "--export-hosts"):
@@ -777,7 +781,7 @@ if __name__ == '__main__':
             try:
                 clone_volume(new_volume_name=newVolumeName, source_volume_name=sourceVolumeName, source_snapshot_name=sourceSnapshotName, cluster_name=clusterName,
                              source_svm=sourceSVM, target_svm=targetSVM, export_policy=exportPolicy, export_hosts=exportHosts, split=split, refresh=refresh,
-                             mountpoint=mountpoint, unix_uid=unixUID, unix_gid=unixGID, junction=junction, readonly=readonly, print_output=True)
+                             mountpoint=mountpoint, unix_uid=unixUID, unix_gid=unixGID, junction=junction, svm_dr_unprotect=svmDrUnprotect, readonly=readonly, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError,
                     MountOperationError):
                 sys.exit(1)

@@ -26,6 +26,7 @@ from netapp_ontap.resources import SnapmirrorTransfer as NetAppSnapmirrorTransfe
 from netapp_ontap.resources import Snapshot as NetAppSnapshot
 from netapp_ontap.resources import Volume as NetAppVolume
 from netapp_ontap.resources import ExportPolicy as NetAppExportPolicy
+from netapp_ontap.resources import CLI as NetAppCLI
 import pandas as pd
 import requests
 from tabulate import tabulate
@@ -361,7 +362,7 @@ def _convert_bytes_to_pretty_size(size_in_bytes: str, num_decimal_points: int = 
 def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: str = None, source_snapshot_name: str = None,
                  source_svm: str = None, target_svm: str = None, export_hosts: str = None, export_policy: str = None, split: bool = False, 
                  unix_uid: str = None, unix_gid: str = None, mountpoint: str = None, junction: str= None, readonly: bool = False,
-                 refresh: bool = False, print_output: bool = False):
+                 refresh: bool = False, svm_dr_unprotect: bool = False, print_output: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -579,6 +580,20 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
             if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
+
+        if svm_dr_unprotect:
+            try:
+                if print_output:
+                    print("Disabling svm-dr protection")                 
+                response = NetAppCLI().execute("volume modify",vserver=targetsvm,volume=new_volume_name,body={"vserver_dr_protection": "unprotected"})
+            except NetAppRestError as err:
+                if "volume is not part of a Vserver DR configuration" in str(err):
+                    if print_output:
+                        print("Warning: could not disable svm-dr-protection since volume is not protected using svm-dr")                    
+                else:
+                    if print_output:
+                        print("Error: ONTAP Rest API Error: ", err)                    
+                    raise APIConnectionError(err)                
 
         #create custom export policy if needed 
         if export_hosts:
