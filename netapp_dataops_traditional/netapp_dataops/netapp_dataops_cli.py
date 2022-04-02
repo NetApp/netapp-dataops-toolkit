@@ -144,7 +144,8 @@ Optional Options/Arguments:
 \t-s, --svm\tNon defaul svm name.
 \t-h, --help\tPrint help text.
 \t-n, --name=\tName of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
-\t-r, --retention=\tif provided snapshot name will be suffixed by <timestamp> and excesive snapshots will be deleted
+\t-r, --retention=\tSnapshot name will be suffixed by <timestamp> and excesive snapshots will be deleted. 
+\t                \tCan be count of snapshots when int (ex. 10) or days when retention is suffixed by d (ex. 10d)
 \t-l, --snapmirror-label=\t if proivded snapmirror label will be configured on the created snapshot 
 
 Examples:
@@ -152,6 +153,7 @@ Examples:
 \tnetapp_dataops_cli.py create snapshot -v project2 -n final_dataset
 \tnetapp_dataops_cli.py create snapshot --volume=test1
 \tnetapp_dataops_cli.py create snapshot -v project2 -n daily_consistent -r 7 -l daily
+\tnetapp_dataops_cli.py create snapshot -v project2 -n daily_for_month -r 30d -l daily
 '''
 helpTextCreateVolume = '''
 Command: create volume
@@ -814,6 +816,7 @@ if __name__ == '__main__':
             clusterName = None             
             svmName = None 
             retentionCount = 0
+            retentionDays = False
             snapmirrorLabel = None
 
             # Get command line options
@@ -843,10 +846,19 @@ if __name__ == '__main__':
             # Check for required options
             if not volumeName:
                 handleInvalidCommand(helpText=helpTextCreateSnapshot, invalidOptArg=True)
+            
+            if retentionCount:
+                if not retentionCount.isnumeric():
+                    matchObj = re.match("^(\d+)d$",retentionCount)
+                    if not matchObj:
+                        handleInvalidCommand(helpText=helpTextCreateSnapshot, invalidOptArg=True)
+                    else:
+                        retentionCount = matchObj.group(1)
+                        retentionDays = True
 
             # Create snapshot
             try:
-                create_snapshot(volume_name=volumeName, snapshot_name=snapshotName, retention_count=retentionCount, cluster_name=clusterName, svm_name=svmName, snapmirror_label=snapmirrorLabel, print_output=True)
+                create_snapshot(volume_name=volumeName, snapshot_name=snapshotName, retention_count=retentionCount, retention_days=retentionDays, cluster_name=clusterName, svm_name=svmName, snapmirror_label=snapmirrorLabel, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
                 sys.exit(1)
 

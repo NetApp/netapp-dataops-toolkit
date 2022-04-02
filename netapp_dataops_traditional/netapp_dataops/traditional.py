@@ -13,8 +13,8 @@ import subprocess
 import sys
 import time
 import warnings
+import datetime
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
 import boto3
 from botocore.client import Config as BotoConfig
 from netapp_ontap import config as netappConfig
@@ -661,7 +661,7 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
         raise ConnectionTypeError()
 
 
-def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = None, snapshot_name: str = None, retention_count: int = 0, snapmirror_label: str = None, print_output: bool = False):
+def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = None, snapshot_name: str = None, retention_count: int = 0, retention_days: bool = False, snapmirror_label: str = None, print_output: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -700,7 +700,7 @@ def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = 
         snapshot_name_original = snapshot_name
         # Set snapshot name if not passed into function or retention provided 
         if not snapshot_name or int(retention_count) > 0:
-            timestamp = '_'+datetime.today().strftime("%Y%m%d_%H%M%S")
+            timestamp = '.'+datetime.datetime.today().strftime("%Y-%m-%d_%H%M%S")
             snapshot_name += timestamp
 
         if print_output:
@@ -745,16 +745,30 @@ def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = 
                     if print_output:
                         print("Error: Invalid volume name.")
                     raise InvalidVolumeParameterError("name")    
+
+                if retention_days:
+                    retention_date = datetime.datetime.today() - datetime.timedelta(days=retention_count)
                 
                 last_snapshot_list = []          
                 snapshot_list = []
                 for snapshot in NetAppSnapshot.get_collection(volume.uuid):
                     snapshot.get()
-                    if snapshot.name.startswith(snapshot_name_original+'_'):
-                        snapshot_list.append(snapshot.name)   
-                        last_snapshot_list.append(snapshot.name)
-                        if len(last_snapshot_list) > retention_count:
-                            last_snapshot_list.pop(0)
+                    if snapshot.name.startswith(snapshot_name_original+'.'):
+                        if not retention_days:
+                            snapshot_list.append(snapshot.name)   
+                            last_snapshot_list.append(snapshot.name)
+                            if len(last_snapshot_list) > retention_count:
+                                last_snapshot_list.pop(0)
+                        else:
+                            rx = r'^{0}\.(.+)$'.format(snapshot_name_original)
+                            matchObj = re.match(rx,snapshot.name)
+                            if matchObj:
+                                snapshot_date = matchObj.group(1)
+                                snapshot_date_obj = datetime.datetime.strptime(snapshot_date, "%Y-%m-%d_%H%M%S")
+                                snapshot_list.append(snapshot.name)   
+                                last_snapshot_list.append(snapshot.name)
+                                if snapshot_date_obj < retention_date:
+                                    last_snapshot_list.pop(0)
                 
                 #delete snapshots not in retention 
                 for snap in snapshot_list:
@@ -765,7 +779,6 @@ def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = 
                 if print_output:
                     print("Error: ONTAP Rest API Error: ", err)
                 raise APIConnectionError(err)                                   
-
     else:
         raise ConnectionTypeError()
 
