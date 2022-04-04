@@ -991,16 +991,17 @@ if __name__ == '__main__':
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hv:n:fu:", ["cluster-name=","help", "svm=", "name=", "force"])
+                opts, args = getopt.getopt(sys.argv[3:], "hfv:n:u:", ["cluster-name=","help", "svm=", "name=", "force"])
             except:
                 handleInvalidCommand(helpText=helpTextDeleteVolume, invalidOptArg=True)
+
 
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
                     print(helpTextDeleteVolume)
                     sys.exit(0)
-                elif opt in ("-n", "--svm"):
+                elif opt in ("-v", "--svm"):
                     svmName = arg
                 elif opt in ("-u", "--cluster-name"):
                     clusterName = arg                     
@@ -1063,7 +1064,7 @@ if __name__ == '__main__':
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:u:", ["cluster-name=","help", "svm="])
+                opts, args = getopt.getopt(sys.argv[3:], "hv:u:", ["cluster-name=","help", "svm="])
             except:
                 handleInvalidCommand(helpText=helpTextListSnapMirrorRelationships, invalidOptArg=True)   
 
@@ -1072,7 +1073,7 @@ if __name__ == '__main__':
                 if opt in ("-h", "--help"):
                     print(helpTextDeleteVolume)
                     sys.exit(0)
-                elif opt in ("-n", "--svm"):
+                elif opt in ("-v", "--svm"):
                     svmName = arg
                 elif opt in ("-u", "--cluster-name"):
                     clusterName = arg                     
