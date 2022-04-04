@@ -196,5 +196,23 @@ printf "\n"
 proceed_prompt
 printf "\n"
 
+### Use List to check if the servers still exist in namespace: "dsk-test"
+command="sudo -E ./netapp_dataops_k8s_cli.py list triton --namespace=$namespace"
+echo "Running: $command"
+eval $command
+printf "\nRetrieving server:\n"
+printf "\n"
+proceed_prompt
+printf "\n"
+
+### Use List to check if the servers still exist in default namespace
+command="sudo -E ./netapp_dataops_k8s_cli.py list triton"
+echo "Running: $command"
+eval $command
+printf "\nRetrieving server:\n"
+printf "\n"
+proceed_prompt
+printf "\n"
+
 ###################################
 printf "* Test class B complete!\n"
