@@ -11,6 +11,8 @@ You can perform the following operation(s) using the toolkit's command line util
 | Triton Inference Server operations                                                   | Supported by BeeGFS | Supported by Trident | Requires Astra Control |
 | ------------------------------------------------------------------------------------ | ------------------- | -------------------- | ---------------------- |
 | [Deploy a new NVIDIA Triton Inference Server.](#lib-create-triton-server)            | Yes                 | Yes                  | No                     |
+| [Delete an NVIDIA Triton Inference Server.](#lib-delete-triton-server)               | Yes                 | Yes                  | No                     |
+| [List all NVIDIA Triton Inference Servers in a specific namespace.](#lib-list-triton)| Yes                 | Yes                  | No                     |
 
 ### NVIDIA Triton Inference Server Management Operations
 
@@ -59,6 +61,41 @@ http: 10.61.188.118:8000
 grpc: 10.61.188.118:8001
 metrics: 10.61.188.118:8002/metrics
 ```
+
+<a name="cli-delete-triton-server"></a>
+
+#### Delete an NVIDIA Triton Inference Server instance 
+
+The NetApp DataOps Toolkit can enable a user to delete an existing NVIDIA Triton Inference Server instance. The command for deploying an NVIDIA Triton Inference Server instance is `netapp_dataops_k8s_cli.py delete triton-server`.
+
+The following options/arguments are required:
+
+```
+    -s, --server-name=          Name of a new Triton Inference Server.
+```
+
+The following options/arguments are optional:
+
+```
+    -f, --force                     Do not prompt user to confirm operation.
+    -h, --help                      Print help text.
+    -n, --namespace=                Kubernetes namespace that the workspace is located in. If not specified, namespace "default" will be used.
+```
+##### Example Usage
+
+Delete the NVIDIA Inference server 'mike' in namespace 'dsk-test'.
+
+```sh
+netapp_dataops_k8s_cli.py delete triton-server --server-name=mike --namespace=dsk-test
+Warning: All data associated with the workspace will be permanently deleted.
+Are you sure that you want to proceed? (yes/no): yes
+Deleting server 'mike' in namespace 'dsk-test'.
+Deleting Deployment...
+Deleting Service...
+Triton Server instance successfully deleted.
+```
+<a name="cli-list-triton"></a>
+
 
 <a name="library-of-functions"></a>
 
