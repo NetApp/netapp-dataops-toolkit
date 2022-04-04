@@ -24,7 +24,7 @@ from kubernetes.client.models.v1_object_meta import V1ObjectMeta
 from kubernetes.client.rest import ApiException
 from tabulate import tabulate
 import pandas as pd
-#import astraSDK
+import astraSDK
 
 
 # Using this decorator in lieu of using a dependency to manage deprecation
@@ -1491,7 +1491,7 @@ def delete_triton_server(server_name: str, namespace: str = "default",
 
     # Delete workspace
     if print_output:
-        print("Deleting workspace '" + server_name + "' in namespace '" + namespace + "'.")
+        print("Deleting server '" + server_name + "' in namespace '" + namespace + "'.")
     try:
         # Delete deployment
         if print_output:
