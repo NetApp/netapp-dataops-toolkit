@@ -10,9 +10,9 @@ You can perform the following operation(s) using the toolkit's command line util
 
 | Triton Inference Server operations                                                   | Supported by BeeGFS | Supported by Trident | Requires Astra Control |
 | ------------------------------------------------------------------------------------ | ------------------- | -------------------- | ---------------------- |
-| [Deploy a new NVIDIA Triton Inference Server.](#lib-create-triton-server)            | Yes                 | Yes                  | No                     |
-| [Delete an NVIDIA Triton Inference Server.](#lib-delete-triton-server)               | Yes                 | Yes                  | No                     |
-| [List all NVIDIA Triton Inference Servers in a specific namespace.](#lib-list-triton)| Yes                 | Yes                  | No                     |
+| [Deploy a new NVIDIA Triton Inference Server.](#cli-create-triton-server)            | Yes                 | Yes                  | No                     |
+| [Delete an NVIDIA Triton Inference Server.](#cli-delete-triton-server)               | Yes                 | Yes                  | No                     |
+| [List all NVIDIA Triton Inference Servers in a specific namespace.](#cli-list-triton)| Yes                 | Yes                  | No                     |
 
 ### NVIDIA Triton Inference Server Management Operations
 
@@ -64,9 +64,9 @@ metrics: 10.61.188.118:8002/metrics
 
 <a name="cli-delete-triton-server"></a>
 
-#### Delete an NVIDIA Triton Inference Server instance 
+#### Delete an existing NVIDIA Triton Inference Server instance 
 
-The NetApp DataOps Toolkit can enable a user to delete an existing NVIDIA Triton Inference Server instance. The command for deploying an NVIDIA Triton Inference Server instance is `netapp_dataops_k8s_cli.py delete triton-server`.
+The NetApp DataOps Toolkit can enable a user to near-instantaneously delete an existing NVIDIA Triton Inference Server instance. The command for deploying an NVIDIA Triton Inference Server instance is `netapp_dataops_k8s_cli.py delete triton-server`.
 
 The following options/arguments are required:
 
@@ -96,6 +96,28 @@ Triton Server instance successfully deleted.
 ```
 <a name="cli-list-triton"></a>
 
+#### List All NVIDIA Triton Inference Server instances
+
+The NetApp DataOps Toolkit can be used to print a list of all existing Triton Inference Servers in a specific namespace within a Kubernetes cluster. The command for printing a list of all existing NVIDIA Triton Servers is `netapp_dataops_k8s_cli.py list trtitonservers`.
+
+No options/arguments are required for this command.
+
+The following options/arguments are optional:
+
+```
+    -h, --help                  Print help text.
+    -n, --namespace=            Kubernetes namespace for which to retrieve list of workspaces. If not specified, namespace "default" will be used.
+```
+
+##### Example Usage
+
+```sh
+netapp_dataops_k8s_cli.py list tritonservers --namespace=dsk-test
+Server Name    Status    Server Endpoints
+-------------  --------  ------------------------------------------------------------------
+imagesufian1   Ready     ['10.61.188.115:8000', '10.61.188.115:8001', '10.61.188.115:8002']
+imagesufian2   Ready     ['10.61.188.115:8000', '10.61.188.115:8001', '10.61.188.115:8002']
+```
 
 <a name="library-of-functions"></a>
 
@@ -112,6 +134,8 @@ The following workspace management operations are available within the set of fu
 | Triton Inference Server operations                                                   | Supported by BeeGFS | Supported by Trident | Requires Astra Control |
 | ------------------------------------------------------------------------------------ | ------------------- | -------------------- | ---------------------- |
 | [Deploy a new NVIDIA Triton Inference Server.](#lib-create-triton-server)            | Yes                 | Yes                  | No                     |
+| [Delete an NVIDIA Triton Inference Server.](#lib-delete-triton-server)               | Yes                 | Yes                  | No                     |
+| [List all NVIDIA Triton Inference Servers in a specific namespace.](#lib-list-triton)| Yes                 | Yes                  | No                     |
 
 ### NVIDIA Triton Inference Server instance Management Operations
 
@@ -158,6 +182,65 @@ InvalidConfigError              # kubeconfig file is missing or is invalid.
 APIConnectionError              # The Kubernetes API returned an error.
 ServiceUnavailableError         # A Kubernetes service is not available.
 ```
+
+<a name="lib-delete-triton-server"></a>
+
+#### Delete an existing NVIDIA Triton Inference Server instance 
+
+The NetApp DataOps Toolkit can enable a user to near-instantaneously delete an existing NVIDIA Triton Server instance.
+
+
+##### Function Definition
+
+```py
+def delete_triton_server(
+    server_name: str,                    # Name of NVIDIA Triton Server instance to be deleted (required).
+    namespace: str = "default",          # Kubernetes namespace that the workspace is located in. If not specified, namespace "default" will be used.
+    print_output: bool = False           # Denotes whether or not to print messages to the console during execution.
+) :
+```
+
+##### Return Value
+ 
+None 
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.k8s`.
+
+```py
+InvalidConfigError              # kubeconfig file is missing or is invalid.
+APIConnectionError              # The Kubernetes API returned an error.
+```
+
+<a name="lib-list-triton"></a>
+
+#### List All NVIDIA Triton Server instance
+
+The NetApp DataOps Toolkit can be used to retrieve a list of all existing NVIDIA Triton Server instances in a specific namespace within a Kubernetes cluster as part of any Python program or workflow.
+
+##### Function Definition
+
+```py
+def list_tritonservers(
+    namespace: str = "default",             # Kubernetes namespace for which to retrieve list of workspaces. If not specified, namespace "default" will be used.
+    print_output: bool = False              # Denotes whether or not to print messages to the console during execution.
+) -> list :
+```
+
+##### Return Value
+
+The function returns a list of all existing NVIDIA Triton Server instances. Each item in the list will be a dictionary containing details regarding a specific server. The keys for the values in this dictionary are "Server Name", "Status", "Server Endpoints".
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.k8s`.
+
+```py
+InvalidConfigError              # kubeconfig file is missing or is invalid.
+APIConnectionError              # The Kubernetes API returned an error.
+```
+
 ## Support
 
 Report any issues via GitHub: https://github.com/NetApp/netapp-data-science-toolkit/issues.
