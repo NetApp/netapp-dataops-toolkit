@@ -244,7 +244,7 @@ def _get_triton_dev_service(server_name: str) -> str:
 
 
 def _get_triton_dev_label_selector() -> str:
-    labels = _get_triton_dev_labels(servername="triton_temp")
+    labels = _get_triton_dev_labels(server_name="triton_temp")
     return "created-by=" + labels["created-by"] + ",entity-type=" + labels["entity-type"]
 
 
@@ -1738,6 +1738,62 @@ def list_jupyter_labs(namespace: str = "default", include_astra_app_id: bool = F
                 if print_output :
                     _print_astra_k8s_cluster_name_error()
                 raise InvalidConfigError()
+
+        # Append dict to list of workspaces
+        workspacesList.append(workspaceDict)
+
+    # Print list of workspaces
+    if print_output:
+        # Convert workspaces array to Pandas DataFrame
+        workspacesDF = pd.DataFrame.from_dict(workspacesList, dtype="string")
+        print(tabulate(workspacesDF, showindex=False, headers=workspacesDF.columns))
+
+    return workspacesList
+
+def list_triton_servers(namespace: str = "default", print_output: bool = False) -> list:
+    # Retrieve kubeconfig
+    try:
+        _load_kube_config()
+    except:
+        if print_output:
+            _print_invalid_config_error()
+        raise InvalidConfigError()
+
+    # Retrieve list of workspaces
+    try:
+        api = client.AppsV1Api()
+        deployments = api.list_namespaced_deployment(namespace=namespace, label_selector=_get_triton_dev_label_selector())
+    except ApiException as err:
+        if print_output:
+            print("Error: Kubernetes API Error: ", err)
+        raise APIConnectionError(err)
+
+    # Construct list of workspaces
+    workspacesList = list()
+    for deployment in deployments.items:
+        # Construct dict containing workspace details
+        workspaceDict = dict()
+
+        # Retrieve workspace name
+        server_name = deployment.metadata.labels["triton-server-name"]
+        workspaceDict["Server Name"] = server_name
+
+        # Determine readiness status
+        if deployment.status.ready_replicas == 1:
+            workspaceDict["Status"] = "Ready"
+        else:
+            workspaceDict["Status"] = "Not Ready"
+
+
+        # Retrieve access URL
+        try :
+            workspaceDict["Server Endpoints"] = _retrieve_triton_endpoints(server_name=server_name, namespace=namespace, printOutput=False)
+        except ServiceUnavailableError :
+            workspaceDict["Server Endpoints"] = "unavailable"
+        except APIConnectionError as err:
+            if print_output:
+                print("Error: Kubernetes API Error: ", err)
+            raise APIConnectionError(err)
 
         # Append dict to list of workspaces
         workspacesList.append(workspaceDict)

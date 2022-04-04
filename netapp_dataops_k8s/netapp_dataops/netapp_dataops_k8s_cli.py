@@ -19,6 +19,7 @@ from netapp_dataops.k8s import (
     list_volume_snapshots,
     list_jupyter_lab_snapshots,
     list_volumes,
+    list_triton_servers,
     register_jupyter_lab_with_astra,
     restore_jupyter_lab_snapshot,
     restore_volume_snapshot,
@@ -359,6 +360,23 @@ Examples:
 \tnetapp_dataops_k8s_cli.py list jupyterlabs -n team1
 \tnetapp_dataops_k8s_cli.py list jupyterlabs --namespace=team2
 '''
+
+helpTextListTritonServers = '''
+Command: list tritonservers
+
+List all NVIDIA Triton Inference Server instances in a specific namespace.
+
+No options/arguments are required.
+
+Optional Options/Arguments:
+\t-h, --help\t\t\tPrint help text.
+\t-n, --namespace=\t\tKubernetes namespace for which to retrieve list of workspaces. If not specified, namespace "default" will be used.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py list tritonservers -n team1
+\tnetapp_dataops_k8s_cli.py list tritonservers --namespace=team2
+'''
+
 helpTextListJupyterLabSnapshots = '''
 Command: list jupyterlab-snapshots
 
@@ -1245,6 +1263,29 @@ if __name__ == '__main__':
             # List JupyterLab workspaces
             try:
                 list_jupyter_labs(namespace=namespace, include_astra_app_id=include_astra_app_id, print_output=True)
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
+        elif target in ("tritonservers", "triton_server", "triton"):
+            namespace = "default"
+
+            # Get command line options
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hn:", ["help", "namespace="])
+            except:
+                handleInvalidCommand(helpText=helpTextListTritonServers, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextListTritonServers)
+                    sys.exit(0)
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+
+            # List JupyterLab workspaces
+            try:
+                list_triton_servers(namespace=namespace, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
