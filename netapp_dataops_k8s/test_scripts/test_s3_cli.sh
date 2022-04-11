@@ -26,7 +26,8 @@ print_configuration_help() {
     printf "s3_protocol=VALUE         # The protocol to use. Either http or https\n"
     printf "target_pvc=VALUE          # The name of a pvc to use for getting files from S3\n"
     printf "source_bucket=VALUE       # The name of a bucket with data to use to get data from S3\n"
-    printf "souce_object=VALUE        # The name of an object to copy from the source bucket\n"
+    printf "source_object=VALUE        # The name of an object to copy from the source bucket\n"
+    printf "target_bucket=VALUE       # The name of a bucket to copy files to\n"
     printf "alt_namespace=VALUE       # The name of an alternate namespace to use. This should be created before running this script.\n"
 
     exit
