@@ -1230,6 +1230,7 @@ if __name__ == '__main__':
                     print_output=True
                 )
                 s3_secret.create()
+                print("Kubernetes secret successfully created.")
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1271,6 +1272,7 @@ if __name__ == '__main__':
                         print_output=True
                     )
                 config_map.create()
+                print("Kubernetes CA config-map successfully created.")
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1470,6 +1472,7 @@ if __name__ == '__main__':
                     print_output=True
                 )
                 s3_secret.delete()
+                print("Kubernetes secret successfully deleted.")
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1548,6 +1551,7 @@ if __name__ == '__main__':
                     print_output=True
                 )
                 config_map.delete()
+                print("Kubernetes CA config-map successfully deleted.")
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
