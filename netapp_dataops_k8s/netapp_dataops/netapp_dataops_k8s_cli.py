@@ -477,22 +477,6 @@ Examples:
 \tnetapp_dataops_k8s_cli.py get-s3 bucket -c mycreds -o host.example.com -b one -p mypvc -u -v
 \tnetapp_dataops_k8s_cli.py get-s3 bucket -c mycreds -o host.example.com -b one -p mypvc -u -v -d "dir5/"
 '''
-helpTextGetS3Job = '''
-Command: get-s3 job
-
-Get the status of the specifed Kubernetes job.
-
-Required Options/Arguments:
-\t-j, --job=\t\tThe name of the Kubernetes job.
-
-Optional Options/Arguments:
-\t-h, --help\t\tPrint help text.
-\t-n, --namespace=\tKubernetes namespace that the Job is located in. If not specified, namespace "default" will be used.
-
-Examples:
-\tnetapp_dataops_k8s_cli.py get-s3 job --job=job1
-\tnetapp_dataops_k8s_cli.py get-s3 job -j job1 -n team1
-'''
 helpTextGetS3Object = '''
 Command: get-s3 object
 
@@ -718,6 +702,22 @@ Optional Options/Arguments:
 Examples:
 \tnetapp_dataops_k8s_cli.py restore volume-snapshot --snapshot-name=snap1
 \tnetapp_dataops_k8s_cli.py restore volume-snapshot -s ntap-dsutil.20210304151544 -n team1
+'''
+helpTextShowS3Job = '''
+Command: show s3-job
+
+Show the status of the specifed Kubernetes job.
+
+Required Options/Arguments:
+\t-j, --job=\t\tThe name of the Kubernetes job.
+
+Optional Options/Arguments:
+\t-h, --help\t\tPrint help text.
+\t-n, --namespace=\tKubernetes namespace that the Job is located in. If not specified, namespace "default" will be used.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py show s3-job --job=job1
+\tnetapp_dataops_k8s_cli.py show s3-job -j job1 -n team1
 '''
 
 
@@ -1817,43 +1817,6 @@ if __name__ == '__main__':
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
-        elif target == "job":
-            namespace = "default"
-            job_name = None
-
-            try:
-                opts, args = getopt.getopt(
-                    sys.argv[3:],
-                    "hn:j:",
-                    [
-                        "help",
-                        "namespace=",
-                        "job="
-                    ]
-                )
-            except:
-                handleInvalidCommand(helpText=helpTextGetS3Job, invalidOptArg=True)
-
-            for opt, arg in opts:
-                if opt in ("-h", "--help"):
-                    print(helpTextGetS3Job)
-                    sys.exit(0)
-                elif opt in ("-n", "--namespace"):
-                    namespace = arg
-                elif opt in ("-j", "--job"):
-                    job_name = arg
-
-            # Verify required arguments
-            if not job_name:
-                handleInvalidCommand(helpText=helpTextGetS3Job, invalidOptArg=True)
-
-            try:
-                mover_job = DataMoverJob(namespace=namespace, print_output=True)
-                job_status = mover_job.get_job_status(job=job_name)
-                print("Job {} status:\n{}".format(job_name, job_status))
-            except (InvalidConfigError, APIConnectionError):
-                sys.exit(1)
-
         else:
             handleInvalidCommand()
 
@@ -2335,6 +2298,48 @@ if __name__ == '__main__':
 
         else:
             handleInvalidCommand()
+
+    elif action == "show":
+        # Get desired target from command line args
+        target = getTarget(sys.argv)
+
+        if target == "s3-job":
+            namespace = "default"
+            job_name = None
+
+            try:
+                opts, args = getopt.getopt(
+                    sys.argv[3:],
+                    "hn:j:",
+                    [
+                        "help",
+                        "namespace=",
+                        "job="
+                    ]
+                )
+            except:
+                handleInvalidCommand(helpText=helpTextShowS3Job, invalidOptArg=True)
+
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextShowS3Job)
+                    sys.exit(0)
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+                elif opt in ("-j", "--job"):
+                    job_name = arg
+
+            # Verify required arguments
+            if not job_name:
+                handleInvalidCommand(helpText=helpTextShowS3Job, invalidOptArg=True)
+
+            try:
+                mover_job = DataMoverJob(namespace=namespace, print_output=True)
+                job_status = mover_job.get_job_status(job=job_name)
+                print("Job {} status:\n{}".format(job_name, job_status))
+            except (InvalidConfigError, APIConnectionError):
+                print(f"Unable to get status of job {job_name}")
+                sys.exit(1)
 
     elif action in ("version", "v", "-v", "--version"):
         print("NetApp DataOps Toolkit for Kubernetes - version " + k8s.__version__)
