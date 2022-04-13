@@ -111,12 +111,14 @@ The following options/arguments are optional:
 
 ##### Example Usage
 
+List all NVIDIA Triton Inference Server instances in namespace "dsk-test".
+
 ```sh
 netapp_dataops_k8s_cli.py list tritonservers --namespace=dsk-test
-Server Name    Status    Server Endpoints
--------------  --------  ------------------------------------------------------------------
-imagesufian1   Ready     ['10.61.188.115:8000', '10.61.188.115:8001', '10.61.188.115:8002']
-imagesufian2   Ready     ['10.61.188.115:8000', '10.61.188.115:8001', '10.61.188.115:8002']
+Server Name    Status     HTTP Endpoints       gRPC Endpoint        Metrics Endpoint
+-------------  ---------  -------------------  -------------------  -------------------
+imagesufian    Ready      10.61.188.115:31102  10.61.188.115:31608  10.61.188.115:31149
+imagesufian1   Not Ready  10.61.188.115:30744  10.61.188.115:32689  10.61.188.115:30772
 ```
 
 <a name="library-of-functions"></a>
@@ -217,7 +219,7 @@ The NetApp DataOps Toolkit can be used to retrieve a list of all existing NVIDIA
 ##### Function Definition
 
 ```py
-def list_tritonservers(
+def list_triton_servers(
     namespace: str = "default",             # Kubernetes namespace for which to retrieve list of workspaces. If not specified, namespace "default" will be used.
     print_output: bool = False              # Denotes whether or not to print messages to the console during execution.
 ) -> list :
