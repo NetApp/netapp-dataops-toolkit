@@ -98,7 +98,7 @@ Triton Server instance successfully deleted.
 
 #### List All NVIDIA Triton Inference Server instances
 
-The NetApp DataOps Toolkit can be used to print a list of all existing Triton Inference Servers in a specific namespace within a Kubernetes cluster. The command for printing a list of all existing NVIDIA Triton Servers is `netapp_dataops_k8s_cli.py list trtitonservers`.
+The NetApp DataOps Toolkit can be used to print a list of all existing Triton Inference Servers in a specific namespace within a Kubernetes cluster. The command for printing a list of all existing NVIDIA Triton Servers is `netapp_dataops_k8s_cli.py list triton-servers`.
 
 No options/arguments are required for this command.
 
