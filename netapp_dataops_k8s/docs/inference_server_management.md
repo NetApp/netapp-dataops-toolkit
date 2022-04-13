@@ -35,7 +35,7 @@ The following options/arguments are optional:
     -h, --help                  Print help text.
     -i, --image=                Container image to use when creating Triton instance. If not specified, "nvcr.io/nvidia/tritonserver:21.11-py3" will be used.
     -m, --memory=               Amount of memory to reserve for Triton instance. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
-    -n, --namespace=            Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
+    -n, --namespace=            Kubernetes namespace to create new server instance in. If not specified, server will be created in namespace "default".
     -p, --cpu=                  Number of CPUs to reserve for Triton instance. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
     -b, --load-balancer         Option to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
 ```
@@ -78,7 +78,7 @@ The following options/arguments are optional:
 ```
     -f, --force                     Do not prompt user to confirm operation.
     -h, --help                      Print help text.
-    -n, --namespace=                Kubernetes namespace that the workspace is located in. If not specified, namespace "default" will be used.
+    -n, --namespace=                Kubernetes namespace that the server instance is located in. If not specified, namespace "default" will be used.
 ```
 ##### Example Usage
 
@@ -86,7 +86,7 @@ Delete the NVIDIA Inference server 'mike' in namespace 'dsk-test'.
 
 ```sh
 netapp_dataops_k8s_cli.py delete triton-server --server-name=mike --namespace=dsk-test
-Warning: All data associated with the workspace will be permanently deleted.
+Warning: This server will be permanently deleted.
 Are you sure that you want to proceed? (yes/no): yes
 Deleting server 'mike' in namespace 'dsk-test'.
 Note: this operation does NOT delete the model repository PVC.
@@ -106,7 +106,7 @@ The following options/arguments are optional:
 
 ```
     -h, --help                  Print help text.
-    -n, --namespace=            Kubernetes namespace for which to retrieve list of workspaces. If not specified, namespace "default" will be used.
+    -n, --namespace=            Kubernetes namespace for which to retrieve list of servers. If not specified, namespace "default" will be used.
 ```
 
 ##### Example Usage
@@ -133,7 +133,7 @@ from netapp_dataops.k8s import delete_triton_server
 from netapp_dataops.k8s import list_triton_servers
 ```
 
-The following workspace management operations are available within the set of functions.
+The following server management operations are available within the set of functions.
 
 | Triton Inference Server operations                                                   | Supported by BeeGFS | Supported by Trident | Requires Astra Control |
 | ------------------------------------------------------------------------------------ | ------------------- | -------------------- | ---------------------- |
@@ -157,7 +157,7 @@ def create_triton_server(
     server_name: str,                                           # Name of the Triton Infernce Server Instance (required).
     model_pvc_name: str                                         # Name of the PVC containing the model repository.
     load_balancer_service: bool = False,                        # Option to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
-    namespace: str = "default",                                 # Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
+    namespace: str = "default",                                 # Kubernetes namespace to create new server in. If not specified, server will be created in namespace "default".
     server_image: str = "nvcr.io/nvidia/tritonserver:21.11-py3" # Container image to use when creating instance. If not specified, "nvcr.io/nvidia/tritonserver:21.11-py3" will be used.
     request_cpu: str = None,                                    # Number of CPUs to reserve for Triton instance. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
     request_memory: str = None,                                 # Amount of memory to reserve for Triton instance. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
@@ -192,7 +192,7 @@ The NetApp DataOps Toolkit can enable a user to near-instantaneously delete an e
 ```py
 def delete_triton_server(
     server_name: str,                    # Name of NVIDIA Triton Server instance to be deleted (required).
-    namespace: str = "default",          # Kubernetes namespace that the workspace is located in. If not specified, namespace "default" will be used.
+    namespace: str = "default",          # Kubernetes namespace that the server is located in. If not specified, namespace "default" will be used.
     print_output: bool = False           # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
@@ -220,7 +220,7 @@ The NetApp DataOps Toolkit can be used to retrieve a list of all existing NVIDIA
 
 ```py
 def list_triton_servers(
-    namespace: str = "default",             # Kubernetes namespace for which to retrieve list of workspaces. If not specified, namespace "default" will be used.
+    namespace: str = "default",             # Kubernetes namespace for which to retrieve list of servers. If not specified, namespace "default" will be used.
     print_output: bool = False              # Denotes whether or not to print messages to the console during execution.
 ) -> list :
 ```
