@@ -114,7 +114,7 @@ The following options/arguments are optional:
 List all NVIDIA Triton Inference Server instances in namespace "dsk-test".
 
 ```sh
-netapp_dataops_k8s_cli.py list tritonservers --namespace=dsk-test
+netapp_dataops_k8s_cli.py list triton-servers --namespace=dsk-test
 Server Name    Status     HTTP Endpoints       gRPC Endpoint        Metrics Endpoint
 -------------  ---------  -------------------  -------------------  -------------------
 imagesufian    Ready      10.61.188.115:31102  10.61.188.115:31608  10.61.188.115:31149
