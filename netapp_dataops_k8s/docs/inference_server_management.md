@@ -1,6 +1,6 @@
 # NVIDIA Triton Inference Server management with NetApp DataOps Toolkit for Kubernetes
 
-The NetApp DataOps Toolkit for Kubernetes can be used to manage data science workspaces and inference servers within a Kubernetes cluster. Some of the key capabilities that the toolkit provides are the ability to deploy a new NVIDIA Triton Inference Server instance, the ability to delete an existing Inference Server instances, and list Inference Servers in specified namespaces.
+The NetApp DataOps Toolkit for Kubernetes can be used to manage data science workspaces and inference servers within a Kubernetes cluster. Some of the key capabilities that the toolkit provides are the ability to deploy a new NVIDIA Triton Inference Server instance, the ability to delete existing Inference Server instances, and list Inference Servers in specified namespaces.
 <a name="command-line-functionality"></a>
 
 ## Command Line Functionality
