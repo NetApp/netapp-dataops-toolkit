@@ -24,7 +24,7 @@ from kubernetes.client.models.v1_object_meta import V1ObjectMeta
 from kubernetes.client.rest import ApiException
 from tabulate import tabulate
 import pandas as pd
-import astraSDK
+#import astraSDK
 
 
 # Using this decorator in lieu of using a dependency to manage deprecation
@@ -1788,7 +1788,10 @@ def list_triton_servers(namespace: str = "default", print_output: bool = False) 
 
         # Retrieve access URL
         try :
-            workspaceDict["Server Endpoints"] = _retrieve_triton_endpoints(server_name=server_name, namespace=namespace, printOutput=False)
+            workspaceDict["HTTP Endpoint"] = _retrieve_triton_endpoints(server_name=server_name, namespace=namespace, printOutput=False)[0]
+            workspaceDict["gRPC Endpoint"] = _retrieve_triton_endpoints(server_name=server_name, namespace=namespace, printOutput=False)[1]
+            workspaceDict["Metrics Endpoint"] = _retrieve_triton_endpoints(server_name=server_name, namespace=namespace, printOutput=False)[2]
+
         except ServiceUnavailableError :
             workspaceDict["Server Endpoints"] = "unavailable"
         except APIConnectionError as err:
