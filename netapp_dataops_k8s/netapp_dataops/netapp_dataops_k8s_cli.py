@@ -375,8 +375,8 @@ Optional Options/Arguments:
 \t-n, --namespace=\t\tKubernetes namespace for which to retrieve list of instances. If not specified, namespace "default" will be used.
 
 Examples:
-\tnetapp_dataops_k8s_cli.py list tritonservers -n team1
-\tnetapp_dataops_k8s_cli.py list tritonservers --namespace=team2
+\tnetapp_dataops_k8s_cli.py list triton-servers -n team1
+\tnetapp_dataops_k8s_cli.py list triton-servers --namespace=team2
 '''
 
 helpTextListJupyterLabSnapshots = '''
