@@ -56,7 +56,9 @@ Note: To view details regarding options/arguments for a specific command, run th
 NVIDIA Triton Inference Server Management Commands
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
 
-\tcreate triton\t\t\tDeploy a new instance of the NVIDIA Triton Inference Server.
+\tcreate triton-server\t\t\tDeploy a new instance of the NVIDIA Triton Inference Server.
+\tdelete triton-server\t\t\tDelete an existing instance of the NVIDIA Triton Inference Server for a given workspace.
+\tlist triton-servers\t\t\tList all instances of the NVIDIA Triton Inference Server in a namespace.
 
 Kubernetes Persistent Volume Management Commands (for advanced Kubernetes users):
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
@@ -194,7 +196,7 @@ Optional Options/Arguments:
 \t-h, --help\t\t\tPrint help text.
 \t-i, --image=\t\t\tContainer image to use when creating instance. If not specified, "nvcr.io/nvidia/tritonserver:21.11-py3" will be used.
 \t-m, --memory=\t\t\tAmount of memory to reserve for Triton instance. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
-\t-n, --namespace=\t\tKubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
+\t-n, --namespace=\t\tKubernetes namespace to create new instance in. If not specified, instance will be created in namespace "default".
 \t-p, --cpu=\t\t\tNumber of CPUs to reserve for Triton instance. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
 \t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
 
@@ -281,12 +283,12 @@ Command: delete triton-server
 Delete an existing NVIDIA Triton Inference Server.
 
 Required Options/Arguments:
-\t-s, --server-name=\t\tName of Nvidia Triton Inference Server to be deleted.
+\t-s, --server-name=\t\tName of NVIDIA Triton Inference Server to be deleted.
 
 Optional Options/Arguments:
 \t-f, --force\t\t\tDo not prompt user to confirm operation.
 \t-h, --help\t\t\tPrint help text.
-\t-n, --namespace=\t\tKubernetes namespace that the workspace is located in. If not specified, namespace "default" will be used.
+\t-n, --namespace=\t\tKubernetes namespace that the instance is located in. If not specified, namespace "default" will be used.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py delete triton-server --server-name=mike
@@ -370,7 +372,7 @@ No options/arguments are required.
 
 Optional Options/Arguments:
 \t-h, --help\t\t\tPrint help text.
-\t-n, --namespace=\t\tKubernetes namespace for which to retrieve list of workspaces. If not specified, namespace "default" will be used.
+\t-n, --namespace=\t\tKubernetes namespace for which to retrieve list of instances. If not specified, namespace "default" will be used.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py list tritonservers -n team1
@@ -1135,7 +1137,7 @@ if __name__ == '__main__':
 
             # Confirm delete operation
             if not force:
-                print("Warning: All data associated with the workspace will be permanently deleted.")
+                print("Warning: This workspace will be permanently deleted.")
                 while True:
                     proceed = input("Are you sure that you want to proceed? (yes/no): ")
                     if proceed in ("yes", "Yes", "YES"):
@@ -1266,7 +1268,7 @@ if __name__ == '__main__':
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
-        elif target in ("tritonservers", "triton_server", "triton"):
+        elif target in ("triton-servers", "triton_server", "triton"):
             namespace = "default"
 
             # Get command line options
