@@ -1,7 +1,6 @@
-# NVIDIA triton server management with NetApp DataOps Toolkit for Kubernetes
+# NVIDIA Triton Inference Server management with NetApp DataOps Toolkit for Kubernetes
 
-The NetApp DataOps Toolkit for Kubernetes can be used to manage data science workspaces and inference servers within a Kubernetes cluster. Some of the key capabilities that the toolkit provides are the ability to provision a new JupyterLab workspace, the ability to almost instantaneously clone a JupyterLab workspace, the ability to almost instantaneously save off a snapshot of a JupyterLab workspace for traceability/baselining, and the ability to provision a new NVIDIA Triton Inference Server. These workspace management capabilities are available within the toolkit's command line utility and as a set of functions that can be imported and used from other Python programs
-
+The NetApp DataOps Toolkit for Kubernetes can be used to manage data science workspaces and inference servers within a Kubernetes cluster. Some of the key capabilities that the toolkit provides are the ability to deploy a new NVIDIA Triton Inference Server instance, the ability to delete an existing Inference Server instances, and list Inference Servers in specified namespaces.
 <a name="command-line-functionality"></a>
 
 ## Command Line Functionality
@@ -46,27 +45,27 @@ The following options/arguments are optional:
 Deploy a new NVIDIA Triton Infernece Server instance and use LoadBalancer Service.
 
 ```sh
-netapp_dataops_k8s_cli.py create triton-server --server-name=Test --model-repo-pvc-name=model-pvc --load-balancer
-Creating Service 'ntap-dsutil-triton-sufian-lb1' in namespace 'default'.
+netapp_dataops_k8s_cli.py create triton-server --server-name=lb1 --model-repo-pvc-name=model-pvc --load-balancer
+Creating Service 'ntap-dsutil-triton-lb1' in namespace 'default'.
 Service successfully created.
 
-Creating Deployment 'ntap-dsutil-triton-sufian-lb1' in namespace 'default'.
-Deployment 'ntap-dsutil-triton-sufian-lb1' created.
-Waiting for Deployment 'ntap-dsutil-triton-sufian-lb1' to reach Ready state.
+Creating Deployment 'ntap-dsutil-triton-lb1' in namespace 'default'.
+Deployment 'ntap-dsutil-triton-lb1' created.
+Waiting for Deployment 'ntap-dsutil-triton-lb1' to reach Ready state.
 Deployment successfully created.
 
-Workspace successfully created.
+Server successfully created.
 Server endpoints:
-http: 10.61.188.118:8000
-grpc: 10.61.188.118:8001
-metrics: 10.61.188.118:8002/metrics
+http: 10.61.188.115:30601
+grpc: 10.61.188.115:31835
+metrics: 10.61.188.115:31880/metrics
 ```
 
 <a name="cli-delete-triton-server"></a>
 
 #### Delete an existing NVIDIA Triton Inference Server instance 
 
-The NetApp DataOps Toolkit can enable a user to near-instantaneously delete an existing NVIDIA Triton Inference Server instance. The command for deploying an NVIDIA Triton Inference Server instance is `netapp_dataops_k8s_cli.py delete triton-server`.
+The NetApp DataOps Toolkit can enable a user to near-instantaneously delete an existing NVIDIA Triton Inference Server instance. The command for deleting an NVIDIA Triton Inference Server instance is `netapp_dataops_k8s_cli.py delete triton-server`.
 
 The following options/arguments are required:
 
@@ -90,6 +89,7 @@ netapp_dataops_k8s_cli.py delete triton-server --server-name=mike --namespace=ds
 Warning: All data associated with the workspace will be permanently deleted.
 Are you sure that you want to proceed? (yes/no): yes
 Deleting server 'mike' in namespace 'dsk-test'.
+Note: this operation does NOT delete the model repository PVC.
 Deleting Deployment...
 Deleting Service...
 Triton Server instance successfully deleted.
@@ -127,6 +127,8 @@ The NetApp DataOps Toolkit for Kubernetes provides a set of functions that can b
 
 ```py
 from netapp_dataops.k8s import create_triton_server
+from netapp_dataops.k8s import delete_triton_server
+from netapp_dataops.k8s import list_triton_servers
 ```
 
 The following workspace management operations are available within the set of functions.
@@ -164,14 +166,7 @@ def create_triton_server(
 
 ##### Return Value
 
-This function will return server endpoints for the triton inference server.
-
-Example of Returned Values:
-
-Server endpoints:
-http: 10.61.188.118:8000  
-grpc: 10.61.188.118:8001  
-metrics: 10.61.188.118:8002/metrics  
+This function will return a list of server endpoints (in string format): ['<http_uri>', '<grpc_uri>', '<metrics_uri>']
 
 ##### Error Handling
 
