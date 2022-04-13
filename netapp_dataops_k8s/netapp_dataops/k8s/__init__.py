@@ -298,11 +298,11 @@ def _retrieve_triton_endpoints(server_name: str, namespace: str = "default", pri
             # Retrieve access port
             for port in serviceStatus.spec.ports :
                 if port.target_port == "http" :
-                    http_port = port.port
+                    http_port = port.node_port
                 if port.target_port == "grpc" :
-                    grpc_port = port.port
+                    grpc_port = port.node_port
                 if port.target_port == "metrics" :
-                    metrics_port = port.port
+                    metrics_port = port.node_port
 
             # Retrieve node IP (random node)
             try:
@@ -1211,7 +1211,7 @@ def create_triton_server(server_name: str, model_pvc_name: str, load_balancer_se
         raise
 
     if print_output:
-        print("\nWorkspace successfully created.")
+        print("\nServer successfully created.")
         print("Server endpoints:")
         print("http: " + uri[0])
         print("grpc: " + uri[1])
@@ -1492,6 +1492,7 @@ def delete_triton_server(server_name: str, namespace: str = "default",
     # Delete workspace
     if print_output:
         print("Deleting server '" + server_name + "' in namespace '" + namespace + "'.")
+        print("Note: this operation does NOT delete the model repository PVC.")
     try:
         # Delete deployment
         if print_output:
@@ -1759,7 +1760,7 @@ def list_triton_servers(namespace: str = "default", print_output: bool = False) 
             _print_invalid_config_error()
         raise InvalidConfigError()
 
-    # Retrieve list of workspaces
+    # Retrieve list of instances
     try:
         api = client.AppsV1Api()
         deployments = api.list_namespaced_deployment(namespace=namespace, label_selector=_get_triton_dev_label_selector())
@@ -1768,13 +1769,13 @@ def list_triton_servers(namespace: str = "default", print_output: bool = False) 
             print("Error: Kubernetes API Error: ", err)
         raise APIConnectionError(err)
 
-    # Construct list of workspaces
+    # Construct list of instances
     workspacesList = list()
     for deployment in deployments.items:
         # Construct dict containing workspace details
         workspaceDict = dict()
 
-        # Retrieve workspace name
+        # Retrieve instance name
         server_name = deployment.metadata.labels["triton-server-name"]
         workspaceDict["Server Name"] = server_name
 
@@ -1795,7 +1796,7 @@ def list_triton_servers(namespace: str = "default", print_output: bool = False) 
                 print("Error: Kubernetes API Error: ", err)
             raise APIConnectionError(err)
 
-        # Append dict to list of workspaces
+        # Append dict to list of instances
         workspacesList.append(workspaceDict)
 
     # Print list of workspaces
