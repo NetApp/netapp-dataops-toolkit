@@ -14,7 +14,7 @@ from time import sleep
 import warnings
 import os
 
-import IPython
+from notebook import auth as jupyter_auth
 from kubernetes import client, config
 from kubernetes.client import (
     V1ConfigMap,
@@ -492,13 +492,15 @@ def clone_jupyter_lab(new_workspace_name: str, source_workspace_name: str, sourc
 
     # Create new workspace
     print()
-    create_jupyter_lab(workspace_name=new_workspace_name, workspace_size=workspaceSize, namespace=namespace,
+    url = create_jupyter_lab(workspace_name=new_workspace_name, workspace_size=workspaceSize, namespace=namespace,
                        workspace_password=new_workspace_password, workspace_image=sourceWorkspaceImage, request_cpu=request_cpu,
                        load_balancer_service=load_balancer_service, request_memory=request_memory, request_nvidia_gpu=request_nvidia_gpu, print_output=print_output,
                        pvc_already_exists=True, labels=labels)
 
     if print_output:
         print("JupyterLab workspace successfully cloned.")
+
+    return url
 
 
 def clone_jupyter_lab_to_new_namespace(source_workspace_name: str, new_namespace: str, source_workspace_namespace: str = "default", clone_to_cluster_name: str = None, print_output: bool = False) :
@@ -628,14 +630,10 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
 
     # Step 0 - Set password
     if not workspace_password:
-        while True:
-            workspace_password = getpass(
-                "Set workspace password (this password will be required in order to access the workspace): ")
-            if getpass("Re-enter password: ") == workspace_password:
-                break
-            else:
-                print("Error: Passwords do not match. Try again.")
-    hashedPassword = IPython.lib.passwd(workspace_password)
+        print("Seting workspace password (this password will be required in order to access the workspace)...")
+        hashedPassword = jupyter_auth.passwd()
+    else :
+        hashedPassword = jupyter_auth.passwd(workspace_password)
 
     # Step 1 - Create PVC for workspace
     if not pvc_already_exists:
