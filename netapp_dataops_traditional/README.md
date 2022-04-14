@@ -78,6 +78,7 @@ If you experience an error and do not know how to resolve it, visit the [Trouble
 
 - [Accelerating the AI training workflow with the NetApp DataOps Toolkit.](https://netapp.io/2020/12/14/accelerating-the-ai-training-workflow-with-the-netapp-data-science-toolkit/)
 - [Easy AI dataset-to-model traceability with the NetApp DataOps Toolkit.](https://netapp.io/2021/01/13/easy-ai-dataset-to-model-traceability-with-the-netapp-data-science-toolkit/)
+- [Automatically mount newly cloned workspaces without needing sudo/root access.](https://netapp.io/2021/11/17/automatically-mount-newly-cloned-workspaces-using-the-netapp-dataops-toolkit/)
 
 <a name="command-line-functionality"></a>
 
