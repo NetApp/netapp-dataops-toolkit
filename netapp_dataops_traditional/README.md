@@ -987,16 +987,24 @@ The NetApp DataOps Toolkit can be used to near-instantaneously create a new data
 
 ```py
 def clone_volume(
-    new_volume_name: str,             # Name of new volume (required).
-    source_volume_name: str,          # Name of volume to be cloned (required).
-    source_snapshot_name: str = None, # Name of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
-    unix_uid: str = None,             # Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
-    unix_gid: str = None,             # Unix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
-    mountpoint: str = None,           # Local mountpoint to mount new volume at. If not specified, volume will not be mounted locally. On Linux hosts - if specified, calling program must be run as root.
-    junction: str = None,             # Custom junction path for volume to be exported at. If not specified, junction path will be: ("/"+Volume Name).
-    readonly: bool = False,           # Option to mount volume locally as "read-only." If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
-    print_output: bool = False        # Denotes whether or not to print messages to the console during execution.
-) :
+    new_volume_name: str,                  # Name of new volume (required).
+    source_volume_name: str,               # Name of volume to be cloned (required).
+    cluster_name: str = None,              # non default cluster name, same credentials as the default credentials should be used 
+    source_snapshot_name: str = None,      # Name of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume). if snapshot name is suffixed by * the latest snapsho starting with the prefix specified will be used (daily* will use the latest snapshot prefixed by daily)
+    source_svm: str = None,                # Name of of the svm hosting the volume to be cloned, when not provided default svm will be used
+    target_svm: str = None,                # Name of of the svm hosting the clone. when not provided source svm will be used 
+    export_hosts: str = None,              # colon(:) seperated hosts/cidrs to to use for export. hosts will be exported for rw and root access
+    export_policy: str = None,             # export policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
+    snapshot_policy: str = None,           # name of existing snapshot policy to configure on the volume 
+    split: bool = False,                   # start clone split after creation
+    unix_uid: str = None,                  # Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
+    unix_gid: str = None,                  # Unix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
+    mountpoint: str = None,                # Local mountpoint to mount new volume at. If not specified, volume will not be mounted locally. On Linux hosts - if specified, calling program must be run as root.
+    junction: str= None,                   # Custom junction path for volume to be exported at. If not specified, junction path will be: ("/"+Volume Name).
+    readonly: bool = False,                # Option to mount volume locally as "read-only." If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
+    refresh: bool = False,                 # when true a previous clone using this name will be deleted prior to the new clone creation
+    svm_dr_unprotect: bool = False,        # mark the clone created to be excluded from svm-dr replication when onfigured on the clone svm 
+    print_output: bool = False):
 ```
 
 ##### Return Value
