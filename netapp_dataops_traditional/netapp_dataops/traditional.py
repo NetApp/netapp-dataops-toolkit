@@ -822,7 +822,7 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
                   volume_type: str = "flexvol", unix_permissions: str = "0777",
                   unix_uid: str = "0", unix_gid: str = "0", export_policy: str = "default",
                   snapshot_policy: str = None, aggregate: str = None, mountpoint: str = None, junction: str = None, readonly: bool = False,
-                  print_output: bool = False, tiering_policy=None):
+                  print_output: bool = False, tiering_policy=None, vol_dp: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -923,25 +923,37 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
         if not tiering_policy in ['none','auto','snapshot-only','all', None]:
             if print_output:
                 print("Error: tiering policy can be: none,auto,snapshot-only or all")
-            raise InvalidVolumeParameterError("tieringPolicy")        
+            raise InvalidVolumeParameterError("tieringPolicy")     
 
-        # Create dict representing volume
-        volumeDict = {
-            "name": volume_name,
-            "comment": "netapp-dataops",
-            "svm": {"name": svm},
-            "size": volumeSizeBytes,
-            "style": volume_type,
-            "nas": {
-                "path": junction,
-                "export_policy": {"name": export_policy},
-                "security_style": "unix",
-                "unix_permissions": unix_permissions,
-                "uid": unix_uid,
-                "gid": unix_gid
-            },
-            "snapshot_policy": {"name": snapshot_policy},          
-        }
+        #vol dp type 
+        if vol_dp:
+            # Create dict representing volume of type dp
+            volumeDict = {
+                "name": volume_name,
+                "comment": "netapp-dataops",
+                "svm": {"name": svm},
+                "size": volumeSizeBytes,
+                "style": volume_type,
+                "type": 'dp'
+            }
+        else:
+            # Create dict representing volume
+            volumeDict = {
+                "name": volume_name,
+                "comment": "netapp-dataops",
+                "svm": {"name": svm},
+                "size": volumeSizeBytes,
+                "style": volume_type,
+                "nas": {
+                    "path": junction,
+                    "export_policy": {"name": export_policy},
+                    "security_style": "unix",
+                    "unix_permissions": unix_permissions,
+                    "uid": unix_uid,
+                    "gid": unix_gid
+                },
+                "snapshot_policy": {"name": snapshot_policy},          
+            }
 
         # Set space guarantee field
         if guarantee_space:

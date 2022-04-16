@@ -130,6 +130,7 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
+    -u, --cluster-name=     non default hosting cluster
     -c, --source-svm=       non default source svm name
     -t, --target-svm=       non default target svm name
     -g, --gid=              Unix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
@@ -140,6 +141,12 @@ The following options/arguments are optional:
     -u, --uid=              Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
     -x, --readonly          Read-only option for mounting volumes locally.
     -j, --junction          Specify a custom junction path for the volume to be exported at.
+    -e, --export-hosts               colon(:) seperated hosts/cidrs to to use for export. hosts will be exported for rw and root access
+    -e, --export-policy              export policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
+    -d, --snapshot-policy            snapshot-policy to attach to the volume, default snapshot policy will be used if not provided
+    -s, --split              start clone split after creation
+    -r, --refresh            delete existing clone if exists before creating a new one
+    -d, --svm-dr-unprotect           disable svm dr protection if svm-dr protection exists
 ```
 
 ##### Example Usage
@@ -192,8 +199,9 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
+    -u, --cluster-name=     non default hosting cluster
     -v, --svm=              non default svm name
-    -a, --aggregate=        Aggregate to use when creating new volume (flexvol volumes only).
+    -a, --aggregate=        Aggregate to use when creating new volume (flexvol) or optional comma seperated aggrlist when specific aggregates are required for FG.
     -d, --snapshot-policy=  Snapshot policy to apply for new volume.
     -e, --export-policy=    NFS export policy to use when exporting new volume.
     -g, --gid=              Unix filesystem group id (gid) to apply when creating new volume (ex. '0' for root group).
@@ -203,8 +211,10 @@ The following options/arguments are optional:
     -r, --guarantee-space   Guarantee sufficient storage space for full capacity of the volume (i.e. do not use thin provisioning).
     -t, --type=             Volume type to use when creating new volume (flexgroup/flexvol).
     -u, --uid=              Unix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
-    -x, --readonly          Read-only option for mounting volumes locally.    
+    -x, --readonly          Read-only option for mounting volumes locally.
     -j, --junction          Specify a custom junction path for the volume to be exported at.
+    -f, --tiering-policy    Specify tiering policy for fabric-pool enabled systems (default is 'none').
+    -y, --dp                Create volume as DP volume (the volume will be used as snapmirror target)
 ```
 
 ##### Example Usage
@@ -246,9 +256,13 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
+    -u, --cluster-name=     non default hosting cluster
     -v, --svm       non default SVM name
     -f, --force     Do not prompt user to confirm operation.
+    -m, --delete-mirror      delete/release snapmirror relationship prior to volume deletion
+        --delete-non-clone  Enable deletion of volume not created as clone by this tool
     -h, --help      Print help text.
+
 ```
 
 ##### Example Usage
@@ -274,8 +288,10 @@ No options/arguments are required for this command.
 The following options/arguments are optional:
 
 ```
+    -u, --cluster-name=     non default hosting cluster
+    -v, --svm                               list volume on non default svm
     -h, --help                              Print help text.
-    -s, --include-space-usage-details       Include storage space usage details in output (see below for explanation).
+    -s, --include-space-usage-details       Include storage space usage details in output (see README for explanation).
 ```
 
 ##### Storage Space Usage Details Explanation
@@ -343,6 +359,8 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
+    -v, --svm       non default SVM name
+    -l, --lif       non default lif (nfs server ip/name)
     -h, --help              Print help text.
     -x, --readonly          Mount volume locally as read-only.
 ```
@@ -398,10 +416,13 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
-    -s, --svm         Non defaul svm name.
-    -n, --name=       Name of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
-    -r, --retention=  if provided snapshot name will be suffixed by <timestamp> and excesive snapshots will be deleted
-    -h, --help        Print help text.    
+    -u, --cluster-name=     non default hosting cluster
+    -s, --svm       Non defaul svm name.
+    -h, --help      Print help text.
+    -n, --name=     Name of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
+    -r, --retention=        Snapshot name will be suffixed by <timestamp> and excesive snapshots will be deleted.
+                            Can be count of snapshots when int (ex. 10) or days when retention is suffixed by d (ex. 10d)
+    -l, --snapmirror-label=  if proivded snapmirror label will be configured on the created snapshot   
 ```
 
 ##### Example Usage
@@ -438,8 +459,10 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
-    -s, --svm       Non defaul svm name.
+    -u, --cluster-name=     non default hosting cluster
+    -s, --svm=      Non default svm
     -h, --help      Print help text.
+
 ```
 
 ##### Example Usage
@@ -464,8 +487,10 @@ The following options/arguments are required:
     -v, --volume=   Name of volume.
 ```
 Optional Options/Arguments:
-    -s, --svm       Non default svm.
+    -u, --cluster-name=     non default hosting cluster
+    -s, --svm=      Non default svm.
     -h, --help      Print help text.
+
 
 ##### Example Usage
 
@@ -500,7 +525,8 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
-    -s, --svm       Non default svm.
+    -u, --cluster-name=     non default hosting cluster
+    -s, --svm=      Non default svm.
     -f, --force     Do not prompt user to confirm operation.
     -h, --help      Print help text.
 ```
@@ -816,7 +842,11 @@ FlexCache prepopulated successfully.
 
 The NetApp DataOps Toolkit can be used to print a list of all existing SnapMirror relationships for which the destination volume resides on the user's storage system. The command for printing a list of all existing SnapMirror relationships is `netapp_dataops_cli.py list snapmirror-relationships`.
 
-No options/arguments are required for this command.
+Optional Options/Arguments:
+    -u, --cluster-name=     non default hosting cluster
+    -s, --svm=      Non default svm.
+    -h, --help      Print help text.
+
 
 Note: To create a new SnapMirror relationship, access ONTAP System Manager.
 
@@ -841,16 +871,19 @@ The following options/arguments are required:
 
 ```
     -i, --uuid=     UUID of the relationship for which the sync operation is to be triggered.
+or
+    -n, --name=     Name of target volume to be sync .
 ```
 
-The following options/arguments are optional:
-
+Optional Options/Arguments:
 ```
+    -u, --cluster-name=     non default hosting cluster
+    -v, --svm       non default target SVM name
     -h, --help      Print help text.
     -w, --wait      Wait for sync operation to complete before exiting.
 ```
 
-Note: To create a new SnapMirror relationship, access ONTAP System Manager.
+Note: To create a new SnapMirror relationship, access ONTAP System Manager or use the create snapmirror-relationship command.
 
 ##### Example Usage
 
@@ -863,6 +896,38 @@ Status check will be performed in 10 seconds...
 Sync operation is not yet complete. Status: transferring
 Checking again in 60 seconds...
 Success: Sync operation is complete.
+```
+
+#### Create New SnapMirror Relationship
+
+The NetApp DataOps Toolkit can be used to create SnapMirror relationshp for which the destination volume resides on the user's storage system. NetApp's SnapMirror volume replication technology can be used to quickly and efficiently replicate data between NetApp storage systems. For example, SnapMirror could be used to replicate newly acquired data, gathered on a different NetApp storage system, to the user's NetApp storage system to be used for AI/ML model training or retraining. The command can create relationship and initialize/resync the relationship. The command for create new SnapMirror relationship is `netapp_dataops_cli.py create snapmirror-relationship`.
+
+
+The following options/arguments are required:
+
+```
+    -n, --target-vol=       Name of target volume
+    -s, --source-svm=       Source SVM name
+    -v, --source-vol=       Source volume name
+```
+
+Optional Options/Arguments:
+```
+    -u, --cluster-name=     non default hosting cluster
+    -t, --target-svm=       non default target SVM
+    -c, --schedule= non default schedule (default is hourly)
+    -p, --policy=   non default policy (default is MirrorAllSnapshots
+    -a, --action=   resync,initialize following creation
+    -h, --help      Print help text.
+```
+
+##### Example Usage
+
+```sh
+netapp_dataops_cli.py create snapmirror-relationship --cluster-name=cluster1 --source-svm=svm1 --target-svm=svm2 --source-vol=vol1 --target-vol=vol1 --schedule=daily --policy=MirrorAllSnapshots -a resync
+Creating snapmirror relationship: svm1:vol1 -> svm2:vol1
+Setting snapmirror policy as: MirrorAllSnapshots schedule:daily
+Setting state to snapmirrored, action:resync
 ```
 
 <a name="library-of-functions"></a>

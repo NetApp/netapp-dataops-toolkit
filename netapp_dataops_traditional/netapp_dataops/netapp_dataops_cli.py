@@ -144,7 +144,7 @@ Required Options/Arguments:
 
 Optional Options/Arguments:
 \t-u, --cluster-name=\tnon default hosting cluster
-\t-s, --svm\tNon defaul svm name.
+\t-s, --svm=\tNon defaul svm name.
 \t-h, --help\tPrint help text.
 \t-n, --name=\tName of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
 \t-r, --retention=\tSnapshot name will be suffixed by <timestamp> and excesive snapshots will be deleted. 
@@ -183,6 +183,7 @@ Optional Options/Arguments:
 \t-x, --readonly\t\tRead-only option for mounting volumes locally.
 \t-j, --junction\t\tSpecify a custom junction path for the volume to be exported at.
 \t-f, --tiering-policy\t\tSpecify tiering policy for fabric-pool enabled systems (default is 'none').
+\t-y, --dp\t\tCreate volume as DP volume (the volume will be used as snapmirror target)
 
 
 Examples (basic usage):
@@ -209,7 +210,7 @@ Required Options/Arguments:
 
 Optional Options/Arguments:
 \t-u, --cluster-name=\tnon default hosting cluster
-\t-s, --svm\tNon default svm
+\t-s, --svm=\tNon default svm
 \t-h, --help\tPrint help text.
 
 Examples:
@@ -267,7 +268,7 @@ List all SnapMirror relationships.
 
 Optional Options/Arguments:
 \t-u, --cluster-name=\tnon default hosting cluster
-\t-s, --svm\tNon default svm.
+\t-s, --svm=\tNon default svm.
 \t-h, --help\tPrint help text.
 '''
 helpTextListSnapshots = '''
@@ -280,7 +281,7 @@ Required Options/Arguments:
 
 Optional Options/Arguments:
 \t-u, --cluster-name=\tnon default hosting cluster
-\t-s, --svm\tNon default svm.
+\t-s, --svm=\tNon default svm.
 \t-h, --help\tPrint help text.
 
 Examples:
@@ -296,7 +297,7 @@ No options/arguments are required.
 
 Optional Options/Arguments:
 \t-u, --cluster-name=\tnon default hosting cluster
-\t-v, --svm\t\t\t\tlist volume on non default svm
+\t-v, --svm=\t\t\t\tlist volume on non default svm
 \t-h, --help\t\t\t\tPrint help text.
 \t-s, --include-space-usage-details\tInclude storage space usage details in output (see README for explanation).
 
@@ -437,7 +438,7 @@ Required Options/Arguments:
 
 Optional Options/Arguments:
 \t-u, --cluster-name=\tnon default hosting cluster
-\t-s, --svm\tNon default svm.
+\t-s, --svm=\tNon default svm.
 \t-f, --force\tDo not prompt user to confirm operation.
 \t-h, --help\tPrint help text.
 
@@ -912,11 +913,11 @@ if __name__ == '__main__':
             junction = None
             readonly = False
             tieringPolicy = None 
-
+            volDP = False
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hv:t:n:s:rt:p:u:g:e:d:m:a:j:xu:", ["cluster-name=","help", "svm=", "name=", "size=", "guarantee-space", "type=", "permissions=", "uid=", "gid=", "export-policy=", "snapshot-policy=", "mountpoint=", "aggregate=", "junction=" ,"readonly","tiering-policy="])
+                opts, args = getopt.getopt(sys.argv[3:], "hv:t:n:s:rt:p:u:g:e:d:m:a:j:xu:y", ["cluster-name=","help", "svm=", "name=", "size=", "guarantee-space", "type=", "permissions=", "uid=", "gid=", "export-policy=", "snapshot-policy=", "mountpoint=", "aggregate=", "junction=" ,"readonly","tiering-policy=","dp"])
             except Exception as err:                
                 print(err)
                 handleInvalidCommand(helpText=helpTextCreateVolume, invalidOptArg=True)
@@ -958,6 +959,8 @@ if __name__ == '__main__':
                     readonly = True
                 elif opt in ("-f", "--tiering-policy"):
                     tieringPolicy = arg
+                elif opt in ("-y", "--dp"):
+                    volDP = True
 
             # Check for required options
             if not volumeName or not volumeSize:
@@ -965,15 +968,18 @@ if __name__ == '__main__':
             if (unixUID and not unixGID) or (unixGID and not unixUID):
                 print("Error: if either one of -u/--uid or -g/--gid is spefied, then both must be specified.")
                 handleInvalidCommand(helpText=helpTextCreateVolume, invalidOptArg=True)
+            if (volDP and (junction or mountpoint or snapshotPolicy or exportPolicy)):
+                handleInvalidCommand(helpText=helpTextCreateVolume, invalidOptArg=True)
 
             # Create volume
             try:
                 create_volume(svm_name=svmName, volume_name=volumeName,  cluster_name=clusterName, volume_size=volumeSize, guarantee_space=guaranteeSpace, volume_type=volumeType, unix_permissions=unixPermissions, unix_uid=unixUID,
-                              unix_gid=unixGID, export_policy=exportPolicy, snapshot_policy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, junction=junction, readonly=readonly, print_output=True, tiering_policy=tieringPolicy)
+                              unix_gid=unixGID, export_policy=exportPolicy, snapshot_policy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, junction=junction, readonly=readonly, 
+                              print_output=True, tiering_policy=tieringPolicy, vol_dp=volDP)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
 
-        elif target in ("snapmirror-relationship", "sm"):
+        elif target in ("snapmirror-relationship", "sm","snapmirror"):
             clusterName = None 
             sourceSvm = None 
             targetSvm = None 
@@ -1153,7 +1159,7 @@ if __name__ == '__main__':
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
-        elif target in ("snapmirror-relationship", "snapmirror", "snapmirror-relationships", "snapmirrors"):
+        elif target in ("snapmirror-relationship", "snapmirror", "snapmirror-relationships", "snapmirrors","sm"):
             svmName = None
             clusterName = None             
 
@@ -1167,7 +1173,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextDeleteVolume)
+                    print(helpTextListSnapMirrorRelationships)
                     sys.exit(0)
                 elif opt in ("-v", "--svm"):
                     svmName = arg
