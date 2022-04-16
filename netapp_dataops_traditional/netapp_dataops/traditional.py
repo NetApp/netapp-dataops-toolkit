@@ -822,7 +822,7 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
                   volume_type: str = "flexvol", unix_permissions: str = "0777",
                   unix_uid: str = "0", unix_gid: str = "0", export_policy: str = "default",
                   snapshot_policy: str = None, aggregate: str = None, mountpoint: str = None, junction: str = None, readonly: bool = False,
-                  print_output: bool = False, tiering_policy=None, vol_dp: bool = False):
+                  print_output: bool = False, tiering_policy: str = None, vol_dp: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)

@@ -111,6 +111,7 @@ Advanced data fabric operations:
 - [Prepopulate specific files/directories on a FlexCache volume (ONTAP 9.8 and above ONLY).](#cli-prepopulate-flexcache)
 - [List all SnapMirror relationships.](#cli-list-snapmirror-relationships)
 - [Trigger a sync operation for an existing SnapMirror relationship.](#cli-sync-snapmirror-relationship)
+- [Create new SnapMirror relationship.](#cli-create-snapmirror-relationship)
 
 ### Data Volume Management Operations
 
@@ -898,6 +899,7 @@ Checking again in 60 seconds...
 Success: Sync operation is complete.
 ```
 
+<a name="cli-create-snapmirror-relationships"></a>
 #### Create New SnapMirror Relationship
 
 The NetApp DataOps Toolkit can be used to create SnapMirror relationshp for which the destination volume resides on the user's storage system. NetApp's SnapMirror volume replication technology can be used to quickly and efficiently replicate data between NetApp storage systems. For example, SnapMirror could be used to replicate newly acquired data, gathered on a different NetApp storage system, to the user's NetApp storage system to be used for AI/ML model training or retraining. The command can create relationship and initialize/resync the relationship. The command for create new SnapMirror relationship is `netapp_dataops_cli.py create snapmirror-relationship`.
@@ -1004,7 +1006,8 @@ def clone_volume(
     readonly: bool = False,                # Option to mount volume locally as "read-only." If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
     refresh: bool = False,                 # when true a previous clone using this name will be deleted prior to the new clone creation
     svm_dr_unprotect: bool = False,        # mark the clone created to be excluded from svm-dr replication when onfigured on the clone svm 
-    print_output: bool = False):
+    print_output: bool = False             # print log to the console
+)
 ```
 
 ##### Return Value
@@ -1032,22 +1035,25 @@ The NetApp DataOps Toolkit can be used to rapidly provision a new data volume as
 ##### Function Definition
 
 ```py
-def create_volume(
+def create_volume:                   
     volume_name: str,                # Name of new volume (required).
     volume_size: str,                # Size of new volume (required). Format: '1024MB', '100GB', '10TB', etc.
     guarantee_space: bool = False,   # Guarantee sufficient storage space for full capacity of the volume (i.e. do not use thin provisioning).
-    volume_type: str = "flexvol",    # Volume type to use when creating new volume (flexgroup/flexvol).
-    unix_permissions: str = "0777",  # Unix filesystem permissions to apply when creating new volume (ex. '0777' for full read/write permissions for all users and groups).
+    cluster_name: str = None,        # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,            # Non default svm name, same credentials as the default credentials should be used 
+    volume_type: str = "flexvol",    # Volume type can be flexvol (default) or flexgroup
+    unix_permissions: str = "0777",  # Unix filesystem permissions to apply when creating new volume (ex. '0777' for full read/write permissions for all users and groups).  
     unix_uid: str = "0",             # Unix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
     unix_gid: str = "0",             # Unix filesystem group id (gid) to apply when creating new volume (ex. '0' for root group).
     export_policy: str = "default",  # NFS export policy to use when exporting new volume.
     snapshot_policy: str = "none",   # Snapshot policy to apply for new volume.
-    aggregate: str = None,           # Aggregate to use when creating new volume (flexvol volumes only).
+    aggregate: str = None,           # aggregate name or comma seperated aggregates for flexgroup
     mountpoint: str = None,          # Local mountpoint to mount new volume at. If not specified, volume will not be mounted locally. On Linux hosts - if specified, calling program must be run as root.
     junction: str = None,            # Custom junction path for volume to be exported at. If not specified, junction path will be: ("/"+Volume Name).
     readonly: bool = False,          # Mount volume locally as "read-only." If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
-    print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
-) :
+    print_output: bool = False,      # Denotes whether or not to print messages to the console during execution.
+    tiering_policy: str = None,      # For fabric pool enabled system tiering policy can be: none,auto,snapshot-only,all
+    vol_dp: bool = False             # Create volume as type DP which can be used as snapmirror destination
 ```
 
 ##### Return Value
@@ -1075,9 +1081,14 @@ The NetApp DataOps Toolkit can be used to near-instantaneously delete an existin
 
 ```py
 def delete_volume(
-    volume_name: str,            # Name of volume (required).
-    print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
-) :
+    volume_name: str,                # Name of volume (required).
+    print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
+    cluster_name: str = None,        # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,            # Non default svm name, same credentials as the default credentials should be used 
+    delete_mirror: bool = False,     # release snapmirror on source volume/delete snapmirror relation on destination volume
+    delete_non_clone: bool = False,  # Enable deletion of non clone volume (extra step not to incedently delete important volume)
+    print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
+):
 ```
 
 ##### Return Value
@@ -1106,6 +1117,8 @@ The NetApp DataOps Toolkit can be used to retrieve a list of all existing data v
 def list_volumes(
     check_local_mounts: bool = False,           # If set to true, then the local mountpoints of any mounted volumes will be included in the returned list and included in printed output.
     include_space_usage_details: bool = False,  # Include storage space usage details in output (see below for explanation).
+    cluster_name: str = None,        # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,            # Non default svm name, same credentials as the default credentials should be used    
     print_output: bool = False                  # Denotes whether or not to print messages to the console during execution.
 ) -> list() :
 ```
@@ -1152,6 +1165,8 @@ The NetApp DataOps Toolkit can be used to mount an existing data volume as "read
 ```py
 def mount_volume(
     volume_name: str,           # Name of volume (required).
+    cluster_name: str = None,        # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,            # Non default svm name, same credentials as the default credentials should be used    
     mountpoint: str,            # Local mountpoint to mount volume at (required).
     readonly: bool = False,     # Mount volume locally as "read-only." If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
     print_output: bool = False  # Denotes whether or not to print messages to the console during execution.
@@ -1215,8 +1230,14 @@ The NetApp DataOps Toolkit can be used to near-instantaneously save a space-effi
 ```py
 def create_snapshot(
     volume_name: str,                    # Name of volume (required).
-    snapshot_name: str = None,           # Name of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
+    snapshot_name: str = None,           # Name of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'. if retention specified snapshot name will be the prefix for the snapshot.    
+    cluster_name: str = None,            # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,                # Non default svm name, same credentials as the default credentials should be used
+    retention_count: int = 0,            # the amount of snapshots to keep. excesive snapshots will be deleted
+    retention_days: bool = False,        # when true the retention count will represent number of days
+    snapmirror_label: str = None,        # when provided snapmirror label will be set on the snapshot created. this is usefull when the volume is source for vault snapmirror 
     print_output: bool = False           # Denotes whether or not to print messages to the console during execution.
+
 ) :
 ```
 
@@ -1246,6 +1267,8 @@ The NetApp DataOps Toolkit can be used to near-instantaneously delete an existin
 def delete_snapshot(
     volume_name: str,            # Name of volume (required).
     snapshot_name: str,          # Name of snapshot to be deleted (required).
+    cluster_name: str = None,    # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,        # Non default svm name, same credentials as the default credentials should be used    
     print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
@@ -1276,6 +1299,8 @@ The NetApp DataOps Toolkit can be used to retrieve a list of all existing snapsh
 ```py
 def list_snapshots(
     volume_name: str,            # Name of volume.
+    cluster_name: str = None,    # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,        # Non default svm name, same credentials as the default credentials should be used    
     print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
 ) -> list() :
 ```
@@ -1308,6 +1333,8 @@ Warning: A snapshot restore operation will delete all snapshots that were create
 def restore_snapshot(
     volume_name: str,            # Name of volume (required).
     snapshot_name: str,          # Name of snapshot to be restored (required).
+    cluster_name: str = None,    # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,        # Non default svm name, same credentials as the default credentials should be used    
     print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
@@ -1579,6 +1606,8 @@ Note: To create a new SnapMirror relationship, access ONTAP System Manager.
 
 ```py
 def list_snap_mirror_relationships(
+    cluster_name: str = None,    # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,        # Non default svm name, same credentials as the default credentials should be used    
     print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
 ) -> list() :
 ```
@@ -1611,6 +1640,9 @@ Note: To create a new SnapMirror relationship, access ONTAP System Manager.
 ```py
 def sync_snap_mirror_relationship(
     uuid: str,                          # UUID of the relationship for which the sync operation is to be triggered (required).
+    volume_name: str = None             # destination volume name (only when uuid not provided)
+    cluster_name: str = None,           # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,               # Non default svm name, same credentials as the default credentials should be used    
     wait_until_complete: bool = False,  # Denotes whether or not to wait for sync operation to complete before returning.
     print_output: bool = False          # Denotes whether or not to print messages to the console during execution.
 ) :
