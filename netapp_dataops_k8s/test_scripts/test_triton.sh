@@ -176,7 +176,7 @@ proceed_prompt
 printf "\n"
 
 ### Use List to check if the servers still exist in namespace: "dsk-test"
-command="./netapp_dataops_k8s_cli.py list triton-servers --namespace=$namespace"
+command="./netapp_dataops_k8s_cli.py list triton-servers -n $namespace"
 echo "Running: $command"
 eval $command
 printf "\nRetrieving server:\n"
@@ -185,7 +185,7 @@ proceed_prompt
 printf "\n"
 
 ### Delete Triton Inference instance 5
-command="./netapp_dataops_k8s_cli.py delete triton-server --server-name=$server5_name --namespace=$namespace --force"
+command="./netapp_dataops_k8s_cli.py delete triton-server -s $server5_name -n $namespace -f"
 echo "Running: $command"
 eval $command
 printf "\nRetrieving server:\n"
@@ -195,7 +195,7 @@ proceed_prompt
 printf "\n"
 
 ### Delete Triton Inference instance 6
-command="./netapp_dataops_k8s_cli.py delete triton-server --server-name=$server6_name --namespace=$namespace --force"
+command="./netapp_dataops_k8s_cli.py delete triton-server -s $server6_name -n $namespace -f"
 echo "Running: $command"
 eval $command
 printf "\nRetrieving server:\n"
@@ -206,3 +206,4 @@ printf "\n"
 
 ###################################
 printf "* Test class B complete!\n"
+
