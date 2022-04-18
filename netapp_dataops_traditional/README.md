@@ -972,6 +972,7 @@ Advanced data fabric operations:
 - [Prepopulate specific files/directories on a FlexCache volume (ONTAP 9.8 and above ONLY).](#lib-prepopulate-flexcache)
 - [List all SnapMirror relationships.](#lib-list-snapmirror-relationships)
 - [Trigger a sync operation for an existing SnapMirror relationship.](#lib-sync-snapmirror-relationship)
+- [Create SnapMirror relationship.](#lib-create-snapmirror-relationship)
 
 ### Examples
 
@@ -1633,7 +1634,7 @@ The NetApp DataOps Toolkit can be used to trigger a sync operation for an existi
 
 Tip: Use the listSnapMirrorRelationships() function to obtain the UUID.
 
-Note: To create a new SnapMirror relationship, access ONTAP System Manager.
+Note: To create a new SnapMirror relationship, access ONTAP System Manager or use the createSnapMirrorRelationships()
 
 ##### Function Definition
 
@@ -1662,6 +1663,48 @@ APIConnectionError                  # The storage system/service API returned an
 SnapMirrorSyncOperationError        # The sync operation failed.
 InvalidSnapMirrorParameterError     # An invalid parameter was specified.
 ```
+
+
+
+<a name="lib-create-snapmirror-relationship"></a>
+
+#### Create New SnapMirror Relationship
+
+The NetApp DataOps Toolkit can be used to create SnapMirror relationshp for which the destination volume resides on the user's storage system. NetApp's SnapMirror volume replication technology can be used to quickly and efficiently replicate data between NetApp storage systems. For example, SnapMirror could be used to replicate newly acquired data, gathered on a different NetApp storage system, to the user's NetApp storage system to be used for AI/ML model training or retraining. The command can create relationship and initialize/resync the relationship. 
+
+##### Function Definition
+
+```py
+def create_snap_mirror_relationship(
+    source_svm: str,                    # snapmirror replication source svm name 
+    source_vol: str,                    # snapmirror replication source volume name 
+    target_svm: str = None,             # snapmirror replication target svm name 
+    target_vol: str,                    # snapmirror replication target volume name, when not provided default svm will be used
+    cluster_name: str = None,           # Non default cluster name, same credentials as the default credentials should be used     
+    schedule: str = '',                 # name of the schedule to use, when not provided no schedule will be provided 
+    policy: str = 'MirrorAllSnapshots', # snapmirror poilcy to use, when not provided MirrorAllSnapshots will be used 
+    action: str = None,                 # the action to perform after the creation of the snapmirror relationship. can be: initialize or resync. initialize can be used to initialize new replication (requires destination volume to be of DP type). resync can be used to resync volumes with common snapshot
+    print_output: bool = False          # Denotes whether or not to print messages to the console during execution.
+
+) :
+```
+
+##### Return Value
+
+None
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError                  # Config file is missing or contains an invalid value.
+APIConnectionError                  # The storage system/service API returned an error.
+SnapMirrorSyncOperationError        # The sync operation failed.
+InvalidSnapMirrorParameterError     # An invalid parameter was specified.
+```
+
+
 
 ## Support
 
