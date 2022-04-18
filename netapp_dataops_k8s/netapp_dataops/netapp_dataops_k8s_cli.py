@@ -57,7 +57,7 @@ NVIDIA Triton Inference Server Management Commands
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
 
 \tcreate triton-server\t\t\tDeploy a new instance of the NVIDIA Triton Inference Server.
-\tdelete triton-server\t\t\tDelete an existing instance of the NVIDIA Triton Inference Server for a given workspace.
+\tdelete triton-server\t\t\tDelete an existing instance of the NVIDIA Triton Inference Server.
 \tlist triton-servers\t\t\tList all instances of the NVIDIA Triton Inference Server in a namespace.
 
 Kubernetes Persistent Volume Management Commands (for advanced Kubernetes users):
@@ -1114,7 +1114,7 @@ if __name__ == '__main__':
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hw:fn:",
+                opts, args = getopt.getopt(sys.argv[3:], "hs:fn:",
                                            ["help", "server-name=", "force", "namespace="])
             except:
                 handleInvalidCommand(helpText=helpTextDeleteTritonServer, invalidOptArg=True)
