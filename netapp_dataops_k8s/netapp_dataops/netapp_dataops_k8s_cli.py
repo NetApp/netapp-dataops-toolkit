@@ -53,12 +53,12 @@ Note: To view details regarding options/arguments for a specific command, run th
 \tregister-with-astra jupyterlab\tRegister an existing JupyterLab workspace with Astra Control.
 \tbackup-with-astra jupyterlab\tBackup an existing JupyterLab workspace using Astra Control.
 
-NVIDIA Triton Inference Server Management Commands
+NVIDIA Triton Inference Server Management Commands:
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
 
-\tcreate triton-server\t\t\tDeploy a new instance of the NVIDIA Triton Inference Server.
-\tdelete triton-server\t\t\tDelete an existing instance of the NVIDIA Triton Inference Server.
-\tlist triton-servers\t\t\tList all instances of the NVIDIA Triton Inference Server in a namespace.
+\tcreate triton-server\t\tDeploy a new instance of the NVIDIA Triton Inference Server.
+\tdelete triton-server\t\tDelete an existing instance of the NVIDIA Triton Inference Server.
+\tlist triton-servers\t\tList all instances of the NVIDIA Triton Inference Server in a namespace.
 
 Kubernetes Persistent Volume Management Commands (for advanced Kubernetes users):
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
@@ -364,7 +364,7 @@ Examples:
 '''
 
 helpTextListTritonServers = '''
-Command: list tritonservers
+Command: list triton-servers
 
 List all NVIDIA Triton Inference Server instances in a specific namespace.
 
@@ -1137,7 +1137,7 @@ if __name__ == '__main__':
 
             # Confirm delete operation
             if not force:
-                print("Warning: This workspace will be permanently deleted.")
+                print("Warning: This server will be permanently deleted.")
                 while True:
                     proceed = input("Are you sure that you want to proceed? (yes/no): ")
                     if proceed in ("yes", "Yes", "YES"):

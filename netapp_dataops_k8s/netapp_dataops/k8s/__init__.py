@@ -4,7 +4,7 @@ This module provides the public functions available to be imported directly
 by applications using the import method of utilizing the toolkit.
 """
 
-__version__ = "2.2.0"
+__version__ = "2.3.0_triton_dev"
 
 import base64
 from datetime import datetime
@@ -1008,7 +1008,7 @@ def create_triton_server(server_name: str, model_pvc_name: str, load_balancer_se
         labels = _get_triton_dev_labels(server_name=server_name)
 
 
-    # Step 2 - Create services for workspace
+    # Step 1 - Create service for server
 
     # Construct load Balancer Service
     if load_balancer_service:
@@ -1083,13 +1083,13 @@ def create_triton_server(server_name: str, model_pvc_name: str, load_balancer_se
     except ApiException as err:
         if print_output:
             print("Error: Kubernetes API Error: ", err)
-            print("Aborting workspace creation...")
+            print("Aborting server creation...")
         raise APIConnectionError(err)
 
     if print_output:
         print("Service successfully created.")
 
-    # Step 3 - Create Deployment for Triton Server
+    # Step 2 - Create Deployment for Triton Server
 
     # Construct deployment for triton server
     deployment = client.V1Deployment(
@@ -1191,7 +1191,7 @@ def create_triton_server(server_name: str, model_pvc_name: str, load_balancer_se
     except ApiException as err:
         if print_output:
             print("Error: Kubernetes API Error: ", err)
-            print("Aborting workspace creation...")
+            print("Aborting server creation...")
         raise APIConnectionError(err)
 
     # Wait for deployment to be ready
@@ -1202,12 +1202,12 @@ def create_triton_server(server_name: str, model_pvc_name: str, load_balancer_se
     if print_output:
         print("Deployment successfully created.")
 
-    # Step 4 - Retrieve access URL
+    # Step 3 - Retrieve endpoints
     try:
         uri = _retrieve_triton_endpoints(server_name=server_name, namespace=namespace, printOutput=print_output)
     except (APIConnectionError, ServiceUnavailableError) as err:
         if print_output:
-            print("Aborting workspace creation...")
+            print("Aborting server creation...")
         raise
 
     if print_output:

@@ -15,8 +15,7 @@ printf "NetApp DataOps Toolkit for Kubernetes - Interactive test script\n\n"
 
 printf "Prerequisites:\n"
 printf "2 namespaces: default, dsk-test\n"
-printf "1 server name that is required for NVIDIA Triton Inference Server instance"
-printf "2 PVCs that already exists with the model repo named 'model-repo-test' and 'model-repo-test1' (1 PVC in each namespace) and model repo's loaded.\n"
+printf "2 PVCs that already exists with the model repo named 'model-repo-test' (in default namespace) and 'model-repo-test1' (in dsk-test namespace) and model repo's loaded.\n"
 proceed_prompt
 
 ##################################################
@@ -32,7 +31,7 @@ printf "** Starting: Test set B.1. - default namespace, long opts\n\n"
 ### Create workspace 1
 server1_name="b-1-w1"
 model_pvc="model-repo-test"
-command="./netapp_dataops_k8s_cli.py create triton-server --server-name=$server1_name --model-repo-pvc-name=$model_pvc"
+command="netapp_dataops_k8s_cli.py create triton-server --server-name=$server1_name --model-repo-pvc-name=$model_pvc"
 echo "Running: $command"
 eval $command
 printf "\n"
@@ -44,7 +43,7 @@ printf "\n"
 ### Create workspace 2
 server2_name="b-1-w2"
 model_pvc="model-repo-test"
-command="./netapp_dataops_k8s_cli.py create triton-server --server-name=$server2_name --model-repo-pvc-name=$model_pvc --image=nvcr.io/nvidia/tritonserver:21.11-py3 --memory=512Mi --cpu=0.25"
+command="netapp_dataops_k8s_cli.py create triton-server --server-name=$server2_name --model-repo-pvc-name=$model_pvc --image=nvcr.io/nvidia/tritonserver:21.11-py3 --memory=512Mi --cpu=0.25"
 echo "Running: $command"
 eval $command
 printf "\n"
@@ -54,7 +53,7 @@ proceed_prompt
 printf "\n"
 
 ### Use List to check if the servers still exist in default namespace
-command="./netapp_dataops_k8s_cli.py list triton-servers"
+command="netapp_dataops_k8s_cli.py list triton-servers"
 echo "Running: $command"
 eval $command
 printf "\nRetrieving server:\n"
@@ -63,7 +62,7 @@ proceed_prompt
 printf "\n"
 
 ### Delete Triton Inference instance 1
-command="./netapp_dataops_k8s_cli.py delete triton-server --server-name=$server1_name --force"
+command="netapp_dataops_k8s_cli.py delete triton-server --server-name=$server1_name --force"
 echo "Running: $command"
 eval $command
 printf "\nRetrieving server:\n"
@@ -73,7 +72,7 @@ proceed_prompt
 printf "\n"
 
 ### Delete Triton Inference instance 2
-command="./netapp_dataops_k8s_cli.py delete triton-server --server-name=$server2_name --force"
+command="netapp_dataops_k8s_cli.py delete triton-server --server-name=$server2_name --force"
 echo "Running: $command"
 eval $command
 printf "\nRetrieving server:\n"
@@ -92,7 +91,7 @@ namespace="dsk-test"
 server3_name="b-2-w1"
 model_pvc="model-repo-test1"
 namespace="dsk-test"
-command="./netapp_dataops_k8s_cli.py create triton-server --namespace=$namespace --server-name=$server3_name --model-repo-pvc-name=$model_pvc"
+command="netapp_dataops_k8s_cli.py create triton-server --namespace=$namespace --server-name=$server3_name --model-repo-pvc-name=$model_pvc"
 echo "Running: $command"
 eval $command
 printf "\n"
@@ -105,7 +104,7 @@ printf "\n"
 server4_name="b-2-w2"
 model_pvc="model-repo-test1"
 namespace="dsk-test"
-command="./netapp_dataops_k8s_cli.py create triton-server --namespace=$namespace --server-name=$server4_name --model-repo-pvc-name=$model_pvc --image=nvcr.io/nvidia/tritonserver:21.11-py3 --memory=512Mi --cpu=0.25 --load-balancer"
+command="netapp_dataops_k8s_cli.py create triton-server --namespace=$namespace --server-name=$server4_name --model-repo-pvc-name=$model_pvc --image=nvcr.io/nvidia/tritonserver:22.03-py3 --memory=512Mi --cpu=0.25 --nvidia-gpu=1 --load-balancer"
 echo "Running: $command"
 eval $command
 printf "\n"
@@ -115,7 +114,7 @@ proceed_prompt
 printf "\n"
 
 ### Use List to check if the servers still exist in namespace: "dsk-test"
-command="./netapp_dataops_k8s_cli.py list triton-servers --namespace=$namespace"
+command="netapp_dataops_k8s_cli.py list triton-servers --namespace=$namespace"
 echo "Running: $command"
 eval $command
 printf "\nRetrieving server:\n"
@@ -124,7 +123,7 @@ proceed_prompt
 printf "\n"
 
 ### Delete Triton Inference instance 3
-command="./netapp_dataops_k8s_cli.py delete triton-server --server-name=$server3_name --namespace=$namespace --force"
+command="netapp_dataops_k8s_cli.py delete triton-server --server-name=$server3_name --namespace=$namespace --force"
 echo "Running: $command"
 eval $command
 printf "\nRetrieving server:\n"
@@ -134,7 +133,7 @@ proceed_prompt
 printf "\n"
 
 ### Delete Triton Inference instance 4
-command="./netapp_dataops_k8s_cli.py delete triton-server --server-name=$server4_name --namespace=$namespace --force"
+command="netapp_dataops_k8s_cli.py delete triton-server --server-name=$server4_name --namespace=$namespace --force"
 echo "Running: $command"
 eval $command
 printf "\nRetrieving server:\n"
@@ -153,7 +152,7 @@ namespace="dsk-test"
 server5_name="b-3-w1"
 model_pvc="model-repo-test1"
 namespace="dsk-test"
-command="./netapp_dataops_k8s_cli.py create triton-server -n $namespace -s $server5_name -v $model_pvc"
+command="netapp_dataops_k8s_cli.py create triton-server -n $namespace -s $server5_name -v $model_pvc"
 echo "Running: $command"
 eval $command
 printf "\n"
@@ -166,7 +165,7 @@ printf "\n"
 server6_name="b-3-w2"
 model_pvc="model-repo-test1"
 namespace="dsk-test"
-command="./netapp_dataops_k8s_cli.py create triton-server -n $namespace -s $server6_name -v $model_pvc -i nvcr.io/nvidia/tritonserver:21.11-py3 -m 512Mi -p 0.25 -b"
+command="netapp_dataops_k8s_cli.py create triton-server -n $namespace -s $server6_name -v $model_pvc -i nvcr.io/nvidia/tritonserver:22.03-py3 -m 512Mi -p 0.25 -g 1 -b"
 echo "Running: $command"
 eval $command
 printf "\n"
@@ -176,7 +175,7 @@ proceed_prompt
 printf "\n"
 
 ### Use List to check if the servers still exist in namespace: "dsk-test"
-command="./netapp_dataops_k8s_cli.py list triton-servers -n $namespace"
+command="netapp_dataops_k8s_cli.py list triton-servers -n $namespace"
 echo "Running: $command"
 eval $command
 printf "\nRetrieving server:\n"
@@ -185,7 +184,7 @@ proceed_prompt
 printf "\n"
 
 ### Delete Triton Inference instance 5
-command="./netapp_dataops_k8s_cli.py delete triton-server -s $server5_name -n $namespace -f"
+command="netapp_dataops_k8s_cli.py delete triton-server -s $server5_name -n $namespace -f"
 echo "Running: $command"
 eval $command
 printf "\nRetrieving server:\n"
@@ -195,7 +194,7 @@ proceed_prompt
 printf "\n"
 
 ### Delete Triton Inference instance 6
-command="./netapp_dataops_k8s_cli.py delete triton-server -s $server6_name -n $namespace -f"
+command="netapp_dataops_k8s_cli.py delete triton-server -s $server6_name -n $namespace -f"
 echo "Running: $command"
 eval $command
 printf "\nRetrieving server:\n"
