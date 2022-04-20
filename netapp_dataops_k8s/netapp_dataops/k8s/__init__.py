@@ -1788,12 +1788,16 @@ def list_triton_servers(namespace: str = "default", print_output: bool = False) 
 
         # Retrieve access URL
         try :
-            workspaceDict["HTTP Endpoint"] = _retrieve_triton_endpoints(server_name=server_name, namespace=namespace, printOutput=False)[0]
-            workspaceDict["gRPC Endpoint"] = _retrieve_triton_endpoints(server_name=server_name, namespace=namespace, printOutput=False)[1]
-            workspaceDict["Metrics Endpoint"] = _retrieve_triton_endpoints(server_name=server_name, namespace=namespace, printOutput=False)[2]
+            endpoints = _retrieve_triton_endpoints(server_name=server_name, namespace=namespace, printOutput=False)
+            workspaceDict["HTTP Endpoint"] = endpoints[0]
+            workspaceDict["gRPC Endpoint"] = endpoints[1]
+            workspaceDict["Metrics Endpoint"] = endpoints[2]
 
         except ServiceUnavailableError :
-            workspaceDict["Server Endpoints"] = "unavailable"
+            workspaceDict["HTTP Endpoint"] = "unavailable"
+            workspaceDict["gRPC Endpoint"] = "unavailable"
+            workspaceDict["Metrics Endpoint"] = "unavailable"
+            
         except APIConnectionError as err:
             if print_output:
                 print("Error: Kubernetes API Error: ", err)
