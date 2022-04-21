@@ -88,7 +88,7 @@ Note: To view details regarding options/arguments for a specific command, run th
 \tget-s3 object\t\t\tGet an object (file) from an S3 bucket and transfer the file to a specified Persistent Volume Claim (PVC).
 \tput-s3 bucket\t\t\tCopy the contents of a Persistent Volume Claim (PVC) to an S3 bucket.
 \tput-s3 object\t\t\tCopy an object (file) from a Persistent Volume Claim (PVC) to an S3 bucket.
-\tget-s3 job\t\t\tGet the status of the specifed Kubernetes job.
+\tshow s3-job\t\t\tShow the status of the specifed Kubernetes job.
 \tdelete s3-job\t\t\tDelete a Kubernetes S3 job.
 '''
 helpTextBackupJupyterLab = '''
