@@ -3,9 +3,9 @@
 ## Overview
 
 Data movement with the NetApp DataOps Toolkit is available for use as a set of classes that can be imported
-and used from other python programs. It is not currently available as part of the cli script.
+and used from other python programs. These operations are also available as part of the toolkit's command line utility.
 
-The purpose of the data movement classes is to provide a mechanism to transfer data to or from a Kubernetes PVC.
+The purpose of the data movement operations is to provide a mechanism to transfer data to or from a Kubernetes PVC.
 In order to move the data a Kubernetes job will be created which will utilize a container with the relevant PVC 
 mounted within the container. The container will then transfer the data from the original source to the destination,
 either in to the PVC or out of the PVC, and the job will be completed.
@@ -27,9 +27,53 @@ The following is a support matrix based on compatibility testing.
 | ONTAP S3           | No         |
 | Amazon S3          | Yes        |
 
+### Command Line Functionality
+
+The netapp_dataops_k8s_cli.py script has the following commands available to perform S3 data movement operations.
+
+| Command         | Description       |
+| ---------------  | ------------------|
+| create s3-secret     | Create a new K8s secret containing S3 credentials.         |
+| delete s3-secret     | Delete an existing Kubernetes S3 secret.   |
+| create ca-config-map | Create a Kubernetes config map object representing a Certificate Authority (CA) certificate. |
+| delete ca-config-map | Delete a Kubernetes config map object representing a Certificate Authority (CA) certificate. |
+| get-s3 bucket        | Get the contents of an S3 bucket and transfer the data to a specified Persistent Volume Claim (PVC). |
+| get-s3 object        | Get an object (file) from an S3 bucket and transfer the file to a specified Persistent Volume Claim (PVC). |
+| put-s3 bucket        | Copy the contents of a Persistent Volume Claim (PVC) to an S3 bucket. |
+| put-s3 object        | Copy an object (file) from a Persistent Volume Claim (PVC) to an S3 bucket. |
+| show s3-job          | Show the status of the specifed Kubernetes job. |
+| delete s3-job        | Delete a Kubernetes S3 job. |
+
+For additional details on the parameters for each command run the script with the command and the '-h' option to show the command help.
+
+Example command help:
+```
+netapp_dataops_k8s_cli.py create s3-secret -h
+
+Command: create s3-secret
+
+Create a new K8s secret containing S3 credentials.
+
+Required Options/Arguments:
+        -d, --secret-name=              The name of the Kubernetes secret.
+        -a, --access-key=               The access key for the S3 account.
+        -s, --secret-key=               The secret key for the S3 account.
+
+Optional Options/Arguments:
+        -n, --namespace=                Kubernetes namespace used to store the secret.
+
+Examples:
+        netapp_dataops_k8s_cli.py create s3-secret --secret-name=mys3secret --access-key=abc --secret-key=secret123
+        netapp_dataops_k8s_cli.py create s3-secret -d mys3secret -a abc -s secret123 -n team1
+```
+
+Follow the [S3 data mover basic usage](#s3-data-mover-basic-usage) section for the CLI commands similarly to how the classes are used.
+
 ### API Documentation
 See the [NetApp DataOps Toolkit for Kubernetes API Documentation](api.md) for full details on the
 API parameters.
+
+<a name="s3-basic-usage"></a>
 
 ### S3 Data Mover Basic Usage
 
