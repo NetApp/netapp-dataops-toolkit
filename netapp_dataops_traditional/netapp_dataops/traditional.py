@@ -161,7 +161,6 @@ def _get_cloud_central_access_token(refreshToken: str, print_output: bool = Fals
 
     return accessToken
 
-
 def _get_cloud_sync_access_parameters(refreshToken: str, print_output: bool = False) -> (str, str):
     try:
         accessToken = _get_cloud_central_access_token(refreshToken=refreshToken, print_output=print_output)
@@ -808,7 +807,7 @@ def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = 
                 #delete snapshots not in retention 
                 for snap in snapshot_list:
                     if snap not in last_snapshot_list:
-                        delete_snapshot(volume_name=volume_name, svm_name = svm, snapshot_name=snap, print_output=True)
+                        delete_snapshot(volume_name=volume_name, svm_name = svm, snapshot_name=snap, skip_owned=True, print_output=True)
 
             except NetAppRestError as err:
                 if print_output:
@@ -999,7 +998,7 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
         raise ConnectionTypeError()
 
 
-def delete_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = None, svm_name: str = None, print_output: bool = False):
+def delete_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = None, svm_name: str = None, skip_owned: bool = False, print_output: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -1045,10 +1044,23 @@ def delete_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = No
 
             # Retrieve snapshot
             snapshot = NetAppSnapshot.find(volume.uuid, name=snapshot_name)
+            
+            
             if not snapshot:
                 if print_output:
                     print("Error: Invalid snapshot name.")
                 raise InvalidSnapshotParameterError("name")
+            
+            if hasattr(snapshot,'owners'):
+                   
+                if not skip_owned:
+                    if print_output:
+                        print('Error: Snapshot cannot be deleted since it has owners:'+','.join(snapshot.owners))
+                    raise InvalidSnapshotParameterError("name")
+                else:
+                    if print_output:
+                        print('Warning: Snapshot cannot be deleted since it has owners:'+','.join(snapshot.owners))
+                    return
 
             # Delete snapshot
             snapshot.delete(poll=True)
