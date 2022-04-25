@@ -1111,9 +1111,6 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
                 _print_invalid_config_error()
             raise InvalidConfigError()
 
-        if print_output:
-            print("Deleting volume '" + svm+':'+volume_name + "'.")
-
         try:
             # Retrieve volume
             volume = NetAppVolume.find(name=volume_name, svm=svm)
@@ -1172,6 +1169,8 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
                     print("Error: ONTAP Rest API Error: ", err)                         
 
         try:
+            if print_output:
+                print("Deleting volume '" + svm+':'+volume_name + "'.")
             # Delete volume
             volume.delete(poll=True)
 
