@@ -413,7 +413,7 @@ class S3DataMover(DataMoverJob):
             sub_dir = ""
         operation = "put-bucket"
         # If we don't change directories the cp will copy files in to a 'data' directory within the bucket
-        command = f"cd {self.data_volume_path}/{sub_dir};mc cp {verify_flag} -r . {self.s3_alias}/{bucket}"
+        command = f"cd {self.data_volume_path}/{sub_dir};mc cp {verify_flag} -r * {self.s3_alias}/{bucket}"
         job_spec = self.job_spec
         job_spec.template = self._get_pod_template_spec(container_command=command, pvc=pvc, operation=operation)
         job_metadata = V1ObjectMeta(generate_name="s3mover-{}-".format(operation),
