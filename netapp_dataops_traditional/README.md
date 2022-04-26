@@ -257,12 +257,12 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
-    -u, --cluster-name=     non default hosting cluster
-    -v, --svm       non default SVM name
-    -f, --force     Do not prompt user to confirm operation.
-    -m, --delete-mirror      delete/release snapmirror relationship prior to volume deletion
+    -u, --cluster-name=     Non default hosting cluster
+    -v, --svm=              Non default SVM name
+    -f, --force             Do not prompt user to confirm operation.
+    -m, --delete-mirror     Delete/release snapmirror relationship prior to volume deletion
         --delete-non-clone  Enable deletion of volume not created as clone by this tool
-    -h, --help      Print help text.
+    -h, --help              Print help text.
 
 ```
 
@@ -289,10 +289,10 @@ No options/arguments are required for this command.
 The following options/arguments are optional:
 
 ```
-    -u, --cluster-name=     non default hosting cluster
-    -v, --svm                               list volume on non default svm
-    -h, --help                              Print help text.
-    -s, --include-space-usage-details       Include storage space usage details in output (see README for explanation).
+    -u, --cluster-name=                 non default hosting cluster
+    -v, --svm=                          list volume on non default svm
+    -h, --help                          Print help text.
+    -s, --include-space-usage-details   Include storage space usage details in output (see README for explanation).
 ```
 
 ##### Storage Space Usage Details Explanation
@@ -352,7 +352,6 @@ The NetApp DataOps Toolkit can be used to mount an existing data volume on your 
 The following options/arguments are required:
 
 ```
-    -v, --svm       non default SVM name
     -m, --mountpoint=       Local mountpoint to mount volume at.
     -n, --name=             Name of volume.
 ```
@@ -360,8 +359,8 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
-    -v, --svm       non default SVM name
-    -l, --lif       non default lif (nfs server ip/name)
+    -v, --svm=              non default SVM name
+    -l, --lif=              non default lif (nfs server ip/name)
     -h, --help              Print help text.
     -x, --readonly          Mount volume locally as read-only.
 ```
@@ -417,13 +416,13 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
-    -u, --cluster-name=     non default hosting cluster
-    -s, --svm       Non defaul svm name.
-    -h, --help      Print help text.
-    -n, --name=     Name of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
-    -r, --retention=        Snapshot name will be suffixed by <timestamp> and excesive snapshots will be deleted.
-                            Can be count of snapshots when int (ex. 10) or days when retention is suffixed by d (ex. 10d)
+    -u, --cluster-name=      non default hosting cluster
+    -s, --svm=               Non defaul svm name.
+    -n, --name=              Name of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
+    -r, --retention=         Snapshot name will be suffixed by <timestamp> and excesive snapshots will be deleted.
+                             Can be count of snapshots when int (ex. 10) or days when retention is suffixed by d (ex. 10d)
     -l, --snapmirror-label=  if proivded snapmirror label will be configured on the created snapshot   
+    -h, --help               Print help text.
 ```
 
 ##### Example Usage
@@ -879,9 +878,9 @@ or
 Optional Options/Arguments:
 ```
     -u, --cluster-name=     non default hosting cluster
-    -v, --svm       non default target SVM name
-    -h, --help      Print help text.
-    -w, --wait      Wait for sync operation to complete before exiting.
+    -v, --svm=              non default target SVM name
+    -h, --help              Print help text.
+    -w, --wait              Wait for sync operation to complete before exiting.
 ```
 
 Note: To create a new SnapMirror relationship, access ONTAP System Manager or use the create snapmirror-relationship command.
