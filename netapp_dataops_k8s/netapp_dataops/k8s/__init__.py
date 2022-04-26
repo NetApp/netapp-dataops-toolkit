@@ -940,11 +940,13 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
                 )
             )
 
-    # Apply resource requests
+    # Apply resource requests/limits
     if request_cpu:
         deployment.spec.template.spec.containers[0].resources["requests"]["cpu"] = request_cpu
+        deployment.spec.template.spec.containers[0].resources["limits"]["cpu"] = request_cpu
     if request_memory:
         deployment.spec.template.spec.containers[0].resources["requests"]["memory"] = request_memory
+        deployment.spec.template.spec.containers[0].resources["limits"]["memory"] = request_memory
     if request_nvidia_gpu:
         deployment.spec.template.spec.containers[0].resources["requests"]["nvidia.com/gpu"] = request_nvidia_gpu
         deployment.spec.template.spec.containers[0].resources["limits"]["nvidia.com/gpu"] = request_nvidia_gpu
@@ -991,7 +993,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
     return url
 
 def create_triton_server(server_name: str, model_pvc_name: str, load_balancer_service: bool = False, namespace: str = "default",
-                       request_cpu: str = None, request_memory: str = None, server_image: str = "nvcr.io/nvidia/tritonserver:21.11-py3", request_nvidia_gpu: str = None,
+                       server_image: str = "nvcr.io/nvidia/tritonserver:21.11-py3", request_cpu: str = None, request_memory: str = None, request_nvidia_gpu: str = None,
                        print_output: bool = False, pvc_already_exists: bool = False, labels: dict = None) -> str:
     # Retrieve kubeconfig
     try:
@@ -1170,11 +1172,13 @@ def create_triton_server(server_name: str, model_pvc_name: str, load_balancer_se
     )
 
 
-    # Apply resource requests
+    # Apply resource requests/limits
     if request_cpu:
         deployment.spec.template.spec.containers[0].resources["requests"]["cpu"] = request_cpu
+        deployment.spec.template.spec.containers[0].resources["limits"]["cpu"] = request_cpu
     if request_memory:
         deployment.spec.template.spec.containers[0].resources["requests"]["memory"] = request_memory
+        deployment.spec.template.spec.containers[0].resources["limits"]["memory"] = request_memory
     if request_nvidia_gpu:
         deployment.spec.template.spec.containers[0].resources["requests"]["nvidia.com/gpu"] = request_nvidia_gpu
         deployment.spec.template.spec.containers[0].resources["limits"]["nvidia.com/gpu"] = request_nvidia_gpu

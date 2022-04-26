@@ -154,15 +154,15 @@ The NetApp DataOps Toolkit can enable a user to deploy an NVIDIA Triton Inferenc
 
 ```py
 def create_triton_server(
-    server_name: str,                                           # Name of the Triton Infernce Server Instance (required).
-    model_pvc_name: str                                         # Name of the PVC containing the model repository.
-    load_balancer_service: bool = False,                        # Option to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
-    namespace: str = "default",                                 # Kubernetes namespace to create new server in. If not specified, server will be created in namespace "default".
-    server_image: str = "nvcr.io/nvidia/tritonserver:21.11-py3" # Container image to use when creating instance. If not specified, "nvcr.io/nvidia/tritonserver:21.11-py3" will be used.
-    request_cpu: str = None,                                    # Number of CPUs to reserve for Triton instance. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
-    request_memory: str = None,                                 # Amount of memory to reserve for Triton instance. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
-    request_nvidia_gpu: str = None,                             # Number of NVIDIA GPUs to allocate to Triton instance. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
-    print_output: bool = False                                  # Denotes whether or not to print messages to the console during execution.
+    server_name: str,                                            # Name of the Triton Infernce Server Instance (required).
+    model_pvc_name: str,                                         # Name of the PVC containing the model repository.
+    load_balancer_service: bool = False,                         # Option to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
+    namespace: str = "default",                                  # Kubernetes namespace to create new server in. If not specified, server will be created in namespace "default".
+    server_image: str = "nvcr.io/nvidia/tritonserver:21.11-py3", # Container image to use when creating instance. If not specified, "nvcr.io/nvidia/tritonserver:21.11-py3" will be used.
+    request_cpu: str = None,                                     # Number of CPUs to reserve for Triton instance. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+    request_memory: str = None,                                  # Amount of memory to reserve for Triton instance. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
+    request_nvidia_gpu: str = None,                              # Number of NVIDIA GPUs to allocate to Triton instance. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
+    print_output: bool = False                                   # Denotes whether or not to print messages to the console during execution.
 ) -> str :
 ```
 
