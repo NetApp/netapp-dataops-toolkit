@@ -145,9 +145,9 @@ proceed_prompt
 printf "\n"
 
 ### Test getting the job status
-printf "\n*** Testing get-s3 job command ***\n"
+printf "\n*** Testing show s3-job command ***\n"
 read -p "Enter the job name: " job_name
-command="${cli_path}netapp_dataops_k8s_cli.py get-s3 job --job=$job_name"
+command="${cli_path}netapp_dataops_k8s_cli.py show s3-job --job=$job_name"
 echo "Running: $command"
 eval $command
 printf "\n"
@@ -321,9 +321,9 @@ proceed_prompt
 printf "\n"
 
 ### Test getting the job status
-printf "\n*** Testing get-s3 job command with short options ***\n"
+printf "\n*** Testing show s3-job command with short options ***\n"
 read -p "Enter the job name: " job_name
-command="${cli_path}netapp_dataops_k8s_cli.py get-s3 job -j $job_name -n $alt_namespace"
+command="${cli_path}netapp_dataops_k8s_cli.py show s3-job -j $job_name -n $alt_namespace"
 echo "Running: $command"
 eval $command
 printf "\n"
