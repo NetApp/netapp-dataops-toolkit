@@ -111,6 +111,7 @@ Advanced data fabric operations:
 - [Prepopulate specific files/directories on a FlexCache volume (ONTAP 9.8 and above ONLY).](#cli-prepopulate-flexcache)
 - [List all SnapMirror relationships.](#cli-list-snapmirror-relationships)
 - [Trigger a sync operation for an existing SnapMirror relationship.](#cli-sync-snapmirror-relationship)
+- [Create new SnapMirror relationship.](#cli-create-snapmirror-relationship)
 
 ### Data Volume Management Operations
 
@@ -130,13 +131,23 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
+    -u, --cluster-name=     non default hosting cluster
+    -c, --source-svm=       non default source svm name
+    -t, --target-svm=       non default target svm name
     -g, --gid=              Unix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
     -h, --help              Print help text.
     -m, --mountpoint=       Local mountpoint to mount new volume at after creating. If not specified, new volume will not be mounted locally. On Linux hosts - if specified, must be run as root.
     -s, --source-snapshot=  Name of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
+                            when snapshot name suffixed with * the latest snapshot will be used (hourly* will use the latest snapshot prefixed with hourly )
     -u, --uid=              Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
     -x, --readonly          Read-only option for mounting volumes locally.
     -j, --junction          Specify a custom junction path for the volume to be exported at.
+    -e, --export-hosts               colon(:) seperated hosts/cidrs to to use for export. hosts will be exported for rw and root access
+    -e, --export-policy              export policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
+    -d, --snapshot-policy            snapshot-policy to attach to the volume, default snapshot policy will be used if not provided
+    -s, --split              start clone split after creation
+    -r, --refresh            delete existing clone if exists before creating a new one
+    -d, --svm-dr-unprotect           disable svm dr protection if svm-dr protection exists
 ```
 
 ##### Example Usage
@@ -189,7 +200,9 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
-    -a, --aggregate=        Aggregate to use when creating new volume (flexvol volumes only).
+    -u, --cluster-name=     non default hosting cluster
+    -v, --svm=              non default svm name
+    -a, --aggregate=        Aggregate to use when creating new volume (flexvol) or optional comma seperated aggrlist when specific aggregates are required for FG.
     -d, --snapshot-policy=  Snapshot policy to apply for new volume.
     -e, --export-policy=    NFS export policy to use when exporting new volume.
     -g, --gid=              Unix filesystem group id (gid) to apply when creating new volume (ex. '0' for root group).
@@ -199,8 +212,10 @@ The following options/arguments are optional:
     -r, --guarantee-space   Guarantee sufficient storage space for full capacity of the volume (i.e. do not use thin provisioning).
     -t, --type=             Volume type to use when creating new volume (flexgroup/flexvol).
     -u, --uid=              Unix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
-    -x, --readonly          Read-only option for mounting volumes locally.    
+    -x, --readonly          Read-only option for mounting volumes locally.
     -j, --junction          Specify a custom junction path for the volume to be exported at.
+    -f, --tiering-policy    Specify tiering policy for fabric-pool enabled systems (default is 'none').
+    -y, --dp                Create volume as DP volume (the volume will be used as snapmirror target)
 ```
 
 ##### Example Usage
@@ -242,8 +257,13 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
-    -f, --force     Do not prompt user to confirm operation.
-    -h, --help      Print help text.
+    -u, --cluster-name=     Non default hosting cluster
+    -v, --svm=              Non default SVM name
+    -f, --force             Do not prompt user to confirm operation.
+    -m, --delete-mirror     Delete/release snapmirror relationship prior to volume deletion
+        --delete-non-clone  Enable deletion of volume not created as clone by this tool
+    -h, --help              Print help text.
+
 ```
 
 ##### Example Usage
@@ -269,8 +289,10 @@ No options/arguments are required for this command.
 The following options/arguments are optional:
 
 ```
-    -h, --help                              Print help text.
-    -s, --include-space-usage-details       Include storage space usage details in output (see below for explanation).
+    -u, --cluster-name=                 non default hosting cluster
+    -v, --svm=                          list volume on non default svm
+    -h, --help                          Print help text.
+    -s, --include-space-usage-details   Include storage space usage details in output (see README for explanation).
 ```
 
 ##### Storage Space Usage Details Explanation
@@ -337,6 +359,8 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
+    -v, --svm=              non default SVM name
+    -l, --lif=              non default lif (nfs server ip/name)
     -h, --help              Print help text.
     -x, --readonly          Mount volume locally as read-only.
 ```
@@ -392,8 +416,13 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
-    -h, --help      Print help text.
-    -n, --name=     Name of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
+    -u, --cluster-name=      non default hosting cluster
+    -s, --svm=               Non defaul svm name.
+    -n, --name=              Name of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
+    -r, --retention=         Snapshot name will be suffixed by <timestamp> and excesive snapshots will be deleted.
+                             Can be count of snapshots when int (ex. 10) or days when retention is suffixed by d (ex. 10d)
+    -l, --snapmirror-label=  if proivded snapmirror label will be configured on the created snapshot   
+    -h, --help               Print help text.
 ```
 
 ##### Example Usage
@@ -430,7 +459,10 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
+    -u, --cluster-name=     non default hosting cluster
+    -s, --svm=      Non default svm
     -h, --help      Print help text.
+
 ```
 
 ##### Example Usage
@@ -454,6 +486,11 @@ The following options/arguments are required:
 ```
     -v, --volume=   Name of volume.
 ```
+Optional Options/Arguments:
+    -u, --cluster-name=     non default hosting cluster
+    -s, --svm=      Non default svm.
+    -h, --help      Print help text.
+
 
 ##### Example Usage
 
@@ -488,6 +525,8 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
+    -u, --cluster-name=     non default hosting cluster
+    -s, --svm=      Non default svm.
     -f, --force     Do not prompt user to confirm operation.
     -h, --help      Print help text.
 ```
@@ -803,7 +842,11 @@ FlexCache prepopulated successfully.
 
 The NetApp DataOps Toolkit can be used to print a list of all existing SnapMirror relationships for which the destination volume resides on the user's storage system. The command for printing a list of all existing SnapMirror relationships is `netapp_dataops_cli.py list snapmirror-relationships`.
 
-No options/arguments are required for this command.
+Optional Options/Arguments:
+    -u, --cluster-name=     non default hosting cluster
+    -s, --svm=      Non default svm.
+    -h, --help      Print help text.
+
 
 Note: To create a new SnapMirror relationship, access ONTAP System Manager.
 
@@ -828,16 +871,19 @@ The following options/arguments are required:
 
 ```
     -i, --uuid=     UUID of the relationship for which the sync operation is to be triggered.
+or
+    -n, --name=     Name of target volume to be sync .
 ```
 
-The following options/arguments are optional:
-
+Optional Options/Arguments:
 ```
-    -h, --help      Print help text.
-    -w, --wait      Wait for sync operation to complete before exiting.
+    -u, --cluster-name=     non default hosting cluster
+    -v, --svm=              non default target SVM name
+    -h, --help              Print help text.
+    -w, --wait              Wait for sync operation to complete before exiting.
 ```
 
-Note: To create a new SnapMirror relationship, access ONTAP System Manager.
+Note: To create a new SnapMirror relationship, access ONTAP System Manager or use the create snapmirror-relationship command.
 
 ##### Example Usage
 
@@ -850,6 +896,39 @@ Status check will be performed in 10 seconds...
 Sync operation is not yet complete. Status: transferring
 Checking again in 60 seconds...
 Success: Sync operation is complete.
+```
+
+<a name="cli-create-snapmirror-relationships"></a>
+#### Create New SnapMirror Relationship
+
+The NetApp DataOps Toolkit can be used to create SnapMirror relationshp for which the destination volume resides on the user's storage system. NetApp's SnapMirror volume replication technology can be used to quickly and efficiently replicate data between NetApp storage systems. For example, SnapMirror could be used to replicate newly acquired data, gathered on a different NetApp storage system, to the user's NetApp storage system to be used for AI/ML model training or retraining. The command can create relationship and initialize/resync the relationship. The command for create new SnapMirror relationship is `netapp_dataops_cli.py create snapmirror-relationship`.
+
+
+The following options/arguments are required:
+
+```
+    -n, --target-vol=       Name of target volume
+    -s, --source-svm=       Source SVM name
+    -v, --source-vol=       Source volume name
+```
+
+Optional Options/Arguments:
+```
+    -u, --cluster-name=     non default hosting cluster
+    -t, --target-svm=       non default target SVM
+    -c, --schedule= non default schedule (default is hourly)
+    -p, --policy=   non default policy (default is MirrorAllSnapshots
+    -a, --action=   resync,initialize following creation
+    -h, --help      Print help text.
+```
+
+##### Example Usage
+
+```sh
+netapp_dataops_cli.py create snapmirror-relationship --cluster-name=cluster1 --source-svm=svm1 --target-svm=svm2 --source-vol=vol1 --target-vol=vol1 --schedule=daily --policy=MirrorAllSnapshots -a resync
+Creating snapmirror relationship: svm1:vol1 -> svm2:vol1
+Setting snapmirror policy as: MirrorAllSnapshots schedule:daily
+Setting state to snapmirrored, action:resync
 ```
 
 <a name="library-of-functions"></a>
@@ -892,6 +971,7 @@ Advanced data fabric operations:
 - [Prepopulate specific files/directories on a FlexCache volume (ONTAP 9.8 and above ONLY).](#lib-prepopulate-flexcache)
 - [List all SnapMirror relationships.](#lib-list-snapmirror-relationships)
 - [Trigger a sync operation for an existing SnapMirror relationship.](#lib-sync-snapmirror-relationship)
+- [Create SnapMirror relationship.](#lib-create-snapmirror-relationship)
 
 ### Examples
 
@@ -909,16 +989,25 @@ The NetApp DataOps Toolkit can be used to near-instantaneously create a new data
 
 ```py
 def clone_volume(
-    new_volume_name: str,             # Name of new volume (required).
-    source_volume_name: str,          # Name of volume to be cloned (required).
-    source_snapshot_name: str = None, # Name of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
-    unix_uid: str = None,             # Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
-    unix_gid: str = None,             # Unix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
-    mountpoint: str = None,           # Local mountpoint to mount new volume at. If not specified, volume will not be mounted locally. On Linux hosts - if specified, calling program must be run as root.
-    junction: str = None,             # Custom junction path for volume to be exported at. If not specified, junction path will be: ("/"+Volume Name).
-    readonly: bool = False,           # Option to mount volume locally as "read-only." If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
-    print_output: bool = False        # Denotes whether or not to print messages to the console during execution.
-) :
+    new_volume_name: str,                  # Name of new volume (required).
+    source_volume_name: str,               # Name of volume to be cloned (required).
+    cluster_name: str = None,              # non default cluster name, same credentials as the default credentials should be used 
+    source_snapshot_name: str = None,      # Name of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume). if snapshot name is suffixed by * the latest snapsho starting with the prefix specified will be used (daily* will use the latest snapshot prefixed by daily)
+    source_svm: str = None,                # Name of of the svm hosting the volume to be cloned, when not provided default svm will be used
+    target_svm: str = None,                # Name of of the svm hosting the clone. when not provided source svm will be used 
+    export_hosts: str = None,              # colon(:) seperated hosts/cidrs to to use for export. hosts will be exported for rw and root access
+    export_policy: str = None,             # export policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
+    snapshot_policy: str = None,           # name of existing snapshot policy to configure on the volume 
+    split: bool = False,                   # start clone split after creation
+    unix_uid: str = None,                  # Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
+    unix_gid: str = None,                  # Unix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
+    mountpoint: str = None,                # Local mountpoint to mount new volume at. If not specified, volume will not be mounted locally. On Linux hosts - if specified, calling program must be run as root.
+    junction: str= None,                   # Custom junction path for volume to be exported at. If not specified, junction path will be: ("/"+Volume Name).
+    readonly: bool = False,                # Option to mount volume locally as "read-only." If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
+    refresh: bool = False,                 # when true a previous clone using this name will be deleted prior to the new clone creation
+    svm_dr_unprotect: bool = False,        # mark the clone created to be excluded from svm-dr replication when onfigured on the clone svm 
+    print_output: bool = False             # print log to the console
+)
 ```
 
 ##### Return Value
@@ -946,22 +1035,25 @@ The NetApp DataOps Toolkit can be used to rapidly provision a new data volume as
 ##### Function Definition
 
 ```py
-def create_volume(
+def create_volume:                   
     volume_name: str,                # Name of new volume (required).
     volume_size: str,                # Size of new volume (required). Format: '1024MB', '100GB', '10TB', etc.
     guarantee_space: bool = False,   # Guarantee sufficient storage space for full capacity of the volume (i.e. do not use thin provisioning).
-    volume_type: str = "flexvol",    # Volume type to use when creating new volume (flexgroup/flexvol).
-    unix_permissions: str = "0777",  # Unix filesystem permissions to apply when creating new volume (ex. '0777' for full read/write permissions for all users and groups).
+    cluster_name: str = None,        # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,            # Non default svm name, same credentials as the default credentials should be used 
+    volume_type: str = "flexvol",    # Volume type can be flexvol (default) or flexgroup
+    unix_permissions: str = "0777",  # Unix filesystem permissions to apply when creating new volume (ex. '0777' for full read/write permissions for all users and groups).  
     unix_uid: str = "0",             # Unix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
     unix_gid: str = "0",             # Unix filesystem group id (gid) to apply when creating new volume (ex. '0' for root group).
     export_policy: str = "default",  # NFS export policy to use when exporting new volume.
     snapshot_policy: str = "none",   # Snapshot policy to apply for new volume.
-    aggregate: str = None,           # Aggregate to use when creating new volume (flexvol volumes only).
+    aggregate: str = None,           # aggregate name or comma seperated aggregates for flexgroup
     mountpoint: str = None,          # Local mountpoint to mount new volume at. If not specified, volume will not be mounted locally. On Linux hosts - if specified, calling program must be run as root.
     junction: str = None,            # Custom junction path for volume to be exported at. If not specified, junction path will be: ("/"+Volume Name).
     readonly: bool = False,          # Mount volume locally as "read-only." If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
-    print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
-) :
+    print_output: bool = False,      # Denotes whether or not to print messages to the console during execution.
+    tiering_policy: str = None,      # For fabric pool enabled system tiering policy can be: none,auto,snapshot-only,all
+    vol_dp: bool = False             # Create volume as type DP which can be used as snapmirror destination
 ```
 
 ##### Return Value
@@ -989,9 +1081,14 @@ The NetApp DataOps Toolkit can be used to near-instantaneously delete an existin
 
 ```py
 def delete_volume(
-    volume_name: str,            # Name of volume (required).
-    print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
-) :
+    volume_name: str,                # Name of volume (required).
+    print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
+    cluster_name: str = None,        # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,            # Non default svm name, same credentials as the default credentials should be used 
+    delete_mirror: bool = False,     # release snapmirror on source volume/delete snapmirror relation on destination volume
+    delete_non_clone: bool = False,  # Enable deletion of non clone volume (extra step not to incedently delete important volume)
+    print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
+):
 ```
 
 ##### Return Value
@@ -1020,6 +1117,8 @@ The NetApp DataOps Toolkit can be used to retrieve a list of all existing data v
 def list_volumes(
     check_local_mounts: bool = False,           # If set to true, then the local mountpoints of any mounted volumes will be included in the returned list and included in printed output.
     include_space_usage_details: bool = False,  # Include storage space usage details in output (see below for explanation).
+    cluster_name: str = None,        # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,            # Non default svm name, same credentials as the default credentials should be used    
     print_output: bool = False                  # Denotes whether or not to print messages to the console during execution.
 ) -> list() :
 ```
@@ -1066,6 +1165,8 @@ The NetApp DataOps Toolkit can be used to mount an existing data volume as "read
 ```py
 def mount_volume(
     volume_name: str,           # Name of volume (required).
+    cluster_name: str = None,        # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,            # Non default svm name, same credentials as the default credentials should be used    
     mountpoint: str,            # Local mountpoint to mount volume at (required).
     readonly: bool = False,     # Mount volume locally as "read-only." If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
     print_output: bool = False  # Denotes whether or not to print messages to the console during execution.
@@ -1129,8 +1230,14 @@ The NetApp DataOps Toolkit can be used to near-instantaneously save a space-effi
 ```py
 def create_snapshot(
     volume_name: str,                    # Name of volume (required).
-    snapshot_name: str = None,           # Name of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
+    snapshot_name: str = None,           # Name of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'. if retention specified snapshot name will be the prefix for the snapshot.    
+    cluster_name: str = None,            # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,                # Non default svm name, same credentials as the default credentials should be used
+    retention_count: int = 0,            # the amount of snapshots to keep. excesive snapshots will be deleted
+    retention_days: bool = False,        # when true the retention count will represent number of days
+    snapmirror_label: str = None,        # when provided snapmirror label will be set on the snapshot created. this is usefull when the volume is source for vault snapmirror 
     print_output: bool = False           # Denotes whether or not to print messages to the console during execution.
+
 ) :
 ```
 
@@ -1160,6 +1267,9 @@ The NetApp DataOps Toolkit can be used to near-instantaneously delete an existin
 def delete_snapshot(
     volume_name: str,            # Name of volume (required).
     snapshot_name: str,          # Name of snapshot to be deleted (required).
+    cluster_name: str = None,    # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,        # Non default svm name, same credentials as the default credentials should be used    
+    skip_owned: bool = False,    # When True snapshot with owners will not be deleted and will not cause an error
     print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
@@ -1190,6 +1300,8 @@ The NetApp DataOps Toolkit can be used to retrieve a list of all existing snapsh
 ```py
 def list_snapshots(
     volume_name: str,            # Name of volume.
+    cluster_name: str = None,    # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,        # Non default svm name, same credentials as the default credentials should be used    
     print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
 ) -> list() :
 ```
@@ -1222,6 +1334,8 @@ Warning: A snapshot restore operation will delete all snapshots that were create
 def restore_snapshot(
     volume_name: str,            # Name of volume (required).
     snapshot_name: str,          # Name of snapshot to be restored (required).
+    cluster_name: str = None,    # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,        # Non default svm name, same credentials as the default credentials should be used    
     print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
@@ -1493,6 +1607,8 @@ Note: To create a new SnapMirror relationship, access ONTAP System Manager.
 
 ```py
 def list_snap_mirror_relationships(
+    cluster_name: str = None,    # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,        # Non default svm name, same credentials as the default credentials should be used    
     print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
 ) -> list() :
 ```
@@ -1518,13 +1634,16 @@ The NetApp DataOps Toolkit can be used to trigger a sync operation for an existi
 
 Tip: Use the listSnapMirrorRelationships() function to obtain the UUID.
 
-Note: To create a new SnapMirror relationship, access ONTAP System Manager.
+Note: To create a new SnapMirror relationship, access ONTAP System Manager or use the createSnapMirrorRelationships()
 
 ##### Function Definition
 
 ```py
 def sync_snap_mirror_relationship(
     uuid: str,                          # UUID of the relationship for which the sync operation is to be triggered (required).
+    volume_name: str = None             # destination volume name (only when uuid not provided)
+    cluster_name: str = None,           # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,               # Non default svm name, same credentials as the default credentials should be used    
     wait_until_complete: bool = False,  # Denotes whether or not to wait for sync operation to complete before returning.
     print_output: bool = False          # Denotes whether or not to print messages to the console during execution.
 ) :
@@ -1544,6 +1663,48 @@ APIConnectionError                  # The storage system/service API returned an
 SnapMirrorSyncOperationError        # The sync operation failed.
 InvalidSnapMirrorParameterError     # An invalid parameter was specified.
 ```
+
+
+
+<a name="lib-create-snapmirror-relationship"></a>
+
+#### Create New SnapMirror Relationship
+
+The NetApp DataOps Toolkit can be used to create SnapMirror relationshp for which the destination volume resides on the user's storage system. NetApp's SnapMirror volume replication technology can be used to quickly and efficiently replicate data between NetApp storage systems. For example, SnapMirror could be used to replicate newly acquired data, gathered on a different NetApp storage system, to the user's NetApp storage system to be used for AI/ML model training or retraining. The command can create relationship and initialize/resync the relationship. 
+
+##### Function Definition
+
+```py
+def create_snap_mirror_relationship(
+    source_svm: str,                    # snapmirror replication source svm name 
+    source_vol: str,                    # snapmirror replication source volume name 
+    target_svm: str = None,             # snapmirror replication target svm name 
+    target_vol: str,                    # snapmirror replication target volume name, when not provided default svm will be used
+    cluster_name: str = None,           # Non default cluster name, same credentials as the default credentials should be used     
+    schedule: str = '',                 # name of the schedule to use, when not provided no schedule will be provided 
+    policy: str = 'MirrorAllSnapshots', # snapmirror poilcy to use, when not provided MirrorAllSnapshots will be used 
+    action: str = None,                 # the action to perform after the creation of the snapmirror relationship. can be: initialize or resync. initialize can be used to initialize new replication (requires destination volume to be of DP type). resync can be used to resync volumes with common snapshot
+    print_output: bool = False          # Denotes whether or not to print messages to the console during execution.
+
+) :
+```
+
+##### Return Value
+
+None
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError                  # Config file is missing or contains an invalid value.
+APIConnectionError                  # The storage system/service API returned an error.
+SnapMirrorSyncOperationError        # The sync operation failed.
+InvalidSnapMirrorParameterError     # An invalid parameter was specified.
+```
+
+
 
 ## Support
 
