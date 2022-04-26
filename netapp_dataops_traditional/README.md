@@ -1270,6 +1270,7 @@ def delete_snapshot(
     snapshot_name: str,          # Name of snapshot to be deleted (required).
     cluster_name: str = None,    # Non default cluster name, same credentials as the default credentials should be used 
     svm_name: str = None,        # Non default svm name, same credentials as the default credentials should be used    
+    skip_owned: bool = False,    # When True snapshot with owners will not be deleted and will not cause an error
     print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
