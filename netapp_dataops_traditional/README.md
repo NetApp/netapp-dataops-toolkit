@@ -488,10 +488,12 @@ The following options/arguments are required:
     -v, --volume=   Name of volume.
 ```
 Optional Options/Arguments:
+
+```
     -u, --cluster-name=     Non default hosting cluster
     -s, --svm=              Non default svm.
     -h, --help              Print help text.
-
+```
 
 ##### Example Usage
 
@@ -844,10 +846,12 @@ FlexCache prepopulated successfully.
 The NetApp DataOps Toolkit can be used to print a list of all existing SnapMirror relationships for which the destination volume resides on the user's storage system. The command for printing a list of all existing SnapMirror relationships is `netapp_dataops_cli.py list snapmirror-relationships`.
 
 Optional Options/Arguments:
+
+```
     -u, --cluster-name=     Non default hosting cluster
     -s, --svm=              Non default svm.
     -h, --help              Print help text.
-
+```
 
 Note: To create a new SnapMirror relationship, access ONTAP System Manager.
 
