@@ -110,12 +110,12 @@ Optional Options/Arguments:
 \t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
 \t-x, --readonly\t\tRead-only option for mounting volumes locally.
 \t-j, --junction\t\tSpecify a custom junction path for the volume to be exported at.
-\t-e, --export-hosts\t\t colon(:) seperated hosts/cidrs to to use for export. hosts will be exported for rw and root access
-\t-e, --export-policy\t\t export policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
-\t-d, --snapshot-policy\t\t snapshot-policy to attach to the volume, default snapshot policy will be used if not provided
-\t-s, --split\t\t start clone split after creation
-\t-r, --refresh\t\t delete existing clone if exists before creating a new one 
-\t-d, --svm-dr-unprotect\t\t disable svm dr protection if svm-dr protection exists 
+\t-e, --export-hosts\tcolon(:) seperated hosts/cidrs to to use for export. hosts will be exported for rw and root access
+\t-e, --export-policy\texport policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
+\t-d, --snapshot-policy\tsnapshot-policy to attach to the volume, default snapshot policy will be used if not provided
+\t-s, --split\t\tstart clone split after creation
+\t-r, --refresh\t\tdelete existing clone if exists before creating a new one 
+\t-d, --svm-dr-unprotect\tdisable svm dr protection if svm-dr protection exists 
 
 Examples (basic usage):
 \tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset
@@ -144,12 +144,12 @@ Required Options/Arguments:
 
 Optional Options/Arguments:
 \t-u, --cluster-name=\tnon default hosting cluster
-\t-s, --svm=\tNon defaul svm name.
-\t-h, --help\tPrint help text.
-\t-n, --name=\tName of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
+\t-s, --svm=\t\tNon defaul svm name.
+\t-h, --help\t\tPrint help text.
+\t-n, --name=\t\tName of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
 \t-r, --retention=\tSnapshot name will be suffixed by <timestamp> and excesive snapshots will be deleted. 
 \t                \tCan be count of snapshots when int (ex. 10) or days when retention is suffixed by d (ex. 10d)
-\t-l, --snapmirror-label=\t if proivded snapmirror label will be configured on the created snapshot 
+\t-l, --snapmirror-label=\tif provided snapmirror label will be configured on the created snapshot 
 
 Examples:
 \tnetapp_dataops_cli.py create snapshot --volume=project1 --name=snap1
@@ -182,7 +182,7 @@ Optional Options/Arguments:
 \t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
 \t-x, --readonly\t\tRead-only option for mounting volumes locally.
 \t-j, --junction\t\tSpecify a custom junction path for the volume to be exported at.
-\t-f, --tiering-policy\t\tSpecify tiering policy for fabric-pool enabled systems (default is 'none').
+\t-f, --tiering-policy\tSpecify tiering policy for fabric-pool enabled systems (default is 'none').
 \t-y, --dp\t\tCreate volume as DP volume (the volume will be used as snapmirror target)
 
 
@@ -209,9 +209,9 @@ Required Options/Arguments:
 \t-v, --volume=\tName of volume.
 
 Optional Options/Arguments:
-\t-u, --cluster-name=\tnon default hosting cluster
-\t-s, --svm=\tNon default svm
-\t-h, --help\tPrint help text.
+\t-u, --cluster-name=\tNon default hosting cluster
+\t-s, --svm=\t\tNon default svm
+\t-h, --help\t\tPrint help text.
 
 Examples:
 \tnetapp_dataops_cli.py delete snapshot --volume=project1 --name=snap1
@@ -227,11 +227,11 @@ Required Options/Arguments:
 
 Optional Options/Arguments:
 \t-u, --cluster-name=\tnon default hosting cluster
-\t-v, --svm \tnon default SVM name
-\t-f, --force\tDo not prompt user to confirm operation.
-\t-m, --delete-mirror\t delete/release snapmirror relationship prior to volume deletion 
+\t-v, --svm \t\tnon default SVM name
+\t-f, --force\t\tDo not prompt user to confirm operation.
+\t-m, --delete-mirror\tdelete/release snapmirror relationship prior to volume deletion 
 \t    --delete-non-clone\tEnable deletion of volume not created as clone by this tool
-\t-h, --help\tPrint help text.
+\t-h, --help\t\tPrint help text.
 
 Examples:
 \tnetapp_dataops_cli.py delete volume --name=project1
@@ -267,9 +267,9 @@ Command: list snapmirror-relationships
 List all SnapMirror relationships.
 
 Optional Options/Arguments:
-\t-u, --cluster-name=\tnon default hosting cluster
-\t-s, --svm=\tNon default svm.
-\t-h, --help\tPrint help text.
+\t-u, --cluster-name=\tNon default hosting cluster
+\t-s, --svm=\t\tNon default svm.
+\t-h, --help\t\tPrint help text.
 '''
 helpTextListSnapshots = '''
 Command: list snapshots
@@ -280,9 +280,9 @@ Required Options/Arguments:
 \t-v, --volume=\tName of volume.
 
 Optional Options/Arguments:
-\t-u, --cluster-name=\tnon default hosting cluster
-\t-s, --svm=\tNon default svm.
-\t-h, --help\tPrint help text.
+\t-u, --cluster-name=\tNon default hosting cluster
+\t-s, --svm=\t\tNon default svm.
+\t-h, --help\t\tPrint help text.
 
 Examples:
 \tnetapp_dataops_cli.py list snapshots --volume=project1
@@ -296,7 +296,7 @@ List all data volumes.
 No options/arguments are required.
 
 Optional Options/Arguments:
-\t-u, --cluster-name=\tnon default hosting cluster
+\t-u, --cluster-name=\t\t\tnon default hosting cluster
 \t-v, --svm=\t\t\t\tlist volume on non default svm
 \t-h, --help\t\t\t\tPrint help text.
 \t-s, --include-space-usage-details\tInclude storage space usage details in output (see README for explanation).
@@ -317,8 +317,8 @@ Required Options/Arguments:
 \t-n, --name=\t\tName of volume.
 
 Optional Options/Arguments:
-\t-v, --svm \tnon default SVM name
-\t-l, --lif \tnon default lif (nfs server ip/name)
+\t-v, --svm \t\tnon default SVM name
+\t-l, --lif \t\tnon default lif (nfs server ip/name)
 \t-h, --help\t\tPrint help text.
 \t-x, --readonly\t\tMount volume locally as read-only.
 
@@ -437,10 +437,10 @@ Required Options/Arguments:
 \t-v, --volume=\tName of volume.
 
 Optional Options/Arguments:
-\t-u, --cluster-name=\tnon default hosting cluster
-\t-s, --svm=\tNon default svm.
-\t-f, --force\tDo not prompt user to confirm operation.
-\t-h, --help\tPrint help text.
+\t-u, --cluster-name=\tNon default hosting cluster
+\t-s, --svm=\t\tNon default svm.
+\t-f, --force\t\tDo not prompt user to confirm operation.
+\t-h, --help\t\tPrint help text.
 
 Examples:
 \tnetapp_dataops_cli.py restore snapshot --volume=project1 --name=snap1
@@ -478,9 +478,9 @@ or
 
 Optional Options/Arguments:
 \t-u, --cluster-name=\tnon default hosting cluster
-\t-v, --svm \tnon default target SVM name
-\t-h, --help\tPrint help text.
-\t-w, --wait\tWait for sync operation to complete before exiting.
+\t-v, --svm \t\tnon default target SVM name
+\t-h, --help\t\tPrint help text.
+\t-w, --wait\t\tWait for sync operation to complete before exiting.
 
 Examples:
 \tnetapp_dataops_cli.py sync snapmirror-relationship --uuid=132aab2c-4557-11eb-b542-005056932373
@@ -501,10 +501,10 @@ Required Options/Arguments:
 Optional Options/Arguments:
 \t-u, --cluster-name=\tnon default hosting cluster 
 \t-t, --target-svm=\tnon default target SVM
-\t-c, --schedule=\tnon default schedule (default is hourly)
-\t-p, --policy=\tnon default policy (default is MirrorAllSnapshots
-\t-a, --action=\tresync,initialize following creation
-\t-h, --help\tPrint help text.
+\t-c, --schedule=\t\tnon default schedule (default is hourly)
+\t-p, --policy=\t\tnon default policy (default is MirrorAllSnapshots
+\t-a, --action=\t\tresync,initialize following creation
+\t-h, --help\t\tPrint help text.
 
 Examples:
 \tnetapp_dataops_cli.py create snapmirror-relationship -u cluster1 -s svm1 -t svm2 -v vol1 -n vol1 -p MirrorAllSnapshots -c hourly 
