@@ -5,7 +5,7 @@ The NetApp DataOps Toolkit is a Python library that makes it simple for develope
 
 ## Getting Started
 
-The latest stable release of the NetApp DataOps Toolkit is version 2.2.0. It is recommended to always use the latest stable release. You can access the documentation for the latest stable release [here](https://github.com/NetApp/netapp-dataops-toolkit/tree/v2.2.0)
+The latest stable release of the NetApp DataOps Toolkit is version 2.3.0. It is recommended to always use the latest stable release. You can access the documentation for the latest stable release [here](https://github.com/NetApp/netapp-dataops-toolkit/tree/v2.3.0)
 
 The NetApp DataOps Toolkit comes in two different flavors - one for Kubernetes-based environments, and one for traditional VM-based or bare-metal environments. Choose the appropriate flavor to use based on your specific environment and use case.
 
