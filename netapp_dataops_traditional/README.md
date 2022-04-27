@@ -132,7 +132,7 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
-    -u, --cluster-name=     non default hosting cluster
+    -l, --cluster-name=     non default hosting cluster
     -c, --source-svm=       non default source svm name
     -t, --target-svm=       non default target svm name
     -g, --gid=              Unix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
@@ -201,7 +201,7 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
-    -u, --cluster-name=     non default hosting cluster
+    -l, --cluster-name=     non default hosting cluster
     -v, --svm=              non default svm name
     -a, --aggregate=        Aggregate to use when creating new volume (flexvol) or optional comma seperated aggrlist when specific aggregates are required for FG.
     -d, --snapshot-policy=  Snapshot policy to apply for new volume.

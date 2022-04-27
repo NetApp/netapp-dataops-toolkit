@@ -99,7 +99,7 @@ Required Options/Arguments:
 \t-v, --source-volume=\tName of volume to be cloned.
 
 Optional Options/Arguments:
-\t-u, --cluster-name=\tnon default hosting cluster
+\t-l, --cluster-name=\tnon default hosting cluster
 \t-c, --source-svm=\tnon default source svm name 
 \t-t, --target-svm=\tnon default target svm name 
 \t-g, --gid=\t\tUnix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
@@ -168,7 +168,7 @@ Required Options/Arguments:
 \t-s, --size=\t\tSize of new volume. Format: '1024MB', '100GB', '10TB', etc.
 
 Optional Options/Arguments:
-\t-u, --cluster-name=\tnon default hosting cluster
+\t-l, --cluster-name=\tnon default hosting cluster
 \t-v, --svm=\t\tnon default svm name 
 \t-a, --aggregate=\tAggregate to use when creating new volume (flexvol) or optional comma seperated aggrlist when specific aggregates are required for FG.
 \t-d, --snapshot-policy=\tSnapshot policy to apply for new volume.
@@ -756,7 +756,7 @@ if __name__ == '__main__':
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hu:c:t:n:v:s:m:u:g:j:xe:p:i:srd", ["help", "cluster-name=", "source-svm=","target-svm=","name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid=", "junction=", "readonly","export-hosts=","export-policy=","snapshot-policy=","split","refresh","svm-dr-unprotect"])
+                opts, args = getopt.getopt(sys.argv[3:], "hl:c:t:n:v:s:m:u:g:j:xe:p:i:srd", ["help", "cluster-name=", "source-svm=","target-svm=","name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid=", "junction=", "readonly","export-hosts=","export-policy=","snapshot-policy=","split","refresh","svm-dr-unprotect"])
             except Exception as err:                
                 print(err)
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
@@ -766,7 +766,7 @@ if __name__ == '__main__':
                 if opt in ("-h", "--help"):
                     print(helpTextCloneVolume)
                     sys.exit(0)
-                elif opt in ("-u", "--cluster-name"):
+                elif opt in ("-l", "--cluster-name"):
                     clusterName = arg                    
                 elif opt in ("-n", "--name"):
                     newVolumeName = arg
@@ -917,7 +917,7 @@ if __name__ == '__main__':
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hv:t:n:s:rt:p:u:g:e:d:m:a:j:xu:y", ["cluster-name=","help", "svm=", "name=", "size=", "guarantee-space", "type=", "permissions=", "uid=", "gid=", "export-policy=", "snapshot-policy=", "mountpoint=", "aggregate=", "junction=" ,"readonly","tiering-policy=","dp"])
+                opts, args = getopt.getopt(sys.argv[3:], "l:hv:t:n:s:rt:p:u:g:e:d:m:a:j:xu:y", ["cluster-name=","help", "svm=", "name=", "size=", "guarantee-space", "type=", "permissions=", "uid=", "gid=", "export-policy=", "snapshot-policy=", "mountpoint=", "aggregate=", "junction=" ,"readonly","tiering-policy=","dp"])
             except Exception as err:                
                 print(err)
                 handleInvalidCommand(helpText=helpTextCreateVolume, invalidOptArg=True)
@@ -929,7 +929,7 @@ if __name__ == '__main__':
                     sys.exit(0)
                 elif opt in ("-v", "--svm"):
                     svmName = arg                    
-                elif opt in ("-u", "--cluster-name"):
+                elif opt in ("-l", "--cluster-name"):
                     clusterName = arg                     
                 elif opt in ("-n", "--name"):
                     volumeName = arg
