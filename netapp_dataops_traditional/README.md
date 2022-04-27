@@ -903,7 +903,7 @@ Checking again in 60 seconds...
 Success: Sync operation is complete.
 ```
 
-<a name="cli-create-snapmirror-relationships"></a>
+<a name="cli-create-snapmirror-relationship"></a>
 #### Create New SnapMirror Relationship
 
 The NetApp DataOps Toolkit can be used to create SnapMirror relationshp for which the destination volume resides on the user's storage system. NetApp's SnapMirror volume replication technology can be used to quickly and efficiently replicate data between NetApp storage systems. For example, SnapMirror could be used to replicate newly acquired data, gathered on a different NetApp storage system, to the user's NetApp storage system to be used for AI/ML model training or retraining. The command can create relationship and initialize/resync the relationship. The command for create new SnapMirror relationship is `netapp_dataops_cli.py create snapmirror-relationship`.
