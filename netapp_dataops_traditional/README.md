@@ -96,6 +96,7 @@ Data volume management operations:
 Snapshot management operations:
 - [Create a new snapshot for a data volume.](#cli-create-snapshot)
 - [Delete an existing snapshot for a data volume.](#cli-delete-snapshot)
+- [Rename an existing snapshot for a data volume.](#cli-renmae-snapshot)
 - [List all snapshots for a data volume.](#cli-list-snapshots)
 - [Restore a snapshot for a data volume.](#cli-restore-snapshot)
 
@@ -473,6 +474,39 @@ Delete the snapshot named 'snap1' for the volume named 'test1'.
 netapp_dataops_cli.py delete snapshot --volume=test1 --name=snap1
 Deleting snapshot 'snap1'.
 Snapshot deleted successfully.
+```
+
+<a name="cli-rename-snapshot"></a>
+
+#### Rename an Existing Snapshot for a Data Volume
+
+The NetApp DataOps Toolkit can be used to near-instantaneously rename an existing snapshot for a specific data volume. The command for renaming an existing snapshot for a specific data volume is `netapp_dataops_cli.py rename snapshot`.
+
+The following options/arguments are required:
+
+```
+    -v, --volume=   Name of volume.
+    -n, --name=     Name of existing snapshot.
+    -t, --new-name= Reanme snapshot to this name.
+```
+
+The following options/arguments are optional:
+
+```
+    -u, --cluster-name=     non default hosting cluster
+    -s, --svm=      Non default svm
+    -h, --help      Print help text.
+
+```
+
+##### Example Usage
+
+Rename the snapshot named 'snap1' for the volume named 'test1' to 'snap1_new'.
+
+```sh
+netapp_dataops_cli.py rename snapshot --volume=test1 --name=snap1 --new-name=snap1_new 
+Renaming snapshot 'snap1' to 'snap1_new'.
+Snapshot renamed successfully.
 ```
 
 <a name="cli-list-snapshots"></a>
@@ -938,7 +972,7 @@ Setting state to snapmirrored, action:resync
 The NetApp DataOps Toolkit can also be utilized as a library of functions that can be imported into any Python program or Jupyter Notebook. In this manner, data scientists and data engineers can easily incorporate data management tasks into their existing projects, programs, and workflows. This functionality is only recommended for advanced users who are proficient in Python.
 
 ```py
-from netapp_dataops.traditional import clone_volume, create_volume, delete_volume, list_volumes, mount_volume, create_snapshot, delete_snapshot, list_snapshots, restore_snapshot, list_cloud_sync_relationships, sync_cloud_sync_relationship, list_snap_mirror_relationships, sync_snap_mirror_relationship, prepopulate_flex_cache, push_directory_to_s3, push_file_to_s3, pull_bucket_from_s3, pull_object_from_s3
+from netapp_dataops.traditional import clone_volume, create_volume, delete_volume, list_volumes, mount_volume, create_snapshot, delete_snapshot, rename_snapshot, list_snapshots, restore_snapshot, list_cloud_sync_relationships, sync_cloud_sync_relationship, list_snap_mirror_relationships, sync_snap_mirror_relationship, create_snap_mirror_relationship, prepopulate_flex_cache, push_directory_to_s3, push_file_to_s3, pull_bucket_from_s3, pull_object_from_s3
 ```
 
 Note: The prerequisite steps outlined in the [Getting Started](#getting-started) section still appy when the toolkit is being utilized as an importable library of functions.
@@ -956,6 +990,7 @@ Data volume management operations:
 Snapshot management operations:
 - [Create a new snapshot for a data volume.](#lib-create-snapshot)
 - [Delete an existing snapshot for a data volume.](#lib-delete-snapshot)
+- [Rename an existing snapshot for a data volume.](#lib-rename-snapshot)
 - [List all snapshots for a data volume.](#lib-list-snapshots)
 - [Restore a snapshot for a data volume.](#lib-restore-snapshot)
 
@@ -1288,6 +1323,41 @@ APIConnectionError              # The storage system/service API returned an err
 InvalidSnapshotParameterError   # An invalid parameter was specified.
 InvalidVolumeParameterError     # An invalid parameter was specified.
 ```
+
+<a name="lib-rename-snapshot"></a>
+
+#### Rename an Existing Snapshot for a Data Volume
+
+The NetApp DataOps Toolkit can be used to near-instantaneously rename an existing snapshot for a specific data volume as part of any Python program or workflow.
+
+##### Function Definition
+
+```py
+def rename_snapshot(
+    volume_name: str,              # Name of volume (required).
+    snapshot_name: str,            # Name of snapshot to be deleted (required).
+    new_snapshot_name: str = None, # When True snapshot with owners will not be deleted and will not cause an error
+    cluster_name: str = None,      # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,          # Non default svm name, same credentials as the default credentials should be used    
+    print_output: bool = False     # Denotes whether or not to print messages to the console during execution.
+) :
+```
+
+##### Return Value
+
+None
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError              # Config file is missing or contains an invalid value.
+APIConnectionError              # The storage system/service API returned an error.
+InvalidSnapshotParameterError   # An invalid parameter was specified.
+InvalidVolumeParameterError     # An invalid parameter was specified.
+```
+
 
 <a name="lib-list-snapshots"></a>
 

@@ -447,7 +447,7 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
         try:
             if currentVolume and refresh:
                 if "CLONENAME:" in currentVolume.comment:
-                    delete_volume(volume_name=new_volume_name, cluster_name=cluster_name, svm_name=target_svm, delete_mirror=True, print_output=True)
+                    delete_volume(volume_name=new_volume_name, cluster_name=cluster_name, svm_name=targetsvm, delete_mirror=True, print_output=True)
                 else:
                     if print_output:
                         print("Error: refresh clone is only supported when existing clone created using the tool (based on volume comment)")
@@ -692,6 +692,77 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
     else:
         raise ConnectionTypeError()
 
+def rename_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = None, svm_name: str = None, new_snapshot_name: str = None, print_output: bool = False):
+    # Retrieve config details from config file
+    try:
+        config = _retrieve_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+    try:
+        connectionType = config["connectionType"]
+    except:
+        if print_output:
+            _print_invalid_config_error()
+        raise InvalidConfigError()
+
+    if cluster_name:
+        config["hostname"] = cluster_name 
+
+    if connectionType == "ONTAP":
+        # Instantiate connection to ONTAP cluster
+        try:
+            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
+        except InvalidConfigError:
+            raise
+
+        # Retrieve svm from config file
+        try:
+            svm = config["svm"]
+            if svm_name: 
+                svm = svm_name 
+        except:
+            if print_output:
+                _print_invalid_config_error()
+            raise InvalidConfigError()
+
+        try:
+            # Retrieve volume
+            volume = NetAppVolume.find(name=volume_name, svm=svm)
+            if not volume:
+                if print_output:
+                    print("Error: Invalid volume name.")
+                raise InvalidVolumeParameterError("name")
+
+            # Retrieve snapshot
+            snapshot = NetAppSnapshot.find(volume.uuid, name=snapshot_name)
+            if not snapshot:
+                if print_output:
+                    print("Error: Existing snapshot does not exists.")
+                raise InvalidSnapshotParameterError("name")
+
+            # check if new snapshot exists 
+            newsnapshot = NetAppSnapshot.find(volume.uuid, name=new_snapshot_name)
+            if newsnapshot:
+                if print_output:
+                    print("Error: New snapshot already exists.")
+                raise InvalidSnapshotParameterError("name")
+
+            if print_output:
+                print("Renaming snapshot '" + snapshot_name + "' to '"+new_snapshot_name+"'.")
+            snapshot.name = new_snapshot_name
+            # Rename snapshot
+            snapshot.patch(poll=True)
+
+            if print_output:
+                print("Snapshot renamed successfully.")
+
+        except NetAppRestError as err :
+            if print_output:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+
+    else:
+        raise ConnectionTypeError()
 
 def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = None, snapshot_name: str = None, retention_count: int = 0, retention_days: bool = False, snapmirror_label: str = None, print_output: bool = False):
     # Retrieve config details from config file
