@@ -26,6 +26,7 @@ from netapp_dataops.traditional import (
     create_volume,
     delete_snapshot,
     delete_volume,
+    rename_snapshot,
     list_cloud_sync_relationships,
     list_snap_mirror_relationships,
     create_snap_mirror_relationship,
@@ -67,6 +68,7 @@ Snapshot Management Commands:
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
 
 \tcreate snapshot\t\t\tCreate a new snapshot for a data volume.
+\rename snapshot\t\t\tRename existing snapshot for a data volume.
 \tdelete snapshot\t\t\tDelete an existing snapshot for a data volume.
 \tlist snapshots\t\t\tList all snapshots for a data volume.
 \trestore snapshot\t\tRestore a snapshot for a data volume (restore the volume to its exact state at the time that the snapshot was created).
@@ -158,6 +160,25 @@ Examples:
 \tnetapp_dataops_cli.py create snapshot -v project2 -n daily_consistent -r 7 -l daily
 \tnetapp_dataops_cli.py create snapshot -v project2 -n daily_for_month -r 30d -l daily
 '''
+helpTextRenameSnapshot = '''
+Command: rename snapshot
+
+Rename existing snapshot for a data volume.
+
+Required Options/Arguments:
+\t-v, --volume=\tName of volume.
+\t-n, --name=\tName of existing snapshot.
+\t-t, --new-name=\tReanme snapshot to this name.
+
+Optional Options/Arguments:
+\t-u, --cluster-name=\tnon default hosting cluster
+\t-s, --svm=\tNon defaul svm name.
+\t-h, --help\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py rename snapshot --volume=project1 --name=snap1 --new-name=newsnap1
+'''
+
 helpTextCreateVolume = '''
 Command: create volume
 
@@ -837,6 +858,55 @@ if __name__ == '__main__':
 
         # Create config file
         createConfig(connectionType=connectionType)
+
+    elif action == "rename":
+
+        # Get desired target from command line args
+        target = getTarget(sys.argv)
+
+        # Invoke desired action based on target
+        if target in ("snapshot", "snap"):
+            volumeName = None
+            snapshotName = None
+            clusterName = None             
+            svmName = None 
+            newSnapshotName = None
+
+            # Get command line options
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hu:s:v:n:t:", ["cluster-name=","help", "svm=", "volume=", "name=", "new-name="])
+            except Exception as err:                
+                print(err)
+                handleInvalidCommand(helpText=helpTextCreateSnapshot, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help") :
+                    print(helpTextRenameSnapshot)
+                    sys.exit(0)
+                elif opt in ("-u", "--cluster-name"):
+                    clusterName = arg                     
+                elif opt in ("-s", "--svm"):
+                    svmName = arg                                                        
+                elif opt in ("-v", "--volume"):
+                    volumeName = arg
+                elif opt in ("-n", "--name"):
+                    snapshotName = arg
+                elif opt in ("-t", "--new-name"):
+                    newSnapshotName = arg                                     
+
+            # Check for required options
+            if not volumeName or not snapshotName or not newSnapshotName:
+                handleInvalidCommand(helpText=helpTextRenameSnapshot, invalidOptArg=True)
+
+
+            # Rename snapshot
+            try:
+                rename_snapshot(volume_name=volumeName, snapshot_name=snapshotName, new_snapshot_name=newSnapshotName, cluster_name=clusterName, svm_name=svmName, print_output=True)
+            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, InvalidSnapshotParameterError):
+                sys.exit(1)
+
+
 
     elif action == "create":
         # Get desired target from command line args
