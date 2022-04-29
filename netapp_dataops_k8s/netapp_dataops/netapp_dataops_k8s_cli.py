@@ -102,7 +102,7 @@ Optional Options/Arguments:
 \t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
 
 Examples:
-\tnetapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment1 --source-workspace-name=project1 --nvidia-gpu=1 
+\tnetapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment1 --source-workspace-name=project1 --nvidia-gpu=1
 \tnetapp_dataops_k8s_cli.py clone jupyterlab -w project2-mike -s project2-snap1 -n team1 -g 1 -p 0.5 -m 1Gi -b
 '''
 helpTextCloneToNewNsJupyterLab = '''
@@ -165,6 +165,7 @@ Optional Options/Arguments:
 \t-p, --cpu=\t\t\tNumber of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
 \t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
 \t-a, --register-with-astra\tRegister new workspace with Astra Control (requires Astra Control).
+\t-v, --mount-pvc\t\t\tOption to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: -v/--mount-pvc=existing_pvc_name:mount_point. If not specified, no additional PVC will be attached.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py create jupyterlab --workspace-name=mike --size=10Gi --nvidia-gpu=2
@@ -739,12 +740,13 @@ if __name__ == '__main__':
             requestCpu = None
             register_with_astra = False
             load_balancer_service = False
+            mount_pvc = None
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hw:s:n:c:i:g:m:p:ab",
+                opts, args = getopt.getopt(sys.argv[3:], "hw:s:n:c:i:g:m:p:abv:",
                                            ["help", "workspace-name=", "size=", "namespace=", "storage-class=",
-                                            "image=", "nvidia-gpu=", "memory=", "cpu=", "register-with-astra", "load-balancer"])
+                                            "image=", "nvidia-gpu=", "memory=", "cpu=", "register-with-astra", "load-balancer", "mount-pvc="])
             except:
                 handleInvalidCommand(helpText=helpTextCreateJupyterLab, invalidOptArg=True)
 
@@ -773,7 +775,8 @@ if __name__ == '__main__':
                     register_with_astra = True
                 elif opt in ("-b", "--load-balancer"):
                     load_balancer_service = True
-
+                elif opt in ("-v", "--mount-pvc"):
+                    mount_pvc = arg
 
             # Check for required options
             if not workspaceName or not workspaceSize:
@@ -782,7 +785,7 @@ if __name__ == '__main__':
             # Create JupyterLab workspace
             try:
                 create_jupyter_lab(workspace_name=workspaceName, workspace_size=workspaceSize, storage_class=storageClass,
-                                   load_balancer_service=load_balancer_service, namespace=namespace, workspace_image=workspaceImage, request_cpu=requestCpu,
+                                   load_balancer_service=load_balancer_service, namespace=namespace, workspace_image=workspaceImage, request_cpu=requestCpu, mount_pvc=mount_pvc,
                                    request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu, register_with_astra=register_with_astra, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)

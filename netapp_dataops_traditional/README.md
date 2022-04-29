@@ -20,7 +20,7 @@ Note: The 'prepopulate flexcache' operation only supports ONTAP 9.8 and above. A
 
 ### Prerequisites
 
-The NetApp DataOps Toolkit for Traditional Environments requires that Python 3.6 or above be installed on the local host. Additionally, the toolkit requires that pip for Python3 be installed on the local host. For more details regarding pip, including installation instructions, refer to the [pip documentation](https://pip.pypa.io/en/stable/installing/).
+The NetApp DataOps Toolkit for Traditional Environments requires that Python 3.8 or above be installed on the local host. Additionally, the toolkit requires that pip for Python3 be installed on the local host. For more details regarding pip, including installation instructions, refer to the [pip documentation](https://pip.pypa.io/en/stable/installing/).
 
 ### Installation Instructions
 
@@ -143,12 +143,12 @@ The following options/arguments are optional:
     -u, --uid=              Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
     -x, --readonly          Read-only option for mounting volumes locally.
     -j, --junction          Specify a custom junction path for the volume to be exported at.
-    -e, --export-hosts               colon(:) seperated hosts/cidrs to to use for export. hosts will be exported for rw and root access
-    -e, --export-policy              export policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
-    -d, --snapshot-policy            snapshot-policy to attach to the volume, default snapshot policy will be used if not provided
-    -s, --split              start clone split after creation
-    -r, --refresh            delete existing clone if exists before creating a new one
-    -d, --svm-dr-unprotect           disable svm dr protection if svm-dr protection exists
+    -e, --export-hosts      colon(:) seperated hosts/cidrs to to use for export. hosts will be exported for rw and root access
+    -e, --export-policy     export policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
+    -d, --snapshot-policy   snapshot-policy to attach to the volume, default snapshot policy will be used if not provided
+    -s, --split             start clone split after creation
+    -r, --refresh           delete existing clone if exists before creating a new one
+    -d, --svm-dr-unprotect  disable svm dr protection if svm-dr protection exists
 ```
 
 ##### Example Usage
@@ -460,9 +460,9 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
-    -u, --cluster-name=     non default hosting cluster
-    -s, --svm=      Non default svm
-    -h, --help      Print help text.
+    -u, --cluster-name=     Non default hosting cluster
+    -s, --svm=              Non default svm
+    -h, --help              Print help text.
 
 ```
 
@@ -521,9 +521,9 @@ The following options/arguments are required:
     -v, --volume=   Name of volume.
 ```
 Optional Options/Arguments:
-    -u, --cluster-name=     non default hosting cluster
-    -s, --svm=      Non default svm.
-    -h, --help      Print help text.
+    -u, --cluster-name=     Non default hosting cluster
+    -s, --svm=              Non default svm.
+    -h, --help              Print help text.
 
 
 ##### Example Usage
@@ -559,10 +559,10 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
-    -u, --cluster-name=     non default hosting cluster
-    -s, --svm=      Non default svm.
-    -f, --force     Do not prompt user to confirm operation.
-    -h, --help      Print help text.
+    -u, --cluster-name=     Non default hosting cluster
+    -s, --svm=              Non default svm.
+    -f, --force             Do not prompt user to confirm operation.
+    -h, --help              Print help text.
 ```
 
 ##### Example Usage
@@ -877,9 +877,9 @@ FlexCache prepopulated successfully.
 The NetApp DataOps Toolkit can be used to print a list of all existing SnapMirror relationships for which the destination volume resides on the user's storage system. The command for printing a list of all existing SnapMirror relationships is `netapp_dataops_cli.py list snapmirror-relationships`.
 
 Optional Options/Arguments:
-    -u, --cluster-name=     non default hosting cluster
-    -s, --svm=      Non default svm.
-    -h, --help      Print help text.
+    -u, --cluster-name=     Non default hosting cluster
+    -s, --svm=              Non default svm.
+    -h, --help              Print help text.
 
 
 Note: To create a new SnapMirror relationship, access ONTAP System Manager.
@@ -950,10 +950,10 @@ Optional Options/Arguments:
 ```
     -u, --cluster-name=     non default hosting cluster
     -t, --target-svm=       non default target SVM
-    -c, --schedule= non default schedule (default is hourly)
-    -p, --policy=   non default policy (default is MirrorAllSnapshots
-    -a, --action=   resync,initialize following creation
-    -h, --help      Print help text.
+    -c, --schedule=         non default schedule (default is hourly)
+    -p, --policy=           non default policy (default is MirrorAllSnapshots
+    -a, --action=           resync,initialize following creation
+    -h, --help              Print help text.
 ```
 
 ##### Example Usage
