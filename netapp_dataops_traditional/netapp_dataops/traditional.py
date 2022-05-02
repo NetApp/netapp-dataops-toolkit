@@ -13,8 +13,8 @@ import subprocess
 import sys
 import time
 import warnings
+import datetime
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
 import boto3
 from botocore.client import Config as BotoConfig
 from netapp_ontap import config as netappConfig
@@ -25,13 +25,16 @@ from netapp_ontap.resources import SnapmirrorRelationship as NetAppSnapmirrorRel
 from netapp_ontap.resources import SnapmirrorTransfer as NetAppSnapmirrorTransfer
 from netapp_ontap.resources import Snapshot as NetAppSnapshot
 from netapp_ontap.resources import Volume as NetAppVolume
+from netapp_ontap.resources import ExportPolicy as NetAppExportPolicy
+from netapp_ontap.resources import SnapshotPolicy as NetAppSnapshotPolicy
+from netapp_ontap.resources import CLI as NetAppCLI
 import pandas as pd
 import requests
 from tabulate import tabulate
 import yaml
 
 
-__version__ = "2.1.1"
+__version__ = "2.2.0"
 
 
 # Using this decorator in lieu of using a dependency to manage deprecation
@@ -157,7 +160,6 @@ def _get_cloud_central_access_token(refreshToken: str, print_output: bool = Fals
         raise APIConnectionError(errorMessage, response)
 
     return accessToken
-
 
 def _get_cloud_sync_access_parameters(refreshToken: str, print_output: bool = False) -> (str, str):
     try:
@@ -357,9 +359,10 @@ def _convert_bytes_to_pretty_size(size_in_bytes: str, num_decimal_points: int = 
 #
 
 
-def clone_volume(new_volume_name: str, source_volume_name: str, source_snapshot_name: str = None,
-                 unix_uid: str = None, unix_gid: str = None, mountpoint: str = None, junction: str =None, readonly: bool = False,
-                 print_output: bool = False):
+def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: str = None, source_snapshot_name: str = None,
+                 source_svm: str = None, target_svm: str = None, export_hosts: str = None, export_policy: str = None, split: bool = False, 
+                 unix_uid: str = None, unix_gid: str = None, mountpoint: str = None, junction: str= None, readonly: bool = False,
+                 snapshot_policy: str = None, refresh: bool = False, svm_dr_unprotect: bool = False, print_output: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -371,6 +374,9 @@ def clone_volume(new_volume_name: str, source_volume_name: str, source_snapshot_
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
+    
+    if cluster_name:
+        config["hostname"] = cluster_name 
 
     if connectionType == "ONTAP":
         # Instantiate connection to ONTAP cluster
@@ -380,14 +386,23 @@ def clone_volume(new_volume_name: str, source_volume_name: str, source_snapshot_
             raise
 
         # Retrieve values from config file if not passed into function
-        try:
-            svm = config["svm"]
+        try:            
+            sourcesvm = config["svm"]
+            if source_svm: 
+                sourcesvm = source_svm 
+            
+            targetsvm = sourcesvm
+            if target_svm:
+                targetsvm = target_svm 
+
             if not unix_uid:
                 unix_uid = config["defaultUnixUID"]
             if not unix_gid:
                 unix_gid = config["defaultUnixGID"]
-        except:
+
+        except Exception as e:
             if print_output:
+                print(e)
                 _print_invalid_config_error()
             raise InvalidConfigError()
 
@@ -407,13 +422,96 @@ def clone_volume(new_volume_name: str, source_volume_name: str, source_snapshot_
                 print("Error: Invalid unix gid specified. Value must be an integer. Example: '0' for root group.")
             raise InvalidVolumeParameterError("unixGID")
 
+        #check if clone volume already exists 
+        try:
+            currentVolume = NetAppVolume.find(name=new_volume_name, svm=targetsvm)        
+            if currentVolume and not refresh:
+                if print_output:
+                    print("Error: clone:"+new_volume_name+" already exists.")
+                raise InvalidVolumeParameterError("name") 
+            
+            #for refresh we want to keep the existing policy
+            if currentVolume and refresh and not export_policy and not export_hosts:
+                export_policy = currentVolume.nas.export_policy.name
+
+            # if refresh and not provided new snapshot_policy
+            if currentVolume and refresh and not snapshot_policy:                
+                snapshot_policy = currentVolume.snapshot_policy.name
+
+        except NetAppRestError as err:
+            if print_output:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+        
+        #delete existing clone when refresh
+        try:
+            if currentVolume and refresh:
+                if "CLONENAME:" in currentVolume.comment:
+                    delete_volume(volume_name=new_volume_name, cluster_name=cluster_name, svm_name=target_svm, delete_mirror=True, print_output=True)
+                else:
+                    if print_output:
+                        print("Error: refresh clone is only supported when existing clone created using the tool (based on volume comment)")
+                    raise InvalidVolumeParameterError("name")                
+        except:
+            print("Error: could not delete previous clone")
+            raise InvalidVolumeParameterError("name")       
+        
+        try:
+            if not snapshot_policy :                
+                snapshot_policy = config["defaultSnapshotPolicy"]
+        except:
+            print("Error: default snapshot policy could not be found in config file")
+            raise InvalidVolumeParameterError("name")   
+
+        # check export policies 
+        try:
+            if not export_policy and not export_hosts:
+                export_policy = config["defaultExportPolicy"]
+            elif export_policy:
+                currentExportPolicy = NetAppExportPolicy.find(name=export_policy, svm=targetsvm)
+                if not currentExportPolicy:
+                    if print_output:
+                        print("Error: export policy:"+export_policy+" dones not exists.")
+                    raise InvalidVolumeParameterError("name")
+            elif export_hosts:
+                export_policy = "netapp_dataops_"+new_volume_name
+                currentExportPolicy = NetAppExportPolicy.find(name=export_policy, svm=targetsvm)
+                if currentExportPolicy:
+                    currentExportPolicy.delete()
+        except NetAppRestError as err:
+            if print_output:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+
+        #exists check if snapshot-policy 
+        try:
+            snapshotPoliciesDetails  = NetAppSnapshotPolicy.get_collection(**{"name":snapshot_policy})   
+            clusterSnapshotPolicy = False
+            svmSnapshotPolicy = False  
+            for snapshotPolicyDetails in snapshotPoliciesDetails:
+                if str(snapshotPolicyDetails.name) == snapshot_policy:
+                    try:
+                        if str(snapshotPolicyDetails.svm.name) == targetsvm:
+                            svmSnapshotPolicy = True
+                    except:
+                        clusterSnapshotPolicy = True
+
+            if not clusterSnapshotPolicy and not svmSnapshotPolicy:
+                if print_output:
+                    print("Error: snapshot-policy:"+snapshot_policy+" could not be found")
+                raise InvalidVolumeParameterError("snapshot_policy")                
+        except NetAppRestError as err:
+            if print_output:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)            
+
         # Create volume
         if print_output:
-            print("Creating clone volume '" + new_volume_name + "' from source volume '" + source_volume_name + "'.")
+            print("Creating clone volume '" + targetsvm+':'+new_volume_name + "' from source volume '" + sourcesvm+':'+source_volume_name + "'.")
 
         try:
             # Retrieve source volume
-            sourceVolume = NetAppVolume.find(name=source_volume_name, svm=svm)
+            sourceVolume = NetAppVolume.find(name=source_volume_name, svm=sourcesvm)
             if not sourceVolume:
                 if print_output:
                     print("Error: Invalid source volume name.")
@@ -424,20 +522,21 @@ def clone_volume(new_volume_name: str, source_volume_name: str, source_snapshot_
                 junction=junction
             else:
                 junction = "/"+new_volume_name
+           
 
             # Construct dict representing new volume
             newVolumeDict = {
                 "name": new_volume_name,
-                "comment": "netapp-dataops",
-                "svm": {"name": svm},
+                "svm": {"name": targetsvm},
                 "nas": {
                     "path": junction
                 },
                 "clone": {
                     "is_flexclone": True,
                     "parent_svm": {
-                        "name": sourceVolume.svm.name,
-                        "uuid": sourceVolume.svm.uuid
+                        #"name": sourceVolume.svm.name,
+                        "name": sourcesvm,
+                        #"uuid": sourceVolume.svm.uuid
                     },
                     "parent_volume": {
                         "name": sourceVolume.name,
@@ -445,6 +544,7 @@ def clone_volume(new_volume_name: str, source_volume_name: str, source_snapshot_
                     }
                 }
             }
+            
             if unix_uid != 0:
                 newVolumeDict["nas"]["uid"] = unix_uid
             else:
@@ -457,21 +557,52 @@ def clone_volume(new_volume_name: str, source_volume_name: str, source_snapshot_
                     print("Warning: Cannot apply gid of '0' when creating clone; gid of source volume will be retained.")
 
             # Add source snapshot details to volume dict if specified
-            if source_snapshot_name:
+            if source_snapshot_name and not source_snapshot_name.endswith("*"):
                 # Retrieve source snapshot
                 sourceSnapshot = NetAppSnapshot.find(sourceVolume.uuid, name=source_snapshot_name)
                 if not sourceSnapshot:
                     if print_output:
                         print("Error: Invalid source snapshot name.")
                     raise InvalidSnapshotParameterError("name")
+              
 
                 # Append source snapshot details to volume dict
                 newVolumeDict["clone"]["parent_snapshot"] = {
                     "name": sourceSnapshot.name,
                     "uuid": sourceSnapshot.uuid
                 }
+            
+            if source_snapshot_name and source_snapshot_name.endswith("*"):
+                source_snapshot_prefix = source_snapshot_name[:-1]
+                latest_source_snapshot = None 
+                latest_source_snapshot_uuid = None 
 
-            # Create new volume
+                # Retrieve all source snapshot from last to 1st 
+                for snapshot in NetAppSnapshot.get_collection(sourceVolume.uuid):
+                    snapshot.get()
+                    if snapshot.name.startswith(source_snapshot_prefix):
+                        latest_source_snapshot = snapshot.name
+                        latest_source_snapshot_uuid = snapshot.uuid
+
+                if not latest_source_snapshot:
+                    if print_output:
+                        print("Error: Could not find snapshot prefixed by '"+source_snapshot_prefix+"'.")
+                    raise InvalidSnapshotParameterError("name")
+                # Append source snapshot details to volume dict
+                newVolumeDict["clone"]["parent_snapshot"] = {
+                    "name": latest_source_snapshot,
+                    "uuid": latest_source_snapshot_uuid
+                }
+                print("Snapshot '" + latest_source_snapshot+ "' will be used to create the clone.")   
+
+            # set clone volume commnet parameter 
+            comment = 'PARENTSVM:'+sourcesvm+',PARENTVOL:'+newVolumeDict["clone"]["parent_volume"]["name"]+',CLONESVM:'+targetsvm+',CLONENAME:'+newVolumeDict["name"]
+            if source_snapshot_name: comment += ' SNAP:'+newVolumeDict["clone"]["parent_snapshot"]["name"] 
+            comment += " netapp-dataops"
+            
+            newVolumeDict["comment"] = comment
+
+            # Create new volume clone 
             newVolume = NetAppVolume.from_dict(newVolumeDict)
             newVolume.post(poll=True, poll_timeout=120)
             if print_output:
@@ -482,10 +613,77 @@ def clone_volume(new_volume_name: str, source_volume_name: str, source_snapshot_
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
 
+        if svm_dr_unprotect:
+            try:
+                if print_output:
+                    print("Disabling svm-dr protection")                 
+                response = NetAppCLI().execute("volume modify",vserver=targetsvm,volume=new_volume_name,body={"vserver_dr_protection": "unprotected"})
+            except NetAppRestError as err:
+                if "volume is not part of a Vserver DR configuration" in str(err):
+                    if print_output:
+                        print("Warning: could not disable svm-dr-protection since volume is not protected using svm-dr")                    
+                else:
+                    if print_output:
+                        print("Error: ONTAP Rest API Error: ", err)                    
+                    raise APIConnectionError(err)                
+
+        #create custom export policy if needed 
+        if export_hosts:
+            try:            
+                if print_output:
+                    print("Creating export-policy:"+export_policy)                  
+                # Construct dict representing new export policy    
+                newExportPolicyDict = {
+                    "name" : export_policy,
+                    "svm": {"name": targetsvm},
+                    "rules": []
+                }
+                for client in export_hosts.split(":"):
+                    newExportPolicyDict['rules'].append({ "clients": [{"match": client }], "ro_rule": ["sys"], "rw_rule": ["sys"], "superuser": ["sys"]})
+
+                # Create new export policy                
+                newExportPolicy = NetAppExportPolicy.from_dict(newExportPolicyDict)
+                newExportPolicy.post(poll=True, poll_timeout=120)
+              
+            except NetAppRestError as err:
+                if print_output:
+                    print("Error: ONTAP Rest API Error: ", err)
+                raise APIConnectionError(err)
+
+        #set export policy and snapshot policy 
+        try:
+            if print_output:
+                print("Setting export-policy:"+export_policy+ " snapshot-policy:"+snapshot_policy) 
+            volumeDetails = NetAppVolume.find(name=new_volume_name, svm=targetsvm)   
+            updatedVolumeDetails = NetAppVolume(uuid=volumeDetails.uuid)
+            updatedVolumeDetails.nas = {"export_policy": {"name": export_policy}}
+            updatedVolumeDetails.snapshot_policy = {"name": snapshot_policy}
+            updatedVolumeDetails.patch(poll=True, poll_timeout=120) 
+        except NetAppRestError as err:
+            if print_output:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)              
+
+        #split clone 
+        try:
+            if split: 
+                if print_output:
+                    print("Splitting clone") 
+                volumeDetails = NetAppVolume.find(name=new_volume_name, svm=targetsvm)                    
+                #get volume details 
+                updatedVolumeDetails = NetAppVolume(uuid=volumeDetails.uuid)        
+                updatedVolumeDetails.clone = {"split_initiated": True}
+                updatedVolumeDetails.patch()   
+
+        except NetAppRestError as err:
+            if print_output:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)            
+
         # Optionally mount newly created volume
         if mountpoint:
             try:
-                mount_volume(volume_name=new_volume_name, mountpoint=mountpoint, readonly=readonly, print_output=True)
+                mount_volume(volume_name=new_volume_name, svm_name=targetsvm, mountpoint=mountpoint, readonly=readonly, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 if print_output:
                     print("Error: Error mounting clone volume.")
@@ -495,7 +693,7 @@ def clone_volume(new_volume_name: str, source_volume_name: str, source_snapshot_
         raise ConnectionTypeError()
 
 
-def create_snapshot(volume_name: str, snapshot_name: str = None, print_output: bool = False):
+def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = None, snapshot_name: str = None, retention_count: int = 0, retention_days: bool = False, snapmirror_label: str = None, print_output: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -508,6 +706,9 @@ def create_snapshot(volume_name: str, snapshot_name: str = None, print_output: b
             _print_invalid_config_error()
         raise InvalidConfigError()
 
+    if cluster_name:
+        config["hostname"] = cluster_name 
+
     if connectionType == "ONTAP":
         # Instantiate connection to ONTAP cluster
         try:
@@ -515,18 +716,24 @@ def create_snapshot(volume_name: str, snapshot_name: str = None, print_output: b
         except InvalidConfigError:
             raise
 
+        if not snapshot_name:
+            snapshot_name = "netapp_dataops"
+
         # Retrieve svm from config file
         try:
             svm = config["svm"]
+            if svm_name:
+                svm = svm_name 
         except:
             if print_output:
                 _print_invalid_config_error()
             raise InvalidConfigError()
 
-        # Set snapshot name if not passed into function
-        if not snapshot_name:
-            timestamp = datetime.today().strftime("%Y%m%d_%H%M%S")
-            snapshot_name = "netapp_dataops_" + timestamp
+        snapshot_name_original = snapshot_name
+        # Set snapshot name if not passed into function or retention provided 
+        if not snapshot_name or int(retention_count) > 0:
+            timestamp = '.'+datetime.datetime.today().strftime("%Y-%m-%d_%H%M%S")
+            snapshot_name += timestamp
 
         if print_output:
             print("Creating snapshot '" + snapshot_name + "'.")
@@ -539,11 +746,18 @@ def create_snapshot(volume_name: str, snapshot_name: str = None, print_output: b
                     print("Error: Invalid volume name.")
                 raise InvalidVolumeParameterError("name")
 
-            # Create snapshot
-            snapshot = NetAppSnapshot.from_dict({
+            # create snapshot dict 
+            snapshotDict = {
                 'name': snapshot_name,
                 'volume': volume.to_dict()
-            })
+            }
+            if snapmirror_label:
+                if print_output:
+                    print("Setting snapmirror label as:"+snapmirror_label)                
+                snapshotDict['snapmirror_label'] = snapmirror_label
+
+            # Create snapshot
+            snapshot = NetAppSnapshot.from_dict(snapshotDict)
             snapshot.post(poll=True)
 
             if print_output:
@@ -554,15 +768,60 @@ def create_snapshot(volume_name: str, snapshot_name: str = None, print_output: b
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
 
+        #delete snapshots exceeding retention count if provided
+        retention_count = int(retention_count)  
+        if retention_count > 0:
+            try:  
+                # Retrieve all source snapshot from last to 1st 
+                # Retrieve volume
+                volume = NetAppVolume.find(name=volume_name, svm=svm)
+                if not volume:
+                    if print_output:
+                        print("Error: Invalid volume name.")
+                    raise InvalidVolumeParameterError("name")    
+
+                if retention_days:
+                    retention_date = datetime.datetime.today() - datetime.timedelta(days=retention_count)
+                
+                last_snapshot_list = []          
+                snapshot_list = []
+                for snapshot in NetAppSnapshot.get_collection(volume.uuid):
+                    snapshot.get()
+                    if snapshot.name.startswith(snapshot_name_original+'.'):
+                        if not retention_days:
+                            snapshot_list.append(snapshot.name)   
+                            last_snapshot_list.append(snapshot.name)
+                            if len(last_snapshot_list) > retention_count:
+                                last_snapshot_list.pop(0)
+                        else:
+                            rx = r'^{0}\.(.+)$'.format(snapshot_name_original)
+                            matchObj = re.match(rx,snapshot.name)
+                            if matchObj:
+                                snapshot_date = matchObj.group(1)
+                                snapshot_date_obj = datetime.datetime.strptime(snapshot_date, "%Y-%m-%d_%H%M%S")
+                                snapshot_list.append(snapshot.name)   
+                                last_snapshot_list.append(snapshot.name)
+                                if snapshot_date_obj < retention_date:
+                                    last_snapshot_list.pop(0)
+                
+                #delete snapshots not in retention 
+                for snap in snapshot_list:
+                    if snap not in last_snapshot_list:
+                        delete_snapshot(volume_name=volume_name, svm_name = svm, snapshot_name=snap, skip_owned=True, print_output=True)
+
+            except NetAppRestError as err:
+                if print_output:
+                    print("Error: ONTAP Rest API Error: ", err)
+                raise APIConnectionError(err)                                   
     else:
         raise ConnectionTypeError()
 
 
-def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = False,
+def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = False, cluster_name: str = None, svm_name: str = None,
                   volume_type: str = "flexvol", unix_permissions: str = "0777",
                   unix_uid: str = "0", unix_gid: str = "0", export_policy: str = "default",
-                  snapshot_policy: str = "none", aggregate: str = None, mountpoint: str = None, junction: str = None, readonly: bool = False,
-                  print_output: bool = False):
+                  snapshot_policy: str = None, aggregate: str = None, mountpoint: str = None, junction: str = None, readonly: bool = False,
+                  print_output: bool = False, tiering_policy: str = None, vol_dp: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -575,6 +834,9 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
             _print_invalid_config_error()
         raise InvalidConfigError()
 
+    if cluster_name:
+        config["hostname"] = cluster_name 
+
     if connectionType == "ONTAP":
         # Instantiate connection to ONTAP cluster
         try:
@@ -585,6 +847,8 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
         # Retrieve values from config file if not passed into function
         try:
             svm = config["svm"]
+            if svm_name: 
+                svm = svm_name 
             if not volume_type :
                 volume_type = config["defaultVolumeType"]
             if not unix_permissions :
@@ -597,7 +861,7 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
                 export_policy = config["defaultExportPolicy"]
             if not snapshot_policy :
                 snapshot_policy = config["defaultSnapshotPolicy"]
-            if not aggregate :
+            if not aggregate and volume_type == 'flexvol' :
                 aggregate = config["defaultAggregate"]
         except:
             if print_output :
@@ -654,23 +918,41 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
             junction = "/"+volume_name
 
 
-        # Create dict representing volume
-        volumeDict = {
-            "name": volume_name,
-            "comment": "netapp-dataops",
-            "svm": {"name": svm},
-            "size": volumeSizeBytes,
-            "style": volume_type,
-            "nas": {
-                "path": junction,
-                "export_policy": {"name": export_policy},
-                "security_style": "unix",
-                "unix_permissions": unix_permissions,
-                "uid": unix_uid,
-                "gid": unix_gid
-            },
-            "snapshot_policy": {"name": snapshot_policy}
-        }
+        #check tiering policy        
+        if not tiering_policy in ['none','auto','snapshot-only','all', None]:
+            if print_output:
+                print("Error: tiering policy can be: none,auto,snapshot-only or all")
+            raise InvalidVolumeParameterError("tieringPolicy")     
+
+        #vol dp type 
+        if vol_dp:
+            # Create dict representing volume of type dp
+            volumeDict = {
+                "name": volume_name,
+                "comment": "netapp-dataops",
+                "svm": {"name": svm},
+                "size": volumeSizeBytes,
+                "style": volume_type,
+                "type": 'dp'
+            }
+        else:
+            # Create dict representing volume
+            volumeDict = {
+                "name": volume_name,
+                "comment": "netapp-dataops",
+                "svm": {"name": svm},
+                "size": volumeSizeBytes,
+                "style": volume_type,
+                "nas": {
+                    "path": junction,
+                    "export_policy": {"name": export_policy},
+                    "security_style": "unix",
+                    "unix_permissions": unix_permissions,
+                    "uid": unix_uid,
+                    "gid": unix_gid
+                },
+                "snapshot_policy": {"name": snapshot_policy},          
+            }
 
         # Set space guarantee field
         if guarantee_space:
@@ -681,10 +963,18 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
         # If flexvol -> set aggregate field
         if volume_type == "flexvol":
             volumeDict["aggregates"] = [{'name': aggregate}]
+        else:
+            if aggregate:
+                volumeDict["aggregates"] = []
+                for aggr in aggregate.split(','):
+                    volumeDict["aggregates"].append({'name': aggr}) 
+        #if tiering policy provided 
+        if tiering_policy:
+            volumeDict['tiering'] = {'policy': tiering_policy}
 
         # Create volume
         if print_output:
-            print("Creating volume '" + volume_name + "'.")
+            print("Creating volume '" + volume_name + "' on svm '" + svm + "'")
         try:
             volume = NetAppVolume.from_dict(volumeDict)
             volume.post(poll=True)
@@ -695,12 +985,10 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
 
-
-
         # Optionally mount newly created volume
         if mountpoint:
             try:
-                mount_volume(volume_name=volume_name, mountpoint=mountpoint, readonly=readonly, print_output=True)
+                mount_volume(volume_name=volume_name, svm_name=svm, mountpoint=mountpoint, readonly=readonly, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 if print_output:
                     print("Error: Error mounting volume.")
@@ -710,7 +998,7 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
         raise ConnectionTypeError()
 
 
-def delete_snapshot(volume_name: str, snapshot_name: str, print_output: bool = False):
+def delete_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = None, svm_name: str = None, skip_owned: bool = False, print_output: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -723,6 +1011,9 @@ def delete_snapshot(volume_name: str, snapshot_name: str, print_output: bool = F
             _print_invalid_config_error()
         raise InvalidConfigError()
 
+    if cluster_name:
+        config["hostname"] = cluster_name 
+
     if connectionType == "ONTAP":
         # Instantiate connection to ONTAP cluster
         try:
@@ -733,6 +1024,8 @@ def delete_snapshot(volume_name: str, snapshot_name: str, print_output: bool = F
         # Retrieve svm from config file
         try:
             svm = config["svm"]
+            if svm_name: 
+                svm = svm_name 
         except:
             if print_output:
                 _print_invalid_config_error()
@@ -751,10 +1044,23 @@ def delete_snapshot(volume_name: str, snapshot_name: str, print_output: bool = F
 
             # Retrieve snapshot
             snapshot = NetAppSnapshot.find(volume.uuid, name=snapshot_name)
+            
+            
             if not snapshot:
                 if print_output:
                     print("Error: Invalid snapshot name.")
                 raise InvalidSnapshotParameterError("name")
+            
+            if hasattr(snapshot,'owners'):
+                   
+                if not skip_owned:
+                    if print_output:
+                        print('Error: Snapshot cannot be deleted since it has owners:'+','.join(snapshot.owners))
+                    raise InvalidSnapshotParameterError("name")
+                else:
+                    if print_output:
+                        print('Warning: Snapshot cannot be deleted since it has owners:'+','.join(snapshot.owners))
+                    return
 
             # Delete snapshot
             snapshot.delete(poll=True)
@@ -771,7 +1077,8 @@ def delete_snapshot(volume_name: str, snapshot_name: str, print_output: bool = F
         raise ConnectionTypeError()
 
 
-def delete_volume(volume_name: str, print_output: bool = False):
+def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = None, delete_mirror: bool = False, 
+                delete_non_clone: bool = False, print_output: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -784,6 +1091,9 @@ def delete_volume(volume_name: str, print_output: bool = False):
             _print_invalid_config_error()
         raise InvalidConfigError()
 
+    if cluster_name:
+        config["hostname"] = cluster_name         
+
     if connectionType == "ONTAP":
         # Instantiate connection to ONTAP cluster
         try:
@@ -794,13 +1104,12 @@ def delete_volume(volume_name: str, print_output: bool = False):
         # Retrieve svm from config file
         try:
             svm = config["svm"]
+            if svm_name:
+                svm = svm_name
         except:
             if print_output :
                 _print_invalid_config_error()
             raise InvalidConfigError()
-
-        if print_output:
-            print("Deleting volume '" + volume_name + "'.")
 
         try:
             # Retrieve volume
@@ -810,6 +1119,58 @@ def delete_volume(volume_name: str, print_output: bool = False):
                     print("Error: Invalid volume name.")
                 raise InvalidVolumeParameterError("name")
 
+            if not "CLONENAME:" in volume.comment and not delete_non_clone:
+                if print_output:
+                    print("Error: volume is not a clone created by this tool. add --delete-non-clone to delete it")
+                raise InvalidVolumeParameterError("delete-non-clone")                
+        except NetAppRestError as err:
+            if print_output:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+
+
+        if delete_mirror:
+            #check if this volume has snapmirror destination relationship
+            uuid = None
+            try:
+                snapmirror_relationship = NetAppSnapmirrorRelationship.get_collection(**{"destination.path": svm+":"+volume_name})
+                for rel in snapmirror_relationship:
+                    # Retrieve relationship details
+                    rel.get()
+                    uuid = rel.uuid
+            except NetAppRestError as err:
+                if print_output:
+                    print("Error: ONTAP Rest API Error: ", err)                
+
+            if uuid: 
+                if print_output:
+                    print("Deleting snapmirror relationship: "+svm+":"+volume_name)                
+                try:
+                    deleteRelation = NetAppSnapmirrorRelationship(uuid=uuid)
+                    deleteRelation.delete(poll=True, poll_timeout=120)
+                except NetAppRestError as err:
+                    if print_output:
+                        print("Error: ONTAP Rest API Error: ", err)                  
+
+            #check if this volume has snapmirror destination relationship
+            uuid = None
+            try:
+                snapmirror_relationship = NetAppSnapmirrorRelationship.get_collection(list_destinations_only=True,**{"source.path": svm+":"+volume_name})
+                for rel in snapmirror_relationship:
+                    # Retrieve relationship details
+                    rel.get(list_destinations_only=True)
+                    uuid = rel.uuid
+                    if print_output:
+                        print("release relationship: "+rel.source.path+" -> "+rel.destination.path)   
+                    deleteRelation = NetAppSnapmirrorRelationship(uuid=uuid)
+                    deleteRelation.delete(poll=True, poll_timeout=120,source_only=True)
+            except NetAppRestError as err:
+                if print_output:
+                    print("Error: ONTAP Rest API Error: ", err)                         
+
+        try:
+            if print_output:
+                print("Deleting volume '" + svm+':'+volume_name + "'.")
             # Delete volume
             volume.delete(poll=True)
 
@@ -818,7 +1179,12 @@ def delete_volume(volume_name: str, print_output: bool = False):
 
         except NetAppRestError as err:
             if print_output:
-                print("Error: ONTAP Rest API Error: ", err)
+                if "You must delete the SnapMirror relationships before" in str(err):
+                    print("Error: volume is snapmirror destination. add --delete-mirror to delete snapmirror relationship before deleting the volume")                
+                elif "the source endpoint of one or more SnapMirror relationships" in str(err):
+                    print("Error: volume is snapmirror source. add --delete-mirror to release snapmirror relationship before deleting the volume")                
+                else:
+                    print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
 
     else:
@@ -878,7 +1244,7 @@ def list_cloud_sync_relationships(print_output: bool = False) -> list():
     return relationshipsList
 
 
-def list_snap_mirror_relationships(print_output: bool = False) -> list():
+def list_snap_mirror_relationships(print_output: bool = False, cluster_name: str = None) -> list():
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -890,6 +1256,9 @@ def list_snap_mirror_relationships(print_output: bool = False) -> list():
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
+
+    if cluster_name:
+        config["hostname"] = cluster_name  
 
     if connectionType == "ONTAP":
         # Instantiate connection to ONTAP cluster
@@ -971,7 +1340,7 @@ def list_snap_mirror_relationships(print_output: bool = False) -> list():
         raise ConnectionTypeError()
 
 
-def list_snapshots(volume_name: str, print_output: bool = False) -> list():
+def list_snapshots(volume_name: str, cluster_name: str = None, svm_name: str = None, print_output: bool = False) -> list():
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -983,6 +1352,9 @@ def list_snapshots(volume_name: str, print_output: bool = False) -> list():
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
+    
+    if cluster_name:
+        config["hostname"] = cluster_name 
 
     if connectionType == "ONTAP":
         # Instantiate connection to ONTAP cluster
@@ -994,6 +1366,8 @@ def list_snapshots(volume_name: str, print_output: bool = False) -> list():
         # Retrieve svm from config file
         try:
             svm = config["svm"]
+            if svm_name:
+                svm = svm_name
         except:
             if print_output:
                 _print_invalid_config_error()
@@ -1037,7 +1411,7 @@ def list_snapshots(volume_name: str, print_output: bool = False) -> list():
         raise ConnectionTypeError()
 
 
-def list_volumes(check_local_mounts: bool = False, include_space_usage_details: bool = False, print_output: bool = False) -> list():
+def list_volumes(check_local_mounts: bool = False, include_space_usage_details: bool = False, print_output: bool = False, cluster_name: str = None, svm_name: str = None) -> list():
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -1049,6 +1423,8 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
         if print_output :
             _print_invalid_config_error()
         raise InvalidConfigError()
+    if cluster_name:
+        config["hostname"] = cluster_name 
 
     if connectionType == "ONTAP":
         # Instantiate connection to ONTAP cluster
@@ -1058,8 +1434,12 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
             raise
 
         try:
+            svmname=config["svm"]
+            if svm_name:
+                svmname = svm_name 
+
             # Retrieve all volumes for SVM
-            volumes = NetAppVolume.get_collection(svm=config["svm"])
+            volumes = NetAppVolume.get_collection(svm=svmname)
 
             # Retrieve local mounts if desired
             if check_local_mounts :
@@ -1096,12 +1476,18 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
                         nfsMountTarget = None
                     else :
                         nfsMountTarget = config["dataLif"]+":"+volume.nas.path
+                        if svmname != config["svm"]:
+                            nfsMountTarget = svmname+":"+volume.nas.path
+
 
                     # Construct clone source
                     clone = "no"
+                    cloneParentSvm = ""
                     cloneParentVolume = ""
                     cloneParentSnapshot = ""
+
                     try:
+                        cloneParentSvm = volume.clone.parent_svm.name 
                         cloneParentVolume = volume.clone.parent_volume.name
                         cloneParentSnapshot = volume.clone.parent_snapshot.name
                         clone = "yes"
@@ -1159,6 +1545,7 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
                         volumeDict["Local Mountpoint"] = localMountpoint
                     volumeDict["FlexCache"] = flexcache
                     volumeDict["Clone"] = clone
+                    volumeDict["Source SVM"] = cloneParentSvm
                     volumeDict["Source Volume"] = cloneParentVolume
                     volumeDict["Source Snapshot"] = cloneParentSnapshot
 
@@ -1182,12 +1569,29 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
         raise ConnectionTypeError()
 
 
-def mount_volume(volume_name: str, mountpoint: str, readonly: bool = False, print_output: bool = False):
+def mount_volume(volume_name: str, mountpoint: str, cluster_name: str = None, svm_name: str = None, lif_name: str = None, readonly: bool = False, print_output: bool = False):
     nfsMountTarget = None
+    
+    svm = None
+    try:
+        config = _retrieve_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+    try:
+        svm = config["svm"]
+        if svm_name:
+            svm = svm_name
+    except:
+        if print_output:
+            _print_invalid_config_error()
+        raise InvalidConfigError()
+
+    if cluster_name:
+        config["hostname"] = cluster_name 
 
     # Retrieve list of volumes
     try:
-        volumes = list_volumes(check_local_mounts=True)
+        volumes = list_volumes(check_local_mounts=True, svm_name = svm)
     except (InvalidConfigError, APIConnectionError):
         if print_output:
             print("Error: Error retrieving NFS mount target for volume.")
@@ -1210,13 +1614,21 @@ def mount_volume(volume_name: str, mountpoint: str, readonly: bool = False, prin
         if print_output:
             print("Error: Invalid volume name specified.")
         raise InvalidVolumeParameterError("name")
+    
+    try:
+        if lif_name:
+            nfsMountTarget = lif_name+':'+nfsMountTarget.split(':')[1]
+    except:
+        if print_output:
+            print("Error: Error retrieving NFS mount target for volume.")
+        raise
 
     # Print message describing action to be understaken
     if print_output:
         if readonly:
-            print("Mounting volume '" + volume_name + "' at '" + mountpoint + "' as read-only.")
+            print("Mounting volume '" + svm+':'+volume_name + "' as '"+nfsMountTarget+"' at '" + mountpoint + "' as read-only.")
         else:
-            print("Mounting volume '" + volume_name + "' at '" + mountpoint + "'.")
+            print("Mounting volume '" + svm+':'+volume_name + "' as '"+nfsMountTarget+"' at '" + mountpoint + "'.")
 
     # Create mountpoint if it doesn't already exist
     mountpoint = os.path.expanduser(mountpoint)
@@ -1435,7 +1847,7 @@ def push_file_to_s3(s3_bucket: str, local_file: str, s3_object_key: str = None, 
     print("Upload complete.")
 
 
-def restore_snapshot(volume_name: str, snapshot_name: str, print_output: bool = False):
+def restore_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = None, svm_name : str = None, print_output: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -1447,6 +1859,9 @@ def restore_snapshot(volume_name: str, snapshot_name: str, print_output: bool = 
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
+    
+    if cluster_name:
+        config["hostname"] = cluster_name 
 
     if connectionType == "ONTAP":
         # Instantiate connection to ONTAP cluster
@@ -1458,6 +1873,8 @@ def restore_snapshot(volume_name: str, snapshot_name: str, print_output: bool = 
         # Retrieve svm from config file
         try:
             svm = config["svm"]
+            if svm_name:
+                svm = svm_name
         except:
             if print_output:
                 _print_invalid_config_error()
@@ -1589,8 +2006,8 @@ def sync_cloud_sync_relationship(relationship_id: str, wait_until_complete: bool
             # Sleep for 60 seconds before checking progress again
             time.sleep(60)
 
-
-def sync_snap_mirror_relationship(uuid: str, wait_until_complete: bool = False, print_output: bool = False):
+def create_snap_mirror_relationship(source_svm: str, source_vol: str, target_vol: str, target_svm: str = None, cluster_name: str = None, 
+        schedule: str = '', policy: str = 'MirrorAllSnapshots', action: str = None, print_output: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -1603,12 +2020,162 @@ def sync_snap_mirror_relationship(uuid: str, wait_until_complete: bool = False, 
             _print_invalid_config_error()
         raise InvalidConfigError()
 
+    if cluster_name:
+        config["hostname"] = cluster_name 
+
     if connectionType == "ONTAP":
         # Instantiate connection to ONTAP cluster
         try:
             _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
         except InvalidConfigError:
             raise
+
+        svm = config["svm"]
+        if not target_svm: 
+            target_svm = svm 
+
+        try: 
+            uuid = None
+            snapmirror_relationship = NetAppSnapmirrorRelationship.get_collection(**{"destination.path": target_svm+":"+target_vol})
+            for rel in snapmirror_relationship:
+                # Retrieve relationship details
+                try:
+                    rel.get()
+                    uuid = rel.uuid
+                except NetAppRestError as err:
+                    if print_output:
+                        print("Error: ONTAP Rest API Error: ", err)
+            if uuid:
+                if print_output:
+                    print("Error: relationship alreay exists: "+target_svm+":"+target_vol)
+                raise InvalidConfigError()
+        except NetAppRestError as err:
+            if print_output:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)         
+        
+        try:
+            newRelationDict = {
+                "source": {
+                    "path": source_svm+":"+source_vol
+                }, 
+                "destination": { 
+                    "path": target_svm+":"+target_vol
+                }
+                #due to bug 1311226 setting the policy wil be done using cli api 
+                # "policy":  {
+                #     "name": policy,
+                # },
+            }
+            # if schedule != '':
+            #     newRelationDict['schedule'] = schedule
+
+            if print_output:
+                print("Creating snapmirror relationship: "+source_svm+":"+source_vol+" -> "+target_svm+":"+target_vol)
+            newRelationship = NetAppSnapmirrorRelationship.from_dict(newRelationDict)
+            newRelationship.post(poll=True, poll_timeout=120)
+        except NetAppRestError as err:
+            if print_output:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+
+        try:
+            if print_output:
+                print("Setting snapmirror policy as: "+policy+" schedule:"+schedule)
+                response = NetAppCLI().execute("snapmirror modify",destination_path=target_svm+":"+target_vol,body={"policy": policy, "schedule":schedule})
+        except NetAppRestError as err:
+            if print_output:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)            
+
+        try: 
+            uuid = None
+            relation = None
+            snapmirror_relationship = NetAppSnapmirrorRelationship.get_collection(**{"destination.path": target_svm+":"+target_vol})
+            for relation in snapmirror_relationship:
+                # Retrieve relationship details
+                try:
+                    relation.get()
+                    uuid = relation.uuid
+                except NetAppRestError as err:
+                    if print_output:
+                        print("Error: ONTAP Rest API Error: ", err)
+                    raise APIConnectionError(err)
+            if not uuid:
+                if print_output:
+                    print("Error: relationship was not created: "+target_svm+":"+target_vol)
+                raise InvalidConfigError()
+        except NetAppRestError as err:
+            if print_output:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+
+        if action in ["resync","initialize"]:
+            try:
+                if print_output:
+                    print("Setting state to snapmirrored, action:"+action)
+                patchRelation = NetAppSnapmirrorRelationship(uuid=uuid)
+                patchRelation.state = "snapmirrored"
+                patchRelation.patch(poll=True, poll_timeout=120)
+            except NetAppRestError as err:
+                if print_output:
+                    print("Error: ONTAP Rest API Error: ", err)
+                raise APIConnectionError(err)                
+
+def sync_snap_mirror_relationship(uuid: str = None, svm_name: str = None, volume_name: str = None, cluster_name: str = None, wait_until_complete: bool = False, print_output: bool = False):
+    # Retrieve config details from config file
+    try:
+        config = _retrieve_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+    try:
+        connectionType = config["connectionType"]
+    except:
+        if print_output :
+            _print_invalid_config_error()
+        raise InvalidConfigError()
+
+    if cluster_name:
+        config["hostname"] = cluster_name 
+
+    if connectionType == "ONTAP":
+        # Instantiate connection to ONTAP cluster
+        try:
+            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
+        except InvalidConfigError:
+            raise
+
+        if volume_name:
+            svm = config["svm"]
+            if svm_name: 
+                svm = svm_name
+
+            snapmirror_relationship = NetAppSnapmirrorRelationship.get_collection(**{"destination.path": svm+":"+volume_name})
+            for rel in snapmirror_relationship:
+                # Retrieve relationship details
+                try:
+                    rel.get()
+                    uuid = rel.uuid
+                except NetAppRestError as err:
+                    if print_output:
+                        print("Error: ONTAP Rest API Error: ", err)
+            if not uuid:
+                snapmirror_relationship = NetAppSnapmirrorRelationship.get_collection(**{"destination.path": svm+":"})
+                for rel in snapmirror_relationship:
+                    try:
+                        rel.get()
+                        uuid = rel.uuid
+                    except NetAppRestError as err:
+                        if print_output:
+                            print("Error: ONTAP Rest API Error: ", err)
+                    if uuid: 
+                        if print_output:
+                            print("volume is part of svm-dr relationshitp: "+svm+":")                    
+
+        if not uuid:
+            if print_output:
+                print("Error: relationship could not be found.")
+            raise SnapMirrorSyncOperationError("not found")
 
         if print_output:
             print("Triggering sync operation for SnapMirror relationship (UUID = " + uuid + ").")
@@ -1661,10 +2228,10 @@ def sync_snap_mirror_relationship(uuid: str, wait_until_complete: bool = False, 
                     # Print message re: progress
                     if print_output:
                         print("Sync operation is not yet complete. Status:", transferState)
-                        print("Checking again in 60 seconds...")
+                        print("Checking again in 10 seconds...")
 
-                # Sleep for 60 seconds before checking progress again
-                time.sleep(60)
+                # Sleep for 10 seconds before checking progress again
+                time.sleep(10)
 
     else:
         raise ConnectionTypeError()
