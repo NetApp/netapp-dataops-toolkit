@@ -142,7 +142,6 @@ def _load_kube_config2(print_output: bool = False):
 def _get_astra_k8s_cluster_name() -> str :
     return os.environ['ASTRA_K8S_CLUSTER_NAME']
 
-
 def _print_invalid_config_error():
     print(
         "Error: Missing or invalid kubeconfig file. The NetApp DataOps Toolkit for Kubernetes requires that a valid kubeconfig file be present on the host, located at $HOME/.kube or at another path specified by the KUBECONFIG environment variable.")
@@ -213,6 +212,114 @@ def _retrieve_jupyter_lab_url(workspaceName: str, namespace: str = "default", pr
                 pass
             # Construct and return url
             return "http://" + ip + ":" + str(port)
+    except ApiException as err:
+        if printOutput:
+            print("Error: Kubernetes API Error: ", err)
+        raise APIConnectionError(err)
+
+
+
+def _get_triton_dev_prefix() -> str:
+    return "ntap-dsutil-triton-"
+
+
+def _get_triton_deployment(server_name: str) -> str:
+    return _get_triton_dev_prefix() + server_name
+
+
+
+def _get_triton_dev_labels(server_name: str) -> dict:
+    labels = {
+        "app": _get_jupyter_lab_prefix() + server_name,
+        "created-by": "ntap-dsutil",
+        "entity-type": "triton_server",
+        "created-by-operation": "create-triton-server",
+        "triton-server-name": server_name
+    }
+    return labels
+
+
+def _get_triton_dev_service(server_name: str) -> str:
+    return _get_triton_dev_prefix() + server_name
+
+
+def _get_triton_dev_label_selector() -> str:
+    labels = _get_triton_dev_labels(server_name="triton_temp")
+    return "created-by=" + labels["created-by"] + ",entity-type=" + labels["entity-type"]
+
+
+def _retrieve_triton_endpoints(server_name: str, namespace: str = "default", printOutput: bool = False) -> str:
+    # Retrieve kubeconfig
+    try:
+        _load_kube_config()
+    except:
+        if printOutput:
+            _print_invalid_config_error()
+        raise InvalidConfigError()
+
+    try:
+        api = client.CoreV1Api()
+        serviceStatus = api.read_namespaced_service(namespace=namespace,
+                                                    name=_get_triton_dev_service(server_name=server_name))
+
+        # Check if service type is LoadBalancer
+        if serviceStatus.spec.type == "LoadBalancer":
+            try :
+                # retrieve IP
+                loadBalancerIP = serviceStatus.status.load_balancer.ingress[0].ip
+
+                # retrieve ports
+                # set default port values
+                http_port = "8000"
+                grpc_port = "8001"
+                metrics_port = "8002"
+
+                # handle non-default port values
+                # note: the user currently has no way to set non-default port values, but we will likely want to add this in the future, so we should handle it.
+                for port in serviceStatus.spec.ports :
+                    if port.target_port == "http" :
+                        http_port = port.port
+                    if port.target_port == "grpc" :
+                        grpc_port = port.port
+                    if port.target_port == "metrics" :
+                        metrics_port = port.port
+            except :
+                if printOutput :
+                    print("Error: Kubernetes Service for workspace is not available.")
+                raise ServiceUnavailableError()
+
+            # Construct and return urls
+            http_uri = loadBalancerIP + ":" + str(http_port)
+            grpc_uri = loadBalancerIP + ":" + str(grpc_port)
+            metrics_uri = loadBalancerIP + ":" + str(metrics_port)
+
+            return [http_uri, grpc_uri, metrics_uri]
+        else:
+            # Retrieve access port
+            for port in serviceStatus.spec.ports :
+                if port.target_port == "http" :
+                    http_port = port.node_port
+                if port.target_port == "grpc" :
+                    grpc_port = port.node_port
+                if port.target_port == "metrics" :
+                    metrics_port = port.node_port
+
+            # Retrieve node IP (random node)
+            try:
+                api = client.CoreV1Api()
+                nodes = api.list_node()
+                ip = nodes.items[0].status.addresses[0].address
+            except:
+                ip = "<IP address of Kubernetes node>"
+                pass
+
+            # Construct and return urls
+            http_uri = ip + ":" + str(http_port)
+            grpc_uri = ip + ":" + str(grpc_port)
+            metrics_uri = ip + ":" + str(metrics_port)
+
+            return [http_uri, grpc_uri, metrics_uri]
+
     except ApiException as err:
         if printOutput:
             print("Error: Kubernetes API Error: ", err)
@@ -377,6 +484,33 @@ def _wait_for_jupyter_lab_deployment_ready(workspaceName: str, namespace: str = 
         sleep(5)
 
 
+def _wait_for_triton_dev_deployment(server_name: str, namespace: str = "default", printOutput: bool = False):
+    # Retrieve kubeconfig
+    try:
+        _load_kube_config()
+    except:
+        if printOutput:
+            _print_invalid_config_error()
+        raise InvalidConfigError()
+
+    # Wait for deployment to be ready
+    if printOutput:
+        print(
+            "Waiting for Deployment '" + _get_triton_deployment(server_name=server_name) + "' to reach Ready state.")
+    while True:
+        try:
+            api = client.AppsV1Api()
+            deploymentStatus = api.read_namespaced_deployment_status(namespace=namespace, name=_get_triton_deployment(
+                server_name=server_name))
+        except ApiException as err:
+            if printOutput:
+                print("Error: Kubernetes API Error: ", err)
+            raise APIConnectionError(err)
+        if deploymentStatus.status.ready_replicas == 1:
+            break
+        sleep(5)
+
+
 def _retrieve_astra_app_id_for_jupyter_lab(astra_apps: dict, workspace_name: str) -> str :
     # Get Astra K8s cluster name
     try :
@@ -389,7 +523,7 @@ def _retrieve_astra_app_id_for_jupyter_lab(astra_apps: dict, workspace_name: str
         workspace_app_label = _get_jupyter_lab_labels(workspaceName=workspace_name)["app"]
         if (app_details[0] == workspace_app_label) and (app_details[1] == astra_k8s_cluster_name) :
             return app_id
-    
+
     return ""
 
 
@@ -787,7 +921,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
 
         if print_output:
             print("\nAttaching Additional PVC: '" + user_pvc_name + "' at mount_path: '" + user_pvc_mountpoint + "'.")
-            
+
         # Add user-specified PVC
         deployment.spec.template.spec.volumes.append(
             client.V1Volume(
@@ -856,6 +990,231 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
 
     return url
 
+def create_triton_server(server_name: str, model_pvc_name: str, load_balancer_service: bool = False, namespace: str = "default",
+                       request_cpu: str = None, request_memory: str = None, server_image: str = "nvcr.io/nvidia/tritonserver:21.11-py3", request_nvidia_gpu: str = None,
+                       print_output: bool = False, pvc_already_exists: bool = False, labels: dict = None) -> str:
+    # Retrieve kubeconfig
+    try:
+        _load_kube_config()
+    except:
+        if print_output:
+            _print_invalid_config_error()
+        raise InvalidConfigError()
+
+    # Set labels
+    if not labels:
+        labels = _get_triton_dev_labels(server_name=server_name)
+
+
+    # Step 1 - Create service for server
+
+    # Construct load Balancer Service
+    if load_balancer_service:
+        service = client.V1Service(
+            metadata=client.V1ObjectMeta(
+                name=_get_triton_dev_service(server_name=server_name),
+                labels=labels
+            ),
+            spec=client.V1ServiceSpec(
+                type="LoadBalancer",
+                selector={
+                    "app": labels["app"]
+                },
+                ports=[
+                    client.V1ServicePort(
+                        name="http-inference-server",
+                        port=8000,
+                        target_port="http",
+                    ),
+                    client.V1ServicePort(
+                        name="grpc-inference-server",
+                        port=8001,
+                        target_port="grpc",
+                    ),
+                    client.V1ServicePort(
+                        name="metrics-inference-server",
+                        port=8002,
+                        target_port="metrics",
+                    )
+                ]
+            )
+        )
+    else:
+        service = client.V1Service(
+            metadata=client.V1ObjectMeta(
+                name=_get_triton_dev_service(server_name=server_name),
+                labels=labels
+            ),
+            spec=client.V1ServiceSpec(
+                type="NodePort",
+                selector={
+                    "app": labels["app"]
+                },
+                ports=[
+                    client.V1ServicePort(
+                        name="http-inference-server",
+                        port=8000,
+                        target_port="http",
+                    ),
+                    client.V1ServicePort(
+                        name="grpc-inference-server",
+                        port=8001,
+                        target_port="grpc",
+                    ),
+                    client.V1ServicePort(
+                        name="metrics-inference-server",
+                        port=8002,
+                        target_port="metrics",
+                    )
+                ]
+            )
+        )
+
+
+    # Create service
+    if print_output:
+        print("\nCreating Service '" + _get_triton_dev_service(
+            server_name=server_name) + "' in namespace '" + namespace + "'.")
+    try:
+        api = client.CoreV1Api()
+        api.create_namespaced_service(namespace=namespace, body=service)
+    except ApiException as err:
+        if print_output:
+            print("Error: Kubernetes API Error: ", err)
+            print("Aborting server creation...")
+        raise APIConnectionError(err)
+
+    if print_output:
+        print("Service successfully created.")
+
+    # Step 2 - Create Deployment for Triton Server
+
+    # Construct deployment for triton server
+    deployment = client.V1Deployment(
+        metadata=client.V1ObjectMeta(
+            name=_get_triton_deployment(server_name=server_name),
+            labels=labels
+        ),
+        spec=client.V1DeploymentSpec(
+            replicas=1,
+            selector={
+                "matchLabels": {
+                    "app": labels["app"]
+                }
+            },
+            template=client.V1PodTemplateSpec(
+                metadata=V1ObjectMeta(
+                    labels=labels
+                ),
+                spec=client.V1PodSpec(
+                    volumes=[
+                        client.V1Volume(
+                            name="model-repo",
+                            persistent_volume_claim={
+                                "claimName": model_pvc_name
+                            }
+                        )
+                    ],
+                    containers=[
+                        client.V1Container(
+                            name="triton-server",
+                            image=server_image,
+                            args=["tritonserver", "--model-store=/models", "--model-control-mode=poll", "--repository-poll-secs=5"],
+                            ports=[
+                                client.V1ContainerPort(
+                                    name="http",
+                                    container_port=8000
+                                    ),
+                                client.V1ContainerPort(
+                                    name="grpc",
+                                    container_port=8001
+                                    ),
+                                client.V1ContainerPort(
+                                    name="metrics",
+                                    container_port=8002
+                                    ),
+                            ],
+                            volume_mounts=[
+                                client.V1VolumeMount(
+                                    name="model-repo",
+                                    mount_path="/models"
+                                )
+                            ],
+                            liveness_probe ={
+                                "httpGet" : {
+                                    "path" : "/v2/health/live",
+                                    "port" : "http"
+                                }
+                            },
+                            readiness_probe ={
+                                "initialDelaySeconds" : 5,
+                                "periodSeconds" : 5,
+                                "httpGet" : {
+                                    "path" : "/v2/health/ready",
+                                    "port" : "http"
+                                }
+                            },
+                            resources={
+                                "limits": dict(),
+                                "requests": dict()
+                            }
+                        )
+
+                    ]
+
+                )
+
+            )
+        )
+
+    )
+
+
+    # Apply resource requests
+    if request_cpu:
+        deployment.spec.template.spec.containers[0].resources["requests"]["cpu"] = request_cpu
+    if request_memory:
+        deployment.spec.template.spec.containers[0].resources["requests"]["memory"] = request_memory
+    if request_nvidia_gpu:
+        deployment.spec.template.spec.containers[0].resources["requests"]["nvidia.com/gpu"] = request_nvidia_gpu
+        deployment.spec.template.spec.containers[0].resources["limits"]["nvidia.com/gpu"] = request_nvidia_gpu
+
+    # Create deployment
+    if print_output:
+        print("\nCreating Deployment '" + _get_triton_deployment(
+            server_name=server_name) + "' in namespace '" + namespace + "'.")
+    try:
+        api = client.AppsV1Api()
+        api.create_namespaced_deployment(namespace=namespace, body=deployment)
+    except ApiException as err:
+        if print_output:
+            print("Error: Kubernetes API Error: ", err)
+            print("Aborting server creation...")
+        raise APIConnectionError(err)
+
+    # Wait for deployment to be ready
+    if print_output:
+        print("Deployment '" + _get_triton_deployment(server_name=server_name) + "' created.")
+    _wait_for_triton_dev_deployment(server_name=server_name, namespace=namespace, printOutput=print_output)
+
+    if print_output:
+        print("Deployment successfully created.")
+
+    # Step 3 - Retrieve endpoints
+    try:
+        uri = _retrieve_triton_endpoints(server_name=server_name, namespace=namespace, printOutput=print_output)
+    except (APIConnectionError, ServiceUnavailableError) as err:
+        if print_output:
+            print("Aborting server creation...")
+        raise
+
+    if print_output:
+        print("\nServer successfully created.")
+        print("Server endpoints:")
+        print("http: " + uri[0])
+        print("grpc: " + uri[1])
+        print("metrics: " + uri[2] + "/metrics")
+    return uri
 
 def create_jupyter_lab_snapshot(workspace_name: str, snapshot_name: str = None, volume_snapshot_class: str = "csi-snapclass",
                                 namespace: str = "default", print_output: bool = False):
@@ -1118,6 +1477,39 @@ def delete_jupyter_lab(workspace_name: str, namespace: str = "default", preserve
     if print_output:
         print("Workspace successfully deleted.")
 
+def delete_triton_server(server_name: str, namespace: str = "default",
+                       print_output: bool = False):
+    # Retrieve kubeconfig
+    try:
+        _load_kube_config()
+    except:
+        if print_output:
+            _print_invalid_config_error()
+        raise InvalidConfigError()
+
+    # Delete workspace
+    if print_output:
+        print("Deleting server '" + server_name + "' in namespace '" + namespace + "'.")
+        print("Note: this operation does NOT delete the model repository PVC.")
+    try:
+        # Delete deployment
+        if print_output:
+            print("Deleting Deployment...")
+        api = client.AppsV1Api()
+        api.delete_namespaced_deployment(namespace=namespace, name=_get_triton_deployment(server_name=server_name))
+
+        # Delete service
+        if print_output:
+            print("Deleting Service...")
+        api = client.CoreV1Api()
+        api.delete_namespaced_service(namespace=namespace, name=_get_triton_dev_service(server_name=server_name))
+
+    except ApiException as err:
+        if print_output:
+            print("Error: Kubernetes API Error: ", err)
+        raise APIConnectionError(err)
+    if print_output:
+        print("Triton Server instance successfully deleted.")
 
 def delete_k8s_config_map(name: str, namespace: str, print_output: bool = False):
     """Delete a Kubernetes config map with the provided name from the provided namespace.
@@ -1357,6 +1749,69 @@ def list_jupyter_labs(namespace: str = "default", include_astra_app_id: bool = F
 
     return workspacesList
 
+def list_triton_servers(namespace: str = "default", print_output: bool = False) -> list:
+    # Retrieve kubeconfig
+    try:
+        _load_kube_config()
+    except:
+        if print_output:
+            _print_invalid_config_error()
+        raise InvalidConfigError()
+
+    # Retrieve list of instances
+    try:
+        api = client.AppsV1Api()
+        deployments = api.list_namespaced_deployment(namespace=namespace, label_selector=_get_triton_dev_label_selector())
+    except ApiException as err:
+        if print_output:
+            print("Error: Kubernetes API Error: ", err)
+        raise APIConnectionError(err)
+
+    # Construct list of instances
+    workspacesList = list()
+    for deployment in deployments.items:
+        # Construct dict containing workspace details
+        workspaceDict = dict()
+
+        # Retrieve instance name
+        server_name = deployment.metadata.labels["triton-server-name"]
+        workspaceDict["Server Name"] = server_name
+
+        # Determine readiness status
+        if deployment.status.ready_replicas == 1:
+            workspaceDict["Status"] = "Ready"
+        else:
+            workspaceDict["Status"] = "Not Ready"
+
+
+        # Retrieve access URL
+        try :
+            endpoints = _retrieve_triton_endpoints(server_name=server_name, namespace=namespace, printOutput=False)
+            workspaceDict["HTTP Endpoint"] = endpoints[0]
+            workspaceDict["gRPC Endpoint"] = endpoints[1]
+            workspaceDict["Metrics Endpoint"] = endpoints[2]
+
+        except ServiceUnavailableError :
+            workspaceDict["HTTP Endpoint"] = "unavailable"
+            workspaceDict["gRPC Endpoint"] = "unavailable"
+            workspaceDict["Metrics Endpoint"] = "unavailable"
+            
+        except APIConnectionError as err:
+            if print_output:
+                print("Error: Kubernetes API Error: ", err)
+            raise APIConnectionError(err)
+
+        # Append dict to list of instances
+        workspacesList.append(workspaceDict)
+
+    # Print list of workspaces
+    if print_output:
+        # Convert workspaces array to Pandas DataFrame
+        workspacesDF = pd.DataFrame.from_dict(workspacesList, dtype="string")
+        print(tabulate(workspacesDF, showindex=False, headers=workspacesDF.columns))
+
+    return workspacesList
+
 
 def list_jupyter_lab_snapshots(workspace_name: str = None, namespace: str = "default", print_output: bool = False):
     # Determine PVC name
@@ -1579,7 +2034,7 @@ def register_jupyter_lab_with_astra(workspace_name: str, namespace: str = "defau
         if print_output :
             print("Error: Astra Control API Error.")
         raise APIConnectionError()
-    
+
 
 def backup_jupyter_lab_with_astra(workspace_name: str, backup_name: str, namespace: str = "default", print_output: bool = False) :
     # Retrieve list of Astra apps
@@ -1605,7 +2060,7 @@ def backup_jupyter_lab_with_astra(workspace_name: str, backup_name: str, namespa
             print("Error:", error_message)
             print("Hint: use the 'netapp_dataops_k8s_cli.py register-with-astra jupyterlab' command to register a JupyterLab workspace with Astra Control.")
         raise AstraAppNotManagedError(error_message)
-    
+
     # Trigger backup
     print("Trigerring backup of workspace '" + workspace_name + "' in namespace '" + namespace + "' using Astra Control...")
     print("\nAstra SDK output:")

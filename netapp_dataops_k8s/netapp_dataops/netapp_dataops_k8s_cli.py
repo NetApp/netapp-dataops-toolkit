@@ -8,15 +8,18 @@ from netapp_dataops.k8s import (
     create_volume,
     clone_jupyter_lab,
     clone_jupyter_lab_to_new_namespace,
+    create_triton_server,
     create_jupyter_lab,
     create_jupyter_lab_snapshot,
     delete_volume_snapshot,
     delete_volume,
     delete_jupyter_lab,
+    delete_triton_server,
     list_jupyter_labs,
     list_volume_snapshots,
     list_jupyter_lab_snapshots,
     list_volumes,
+    list_triton_servers,
     register_jupyter_lab_with_astra,
     restore_jupyter_lab_snapshot,
     restore_volume_snapshot,
@@ -49,6 +52,13 @@ Note: To view details regarding options/arguments for a specific command, run th
 \trestore jupyterlab-snapshot\tRestore a snapshot.
 \tregister-with-astra jupyterlab\tRegister an existing JupyterLab workspace with Astra Control.
 \tbackup-with-astra jupyterlab\tBackup an existing JupyterLab workspace using Astra Control.
+
+NVIDIA Triton Inference Server Management Commands:
+Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
+
+\tcreate triton-server\t\tDeploy a new instance of the NVIDIA Triton Inference Server.
+\tdelete triton-server\t\tDelete an existing instance of the NVIDIA Triton Inference Server.
+\tlist triton-servers\t\tList all instances of the NVIDIA Triton Inference Server in a namespace.
 
 Kubernetes Persistent Volume Management Commands (for advanced Kubernetes users):
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
@@ -171,6 +181,29 @@ Examples:
 \tnetapp_dataops_k8s_cli.py create jupyterlab --workspace-name=mike --size=10Gi --nvidia-gpu=2
 \tnetapp_dataops_k8s_cli.py create jupyterlab -n dst-test -w dave -i jupyter/scipy-notebook:latest -s 2Ti -c ontap-flexgroup -g 1 -p 0.5 -m 1Gi -b
 '''
+
+helpTextDeployTritonServer = '''
+Command: create triton-server
+
+Deploy a new NVIDIA Triton Inference Server instance
+
+Required Options/Arguments:
+\t-s, --server-name=\t\tName of a new Triton Inference Server.
+\t-v, --model-repo-pvc-name=\tName of the PVC containing the model repository.
+
+Optional Options/Arguments:
+\t-g, --nvidia-gpu=\t\tNumber of NVIDIA GPUs to allocate to Triton instance. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
+\t-h, --help\t\t\tPrint help text.
+\t-i, --image=\t\t\tContainer image to use when creating instance. If not specified, "nvcr.io/nvidia/tritonserver:21.11-py3" will be used.
+\t-m, --memory=\t\t\tAmount of memory to reserve for Triton instance. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
+\t-n, --namespace=\t\tKubernetes namespace to create new instance in. If not specified, instance will be created in namespace "default".
+\t-p, --cpu=\t\t\tNumber of CPUs to reserve for Triton instance. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+\t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py create triton-server --server-name=Test --model-repo-pvc-name=model-pvc
+\tnetapp_dataops_k8s_cli.py create triton-server -s Test -v model-pvc -g 1 -p 0.5 -m 1Gi -b
+'''
 helpTextCreateJupyterLabSnapshot = '''
 Command: create jupyterlab-snapshot
 
@@ -244,6 +277,23 @@ Examples:
 \tnetapp_dataops_k8s_cli.py delete jupyterlab --workspace-name=mike
 \tnetapp_dataops_k8s_cli.py delete jupyterlab -w dave -n dst-test
 '''
+helpTextDeleteTritonServer = '''
+Command: delete triton-server
+
+Delete an existing NVIDIA Triton Inference Server.
+
+Required Options/Arguments:
+\t-s, --server-name=\t\tName of NVIDIA Triton Inference Server to be deleted.
+
+Optional Options/Arguments:
+\t-f, --force\t\t\tDo not prompt user to confirm operation.
+\t-h, --help\t\t\tPrint help text.
+\t-n, --namespace=\t\tKubernetes namespace that the instance is located in. If not specified, namespace "default" will be used.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py delete triton-server --server-name=mike
+\tnetapp_dataops_k8s_cli.py delete triton-server -s dave -n dst-test
+'''
 helpTextDeleteJupyterLabSnapshot = '''
 Command: delete jupyterlab-snapshot
 
@@ -312,6 +362,23 @@ Examples:
 \tnetapp_dataops_k8s_cli.py list jupyterlabs -n team1
 \tnetapp_dataops_k8s_cli.py list jupyterlabs --namespace=team2
 '''
+
+helpTextListTritonServers = '''
+Command: list triton-servers
+
+List all NVIDIA Triton Inference Server instances in a specific namespace.
+
+No options/arguments are required.
+
+Optional Options/Arguments:
+\t-h, --help\t\t\tPrint help text.
+\t-n, --namespace=\t\tKubernetes namespace for which to retrieve list of instances. If not specified, namespace "default" will be used.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py list triton-servers -n team1
+\tnetapp_dataops_k8s_cli.py list triton-servers --namespace=team2
+'''
+
 helpTextListJupyterLabSnapshots = '''
 Command: list jupyterlab-snapshots
 
@@ -790,6 +857,60 @@ if __name__ == '__main__':
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
+
+        elif target in ("triton-server", "triton"):
+            server_name = None
+            model_pvc_name = None
+            namespace = "default"
+            server_image = "nvcr.io/nvidia/tritonserver:21.11-py3"
+            requestNvidiaGpu = None
+            requestMemory = None
+            requestCpu = None
+            load_balancer_service = False
+
+            # Get command line options
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hs:v:n:i:g:m:p:b",
+                                           ["help", "server-name=", "model-repo-pvc-name=", "namespace=", "image=", "nvidia-gpu=", "memory=", "cpu=", "load-balancer"])
+            except:
+                handleInvalidCommand(helpText=helpTextDeployTritonServer, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextDeployTritonServer)
+                    sys.exit(0)
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+                elif opt in ("-i", "--image"):
+                    server_image = arg
+                elif opt in ("-g", "--nvidia-gpu"):
+                    requestNvidiaGpu = arg
+                elif opt in ("-m", "--memory"):
+                    requestMemory = arg
+                elif opt in ("-p", "--cpu"):
+                    requestCpu = arg
+                elif opt in ("-s", "--server-name"):
+                    server_name = arg
+                elif opt in ("-v", "--model-repo-pvc-name"):
+                    model_pvc_name = arg
+                elif opt in ("-b", "--load-balancer"):
+                    load_balancer_service = True
+
+
+            # Check for required options
+            if not server_name or not model_pvc_name:
+                handleInvalidCommand(helpText=helpTextDeployTritonServer, invalidOptArg=True)
+
+            # Create JupyterLab workspace
+            try:
+                create_triton_server(server_name=server_name,  model_pvc_name= model_pvc_name,
+                                   load_balancer_service=load_balancer_service, namespace=namespace, server_image=server_image, request_cpu=requestCpu,
+                                   request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu,
+                                   print_output=True)
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
         elif target in ("jupyterlab-snapshot", "jupyterlabsnapshot", "jupyter-snapshot", "jupytersnapshot"):
             workspaceName = None
             snapshotName = None
@@ -986,8 +1107,56 @@ if __name__ == '__main__':
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
+        elif target in ("triton-server", "triton"):
+            server_name = None
+            namespace = "default"
+            force = False
+
+            # Get command line options
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hs:fn:",
+                                           ["help", "server-name=", "force", "namespace="])
+            except:
+                handleInvalidCommand(helpText=helpTextDeleteTritonServer, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextDeleteTritonServer)
+                    sys.exit(0)
+                elif opt in ("-s", "--server-name"):
+                    server_name = arg
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+                elif opt in ("-f", "--force"):
+                    force = True
+
+            # Check for required options
+            if not server_name:
+                handleInvalidCommand(helpText=helpTextDeleteTritonServer, invalidOptArg=True)
+
+            # Confirm delete operation
+            if not force:
+                print("Warning: This server will be permanently deleted.")
+                while True:
+                    proceed = input("Are you sure that you want to proceed? (yes/no): ")
+                    if proceed in ("yes", "Yes", "YES"):
+                        break
+                    elif proceed in ("no", "No", "NO"):
+                        sys.exit(0)
+                    else:
+                        print("Invalid value. Must enter 'yes' or 'no'.")
+
+            # Delete Triton instance
+            try:
+                delete_triton_server(server_name=server_name, namespace=namespace,
+                                   print_output=True)
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
         else:
             handleInvalidCommand()
+
 
     elif action in ("help", "h", "-h", "--help"):
         print(helpTextStandard)
@@ -1096,6 +1265,29 @@ if __name__ == '__main__':
             # List JupyterLab workspaces
             try:
                 list_jupyter_labs(namespace=namespace, include_astra_app_id=include_astra_app_id, print_output=True)
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
+        elif target in ("triton-servers", "triton_server", "triton"):
+            namespace = "default"
+
+            # Get command line options
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hn:", ["help", "namespace="])
+            except:
+                handleInvalidCommand(helpText=helpTextListTritonServers, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextListTritonServers)
+                    sys.exit(0)
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+
+            # List JupyterLab workspaces
+            try:
+                list_triton_servers(namespace=namespace, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
