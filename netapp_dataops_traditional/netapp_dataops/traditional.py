@@ -34,7 +34,7 @@ from tabulate import tabulate
 import yaml
 
 
-__version__ = "2.2.0"
+__version__ = "2.1.0"
 
 
 # Using this decorator in lieu of using a dependency to manage deprecation
@@ -751,7 +751,7 @@ def rename_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = No
                 print("Renaming snapshot '" + snapshot_name + "' to '"+new_snapshot_name+"'.")
             snapshot.name = new_snapshot_name
             # Rename snapshot
-            snapshot.patch(poll=True)
+            snapshot.patch(poll=True, poll_timeout=120)
 
             if print_output:
                 print("Snapshot renamed successfully.")
@@ -829,7 +829,7 @@ def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = 
 
             # Create snapshot
             snapshot = NetAppSnapshot.from_dict(snapshotDict)
-            snapshot.post(poll=True)
+            snapshot.post(poll=True, poll_timeout=120)
 
             if print_output:
                 print("Snapshot created successfully.")
@@ -1048,7 +1048,7 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
             print("Creating volume '" + volume_name + "' on svm '" + svm + "'")
         try:
             volume = NetAppVolume.from_dict(volumeDict)
-            volume.post(poll=True)
+            volume.post(poll=True, poll_timeout=120)
             if print_output:
                 print("Volume created successfully.")
         except NetAppRestError as err:
@@ -1134,7 +1134,7 @@ def delete_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = No
                     return
 
             # Delete snapshot
-            snapshot.delete(poll=True)
+            snapshot.delete(poll=True, poll_timeout=120)
 
             if print_output:
                 print("Snapshot deleted successfully.")
@@ -1243,7 +1243,7 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
             if print_output:
                 print("Deleting volume '" + svm+':'+volume_name + "'.")
             # Delete volume
-            volume.delete(poll=True)
+            volume.delete(poll=True, poll_timeout=120)
 
             if print_output:
                 print("Volume deleted successfully.")
@@ -1970,7 +1970,7 @@ def restore_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = N
                 raise InvalidSnapshotParameterError("name")
 
             # Restore snapshot
-            volume.patch(volume.uuid, **{"restore_to.snapshot.name": snapshot.name, "restore_to.snapshot.uuid": snapshot.uuid}, poll=True)
+            volume.patch(volume.uuid, **{"restore_to.snapshot.name": snapshot.name, "restore_to.snapshot.uuid": snapshot.uuid}, poll=True, poll_timeout=120)
             if print_output:
                 print("Snapshot restored successfully.")
 
@@ -2254,7 +2254,7 @@ def sync_snap_mirror_relationship(uuid: str = None, svm_name: str = None, volume
         try:
             # Trigger sync operation for SnapMirror relationship
             transfer = NetAppSnapmirrorTransfer(uuid)
-            transfer.post(poll=True)
+            transfer.post(poll=True, poll_timeout=120)
         except NetAppRestError as err:
             if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
