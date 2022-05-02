@@ -26,9 +26,14 @@ from netapp_dataops.k8s import (
     APIConnectionError,
     AstraAppNotManagedError,
     AstraClusterDoesNotExistError,
+    CAConfigMap,
     InvalidConfigError
 )
-
+from netapp_dataops.k8s.data_movers.s3 import (
+    DataMoverJob,
+    S3ConfigSecret,
+    S3DataMover,
+)
 
 # Define contents of help text
 helpTextStandard = '''
@@ -71,6 +76,20 @@ Note: To view details regarding options/arguments for a specific command, run th
 \tdelete volume-snapshot\t\tDelete an existing snapshot.
 \tlist volume-snapshots\t\tList all snapshots.
 \trestore volume-snapshot\t\tRestore a snapshot.
+
+Data Movement Commands:
+Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
+
+\tcreate s3-secret\t\tCreate a new K8s secret containing S3 credentials.
+\tdelete s3-secret\t\tDelete an existing Kubernetes S3 secret.
+\tcreate ca-config-map\t\tCreate a Kubernetes config map object representing a Certificate Authority (CA) certificate.
+\tdelete ca-config-map\t\tDelete a Kubernetes config map object representing a Certificate Authority (CA) certificate.
+\tget-s3 bucket\t\t\tGet the contents of an S3 bucket and transfer the data to a specified Persistent Volume Claim (PVC).
+\tget-s3 object\t\t\tGet an object (file) from an S3 bucket and transfer the file to a specified Persistent Volume Claim (PVC).
+\tput-s3 bucket\t\t\tCopy the contents of a Persistent Volume Claim (PVC) to an S3 bucket.
+\tput-s3 object\t\t\tCopy an object (file) from a Persistent Volume Claim (PVC) to an S3 bucket.
+\tshow s3-job\t\t\tShow the status of the specifed Kubernetes job.
+\tdelete s3-job\t\t\tDelete a Kubernetes S3 job.
 '''
 helpTextBackupJupyterLab = '''
 Command: backup-with-astra jupyterlab
@@ -156,6 +175,23 @@ Examples:
 \tnetapp_dataops_k8s_cli.py clone volume --new-pvc-name=project1-experiment1 --source-pvc-name=project1
 \tnetapp_dataops_k8s_cli.py clone volume -p project2-mike -s snap1 -n team1
 '''
+helpTextCreateCAConfigMap = '''
+Command: create ca-config-map
+
+Create a Kubernetes config map object representing a Certificate Authority (CA) certificate.
+
+Required Options/Arguments:
+\t-c, --config-map-name=\t\tName of the config map object representing the certificate.
+\t-f, --file=\t\t\tThe path to the certificate file.
+
+Optional Options/Arguments:
+\t-h, --help\t\t\tPrint help text.
+\t-n, --namespace=\t\tKubernetes namespace that the ConfigMap is located in. If not specified, namespace "default" will be used.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py create ca-config-map --config-map-name=myca --file=/path/to/certificate.pem
+\tnetapp_dataops_k8s_cli.py create ca-config-map -c myca -f certificate.pem -n team1
+'''
 helpTextCreateJupyterLab = '''
 Command: create jupyterlab
 
@@ -222,6 +258,23 @@ Examples:
 \tnetapp_dataops_k8s_cli.py create jupyterlab-snapshot --workspace-name=mike
 \tnetapp_dataops_k8s_cli.py create jupyterlab-snapshot -w sathish -s snap1 -c ontap -n team1
 '''
+helpTextCreateS3Secret = '''
+Command: create s3-secret
+
+Create a new K8s secret containing S3 credentials.
+
+Required Options/Arguments:
+\t-d, --secret-name=\t\tThe name of the Kubernetes secret.
+\t-a, --access-key=\t\tThe access key for the S3 account.
+\t-s, --secret-key=\t\tThe secret key for the S3 account.
+
+Optional Options/Arguments:
+\t-n, --namespace=\t\tKubernetes namespace used to store the secret.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py create s3-secret --secret-name=mys3secret --access-key=abc --secret-key=secret123
+\tnetapp_dataops_k8s_cli.py create s3-secret -d mys3secret -a abc -s secret123 -n team1
+'''
 helpTextCreateVolumeSnapshot = '''
 Command: create volume-snapshot
 
@@ -258,6 +311,22 @@ Examples:
 \tnetapp_dataops_k8s_cli.py create volume --pvc-name=project1 --size=10Gi
 \tnetapp_dataops_k8s_cli.py create volume -p datasets -s 10Ti -n team1
 \tnetapp_dataops_k8s_cli.py create volume --pvc-name=project2 --size=2Ti --namespace=team2 --storage-class=ontap-flexgroup
+'''
+helpTextDeleteCAConfigMap = '''
+Command: delete ca-config-map
+
+Delete a Kubernetes config map object representing a Certificate Authority (CA) certificate.
+
+Required Options/Arguments:
+\t-c, --config-map-name=\t\tName of the config map object representing the certificate.
+
+Optional Options/Arguments:
+\t-h, --help\t\t\tPrint help text.
+\t-n, --namespace=\t\tKubernetes namespace that the ConfigMap is located in. If not specified, namespace "default" will be used.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py delete ca-config-map --config-map-name=selfsigned-ca-1
+\tnetapp_dataops_k8s_cli.py delete ca-config-map -c selfsigned-ca-1 -n team1
 '''
 helpTextDeleteJupyterLab = '''
 Command: delete jupyterlab
@@ -311,6 +380,38 @@ Examples:
 \tnetapp_dataops_k8s_cli.py delete jupyterlab-snapshot --snapshot-name=snap1
 \tnetapp_dataops_k8s_cli.py delete jupyterlab-snapshot -s ntap-dsutil.20210304151544 -n team1
 '''
+helpTextDeleteS3Job = '''
+Command: delete s3-job
+
+Delete a Kubernetes S3 job.
+
+Required Options/Arguments:
+\t-j, --job=\t\tThe name of the Kubernetes job.
+
+Optional Options/Arguments:
+\t-h, --help\t\tPrint help text.
+\t-n, --namespace=\tKubernetes namespace that the Job is located in. If not specified, namespace "default" will be used.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py delete s3-job --job=myfirstjob
+\tnetapp_dataops_k8s_cli.py delete s3-job -j job2 -n team1
+'''
+helpTextDeleteS3Secret = '''
+Command: delete s3-secret
+
+Delete an existing Kubernetes S3 secret.
+
+Required Options/Arguments:
+\t-d, --secret-name=\t\tName of Kubernetes secret to be deleted.
+
+Optional Options/Arguments:
+\t-h, --help\t\t\tPrint help text.
+\t-n, --namespace=\t\tKubernetes namespace that secret is located in. If not specified, namespace "default" will be used.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py delete s3-secret --secret-name=mys3secret
+\tnetapp_dataops_k8s_cli.py delete s3-secret -d mys3secret -n team1
+'''
 helpTextDeleteVolumeSnapshot = '''
 Command: delete volume-snapshot
 
@@ -345,6 +446,67 @@ Optional Options/Arguments:
 Examples:
 \tnetapp_dataops_k8s_cli.py delete volume --pvc-name=project1
 \tnetapp_dataops_k8s_cli.py delete volume -p project2 -n team1
+'''
+helpTextGetS3Bucket = '''
+Command: get-s3 bucket
+
+Get the contents of an S3 bucket and transfer the data to a specified Persistent Volume Claim (PVC).
+
+Required Options/Arguments:
+\t-o, --s3-host=\t\t\tThe name or IP of the S3 host.
+\t-b, --bucket-name=\t\tName of the S3 Bucket which will be the source of the data transfer.
+\t-p, --pvc-name=\t\t\tName of Kubernetes PersistentVolumeClaim (PVC) that will be the destination.
+\t-c, --credentials-secret=\tThe name of the S3 credentials secret to use.
+
+Optional Options/Arguments:
+\t-h, --help\t\t\tPrint help text.
+\t-n, --namespace=\t\tKubernetes namespace that the PersistentVolumeClaim (PVC) is located in. If not specified, namespace "default" will be used.
+\t-t, --s3-port=\t\t\tThe port used to connect to the S3 service. The default value depends on the protocol specified.
+\t-u, --use-https\t\t\tWhen this flag is provided the HTTPS protocol will be used to connect to S3. If the flag is not provided HTTP will be used.
+\t-v, --verify-certificates\tWhen this flag is provided the HTTPS certificates will be verified. This only applies if HTTPS is used.
+\t-i, --image-name=\t\tThe name of the container image to use for transferring files.
+\t--cpu-request=\t\t\tA Kubernetes CPU request specification.
+\t--cpu-limit=\t\t\tA Kubernetes CPU limit specification.
+\t--memory-request=\t\tA Kubernetes Memory request specification.
+\t--memory-limit=\t\t\tA Kubernetes Memory limit specfiication.
+\t-d, --pvc-dir=\t\t\tOptionally specifies a directory to use as the base location for the files within the PVC. Files with directories will be relative to this base.
+\t-m, --ca-config-map=\t\tThe name of a CA ConfigMap object for the certificate to the S3 service. This can be specfied multiple times for multiple certificates.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py get-s3 bucket --credentials-secret=mycreds --s3-host=host.example.com --bucket-name=one --pvc-name=testpvc
+\tnetapp_dataops_k8s_cli.py get-s3 bucket -c mycreds -o host.example.com -b one -p mypvc -u -v
+\tnetapp_dataops_k8s_cli.py get-s3 bucket -c mycreds -o host.example.com -b one -p mypvc -u -v -d "dir5/"
+'''
+helpTextGetS3Object = '''
+Command: get-s3 object
+
+Get an object (file) from an S3 bucket and transfer the file to a specified Persistent Volume Claim (PVC).
+
+Required Options/Arguments:
+\t-o, --s3-host=\t\t\tThe name or IP of the S3 host.
+\t-b, --bucket-name=\t\tName of the S3 Bucket which will be the source of the data transfer.
+\t-p, --pvc-name=\t\t\tName of Kubernetes PersistentVolumeClaim (PVC) that will be the destination.
+\t-c, --credentials-secret=\tThe name of the S3 credentials secret to use.
+\t-k, --object-key=\t\tThe name of the object key to copy from the bucket to the PVC.
+
+Optional Options/Arguments:
+\t-h, --help\t\t\tPrint help text.
+\t-n, --namespace=\t\tKubernetes namespace that the PersistentVolumeClaim (PVC) is located in. If not specified, namespace "default" will be used.
+\t-t, --s3-port=\t\t\tThe port used to connect to the S3 service. The default value depends on the protocol specified.
+\t-u, --use-https\t\t\tWhen this flag is provided the HTTPS protocol will be used to connect to S3. If the flag is not provided HTTP will be used.
+\t-v, --verify-certificates\tWhen this flag is provided the HTTPS certificates will be verified. This only applies if HTTPS is used.
+\t-i, --image-name=\t\tThe name of the container image to use for transferring files.
+\t--cpu-request=\t\t\tA Kubernetes CPU request specification.
+\t--cpu-limit=\t\t\tA Kubernetes CPU limit specification.
+\t--memory-request=\t\tA Kubernetes Memory request specification.
+\t--memory-limit=\t\t\tA Kubernetes Memory limit specfiication.
+\t-f, --file-location=\t\tSpecifies the location within the PVC to save the file. If not specified the file will be saved relative to the root of the PVC.
+\t-m, --ca-config-map=\t\tThe name of a CA ConfigMap object for the certificate to the S3 service. This can be specfied multiple times for multiple certificates.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py get-s3 object --credentials-secret=mycreds --s3-host=host.example.com --bucket-name=one --pvc-name=testpvc --object-key=sample.txt
+\tnetapp_dataops_k8s_cli.py get-s3 object -c mycreds -o host.example.com -b one -p mypvc -u -v -k sample.txt
+\tnetapp_dataops_k8s_cli.py get-s3 object -c mycreds -o host.example.com -b one -p mypvc -u -v -d "dir5/" -k sample.txt -f "dir2"
 '''
 helpTextListJupyterLabs = '''
 Command: list jupyterlabs
@@ -426,6 +588,67 @@ Examples:
 \tnetapp_dataops_k8s_cli.py list volumes -n team1
 \tnetapp_dataops_k8s_cli.py list volumes --namespace=team2
 '''
+helpTextPutS3Bucket = '''
+Command: put-s3 bucket
+
+Copy the contents of a Persistent Volume Claim (PVC) to an S3 bucket.
+
+Required Options/Arguments:
+\t-o, --s3-host=\t\t\tThe name or IP of the S3 host.
+\t-b, --bucket-name=\t\tName of the S3 Bucket which will be the destination of the data transfer.
+\t-p, --pvc-name=\t\t\tName of Kubernetes PersistentVolumeClaim (PVC) that will be the data source.
+\t-c, --credentials-secret=\tThe name of the S3 credentials secret to use.
+
+Optional Options/Arguments:
+\t-h, --help\t\t\tPrint help text.
+\t-n, --namespace=\t\tKubernetes namespace that the PersistentVolumeClaim (PVC) is located in. If not specified, namespace "default" will be used.
+\t-t, --s3-port=\t\t\tThe port used to connect to the S3 service. The default value depends on the protocol specified.
+\t-u, --use-https\t\t\tWhen this flag is provided the HTTPS protocol will be used to connect to S3. If the flag is not provided HTTP will be used.
+\t-v, --verify-certificates\tWhen this flag is provided the HTTPS certificates will be verified. This only applies if HTTPS is used.
+\t-i, --image-name=\t\tThe name of the container image to use for transferring files.
+\t--cpu-request=\t\t\tA Kubernetes CPU request specification.
+\t--cpu-limit=\t\t\tA Kubernetes CPU limit specification.
+\t--memory-request=\t\tA Kubernetes Memory request specification.
+\t--memory-limit=\t\t\tA Kubernetes Memory limit specfiication.
+\t-d, --pvc-dir=\t\t\tOptionally specifies a directory to use as the base location for the files within the PVC. Files with directories will be relative to this base.
+\t-m, --ca-config-map=\t\tThe name of a CA ConfigMap object for the certificate to the S3 service. This can be specfied multiple times for multiple certificates.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py put-s3 bucket --credentials-secret=mycreds --s3-host=host.example.com --bucket-name=one --pvc-name=testpvc
+\tnetapp_dataops_k8s_cli.py put-s3 bucket -c mycreds -o host.example.com -b one -p mypvc -u -v
+\tnetapp_dataops_k8s_cli.py put-s3 bucket -c mycreds -o host.example.com -b one -p mypvc -u -v -d "dir5/"
+'''
+helpTextPutS3Object = '''
+Command: put-s3 object
+
+Copy an object (file) from a Persistent Volume Claim (PVC) to an S3 bucket.
+
+Required Options/Arguments:
+\t-o, --s3-host=\t\t\tThe name or IP of the S3 host.
+\t-b, --bucket-name=\t\tName of the S3 Bucket which will be the destination of the data transfer.
+\t-p, --pvc-name=\t\t\tName of Kubernetes PersistentVolumeClaim (PVC) that will be the data source.
+\t-c, --credentials-secret=\tThe name of the S3 credentials secret to use.
+\t-k, --object-key=\t\tThe name (and path) to use for the object within the bucket.
+\t-f, --file-location=\t\tSpecifies the path and filename within the PVC of the file to copy.
+
+Optional Options/Arguments:
+\t-h, --help\t\t\tPrint help text.
+\t-n, --namespace=\t\tKubernetes namespace that the PersistentVolumeClaim (PVC) is located in. If not specified, namespace "default" will be used.
+\t-t, --s3-port=\t\t\tThe port used to connect to the S3 service. The default value depends on the protocol specified.
+\t-u, --use-https\t\t\tWhen this flag is provided the HTTPS protocol will be used to connect to S3. If the flag is not provided HTTP will be used.
+\t-v, --verify-certificates\tWhen this flag is provided the HTTPS certificates will be verified. This only applies if HTTPS is used.
+\t-i, --image-name=\t\tThe name of the container image to use for transferring files.
+\t--cpu-request=\t\t\tA Kubernetes CPU request specification.
+\t--cpu-limit=\t\t\tA Kubernetes CPU limit specification.
+\t--memory-request=\t\tA Kubernetes Memory request specification.
+\t--memory-limit=\t\t\tA Kubernetes Memory limit specfiication.
+\t-m, --ca-config-map=\t\tThe name of a CA ConfigMap object for the certificate to the S3 service. This can be specfied multiple times for multiple certificates.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py put-s3 object --credentials-secret=mycreds --s3-host=host.example.com --bucket-name=one --pvc-name=testpvc --object-key=sample.txt
+\tnetapp_dataops_k8s_cli.py put-s3 object -c mycreds -o host.example.com -b one -p mypvc -u -v -k sample.txt
+\tnetapp_dataops_k8s_cli.py put-s3 object -c mycreds -o host.example.com -b one -p mypvc -u -v -f "dir5/" -k sample.txt
+'''
 helpTextRegisterJupyterLab = '''
 Command: register-with-astra jupyterlab
 
@@ -479,6 +702,22 @@ Optional Options/Arguments:
 Examples:
 \tnetapp_dataops_k8s_cli.py restore volume-snapshot --snapshot-name=snap1
 \tnetapp_dataops_k8s_cli.py restore volume-snapshot -s ntap-dsutil.20210304151544 -n team1
+'''
+helpTextShowS3Job = '''
+Command: show s3-job
+
+Show the status of the specifed Kubernetes job.
+
+Required Options/Arguments:
+\t-j, --job=\t\tThe name of the Kubernetes job.
+
+Optional Options/Arguments:
+\t-h, --help\t\tPrint help text.
+\t-n, --namespace=\tKubernetes namespace that the Job is located in. If not specified, namespace "default" will be used.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py show s3-job --job=job1
+\tnetapp_dataops_k8s_cli.py show s3-job -j job1 -n team1
 '''
 
 
@@ -950,6 +1189,93 @@ if __name__ == '__main__':
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
+        elif target == "s3-secret":
+            namespace = "default"
+            secret_name = None
+            access_key = None
+            secret_key = None
+
+            try:
+                opts, args = getopt.getopt(
+                    sys.argv[3:],
+                    "hn:d:a:s:",
+                    ["help", "namespace=", "secret-name=", "access-key=", "secret-key="])
+            except:
+                handleInvalidCommand(helpText=helpTextCreateS3Secret, invalidOptArg=True)
+
+            for opt, arg in opts:
+                if opt in ("-h", "-help"):
+                    print(helpTextCreateS3Secret)
+                    sys.exit(0)
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+                elif opt in ("-d", "--secret-name"):
+                    secret_name = arg
+                elif opt in ("-a", "--access-key"):
+                    access_key = arg
+                elif opt in ("-s", "--secret-key"):
+                    secret_key = arg
+
+            # Verify required args
+            if not secret_name or not access_key or not secret_key:
+                handleInvalidCommand(helpText=helpTextCreateS3Secret, invalidOptArg=True)
+
+            # Create S3 secret here
+            try:
+                s3_secret = S3ConfigSecret(
+                    name=secret_name,
+                    access_key=access_key,
+                    secret_key=secret_key,
+                    namespace=namespace,
+                    print_output=True
+                )
+                s3_secret.create()
+                print("Kubernetes secret successfully created.")
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
+        elif target == "ca-config-map":
+            namespace = "default"
+            config_map_name = None
+            file_path = None
+
+
+            try:
+                opts, args = getopt.getopt(
+                    sys.argv[3:],
+                    "hn:c:f:",
+                    ["help", "namespace=", "config-map-name=", "file="])
+            except:
+                handleInvalidCommand(helpText=helpTextCreateCAConfigMap, invalidOptArg=True)
+
+            for opt, arg in opts:
+                if opt in ("-h", "-help"):
+                    print(helpTextCreateCAConfigMap)
+                    sys.exit(0)
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+                elif opt in ("-c", "--config-map-name"):
+                    config_map_name = arg
+                elif opt in ("-f", "--file"):
+                    file_path = arg
+
+            # Verify required args
+            if not config_map_name or not file_path:
+                handleInvalidCommand(helpText=helpTextCreateCAConfigMap, invalidOptArg=True)
+
+            # Create ca config map
+            try:
+                config_map = CAConfigMap(
+                        name=config_map_name,
+                        certificate_file=file_path,
+                        namespace=namespace,
+                        print_output=True
+                    )
+                config_map.create()
+                print("Kubernetes CA config-map successfully created.")
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
         else:
             handleInvalidCommand()
 
@@ -1107,6 +1433,128 @@ if __name__ == '__main__':
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
+        elif target == "s3-secret":
+            namespace = "default"
+            secret_name = None
+
+                       # Get command line options
+            try:
+                opts, args = getopt.getopt(
+                    sys.argv[3:],
+                     "hn:d:",
+                    ["help", "namespace=", "secret-name="]
+                )
+            except:
+                handleInvalidCommand(helpText=helpTextDeleteS3Secret, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextDeleteS3Secret)
+                    sys.exit(0)
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+                elif opt in ("-d", "--secret-name"):
+                    secret_name = arg
+
+            # Verify required args have been set
+            if not secret_name:
+                handleInvalidCommand(helpText=helpTextDeleteS3Secret, invalidOptArg=True)
+
+            # Delete the S3 secret
+            try:
+                s3_secret = S3ConfigSecret(
+                    name=secret_name,
+                    namespace=namespace,
+                    # The keys aren't used when deleting
+                    access_key="",
+                    secret_key="",
+                    print_output=True
+                )
+                s3_secret.delete()
+                print("Kubernetes secret successfully deleted.")
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
+        elif target == "s3-job":
+            namespace = "default"
+            job_name = None
+
+            try:
+                opts, args = getopt.getopt(
+                    sys.argv[3:],
+                    "hn:j:",
+                    [
+                        "help",
+                        "namespace=",
+                        "job="
+                    ]
+                )
+            except:
+                handleInvalidCommand(helpText=helpTextDeleteS3Job, invalidOptArg=True)
+
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextDeleteS3Job)
+                    sys.exit(0)
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+                elif opt in ("-j", "--job"):
+                    job_name = arg
+
+            # Verify required arguments
+            if not job_name:
+                handleInvalidCommand(helpText=helpTextDeleteS3Job, invalidOptArg=True)
+
+            try:
+                mover_job = DataMoverJob(namespace=namespace, print_output=True)
+                mover_job.delete_job(job=job_name)
+                print("Job {} deleted.".format(job_name))
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
+        elif target == "ca-config-map":
+            namespace = "default"
+            config_map_name = None
+
+            try:
+                opts, args = getopt.getopt(
+                    sys.argv[3:],
+                    "hn:c:",
+                    [
+                        "help",
+                        "namespace=",
+                        "config-map-name="
+                    ]
+                )
+            except:
+                handleInvalidCommand(helpText=helpTextDeleteCAConfigMap, invalidOptArg=True)
+
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextDeleteCAConfigMap)
+                    sys.exit(0)
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+                elif opt in ("-c", "--config-map-name"):
+                    config_map_name = arg
+
+            # Verify required arguments
+            if not config_map_name:
+                handleInvalidCommand(helpText=helpTextDeleteCAConfigMap, invalidOptArg=True)
+
+            try:
+                config_map = CAConfigMap(
+                    name=config_map_name,
+                    certificate_file="not_applicable",
+                    namespace=namespace,
+                    print_output=True
+                )
+                config_map.delete()
+                print("Kubernetes CA config-map successfully deleted.")
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
         elif target in ("triton-server", "triton"):
             server_name = None
             namespace = "default"
@@ -1151,6 +1599,225 @@ if __name__ == '__main__':
             try:
                 delete_triton_server(server_name=server_name, namespace=namespace,
                                    print_output=True)
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
+        else:
+            handleInvalidCommand()
+
+    elif action == "get-s3":
+        # Get desired target from command line args
+        target = getTarget(sys.argv)
+
+        if target == "bucket":
+            namespace = "default"
+            bucket_name = None
+            pvc_name = None
+            s3_host = None
+            s3_port = None
+            use_https = False
+            verify_certificates = False
+            image_name = None
+            cpu_request = None
+            cpu_limit = None
+            memory_request = None
+            memory_limit = None
+            pvc_dir = None
+            credentials_secret = None
+            config_maps = []
+
+            try:
+                opts, args = getopt.getopt(
+                    sys.argv[3:],
+                    "hn:t:uvi:o:b:p:d:c:m:",
+                    [
+                        "help",
+                        "namespace=",
+                        "bucket-name=",
+                        "pvc-name=",
+                        "s3-host=",
+                        "s3-port=",
+                        "use-https",
+                        "verify-certificates",
+                        "image-name=",
+                        "cpu-request=",
+                        "cpu-limit=",
+                        "memory-request=",
+                        "memory-limit=",
+                        "pvc-dir=",
+                        "credentials-secret=",
+                        "ca-config-map="
+                    ]
+                )
+            except:
+                handleInvalidCommand(helpText=helpTextGetS3Bucket, invalidOptArg=True)
+
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextGetS3Bucket)
+                    sys.exit(0)
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+                elif opt in ("-b", "--bucket-name"):
+                    bucket_name = arg
+                elif opt in ("-p", "--pvc-name"):
+                    pvc_name = arg
+                elif opt in ("-o", "--s3-host"):
+                    s3_host = arg
+                elif opt in ("-t", "--s3-port"):
+                    s3_port = arg
+                elif opt in ("-u", "--use-https"):
+                    use_https = True
+                elif opt in ("-v", "--verify-certificates"):
+                    verify_certificates = True
+                elif opt in ("-i", "--image-name"):
+                    image_name = arg
+                elif opt in ("--cpu-request",):
+                    cpu_request = arg
+                elif opt in ("--cpu-limit",):
+                    cpu_limit = arg
+                elif opt in ("--memory-request",):
+                    memory_request = arg
+                elif opt in ("--memory-limit",):
+                    memory_limit = arg
+                elif opt in ("-d", "--pvc-dir"):
+                    pvc_dir = arg
+                elif opt in ("-c", "--credentials-secret"):
+                    credentials_secret = arg
+                elif opt in ("-m", "--ca-config-map"):
+                    config_maps.append(arg)
+
+            # Verify required args
+            if not s3_host or not credentials_secret or not bucket_name or not pvc_name:
+                handleInvalidCommand(helpText=helpTextGetS3Bucket, invalidOptArg=True)
+
+            # Do the s3 get bucket
+            try:
+                data_mover = S3DataMover(
+                    credentials_secret=credentials_secret,
+                    s3_host=s3_host,
+                    s3_port=s3_port,
+                    use_https=use_https,
+                    verify_certificates=verify_certificates,
+                    image_name=image_name,
+                    namespace=namespace,
+                    cpu_limit=cpu_limit,
+                    cpu_request=cpu_request,
+                    memory_request=memory_request,
+                    memory_limit=memory_limit,
+                    ca_config_maps=config_maps,
+                    print_output=True
+                )
+                job = data_mover.get_bucket(bucket=bucket_name, pvc=pvc_name, pvc_dir=pvc_dir)
+                print("Created Kubernetes job {}".format(job))
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
+        elif target == "object":
+            namespace = "default"
+            bucket_name = None
+            pvc_name = None
+            s3_host = None
+            s3_port = None
+            use_https = False
+            verify_certificates = False
+            image_name = None
+            cpu_request = None
+            cpu_limit = None
+            memory_request = None
+            memory_limit = None
+            file_location = None
+            object_key = None
+            credentials_secret = None
+            config_maps = []
+
+            try:
+                opts, args = getopt.getopt(
+                    sys.argv[3:],
+                    "hn:t:uvi:o:b:p:f:c:k:m:",
+                    [
+                        "help",
+                        "namespace=",
+                        "bucket-name=",
+                        "pvc-name=",
+                        "s3-host=",
+                        "s3-port=",
+                        "use-https",
+                        "verify-certificates",
+                        "image-name=",
+                        "cpu-request=",
+                        "cpu-limit=",
+                        "memory-request=",
+                        "memory-limit=",
+                        "file-location=",
+                        "object-key=",
+                        "credentials-secret=",
+                        "ca-config-map="
+                    ]
+                )
+            except:
+                handleInvalidCommand(helpText=helpTextGetS3Object, invalidOptArg=True)
+
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextGetS3Object)
+                    sys.exit(0)
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+                elif opt in ("-b", "--bucket-name"):
+                    bucket_name = arg
+                elif opt in ("-p", "--pvc-name"):
+                    pvc_name = arg
+                elif opt in ("-o", "--s3-host"):
+                    s3_host = arg
+                elif opt in ("-t", "--s3-port"):
+                    s3_port = arg
+                elif opt in ("-u", "--use-https"):
+                    use_https = True
+                elif opt in ("-v", "--verify-certificates"):
+                    verify_certificates = True
+                elif opt in ("-i", "--image-name"):
+                    image_name = arg
+                elif opt in ("--cpu-request",):
+                    cpu_request = arg
+                elif opt in ("--cpu-limit",):
+                    cpu_limit = arg
+                elif opt in ("--memory-request",):
+                    memory_request = arg
+                elif opt in ("--memory-limit",):
+                    memory_limit = arg
+                elif opt in ("-f", "--file-location"):
+                    file_location = arg
+                elif opt in ("-c", "--credentials-secret"):
+                    credentials_secret = arg
+                elif opt in ("-k", "--object-key"):
+                    object_key = arg
+                elif opt in ("-m", "--ca-config-map"):
+                    config_maps.append(arg)
+
+            # Verify required args
+            if not s3_host or not credentials_secret or not bucket_name or not pvc_name or not object_key:
+                handleInvalidCommand(helpText=helpTextGetS3Object, invalidOptArg=True)
+
+            # Do the s3 get bucket
+            try:
+                data_mover = S3DataMover(
+                    credentials_secret=credentials_secret,
+                    s3_host=s3_host,
+                    s3_port=s3_port,
+                    use_https=use_https,
+                    verify_certificates=verify_certificates,
+                    image_name=image_name,
+                    namespace=namespace,
+                    cpu_limit=cpu_limit,
+                    cpu_request=cpu_request,
+                    memory_request=memory_request,
+                    memory_limit=memory_limit,
+                    ca_config_maps=config_maps,
+                    print_output=True
+                )
+                job = data_mover.get_object(bucket=bucket_name, pvc=pvc_name, object_key=object_key, file_location=file_location)
+                print("Created Kubernetes job {}".format(job))
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1294,6 +1961,225 @@ if __name__ == '__main__':
         else:
             handleInvalidCommand()
 
+    elif action in ("put-s3"):
+        # Get desired target from command line args
+        target = getTarget(sys.argv)
+
+        if target == "bucket":
+            namespace = "default"
+            bucket_name = None
+            pvc_name = None
+            s3_host = None
+            s3_port = None
+            use_https = False
+            verify_certificates = False
+            image_name = None
+            cpu_request = None
+            cpu_limit = None
+            memory_request = None
+            memory_limit = None
+            pvc_dir = None
+            credentials_secret = None
+            config_maps = []
+
+            try:
+                opts, args = getopt.getopt(
+                    sys.argv[3:],
+                    "hn:t:uvi:o:b:p:d:c:m:",
+                    [
+                        "help",
+                        "namespace=",
+                        "bucket-name=",
+                        "pvc-name=",
+                        "s3-host=",
+                        "s3-port=",
+                        "use-https",
+                        "verify-certificates",
+                        "image-name=",
+                        "cpu-request=",
+                        "cpu-limit=",
+                        "memory-request=",
+                        "memory-limit=",
+                        "pvc-dir=",
+                        "credentials-secret=",
+                        "ca-config-map="
+                    ]
+                )
+            except:
+                handleInvalidCommand(helpText=helpTextPutS3Bucket, invalidOptArg=True)
+
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextPutS3Bucket)
+                    sys.exit(0)
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+                elif opt in ("-b", "--bucket-name"):
+                    bucket_name = arg
+                elif opt in ("-p", "--pvc-name"):
+                    pvc_name = arg
+                elif opt in ("-o", "--s3-host"):
+                    s3_host = arg
+                elif opt in ("-t", "--s3-port"):
+                    s3_port = arg
+                elif opt in ("-u", "--use-https"):
+                    use_https = True
+                elif opt in ("-v", "--verify-certificates"):
+                    verify_certificates = True
+                elif opt in ("-i", "--image-name"):
+                    image_name = arg
+                elif opt in ("--cpu-request",):
+                    cpu_request = arg
+                elif opt in ("--cpu-limit",):
+                    cpu_limit = arg
+                elif opt in ("--memory-request",):
+                    memory_request = arg
+                elif opt in ("--memory-limit",):
+                    memory_limit = arg
+                elif opt in ("-d", "--pvc-dir"):
+                    pvc_dir = arg
+                elif opt in ("-c", "--credentials-secret"):
+                    credentials_secret = arg
+                elif opt in ("-m", "--ca-config-map"):
+                    config_maps.append(arg)
+
+            # Verify required args
+            if not s3_host or not credentials_secret or not bucket_name or not pvc_name:
+                handleInvalidCommand(helpText=helpTextPutS3Bucket, invalidOptArg=True)
+
+            # Do the s3 put bucket
+            try:
+                data_mover = S3DataMover(
+                    credentials_secret=credentials_secret,
+                    s3_host=s3_host,
+                    s3_port=s3_port,
+                    use_https=use_https,
+                    verify_certificates=verify_certificates,
+                    image_name=image_name,
+                    namespace=namespace,
+                    cpu_limit=cpu_limit,
+                    cpu_request=cpu_request,
+                    memory_request=memory_request,
+                    memory_limit=memory_limit,
+                    ca_config_maps=config_maps,
+                    print_output=True
+                )
+                job = data_mover.put_bucket(bucket=bucket_name, pvc=pvc_name, pvc_dir=pvc_dir)
+                print("Created Kubernetes job {}".format(job))
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
+        elif target == "object":
+            namespace = "default"
+            bucket_name = None
+            pvc_name = None
+            s3_host = None
+            s3_port = None
+            use_https = False
+            verify_certificates = False
+            image_name = None
+            cpu_request = None
+            cpu_limit = None
+            memory_request = None
+            memory_limit = None
+            file_location = None
+            object_key = None
+            credentials_secret = None
+            config_maps = []
+
+            try:
+                opts, args = getopt.getopt(
+                    sys.argv[3:],
+                    "hn:t:uvi:o:b:p:f:c:k:m:",
+                    [
+                        "help",
+                        "namespace=",
+                        "bucket-name=",
+                        "pvc-name=",
+                        "s3-host=",
+                        "s3-port=",
+                        "use-https",
+                        "verify-certificates",
+                        "image-name=",
+                        "cpu-request=",
+                        "cpu-limit=",
+                        "memory-request=",
+                        "memory-limit=",
+                        "file-location=",
+                        "object-key=",
+                        "credentials-secret=",
+                        "ca-config-map="
+                    ]
+                )
+            except:
+                handleInvalidCommand(helpText=helpTextPutS3Object, invalidOptArg=True)
+
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextPutS3Object)
+                    sys.exit(0)
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+                elif opt in ("-b", "--bucket-name"):
+                    bucket_name = arg
+                elif opt in ("-p", "--pvc-name"):
+                    pvc_name = arg
+                elif opt in ("-o", "--s3-host"):
+                    s3_host = arg
+                elif opt in ("-t", "--s3-port"):
+                    s3_port = arg
+                elif opt in ("-u", "--use-https"):
+                    use_https = True
+                elif opt in ("-v", "--verify-certificates"):
+                    verify_certificates = True
+                elif opt in ("-i", "--image-name"):
+                    image_name = arg
+                elif opt in ("--cpu-request",):
+                    cpu_request = arg
+                elif opt in ("--cpu-limit",):
+                    cpu_limit = arg
+                elif opt in ("--memory-request",):
+                    memory_request = arg
+                elif opt in ("--memory-limit",):
+                    memory_limit = arg
+                elif opt in ("-f", "--file-location"):
+                    file_location = arg
+                elif opt in ("-c", "--credentials-secret"):
+                    credentials_secret = arg
+                elif opt in ("-k", "--object-key"):
+                    object_key = arg
+                elif opt in ("-m", "--config-map"):
+                    config_maps.append(arg)
+
+            # Verify required args
+            if not s3_host or not credentials_secret or not bucket_name or not pvc_name or not object_key or not file_location:
+                handleInvalidCommand(helpText=helpTextPutS3Object, invalidOptArg=True)
+
+            # Do the s3 put object
+            try:
+                data_mover = S3DataMover(
+                    credentials_secret=credentials_secret,
+                    s3_host=s3_host,
+                    s3_port=s3_port,
+                    use_https=use_https,
+                    verify_certificates=verify_certificates,
+                    image_name=image_name,
+                    namespace=namespace,
+                    cpu_limit=cpu_limit,
+                    cpu_request=cpu_request,
+                    memory_request=memory_request,
+                    memory_limit=memory_limit,
+                    ca_config_maps=config_maps,
+                    print_output=True
+                )
+                job = data_mover.put_object(bucket=bucket_name, pvc=pvc_name, file_location=file_location, object_key=object_key)
+                print("Created Kubernetes job {}".format(job))
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
+        else:
+            handleInvalidCommand()
+
     elif action in ("register-with-astra", "register", "reg"):
         # Get desired target from command line args
         target = getTarget(sys.argv)
@@ -1416,6 +2302,48 @@ if __name__ == '__main__':
 
         else:
             handleInvalidCommand()
+
+    elif action == "show":
+        # Get desired target from command line args
+        target = getTarget(sys.argv)
+
+        if target == "s3-job":
+            namespace = "default"
+            job_name = None
+
+            try:
+                opts, args = getopt.getopt(
+                    sys.argv[3:],
+                    "hn:j:",
+                    [
+                        "help",
+                        "namespace=",
+                        "job="
+                    ]
+                )
+            except:
+                handleInvalidCommand(helpText=helpTextShowS3Job, invalidOptArg=True)
+
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextShowS3Job)
+                    sys.exit(0)
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+                elif opt in ("-j", "--job"):
+                    job_name = arg
+
+            # Verify required arguments
+            if not job_name:
+                handleInvalidCommand(helpText=helpTextShowS3Job, invalidOptArg=True)
+
+            try:
+                mover_job = DataMoverJob(namespace=namespace, print_output=True)
+                job_status = mover_job.get_job_status(job=job_name)
+                print("Job {} status:\n{}".format(job_name, job_status))
+            except (InvalidConfigError, APIConnectionError):
+                print(f"Unable to get status of job {job_name}")
+                sys.exit(1)
 
     elif action in ("version", "v", "-v", "--version"):
         print("NetApp DataOps Toolkit for Kubernetes - version " + k8s.__version__)
