@@ -801,7 +801,7 @@ if __name__ == '__main__':
             workspaceSize = None
             namespace = "default"
             storageClass = None
-            workspaceImage = "jupyter/scipy-notebook:latest"
+            workspaceImage = "jupyter/tensorflow-notebook"
             requestNvidiaGpu = None
             requestMemory = None
             requestCpu = None
