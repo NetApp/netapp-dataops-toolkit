@@ -339,6 +339,7 @@ The following options/arguments are optional:
 ```
     -h, --help              Print help text.
     -x, --readonly          Mount volume locally as read-only.
+    -o, --options           Enables users to specify custom mount options.
 ```
 
 ##### Example Usage
@@ -1059,7 +1060,7 @@ APIConnectionError              # The storage system/service API returned an err
 
 #### Mount an Existing Data Volume Locally
 
-The NetApp DataOps Toolkit can be used to mount an existing data volume as "read-only" or "read-write" on your local host as part of any Python program or workflow. On Linux hosts, mounting requires root privileges, so any Python program that invokes this function must be run as root. It is usually not necessary to invoke this function as root on macOS hosts.
+The NetApp DataOps Toolkit can be used to mount an existing data volume with custom mount options as "read-only" or "read-write" on your local host as part of any Python program or workflow. On Linux hosts, mounting requires root privileges, so any Python program that invokes this function must be run as root. It is usually not necessary to invoke this function as root on macOS hosts.
 
 ##### Function Definition
 
@@ -1067,6 +1068,7 @@ The NetApp DataOps Toolkit can be used to mount an existing data volume as "read
 def mount_volume(
     volume_name: str,           # Name of volume (required).
     mountpoint: str,            # Local mountpoint to mount volume at (required).
+    mount_options: str = None   # Enables users to specify custom mount options. If not specified volume will be mounted without custom options as "read-write" or "read-only".
     readonly: bool = False,     # Mount volume locally as "read-only." If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
     print_output: bool = False  # Denotes whether or not to print messages to the console during execution.
 ) :
