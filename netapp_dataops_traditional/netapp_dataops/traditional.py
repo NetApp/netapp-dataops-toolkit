@@ -1182,7 +1182,7 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
         raise ConnectionTypeError()
 
 
-def mount_volume(volume_name: str, mountpoint: str, readonly: bool = False, print_output: bool = False):
+def mount_volume(volume_name: str, mountpoint: str, mount_options: str = None, readonly: bool = False, print_output: bool = False):
     nfsMountTarget = None
 
     # Retrieve list of volumes
@@ -1204,13 +1204,12 @@ def mount_volume(volume_name: str, mountpoint: str, readonly: bool = False, prin
         if volume_name == volume["Volume Name"]:
             # Retrieve NFS mount target
             nfsMountTarget = volume["NFS Mount Target"]
-
+            nfsMountTarget = nfsMountTarget.strip()
     # Raise error if invalid volume name was entered
     if not nfsMountTarget:
         if print_output:
             print("Error: Invalid volume name specified.")
         raise InvalidVolumeParameterError("name")
-
     # Print message describing action to be understaken
     if print_output:
         if readonly:
@@ -1225,8 +1224,9 @@ def mount_volume(volume_name: str, mountpoint: str, readonly: bool = False, prin
     except FileExistsError:
         pass
 
+
     # Mount volume
-    if readonly:
+    if readonly and not mount_options:
         try:
             subprocess.check_call(['mount', '-o', 'ro', nfsMountTarget, mountpoint])
             if print_output:
@@ -1235,6 +1235,27 @@ def mount_volume(volume_name: str, mountpoint: str, readonly: bool = False, prin
             if print_output:
                 print("Error: Error running mount command: ", err)
             raise MountOperationError(err)
+
+    elif readonly and mount_options:
+        try:
+            subprocess.check_call(['mount', '-o', 'ro,'+mount_options, nfsMountTarget, mountpoint])
+            if print_output:
+                print("Volume mounted successfully.")
+        except subprocess.CalledProcessError as err:
+            if print_output:
+                print("Error: Error running mount command: ", err)
+            raise MountOperationError(err)
+
+    elif mount_options:
+        try:
+            subprocess.check_call(['mount', '-o', mount_options, nfsMountTarget, mountpoint])
+            if print_output:
+                print("Volume mounted successfully.")
+        except subprocess.CalledProcessError as err:
+            if print_output:
+                print("Error: Error running mount command: ", err)
+            raise MountOperationError(err)
+
     else:
         try:
             subprocess.check_call(['mount', nfsMountTarget, mountpoint])
@@ -1244,8 +1265,6 @@ def mount_volume(volume_name: str, mountpoint: str, readonly: bool = False, prin
             if print_output:
                 print("Error: Error running mount command: ", err)
             raise MountOperationError(err)
-
-
 
 # Function to unmount volume
 def unmount_volume(mountpoint: str, print_output: bool = False):

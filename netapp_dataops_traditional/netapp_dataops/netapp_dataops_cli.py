@@ -278,11 +278,13 @@ Required Options/Arguments:
 Optional Options/Arguments:
 \t-h, --help\t\tPrint help text.
 \t-x, --readonly\t\tMount volume locally as read-only.
+\t-o, --options\t\tEnables users to specify custom mount options.
 
 Examples:
 \tsudo -E netapp_dataops_cli.py mount volume --name=project1 --mountpoint=/mnt/project1
 \tsudo -E netapp_dataops_cli.py mount volume -m ~/testvol -n testvol -x
 \tsudo -E netapp_dataops_cli.py mount volume --name=project1 --mountpoint=/mnt/project1 --readonly
+\tsudo -E netapp_dataops_cli.py mount volume --name=project1 --mountpoint=/mnt/project1 --readonly --options=rsize=262144,wsize=262144,nconnect=16
 '''
 helpTextPullFromS3Bucket = '''
 Command: pull-from-s3 bucket
@@ -1019,10 +1021,11 @@ if __name__ == '__main__':
         if target in ("volume", "vol"):
             volumeName = None
             mountpoint = None
+            mount_options = None
             readonly = False
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:m:x", ["help", "name=", "mountpoint=", "readonly"])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:m:o:x", ["help", "name=", "mountpoint=", "options=", "readonly"])
             except:
                 handleInvalidCommand(helpText=helpTextMountVolume, invalidOptArg=True)
 
@@ -1035,12 +1038,14 @@ if __name__ == '__main__':
                     volumeName = arg
                 elif opt in ("-m", "--mountpoint"):
                     mountpoint = arg
+                elif opt in ("-o", "--options"):
+                    mount_options = arg
                 elif opt in ("-x", "--readonly"):
                     readonly = True
 
             # Mount volume
             try:
-                mount_volume(volume_name=volumeName, mountpoint=mountpoint, readonly=readonly, print_output=True)
+                mount_volume(volume_name=volumeName, mountpoint=mountpoint, mount_options=mount_options, readonly=readonly, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
 
