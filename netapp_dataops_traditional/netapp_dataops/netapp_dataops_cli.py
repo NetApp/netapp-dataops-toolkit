@@ -1026,9 +1026,10 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hv:n:l:m:u:o:x", ["cluster-name=","help", "lif=","svm=", "name=", "mountpoint=", "readonly", "options="])
-            except:
+            except Exception as err:                
+                print(err)
                 handleInvalidCommand(helpText=helpTextMountVolume, invalidOptArg=True)
-
+                
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
