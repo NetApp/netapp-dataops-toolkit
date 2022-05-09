@@ -1025,7 +1025,7 @@ if __name__ == '__main__':
             readonly = False
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:m:o:x", ["help", "name=", "mountpoint=", "options=", "readonly"])
+                opts, args = getopt.getopt(sys.argv[3:], "hv:n:l:m:u:o:x", ["cluster-name=","help", "lif=","svm=", "name=", "mountpoint=", "readonly", "options="])
             except:
                 handleInvalidCommand(helpText=helpTextMountVolume, invalidOptArg=True)
 
