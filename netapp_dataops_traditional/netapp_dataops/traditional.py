@@ -1182,7 +1182,7 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
         raise ConnectionTypeError()
 
 
-def mount_volume(volume_name: str, mountpoint: str, cluster_name: str = None, mount_options: str = None, svm_name: str = None, lif_name: str = None, readonly: bool = False, print_output: bool = False):
+def mount_volume(volume_name: str, mountpoint: str, cluster_name: str = None, svm_name: str = None, lif_name: str = None, readonly: bool = False, print_output: bool = False):
     nfsMountTarget = None
     
     svm = None
