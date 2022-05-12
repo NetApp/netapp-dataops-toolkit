@@ -1037,7 +1037,7 @@ def list_snapshots(volume_name: str, print_output: bool = False) -> list():
         raise ConnectionTypeError()
 
 
-def list_volumes(check_local_mounts: bool = False, include_space_usage_details: bool = False, print_output: bool = False) -> list():
+def list_volumes(check_local_mounts: bool = False, include_space_usage_details: bool = False, print_output: bool = False, cluster_name: str = None, svm_name: str = None) -> list():
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -1049,6 +1049,8 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
         if print_output :
             _print_invalid_config_error()
         raise InvalidConfigError()
+    if cluster_name:
+        config["hostname"] = cluster_name
 
     if connectionType == "ONTAP":
         # Instantiate connection to ONTAP cluster
@@ -1058,8 +1060,12 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
             raise
 
         try:
+            svmname=config["svm"]
+            if svm_name:
+                svmname = svm_name
+
             # Retrieve all volumes for SVM
-            volumes = NetAppVolume.get_collection(svm=config["svm"])
+            volumes = NetAppVolume.get_collection(svm=svmname)
 
             # Retrieve local mounts if desired
             if check_local_mounts :
@@ -1096,12 +1102,18 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
                         nfsMountTarget = None
                     else :
                         nfsMountTarget = config["dataLif"]+":"+volume.nas.path
+                        if svmname != config["svm"]:
+                            nfsMountTarget = svmname+":"+volume.nas.path
+
 
                     # Construct clone source
                     clone = "no"
+                    cloneParentSvm = ""
                     cloneParentVolume = ""
                     cloneParentSnapshot = ""
+
                     try:
+                        cloneParentSvm = volume.clone.parent_svm.name
                         cloneParentVolume = volume.clone.parent_volume.name
                         cloneParentSnapshot = volume.clone.parent_snapshot.name
                         clone = "yes"
@@ -1159,6 +1171,7 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
                         volumeDict["Local Mountpoint"] = localMountpoint
                     volumeDict["FlexCache"] = flexcache
                     volumeDict["Clone"] = clone
+                    volumeDict["Source SVM"] = cloneParentSvm
                     volumeDict["Source Volume"] = cloneParentVolume
                     volumeDict["Source Snapshot"] = cloneParentSnapshot
 
@@ -1181,10 +1194,9 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
     else:
         raise ConnectionTypeError()
 
-
 def mount_volume(volume_name: str, mountpoint: str, cluster_name: str = None, svm_name: str = None, mount_options: str = None, lif_name: str = None, readonly: bool = False, print_output: bool = False):
     nfsMountTarget = None
-    
+
     svm = None
     try:
         config = _retrieve_config(print_output=print_output)
@@ -1200,7 +1212,7 @@ def mount_volume(volume_name: str, mountpoint: str, cluster_name: str = None, sv
         raise InvalidConfigError()
 
     if cluster_name:
-        config["hostname"] = cluster_name 
+        config["hostname"] = cluster_name
 
     # Retrieve list of volumes
     try:
@@ -1221,13 +1233,14 @@ def mount_volume(volume_name: str, mountpoint: str, cluster_name: str = None, sv
         if volume_name == volume["Volume Name"]:
             # Retrieve NFS mount target
             nfsMountTarget = volume["NFS Mount Target"]
+            nfsMountTarget = nfsMountTarget.strip()
 
     # Raise error if invalid volume name was entered
     if not nfsMountTarget:
         if print_output:
             print("Error: Invalid volume name specified.")
         raise InvalidVolumeParameterError("name")
-    
+
     try:
         if lif_name:
             nfsMountTarget = lif_name+':'+nfsMountTarget.split(':')[1]
@@ -1808,3 +1821,4 @@ def syncCloudSyncRelationship(relationshipID: str, waitUntilComplete: bool = Fal
 @deprecated
 def syncSnapMirrorRelationship(uuid: str, waitUntilComplete: bool = False, printOutput: bool = False) :
     sync_snap_mirror_relationship(uuid=uuid, wait_until_complete=waitUntilComplete, print_output=printOutput)
+
