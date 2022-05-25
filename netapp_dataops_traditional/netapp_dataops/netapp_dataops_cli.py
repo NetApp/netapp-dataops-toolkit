@@ -321,7 +321,7 @@ Optional Options/Arguments:
 \t-l, --lif \t\tnon default lif (nfs server ip/name)
 \t-h, --help\t\tPrint help text.
 \t-x, --readonly\t\tMount volume locally as read-only.
-\t-o, --options\t\tEnables users to specify custom mount options.
+\t-o, --options\t\tEnables users to Specify custom NFS mount options.
 
 Examples:
 \tsudo -E netapp_dataops_cli.py mount volume --name=project1 --mountpoint=/mnt/project1
