@@ -362,7 +362,7 @@ def _convert_bytes_to_pretty_size(size_in_bytes: str, num_decimal_points: int = 
 def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: str = None, source_snapshot_name: str = None,
                  source_svm: str = None, target_svm: str = None, export_hosts: str = None, export_policy: str = None, split: bool = False, 
                  unix_uid: str = None, unix_gid: str = None, mountpoint: str = None, junction: str= None, readonly: bool = False,
-                 snapshot_policy: str = None, refresh: bool = False, svm_dr_unprotect: bool = False, print_output: bool = False):
+                 snapshot_policy: str = None, refresh: bool = False, preserve_msid: bool = False, svm_dr_unprotect: bool = False, print_output: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -443,6 +443,17 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
         
+        #if exisiting vlone and refresh + preserve-msid 
+        oldmsid = ''
+        try:
+            if currentVolume and refresh and preserve_msid:
+                response = NetAppCLI().execute("volume show",vserver=targetsvm,volume=new_volume_name,fields='msid')
+                output = response.http_response.json()
+                oldmsid = output['records'][0]['msid']
+        except:
+            print("Error: could not delete previous clone")
+            raise InvalidVolumeParameterError("name")              
+
         #delete existing clone when refresh
         try:
             if currentVolume and refresh:
@@ -455,6 +466,8 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
         except:
             print("Error: could not delete previous clone")
             raise InvalidVolumeParameterError("name")       
+
+        
         
         try:
             if not snapshot_policy :                
@@ -517,20 +530,10 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
                     print("Error: Invalid source volume name.")
                 raise InvalidVolumeParameterError("name")
 
-            # Create option to choose junction path.
-            if junction:
-                junction=junction
-            else:
-                junction = "/"+new_volume_name
-           
-
             # Construct dict representing new volume
             newVolumeDict = {
                 "name": new_volume_name,
                 "svm": {"name": targetsvm},
-                "nas": {
-                    "path": junction
-                },
                 "clone": {
                     "is_flexclone": True,
                     "parent_svm": {
@@ -612,6 +615,38 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
             if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
+
+        #if need to set old msid
+        try:
+            if oldmsid:
+                response = NetAppCLI().execute("volume show",vserver=targetsvm,volume=new_volume_name,fields='msid')
+                output = response.http_response.json()
+                newmsid = output['records'][0]['msid']
+                #change msid 
+                print("Changin MSID of clone to orginal MSID:"+str(oldmsid)+" .")
+                response = NetAppCLI().execute("debug vserverdr restamp-volume-msid",body={"vserver":targetsvm,"volume":new_volume_name,"msid": str(newmsid),"new_msid": str(oldmsid)}, privilege_level='diagnostic',poll=True)
+        except:
+            print("Error: could not change new clone msid")
+            raise InvalidVolumeParameterError("name") 
+
+        #mount the volume 
+        try:
+            # Create option to choose junction path.
+            if not junction:
+                junction = "/"+new_volume_name
+
+            volumeDetails = NetAppVolume.find(name=new_volume_name, svm=targetsvm)   
+            updatedVolumeDetails = NetAppVolume(uuid=volumeDetails.uuid)
+            updatedVolumeDetails.nas = {"path": junction}
+            updatedVolumeDetails.patch(poll=True, poll_timeout=120) 
+            if print_output:
+                print("Clone volume mounted successfully.")
+
+        except NetAppRestError as err:
+            if print_output:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)                
+
 
         if svm_dr_unprotect:
             try:
@@ -1482,7 +1517,7 @@ def list_snapshots(volume_name: str, cluster_name: str = None, svm_name: str = N
         raise ConnectionTypeError()
 
 
-def list_volumes(check_local_mounts: bool = False, include_space_usage_details: bool = False, print_output: bool = False, cluster_name: str = None, svm_name: str = None) -> list():
+def list_volumes(check_local_mounts: bool = False, include_space_usage_details: bool = False, print_output: bool = False, cluster_name: str = None, svm_name: str = None, vol_prefix: str = '') -> list():
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -1619,9 +1654,10 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
                     volumeDict["Source SVM"] = cloneParentSvm
                     volumeDict["Source Volume"] = cloneParentVolume
                     volumeDict["Source Snapshot"] = cloneParentSnapshot
-
+                
                     # Append dict to list of volumes
-                    volumesList.append(volumeDict)
+                    if volumeDict['Volume Name'].startswith(vol_prefix):
+                        volumesList.append(volumeDict)
 
         except NetAppRestError as err:
             if print_output :

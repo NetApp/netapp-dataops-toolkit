@@ -101,23 +101,24 @@ Required Options/Arguments:
 \t-v, --source-volume=\tName of volume to be cloned.
 
 Optional Options/Arguments:
-\t-l, --cluster-name=\tnon default hosting cluster
-\t-c, --source-svm=\tnon default source svm name 
-\t-t, --target-svm=\tnon default target svm name 
-\t-g, --gid=\t\tUnix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
-\t-h, --help\t\tPrint help text.
-\t-m, --mountpoint=\tLocal mountpoint to mount new volume at after creating. If not specified, new volume will not be mounted locally. On Linux hosts - if specified, must be run as root.
+\t-l, --cluster-name=\t non default hosting cluster
+\t-c, --source-svm=\t non default source svm name 
+\t-t, --target-svm=\t non default target svm name 
+\t-g, --gid=\t\t Unix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
+\t-h, --help\t\t Print help text.
+\t-m, --mountpoint=\t Local mountpoint to mount new volume at after creating. If not specified, new volume will not be mounted locally. On Linux hosts - if specified, must be run as root.
 \t-s, --source-snapshot=\tName of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
 \t\t\t\twhen snapshot name suffixed with * the latest snapshot will be used (hourly* will use the latest snapshot prefixed with hourly )
-\t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
-\t-x, --readonly\t\tRead-only option for mounting volumes locally.
-\t-j, --junction\t\tSpecify a custom junction path for the volume to be exported at.
-\t-e, --export-hosts\t\t colon(:) seperated hosts/cidrs to to use for export. hosts will be exported for rw and root access
-\t-e, --export-policy\t\t export policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
-\t-d, --snapshot-policy\t\t snapshot-policy to attach to the volume, default snapshot policy will be used if not provided
+\t-u, --uid=\t\t Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
+\t-x, --readonly\t\t Read-only option for mounting volumes locally.
+\t-j, --junction\t\t Specify a custom junction path for the volume to be exported at.
+\t-e, --export-hosts\t colon(:) seperated hosts/cidrs to to use for export. hosts will be exported for rw and root access
+\t-e, --export-policy\t export policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
+\t-d, --snapshot-policy\t snapshot-policy to attach to the volume, default snapshot policy will be used if not provided
 \t-s, --split\t\t start clone split after creation
 \t-r, --refresh\t\t delete existing clone if exists before creating a new one 
-\t-d, --svm-dr-unprotect\t\t disable svm dr protection if svm-dr protection exists 
+\t-a, --preserve-msid\t when refreshing clone preserve the original clone msid (can help nfs remount)
+\t-d, --svm-dr-unprotect\t disable svm dr protection if svm-dr protection exists 
 
 Examples (basic usage):
 \tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset
@@ -319,6 +320,7 @@ No options/arguments are required.
 Optional Options/Arguments:
 \t-u, --cluster-name=\tnon default hosting cluster
 \t-v, --svm=\t\t\t\tlist volume on non default svm
+\t-p, --vol-prefix=\t\t\t\tlist volumes starting with 
 \t-h, --help\t\t\t\tPrint help text.
 \t-s, --include-space-usage-details\tInclude storage space usage details in output (see README for explanation).
 
@@ -774,10 +776,11 @@ if __name__ == '__main__':
             snapshotPolicy = None
             exportHosts = None
             svmDrUnprotect = False
+            preserveMSID = False
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hu:c:t:n:v:s:m:u:l:g:j:xe:p:i:srd", ["help", "cluster-name=", "source-svm=","target-svm=","name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid=", "junction=", "readonly","export-hosts=","export-policy=","snapshot-policy=","split","refresh","svm-dr-unprotect"])
+                opts, args = getopt.getopt(sys.argv[3:], "hu:c:t:n:v:s:m:u:l:g:j:xe:p:i:srda", ["help", "cluster-name=", "source-svm=","target-svm=","name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid=", "junction=", "readonly","export-hosts=","export-policy=","snapshot-policy=","split","refresh","preserve-msid","svm-dr-unprotect"])
             except Exception as err:                
                 print(err)
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
@@ -814,7 +817,9 @@ if __name__ == '__main__':
                 elif opt in ("-r", "--refresh"):
                     refresh = True   
                 elif opt in ("-d", "--svm-dr-unprotect"):
-                    svmDrUnprotect = True                    
+                    svmDrUnprotect = True                
+                elif opt in ("-a", "--preserve-msid"):
+                    preserveMSID = True                         
                 elif opt in ("-p", "--export-policy"):
                     exportPolicy = arg    
                 elif opt in ("-i", "--snapshot-policy"):
@@ -831,12 +836,15 @@ if __name__ == '__main__':
             if exportHosts and exportPolicy:
                 print("Error: cannot use both --export-policy and --export-hosts. only one of them can be specified.")
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
+            if preserveMSID and not refresh:
+                print("Error: cannot use both --preserve-msid without --refresh.")
+                handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
 
             # Clone volume
             try:
                 clone_volume(new_volume_name=newVolumeName, source_volume_name=sourceVolumeName, source_snapshot_name=sourceSnapshotName, 
                              cluster_name=clusterName, source_svm=sourceSVM, target_svm=targetSVM, export_policy=exportPolicy, export_hosts=exportHosts, 
-                             snapshot_policy=snapshotPolicy, split=split, refresh=refresh, mountpoint=mountpoint, unix_uid=unixUID, unix_gid=unixGID, 
+                             snapshot_policy=snapshotPolicy, split=split, refresh=refresh, preserve_msid=preserveMSID, mountpoint=mountpoint, unix_uid=unixUID, unix_gid=unixGID, 
                              junction=junction, svm_dr_unprotect=svmDrUnprotect, readonly=readonly, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError,
                     MountOperationError):
@@ -1293,11 +1301,12 @@ if __name__ == '__main__':
         elif target in ("volume", "vol", "volumes", "vols"):
             includeSpaceUsageDetails = False
             svmName = None
-            clusterName = None        
+            clusterName = None
+            volPrefix = ''      
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hsv:u:", ["cluster-name=","help", "include-space-usage-details","svm="])
+                opts, args = getopt.getopt(sys.argv[3:], "hsv:u:p:", ["cluster-name=","help", "include-space-usage-details","svm=","vol-prefix="])
             except Exception as err:                
                 print(err)
                 handleInvalidCommand(helpText=helpTextListVolumes, invalidOptArg=True)
@@ -1309,6 +1318,8 @@ if __name__ == '__main__':
                     sys.exit(0)
                 elif opt in ("-v", "--svm") :
                     svmName = arg
+                elif opt in ("-p", "--vol-prefix"):
+                    volPrefix = arg
                 elif opt in ("-s", "--include-space-usage-details"):
                     includeSpaceUsageDetails = True
                 elif opt in ("-u", "--cluster-name"):
@@ -1316,7 +1327,7 @@ if __name__ == '__main__':
 
             # List volumes
             try:
-                list_volumes(check_local_mounts=True, include_space_usage_details=includeSpaceUsageDetails, print_output=True, svm_name=svmName, cluster_name=clusterName)
+                list_volumes(check_local_mounts=True, include_space_usage_details=includeSpaceUsageDetails, print_output=True, svm_name=svmName, cluster_name=clusterName, vol_prefix=volPrefix)
             except (InvalidConfigError, APIConnectionError) :
                 sys.exit(1)
 

@@ -143,12 +143,13 @@ The following options/arguments are optional:
     -u, --uid=              Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
     -x, --readonly          Read-only option for mounting volumes locally.
     -j, --junction          Specify a custom junction path for the volume to be exported at.
-    -e, --export-hosts               colon(:) seperated hosts/cidrs to to use for export. hosts will be exported for rw and root access
-    -e, --export-policy              export policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
-    -d, --snapshot-policy            snapshot-policy to attach to the volume, default snapshot policy will be used if not provided
-    -s, --split              start clone split after creation
-    -r, --refresh            delete existing clone if exists before creating a new one
-    -d, --svm-dr-unprotect           disable svm dr protection if svm-dr protection exists
+    -e, --export-hosts      colon(:) seperated hosts/cidrs to to use for export. hosts will be exported for rw and root access
+    -e, --export-policy     export policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
+    -d, --snapshot-policy   snapshot-policy to attach to the volume, default snapshot policy will be used if not provided
+    -s, --split             start clone split after creation
+    -r, --refresh           delete existing clone if exists before creating a new one
+    -a, --preserve-msid     when refreshing clone preserve the original clone msid (can help nfs remount)
+    -d, --svm-dr-unprotect  disable svm dr protection if svm-dr protection exists
 ```
 
 ##### Example Usage
@@ -292,6 +293,7 @@ The following options/arguments are optional:
 ```
     -u, --cluster-name=                 non default hosting cluster
     -v, --svm=                          list volume on non default svm
+    -p, --vol-prefix=                   list information for volume prefixed by this
     -h, --help                          Print help text.
     -s, --include-space-usage-details   Include storage space usage details in output (see README for explanation).
 ```
@@ -1040,6 +1042,7 @@ def clone_volume(
     junction: str= None,                   # Custom junction path for volume to be exported at. If not specified, junction path will be: ("/"+Volume Name).
     readonly: bool = False,                # Option to mount volume locally as "read-only." If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
     refresh: bool = False,                 # when true a previous clone using this name will be deleted prior to the new clone creation
+    preserver_msid: bool = False,          # when refreshing clone preserve the original clone msid (can help nfs remount)
     svm_dr_unprotect: bool = False,        # mark the clone created to be excluded from svm-dr replication when onfigured on the clone svm 
     print_output: bool = False             # print log to the console
 )
