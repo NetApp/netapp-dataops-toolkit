@@ -205,7 +205,7 @@ Optional Options/Arguments:
 \t-c, --storage-class=\t\tKubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
 \t-g, --nvidia-gpu=\t\tNumber of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
 \t-h, --help\t\t\tPrint help text.
-\t-i, --image=\t\t\tContainer image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.
+\t-i, --image=\t\t\tContainer image to use when creating workspace. If not specified, "nvcr.io/nvidia/tensorflow:22.05-tf2-py3" will be used.
 \t-m, --memory=\t\t\tAmount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
 \t-n, --namespace=\t\tKubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
 \t-p, --cpu=\t\t\tNumber of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
@@ -215,7 +215,7 @@ Optional Options/Arguments:
 
 Examples:
 \tnetapp_dataops_k8s_cli.py create jupyterlab --workspace-name=mike --size=10Gi --nvidia-gpu=2
-\tnetapp_dataops_k8s_cli.py create jupyterlab -n dst-test -w dave -i jupyter/scipy-notebook:latest -s 2Ti -c ontap-flexgroup -g 1 -p 0.5 -m 1Gi -b
+\tnetapp_dataops_k8s_cli.py create jupyterlab -n dst-test -w dave -i nvcr.io/nvidia/pytorch:22.04-py3 -s 2Ti -c ontap-flexgroup -g 1 -p 0.5 -m 1Gi -b
 '''
 
 helpTextDeployTritonServer = '''
@@ -1040,7 +1040,7 @@ if __name__ == '__main__':
             workspaceSize = None
             namespace = "default"
             storageClass = None
-            workspaceImage = "jupyter/tensorflow-notebook"
+            workspaceImage = "nvcr.io/nvidia/tensorflow:22.05-tf2-py3"
             requestNvidiaGpu = None
             requestMemory = None
             requestCpu = None

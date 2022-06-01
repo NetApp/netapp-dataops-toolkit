@@ -747,7 +747,7 @@ def clone_volume(new_pvc_name: str, source_pvc_name: str, source_snapshot_name: 
 
 def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str = None, storage_class: str = None,
                        load_balancer_service: bool = False, namespace: str = "default",
-                       workspace_password: str = None, workspace_image: str = "jupyter/tensorflow-notebook",
+                       workspace_password: str = None, workspace_image: str = "nvcr.io/nvidia/tensorflow:22.05-tf2-py3",
                        request_cpu: str = None, request_memory: str = None, request_nvidia_gpu: str = None, register_with_astra: bool = False,
                        print_output: bool = False, pvc_already_exists: bool = False, labels: dict = None) -> str:
     # Retrieve kubeconfig
@@ -872,6 +872,20 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
                             }
                         )
                     ],
+                    init_containers=[
+                        client.V1Container(
+                            name="init-jupyterlab",
+                            image=workspace_image,
+                            command=["/bin/bash", "-c"],
+                            args=["cp -au /workspace/. /vol/ || true"],
+                            volume_mounts=[
+                                client.V1VolumeMount(
+                                    name="workspace",
+                                    mount_path="/vol"
+                                )
+                            ]
+                        )
+                    ],
                     containers=[
                         client.V1Container(
                             name="jupyterlab",
@@ -890,15 +904,15 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
                                     value="yes"
                                 )
                             ],
-                            args=["start-notebook.sh", "--ServerApp.password=" + hashedPassword, "--ServerApp.ip='0.0.0.0'",
-                                  "--no-browser"],
+                            command=["jupyter", "lab", "--LabApp.password=" + hashedPassword, "--LabApp.ip='0.0.0.0'",
+                                  "--no-browser", "--notebook-dir=/workspace"],
                             ports=[
                                 client.V1ContainerPort(container_port=8888)
                             ],
                             volume_mounts=[
                                 client.V1VolumeMount(
                                     name="workspace",
-                                    mount_path="/home/jovyan"
+                                    mount_path="/workspace"
                                 )
                             ],
                             resources={

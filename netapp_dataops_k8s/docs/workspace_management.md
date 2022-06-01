@@ -176,7 +176,7 @@ The following options/arguments are optional:
     -c, --storage-class=        Kubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
     -g, --nvidia-gpu=           Number of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
     -h, --help                  Print help text.
-    -i, --image=                Container image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.
+    -i, --image=                Container image to use when creating workspace. If not specified, "nvcr.io/nvidia/tensorflow:22.05-tf2-py3" will be used.
     -m, --memory=               Amount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
     -n, --namespace=            Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
     -p, --cpu=                  Number of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
@@ -210,10 +210,10 @@ Workspace successfully created.
 To access workspace, navigate to http://10.61.188.112:31082
 ```
 
-Provision a new JupyterLab workspace named 'dave', of size 2TB, in the namespace 'dst-test', using the container image 'jupyter/scipy-notebook:latest', use the Load Balancer service and Kubernetes StorageClass 'ontap-flexgroup' when provisioning the backing volume for the workspace.
+Provision a new JupyterLab workspace named 'dave', of size 2TB, in the namespace 'dst-test', using the container image 'nvcr.io/nvidia/pytorch:22.04-py3', use the Load Balancer service and Kubernetes StorageClass 'ontap-flexgroup' when provisioning the backing volume for the workspace.
 
 ```sh
-netapp_dataops_k8s_cli.py create jupyterlab --namespace=dst-test --workspace-name=dave --image=jupyter/scipy-notebook:latest --size=2Ti --load-balancer --storage-class=ontap-flexgroup
+netapp_dataops_k8s_cli.py create jupyterlab --namespace=dst-test --workspace-name=dave --image=nvcr.io/nvidia/pytorch:22.04-py3 --size=2Ti --load-balancer --storage-class=ontap-flexgroup
 Set workspace password (this password will be required in order to access the workspace):
 Re-enter password:
 
@@ -631,19 +631,19 @@ Tip: Refer to the [Trident documentation](https://netapp-trident.readthedocs.io/
 
 ```py
 def create_jupyter_lab(
-    workspace_name: str,                                     # Name of new JupyterLab workspace (required).
-    workspace_size: str,                                     # Size new workspace (i.e. size of backing persistent volume to be created) (required). Format: '1024Mi', '100Gi', '10Ti', etc.
-    mount_pvc: str = None,                                   # Option to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: 'existing_pvc_name:mount_point'. If not specified, no additional PVC will be attached.
-    storage_class: str = None,                               # Kubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
-    load_balancer_service: bool = False,                     # Option to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
-    namespace: str = "default",                              # Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
-    workspace_password: str = None,                          # Workspace password (this password will be required in order to access the workspace). If not specified, you will be prompted to enter a password via the console.
-    workspace_image: str = "jupyter/tensorflow-notebook",    # Container image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.
-    request_cpu: str = None,                                 # Number of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
-    request_memory: str = None,                              # Amount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
-    request_nvidia_gpu: str = None,                          # Number of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
-    register_with_astra: bool = False,                       # Register new workspace with Astra Control (requires Astra Control).
-    print_output: bool = False                               # Denotes whether or not to print messages to the console during execution.
+    workspace_name: str,                                                # Name of new JupyterLab workspace (required).
+    workspace_size: str,                                                # Size new workspace (i.e. size of backing persistent volume to be created) (required). Format: '1024Mi', '100Gi', '10Ti', etc.
+    mount_pvc: str = None,                                              # Option to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: 'existing_pvc_name:mount_point'. If not specified, no additional PVC will be attached.
+    storage_class: str = None,                                          # Kubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
+    load_balancer_service: bool = False,                                # Option to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
+    namespace: str = "default",                                         # Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
+    workspace_password: str = None,                                     # Workspace password (this password will be required in order to access the workspace). If not specified, you will be prompted to enter a password via the console.
+    workspace_image: str = "nvcr.io/nvidia/tensorflow:22.05-tf2-py3",    # Container image to use when creating workspace. If not specified, "nvcr.io/nvidia/tensorflow:22.05-tf2-py3" will be used.
+    request_cpu: str = None,                                            # Number of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
+    request_memory: str = None,                                         # Amount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
+    request_nvidia_gpu: str = None,                                     # Number of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
+    register_with_astra: bool = False,                                  # Register new workspace with Astra Control (requires Astra Control).
+    print_output: bool = False                                          # Denotes whether or not to print messages to the console during execution.
 ) -> str :
 ```
 
