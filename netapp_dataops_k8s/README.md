@@ -14,15 +14,11 @@ The toolkit is currently compatible with Kubernetes versions 1.17 and above, and
 The toolkit is currently compatible with Trident versions 20.07 and above. Additionally, the toolkit is compatible with the following Trident backend types:
 
 - ontap-nas
-- aws-cvs
+- ontap-nas-flexgroup
 - gcp-cvs
 - azure-netapp-files
 
-The toolkit is also compatible with all versions of the BeeGFS CSI driver, though not all functionality is supported by BeeGFS.
-For details on supported BeeGFS CSI driver functionality refer to the following documentation.
-- [Volume Management Command Line Operations](docs/volume_management.md#command-line-functionality)
-- [Workspace Management Command Line Operations](docs/workspace_management.md#command-line-functionality)
-
+The toolkit is currently compatible with all versions of the BeeGFS CSI driver, though not all functionality is supported by BeeGFS. Operations that are not supported by BeeGFS are noted within the documentation.
 
 ## Installation
 
