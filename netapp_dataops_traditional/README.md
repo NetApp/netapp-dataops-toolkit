@@ -132,24 +132,36 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
-    -l, --cluster-name=     non default hosting cluster
-    -c, --source-svm=       non default source svm name
-    -t, --target-svm=       non default target svm name
-    -g, --gid=              Unix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
-    -h, --help              Print help text.
-    -m, --mountpoint=       Local mountpoint to mount new volume at after creating. If not specified, new volume will not be mounted locally. On Linux hosts - if specified, must be run as root.
-    -s, --source-snapshot=  Name of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
-                            when snapshot name suffixed with * the latest snapshot will be used (hourly* will use the latest snapshot prefixed with hourly )
-    -u, --uid=              Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
-    -x, --readonly          Read-only option for mounting volumes locally.
-    -j, --junction          Specify a custom junction path for the volume to be exported at.
-    -e, --export-hosts      colon(:) seperated hosts/cidrs to to use for export. hosts will be exported for rw and root access
-    -e, --export-policy     export policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
-    -d, --snapshot-policy   snapshot-policy to attach to the volume, default snapshot policy will be used if not provided
-    -s, --split             start clone split after creation
-    -r, --refresh           delete existing clone if exists before creating a new one
-    -a, --preserve-msid     when refreshing clone preserve the original clone msid (can help nfs remount)
-    -d, --svm-dr-unprotect  disable svm dr protection if svm-dr protection exists
+Optional Options/Arguments:
+        -l, --cluster-name=      non default hosting cluster
+        -c, --source-svm=        non default source svm name
+        -t, --target-svm=        non default target svm name
+        -g, --gid=               Unix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
+        -h, --help               Print help text.
+        -m, --mountpoint=        Local mountpoint to mount new volume at after creating. If not specified, new volume will not be mounted locally. On Linux hosts - if specified, must be run as root.
+        -s, --source-snapshot=   Name of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
+                                 when snapshot name suffixed with * the latest snapshot will be used (hourly* will use the latest snapshot prefixed with hourly )
+        -u, --uid=               Unix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
+        -x, --readonly           Read-only option for mounting volumes locally.
+        -j, --junction           Specify a custom junction path for the volume to be exported at.
+        -e, --export-hosts       colon(:) seperated hosts/cidrs to to use for export. hosts will be exported for rw and root access
+        -p, --export-policy      export policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
+        -i, --snapshot-policy    snapshot-policy to attach to the volume, default snapshot policy will be used if not provided
+        -o, --igroup             map luns in clone the the provided igroup
+        -s, --split              start clone split after creation
+        -r, --refresh            delete existing clone if exists before creating a new one, lun maps and serial numbers will be preserved if oroginal clone contains maped luns
+        -a, --preserve-msid      when refreshing clone preserve the original clone msid (can help nfs remount)
+        -d, --svm-dr-unprotect   disable svm dr protection if svm-dr protection exists
+
+Examples (basic usage):
+        netapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset
+        netapp_dataops_cli.py clone volume -n project2 -v gold_dataset -s snap1
+        netapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset --mountpoint=~/project1 --readonly
+
+
+Examples (advanced usage):
+        netapp_dataops_cli.py clone volume -n testvol -v gold_dataset -u 1000 -g 1000 -x -j /project1 -d snappolicy1
+        netapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset --source-svm=svm1 --target-svm=svm2 --source-snapshot=daily* --export-hosts 10.5.5.3:host1:10.6.4.0/24 --split
 ```
 
 ##### Example Usage

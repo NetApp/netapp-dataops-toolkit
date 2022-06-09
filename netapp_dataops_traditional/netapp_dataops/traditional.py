@@ -28,6 +28,10 @@ from netapp_ontap.resources import Volume as NetAppVolume
 from netapp_ontap.resources import ExportPolicy as NetAppExportPolicy
 from netapp_ontap.resources import SnapshotPolicy as NetAppSnapshotPolicy
 from netapp_ontap.resources import CLI as NetAppCLI
+from netapp_ontap.resources import Lun as NetAppLun
+from netapp_ontap.resources import LunMap as NetAppLunMap
+from netapp_ontap.resources import Igroup as NetAppIgroup
+
 import pandas as pd
 import requests
 from tabulate import tabulate
@@ -362,7 +366,9 @@ def _convert_bytes_to_pretty_size(size_in_bytes: str, num_decimal_points: int = 
 def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: str = None, source_snapshot_name: str = None,
                  source_svm: str = None, target_svm: str = None, export_hosts: str = None, export_policy: str = None, split: bool = False, 
                  unix_uid: str = None, unix_gid: str = None, mountpoint: str = None, junction: str= None, readonly: bool = False,
-                 snapshot_policy: str = None, refresh: bool = False, preserve_msid: bool = False, svm_dr_unprotect: bool = False, print_output: bool = False):
+                 snapshot_policy: str = None, refresh: bool = False, preserve_msid: bool = False, preserve_lun_maps: bool = False, igroup: str = None, 
+                 svm_dr_unprotect: bool = False, print_output: bool = False):
+
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -451,8 +457,32 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
                 output = response.http_response.json()
                 oldmsid = output['records'][0]['msid']
         except:
-            print("Error: could not delete previous clone")
-            raise InvalidVolumeParameterError("name")              
+            print("Error: could not retrive exisiting clone msid")
+            raise InvalidVolumeParameterError("name")     
+
+        #preserve lun mapping, id, serial and group 
+        oldluninfo = {}
+        try:
+            if currentVolume and refresh and preserve_lun_maps:
+                luns = NetAppLun.get_collection(**{"svm.name": targetsvm, "location.volume.name": new_volume_name}, fields='serial_number,status.state,lun_maps.*')
+                print("Mapping LUN information")
+                for lun in luns:
+                    oldluninfo[lun.name]=lun
+        except:
+             print("Error: could not map existing luns")
+             raise InvalidVolumeParameterError("name") 
+
+        # validate if provided igroup exists
+        try:
+            if igroup:
+                currentIgroup = NetAppIgroup.find(name=igroup, svm=targetsvm)
+                if not currentIgroup:
+                    if print_output:
+                        print("Error: igroup:"+igroup+" dones not exists.")
+                    raise InvalidVolumeParameterError("name")
+        except:
+             print("Error: could not find igroup")
+             raise InvalidVolumeParameterError("name")
 
         #delete existing clone when refresh
         try:
@@ -616,6 +646,67 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
 
+
+        #restore lun mapping, id, serial and group 
+        try:            
+            if currentVolume and refresh and preserve_lun_maps:
+                print("Restoring original LUN configuration")
+                newluns = NetAppLun.get_collection(**{"svm.name": targetsvm, "location.volume.name": new_volume_name}, fields='serial_number,status.state,lun_maps.*')
+                for lun in newluns:
+                    if lun.name in oldluninfo:
+                        oldlun = oldluninfo[lun.name]
+                        if hasattr(oldlun, 'lun_maps'):
+                            print("Setting LUN '"+lun.name+"' serial number to original '"+oldlun.serial_number+"'")
+                            lunobj = NetAppLun(uuid=lun.uuid)
+                            lunobj.enabled = False
+                            lunobj.patch(poll=True, poll_timeout=120)                      
+
+                            response = NetAppCLI().execute("lun modify",vserver=targetsvm,path=lun.name,body={"serial": str(oldlun.serial_number)}, privilege_level='diagnostic',poll=True)
+
+                            if oldlun.status.state == 'online': 
+                                lunobj.enabled = True 
+                            else: 
+                                lunobj.enabled = False
+                            lunobj.patch(poll=True, poll_timeout=120) 
+
+                            for lunmap in oldlun.lun_maps:
+                                print("Mapping LUN '"+lun.name+"' to igroup '"+lunmap.igroup.name+":"+str(lunmap.logical_unit_number)+"'")
+                                lunobj = NetAppLunMap()
+                                lunobj.lun = {'name': lun.name}
+                                lunobj.svm = {'name': targetsvm}
+                                lunobj.igroup = {'name': lunmap.igroup.name}
+                                lunobj.logical_unit_number = lunmap.logical_unit_number
+                                lunobj.logical_unit_number = 10
+                                lunobj.post(poll=True, poll_timeout=120)
+                                
+                                
+
+                        else:
+                            print("Origianl LUN '"+lun.name+"' was not mapped")
+
+        except Exception as err:
+                print("Error: could not restore LUN configuration existing luns:")
+                print(err)
+                raise InvalidVolumeParameterError("name") 
+
+        #map lun to provided igroup 
+        try:            
+            if igroup:
+                print("Mapping LUNs to igroup '"+igroup+"'")
+                newluns = NetAppLun.get_collection(**{"svm.name": targetsvm, "location.volume.name": new_volume_name})
+                for lun in newluns:
+                    print("Mapping LUN '"+lun.name+"'")
+                    lunobj = NetAppLunMap()
+                    lunobj.lun = {'name': lun.name}
+                    lunobj.svm = {'name': targetsvm}
+                    lunobj.igroup = {'name': igroup}
+                    lunobj.post(poll=True, poll_timeout=120)
+
+        except Exception as err:
+                print("Error: could not map LUNs:")
+                print(err)
+                raise InvalidVolumeParameterError("name")                           
+
         #if need to set old msid
         try:
             if oldmsid:
@@ -623,7 +714,7 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
                 output = response.http_response.json()
                 newmsid = output['records'][0]['msid']
                 #change msid 
-                print("Changin MSID of clone to orginal MSID:"+str(oldmsid)+" .")
+                print("Changing MSID of clone to original MSID:"+str(oldmsid)+" .")
                 response = NetAppCLI().execute("debug vserverdr restamp-volume-msid",body={"vserver":targetsvm,"volume":new_volume_name,"msid": str(newmsid),"new_msid": str(oldmsid)}, privilege_level='diagnostic',poll=True)
         except:
             print("Error: could not change new clone msid")
