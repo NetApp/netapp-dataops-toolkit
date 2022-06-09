@@ -1169,6 +1169,7 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
                     print("Error: ONTAP Rest API Error: ", err)                         
         
         if mountpoint:
+            #check if volume is mounted locally, and then unmount it.
             try:
                 unmount_volume(mountpoint=mountpoint, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
