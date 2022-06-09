@@ -1077,7 +1077,7 @@ def delete_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = No
         raise ConnectionTypeError()
 
 
-def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = None, delete_mirror: bool = False, 
+def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = None, mountpoint: str = None, delete_mirror: bool = False, 
                 delete_non_clone: bool = False, print_output: bool = False):
     # Retrieve config details from config file
     try:
@@ -1167,6 +1167,14 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
             except NetAppRestError as err:
                 if print_output:
                     print("Error: ONTAP Rest API Error: ", err)                         
+        
+        if mountpoint:
+            try:
+                unmount_volume(mountpoint=mountpoint, print_output=True)
+            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
+                if print_output:
+                    print("Error: Error mounting volume.")
+                raise
 
         try:
             if print_output:
