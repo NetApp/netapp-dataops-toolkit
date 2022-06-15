@@ -229,6 +229,7 @@ Optional Options/Arguments:
 \t-u, --cluster-name=\tnon default hosting cluster
 \t-v, --svm \t\tnon default SVM name
 \t-f, --force\t\tDo not prompt user to confirm operation.
+\t-p, --mountpoint\t\tMount point for the locally mounted volume.
 \t-m, --delete-mirror\tdelete/release snapmirror relationship prior to volume deletion 
 \t    --delete-non-clone\tEnable deletion of volume not created as clone by this tool
 \t-h, --help\t\tPrint help text.
@@ -1087,10 +1088,11 @@ if __name__ == '__main__':
             force = False
             deleteMirror = False 
             deleteNonClone = False
+            mountpoint = None
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hfv:n:u:m", ["cluster-name=","help", "svm=", "name=", "force", "delete-non-clone","delete-mirror"])
+                opts, args = getopt.getopt(sys.argv[3:], "hfv:n:u:m:p:", ["cluster-name=","help", "svm=", "name=", "force", "delete-non-clone", "delete-mirror", "mountpoint="])
             except Exception as err:                
                 print(err)
                 handleInvalidCommand(helpText=helpTextDeleteVolume, invalidOptArg=True)
@@ -1106,12 +1108,14 @@ if __name__ == '__main__':
                     clusterName = arg                     
                 elif opt in ("-n", "--name"):
                     volumeName = arg
+                elif opt in ("-p", "--mount-point"):
+                    mountpoint = arg                    
                 elif opt in ("-f", "--force"):
                     force = True
                 elif opt in ("-m", "--delete-mirror"):
                     deleteMirror = True                    
                 elif opt in ("--delete-non-clone"):
-                    deleteNonClone = True                    
+                    deleteNonClone = True
 
             # Check for required options
             if not volumeName:
