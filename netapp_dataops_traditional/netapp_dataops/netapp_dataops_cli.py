@@ -100,8 +100,8 @@ Required Options/Arguments:
 
 Optional Options/Arguments:
 \t-l, --cluster-name=\tnon default hosting cluster
-\t-c, --source-svm=\tnon default source svm name 
-\t-t, --target-svm=\tnon default target svm name 
+\t-c, --source-svm=\tnon default source svm name
+\t-t, --target-svm=\tnon default target svm name
 \t-g, --gid=\t\tUnix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
 \t-h, --help\t\tPrint help text.
 \t-m, --mountpoint=\tLocal mountpoint to mount new volume at after creating. If not specified, new volume will not be mounted locally. On Linux hosts - if specified, must be run as root.
@@ -114,8 +114,8 @@ Optional Options/Arguments:
 \t-e, --export-policy\texport policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
 \t-d, --snapshot-policy\tsnapshot-policy to attach to the volume, default snapshot policy will be used if not provided
 \t-s, --split\t\tstart clone split after creation
-\t-r, --refresh\t\tdelete existing clone if exists before creating a new one 
-\t-d, --svm-dr-unprotect\tdisable svm dr protection if svm-dr protection exists 
+\t-r, --refresh\t\tdelete existing clone if exists before creating a new one
+\t-d, --svm-dr-unprotect\tdisable svm dr protection if svm-dr protection exists
 
 Examples (basic usage):
 \tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset
@@ -147,9 +147,9 @@ Optional Options/Arguments:
 \t-s, --svm=\t\tNon defaul svm name.
 \t-h, --help\t\tPrint help text.
 \t-n, --name=\t\tName of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
-\t-r, --retention=\tSnapshot name will be suffixed by <timestamp> and excesive snapshots will be deleted. 
+\t-r, --retention=\tSnapshot name will be suffixed by <timestamp> and excesive snapshots will be deleted.
 \t                \tCan be count of snapshots when int (ex. 10) or days when retention is suffixed by d (ex. 10d)
-\t-l, --snapmirror-label=\tif provided snapmirror label will be configured on the created snapshot 
+\t-l, --snapmirror-label=\tif provided snapmirror label will be configured on the created snapshot
 
 Examples:
 \tnetapp_dataops_cli.py create snapshot --volume=project1 --name=snap1
@@ -169,7 +169,7 @@ Required Options/Arguments:
 
 Optional Options/Arguments:
 \t-l, --cluster-name=\tnon default hosting cluster
-\t-v, --svm=\t\tnon default svm name 
+\t-v, --svm=\t\tnon default svm name
 \t-a, --aggregate=\tAggregate to use when creating new volume (flexvol) or optional comma seperated aggrlist when specific aggregates are required for FG.
 \t-d, --snapshot-policy=\tSnapshot policy to apply for new volume.
 \t-e, --export-policy=\tNFS export policy to use when exporting new volume.
@@ -230,7 +230,7 @@ Optional Options/Arguments:
 \t-v, --svm \t\tnon default SVM name
 \t-f, --force\t\tDo not prompt user to confirm operation.
 \t-p, --mountpoint\t\tMount point for the locally mounted volume.
-\t-m, --delete-mirror\tdelete/release snapmirror relationship prior to volume deletion 
+\t-m, --delete-mirror\tdelete/release snapmirror relationship prior to volume deletion
 \t    --delete-non-clone\tEnable deletion of volume not created as clone by this tool
 \t-h, --help\t\tPrint help text.
 
@@ -494,7 +494,7 @@ Examples:
 helpTextCreateSnapMirrorRelationship = '''
 Command: create snapmirror-relationship
 
-create snapmirror relationship 
+create snapmirror relationship
 
 Required Options/Arguments:
 \t-n, --target-vol=\tName of target volume
@@ -502,7 +502,7 @@ Required Options/Arguments:
 \t-v, --source-vol=\tSource volume name
 
 Optional Options/Arguments:
-\t-u, --cluster-name=\tnon default hosting cluster 
+\t-u, --cluster-name=\tnon default hosting cluster
 \t-t, --target-svm=\tnon default target SVM
 \t-c, --schedule=\t\tnon default schedule (default is hourly)
 \t-p, --policy=\t\tnon default policy (default is MirrorAllSnapshots
@@ -510,7 +510,7 @@ Optional Options/Arguments:
 \t-h, --help\t\tPrint help text.
 
 Examples:
-\tnetapp_dataops_cli.py create snapmirror-relationship -u cluster1 -s svm1 -t svm2 -v vol1 -n vol1 -p MirrorAllSnapshots -c hourly 
+\tnetapp_dataops_cli.py create snapmirror-relationship -u cluster1 -s svm1 -t svm2 -v vol1 -n vol1 -p MirrorAllSnapshots -c hourly
 \tnetapp_dataops_cli.py create snapmirror-relationship -u cluster1 -s svm1 -t svm2 -v vol1 -n vol1 -p MirrorAllSnapshots -c hourly -a resync
 '''
 
@@ -740,9 +740,9 @@ if __name__ == '__main__':
         # Invoke desired action based on target
         if target in ("volume", "vol"):
             newVolumeName = None
-            clusterName = None 
-            sourceSVM = None 
-            targetSVM = None 
+            clusterName = None
+            sourceSVM = None
+            targetSVM = None
             sourceVolumeName = None
             sourceSnapshotName = None
             mountpoint = None
@@ -760,7 +760,7 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hl:c:t:n:v:s:m:u:g:j:xe:p:i:srd", ["help", "cluster-name=", "source-svm=","target-svm=","name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid=", "junction=", "readonly","export-hosts=","export-policy=","snapshot-policy=","split","refresh","svm-dr-unprotect"])
-            except Exception as err:                
+            except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
 
@@ -770,15 +770,15 @@ if __name__ == '__main__':
                     print(helpTextCloneVolume)
                     sys.exit(0)
                 elif opt in ("-l", "--cluster-name"):
-                    clusterName = arg                    
+                    clusterName = arg
                 elif opt in ("-n", "--name"):
                     newVolumeName = arg
                 elif opt in ("-c", "--source-svm"):
                     sourceSVM = arg
                 elif opt in ("-t", "--target-svm"):
-                    targetSVM = arg                    
+                    targetSVM = arg
                 elif opt in ("-v", "--source-volume"):
-                    sourceVolumeName = arg                   
+                    sourceVolumeName = arg
                 elif opt in ("-s", "--source-snapshot"):
                     sourceSnapshotName = arg
                 elif opt in ("-m", "--mountpoint"):
@@ -792,17 +792,17 @@ if __name__ == '__main__':
                 elif opt in ("-x", "--readonly"):
                     readonly = True
                 elif opt in ("-s", "--split"):
-                    split = True 
+                    split = True
                 elif opt in ("-r", "--refresh"):
-                    refresh = True   
+                    refresh = True
                 elif opt in ("-d", "--svm-dr-unprotect"):
-                    svmDrUnprotect = True                    
+                    svmDrUnprotect = True
                 elif opt in ("-p", "--export-policy"):
-                    exportPolicy = arg    
+                    exportPolicy = arg
                 elif opt in ("-i", "--snapshot-policy"):
-                    snapshotPolicy = arg                     
+                    snapshotPolicy = arg
                 elif opt in ("-e", "--export-hosts"):
-                    exportHosts = arg                                                        
+                    exportHosts = arg
 
             # Check for required options
             if not newVolumeName or not sourceVolumeName:
@@ -816,9 +816,9 @@ if __name__ == '__main__':
 
             # Clone volume
             try:
-                clone_volume(new_volume_name=newVolumeName, source_volume_name=sourceVolumeName, source_snapshot_name=sourceSnapshotName, 
-                             cluster_name=clusterName, source_svm=sourceSVM, target_svm=targetSVM, export_policy=exportPolicy, export_hosts=exportHosts, 
-                             snapshot_policy=snapshotPolicy, split=split, refresh=refresh, mountpoint=mountpoint, unix_uid=unixUID, unix_gid=unixGID, 
+                clone_volume(new_volume_name=newVolumeName, source_volume_name=sourceVolumeName, source_snapshot_name=sourceSnapshotName,
+                             cluster_name=clusterName, source_svm=sourceSVM, target_svm=targetSVM, export_policy=exportPolicy, export_hosts=exportHosts,
+                             snapshot_policy=snapshotPolicy, split=split, refresh=refresh, mountpoint=mountpoint, unix_uid=unixUID, unix_gid=unixGID,
                              junction=junction, svm_dr_unprotect=svmDrUnprotect, readonly=readonly, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError,
                     MountOperationError):
@@ -849,8 +849,8 @@ if __name__ == '__main__':
         if target in ("snapshot", "snap"):
             volumeName = None
             snapshotName = None
-            clusterName = None             
-            svmName = None 
+            clusterName = None
+            svmName = None
             retentionCount = 0
             retentionDays = False
             snapmirrorLabel = None
@@ -858,7 +858,7 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hn:v:s:r:u:l:", ["cluster-name=","help", "svm=", "name=", "volume=", "retention=", "snapmirror-label="])
-            except Exception as err:                
+            except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextCreateSnapshot, invalidOptArg=True)
 
@@ -870,20 +870,20 @@ if __name__ == '__main__':
                 elif opt in ("-n", "--name"):
                     snapshotName = arg
                 elif opt in ("-u", "--cluster-name"):
-                    clusterName = arg                     
+                    clusterName = arg
                 elif opt in ("-s", "--svm"):
                     svmName = arg
                 elif opt in ("-r", "--retention"):
-                    retentionCount = arg                                                           
+                    retentionCount = arg
                 elif opt in ("-v", "--volume"):
                     volumeName = arg
                 elif opt in ("-l", "--snapmirror-label"):
-                    snapmirrorLabel = arg                    
+                    snapmirrorLabel = arg
 
             # Check for required options
             if not volumeName:
                 handleInvalidCommand(helpText=helpTextCreateSnapshot, invalidOptArg=True)
-            
+
             if retentionCount:
                 if not retentionCount.isnumeric():
                     matchObj = re.match("^(\d+)d$",retentionCount)
@@ -900,8 +900,8 @@ if __name__ == '__main__':
                 sys.exit(1)
 
         elif target in ("volume", "vol"):
-            clusterName = None 
-            svmName = None 
+            clusterName = None
+            svmName = None
             volumeName = None
             volumeSize = None
             guaranteeSpace = False
@@ -915,13 +915,13 @@ if __name__ == '__main__':
             aggregate = None
             junction = None
             readonly = False
-            tieringPolicy = None 
+            tieringPolicy = None
             volDP = False
 
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "l:hv:t:n:s:rt:p:u:g:e:d:m:a:j:xu:y", ["cluster-name=","help", "svm=", "name=", "size=", "guarantee-space", "type=", "permissions=", "uid=", "gid=", "export-policy=", "snapshot-policy=", "mountpoint=", "aggregate=", "junction=" ,"readonly","tiering-policy=","dp"])
-            except Exception as err:                
+            except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextCreateVolume, invalidOptArg=True)
 
@@ -931,9 +931,9 @@ if __name__ == '__main__':
                     print(helpTextCreateVolume)
                     sys.exit(0)
                 elif opt in ("-v", "--svm"):
-                    svmName = arg                    
+                    svmName = arg
                 elif opt in ("-l", "--cluster-name"):
-                    clusterName = arg                     
+                    clusterName = arg
                 elif opt in ("-n", "--name"):
                     volumeName = arg
                 elif opt in ("-s", "--size"):
@@ -977,17 +977,17 @@ if __name__ == '__main__':
             # Create volume
             try:
                 create_volume(svm_name=svmName, volume_name=volumeName,  cluster_name=clusterName, volume_size=volumeSize, guarantee_space=guaranteeSpace, volume_type=volumeType, unix_permissions=unixPermissions, unix_uid=unixUID,
-                              unix_gid=unixGID, export_policy=exportPolicy, snapshot_policy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, junction=junction, readonly=readonly, 
+                              unix_gid=unixGID, export_policy=exportPolicy, snapshot_policy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, junction=junction, readonly=readonly,
                               print_output=True, tiering_policy=tieringPolicy, vol_dp=volDP)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
 
         elif target in ("snapmirror-relationship", "sm","snapmirror"):
-            clusterName = None 
-            sourceSvm = None 
-            targetSvm = None 
-            sourceVol = None 
-            targetVol = None             
+            clusterName = None
+            sourceSvm = None
+            targetSvm = None
+            sourceVol = None
+            targetVol = None
             policy = 'MirrorAllSnapshots'
             schedule = "hourly"
             volumeSize = None
@@ -1008,13 +1008,13 @@ if __name__ == '__main__':
                 elif opt in ("-t", "--target-svm"):
                     targetSvm = arg
                 elif opt in ("-n", "--target-vol"):
-                    targetVol = arg    
+                    targetVol = arg
                 elif opt in ("-s", "--source-svm"):
-                    sourceSvm = arg      
+                    sourceSvm = arg
                 elif opt in ("-v", "--source-vol"):
-                    sourceVol = arg                                                       
+                    sourceVol = arg
                 elif opt in ("-u", "--cluster-name"):
-                    clusterName = arg                     
+                    clusterName = arg
                 elif opt in ("-c", "--schedule"):
                     schedule = arg
                 elif opt in ("-p", "--policy"):
@@ -1029,9 +1029,9 @@ if __name__ == '__main__':
             if action not in [None,'resync','initialize']:
                 handleInvalidCommand(helpText=helpTextCreateSnapMirrorRelationship, invalidOptArg=True)
 
-            # Create snapmirror 
+            # Create snapmirror
             try:
-                create_snap_mirror_relationship(source_svm=sourceSvm, target_svm=targetSvm, source_vol=sourceVol, target_vol=targetVol, schedule=schedule, policy=policy, 
+                create_snap_mirror_relationship(source_svm=sourceSvm, target_svm=targetSvm, source_vol=sourceVol, target_vol=targetVol, schedule=schedule, policy=policy,
                         cluster_name=clusterName, action=action, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
@@ -1047,13 +1047,13 @@ if __name__ == '__main__':
         if target in ("snapshot", "snap"):
             volumeName = None
             snapshotName = None
-            svmName = None 
-            clusterName = None             
+            svmName = None
+            clusterName = None
 
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hn:v:s:u:", ["cluster-name=","help", "svm=", "name=", "volume="])
-            except Exception as err:                
+            except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextDeleteSnapshot, invalidOptArg=True)
 
@@ -1067,7 +1067,7 @@ if __name__ == '__main__':
                 elif opt in ("-s", "--svm"):
                     svmName = arg
                 elif opt in ("-u", "--cluster-name"):
-                    clusterName = arg                     
+                    clusterName = arg
                 elif opt in ("-v", "--volume"):
                     volumeName = arg
 
@@ -1084,16 +1084,16 @@ if __name__ == '__main__':
         elif target in ("volume", "vol"):
             volumeName = None
             svmName = None
-            clusterName = None             
+            clusterName = None
             force = False
-            deleteMirror = False 
+            deleteMirror = False
             deleteNonClone = False
             mountpoint = None
 
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hfv:n:u:m:p:", ["cluster-name=","help", "svm=", "name=", "force", "delete-non-clone", "delete-mirror", "mountpoint="])
-            except Exception as err:                
+            except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextDeleteVolume, invalidOptArg=True)
 
@@ -1105,15 +1105,15 @@ if __name__ == '__main__':
                 elif opt in ("-v", "--svm"):
                     svmName = arg
                 elif opt in ("-u", "--cluster-name"):
-                    clusterName = arg                     
+                    clusterName = arg
                 elif opt in ("-n", "--name"):
                     volumeName = arg
-                elif opt in ("-p", "--mount-point"):
-                    mountpoint = arg                    
+                elif opt in ("-p", "--mountpoint"):
+                    mountpoint = arg
                 elif opt in ("-f", "--force"):
                     force = True
                 elif opt in ("-m", "--delete-mirror"):
-                    deleteMirror = True                    
+                    deleteMirror = True
                 elif opt in ("--delete-non-clone"):
                     deleteNonClone = True
 
@@ -1167,14 +1167,14 @@ if __name__ == '__main__':
 
         elif target in ("snapmirror-relationship", "snapmirror", "snapmirror-relationships", "snapmirrors","sm"):
             svmName = None
-            clusterName = None             
+            clusterName = None
 
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hv:u:", ["cluster-name=","help", "svm="])
-            except Exception as err:                
+            except Exception as err:
                 print(err)
-                handleInvalidCommand(helpText=helpTextListSnapMirrorRelationships, invalidOptArg=True)   
+                handleInvalidCommand(helpText=helpTextListSnapMirrorRelationships, invalidOptArg=True)
 
             # Parse command line options
             for opt, arg in opts:
@@ -1184,9 +1184,9 @@ if __name__ == '__main__':
                 elif opt in ("-v", "--svm"):
                     svmName = arg
                 elif opt in ("-u", "--cluster-name"):
-                    clusterName = arg                     
+                    clusterName = arg
 
-            # List snapmirror relationships 
+            # List snapmirror relationships
             try:
                 list_snap_mirror_relationships(print_output=True, cluster_name=clusterName)
             except (InvalidConfigError, APIConnectionError):
@@ -1194,13 +1194,13 @@ if __name__ == '__main__':
 
         elif target in ("snapshot", "snap", "snapshots", "snaps"):
             volumeName = None
-            clusterName = None             
-            svmName = None 
+            clusterName = None
+            svmName = None
 
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hv:s:u:", ["cluster-name=","help", "volume=","svm="])
-            except Exception as err:                
+            except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextListSnapshots, invalidOptArg=True)
 
@@ -1214,7 +1214,7 @@ if __name__ == '__main__':
                 elif opt in ("-s", "--svm"):
                     svmName = arg
                 elif opt in ("-u", "--cluster-name"):
-                    clusterName = arg                     
+                    clusterName = arg
 
             # Check for required options
             if not volumeName:
@@ -1229,12 +1229,12 @@ if __name__ == '__main__':
         elif target in ("volume", "vol", "volumes", "vols"):
             includeSpaceUsageDetails = False
             svmName = None
-            clusterName = None        
+            clusterName = None
 
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hsv:u:", ["cluster-name=","help", "include-space-usage-details","svm="])
-            except Exception as err:                
+            except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextListVolumes, invalidOptArg=True)
 
@@ -1248,7 +1248,7 @@ if __name__ == '__main__':
                 elif opt in ("-s", "--include-space-usage-details"):
                     includeSpaceUsageDetails = True
                 elif opt in ("-u", "--cluster-name"):
-                    clusterName = arg                     
+                    clusterName = arg
 
             # List volumes
             try:
@@ -1266,19 +1266,19 @@ if __name__ == '__main__':
         # Invoke desired action based on target
         if target in ("volume", "vol"):
             volumeName = None
-            svmName = None 
-            clusterName = None 
-            lifName = None 
+            svmName = None
+            clusterName = None
+            lifName = None
             mountpoint = None
             mount_options = None
             readonly = False
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hv:n:l:m:u:o:x", ["cluster-name=","help", "lif=","svm=", "name=", "mountpoint=", "readonly", "options="])
-            except Exception as err:                
+            except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextMountVolume, invalidOptArg=True)
-                
+
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
@@ -1287,9 +1287,9 @@ if __name__ == '__main__':
                 elif opt in ("-v", "--svm"):
                     svmName = arg
                 elif opt in ("-u", "--cluster-name"):
-                    clusterName = arg                     
+                    clusterName = arg
                 elif opt in ("-l", "--lif"):
-                    lifName = arg                    
+                    lifName = arg
                 elif opt in ("-n", "--name"):
                     volumeName = arg
                 elif opt in ("-m", "--mountpoint"):
@@ -1318,7 +1318,7 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hm:", ["help", "mountpoint="])
-            except Exception as err:                
+            except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextUnmountVolume, invalidOptArg=True)
 
@@ -1354,7 +1354,7 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hn:p:", ["help", "name=", "paths="])
-            except Exception as err:                
+            except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextPrepopulateFlexCache, invalidOptArg=True)
 
@@ -1397,7 +1397,7 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hb:p:d:e:", ["help", "bucket=", "key-prefix=", "directory="])
-            except Exception as err:                
+            except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextPullFromS3Bucket, invalidOptArg=True)
 
@@ -1431,7 +1431,7 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hb:k:f:", ["help", "bucket=", "key=", "file=", "extra-args="])
-            except Exception as err:                
+            except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextPullFromS3Object, invalidOptArg=True)
 
@@ -1474,7 +1474,7 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hb:p:d:e:", ["help", "bucket=", "key-prefix=", "directory=", "extra-args="])
-            except Exception as err:                
+            except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextPushToS3Directory, invalidOptArg=True)
 
@@ -1511,7 +1511,7 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hb:k:f:e:", ["help", "bucket=", "key=", "file=", "extra-args="])
-            except Exception as err:                
+            except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextPushToS3File, invalidOptArg=True)
 
@@ -1550,14 +1550,14 @@ if __name__ == '__main__':
         if target in ("snapshot", "snap"):
             volumeName = None
             snapshotName = None
-            svmName = None 
-            clusterName = None             
+            svmName = None
+            clusterName = None
             force = False
 
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hs:n:v:fu:", ["cluster-name=","help", "svm=", "name=", "volume=", "force"])
-            except Exception as err:                
+            except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextRestoreSnapshot, invalidOptArg=True)
 
@@ -1569,9 +1569,9 @@ if __name__ == '__main__':
                 elif opt in ("-n", "--name"):
                     snapshotName = arg
                 elif opt in ("-s", "--svm"):
-                    svmName = arg           
+                    svmName = arg
                 elif opt in ("-u", "--cluster-name"):
-                    clusterName = arg                              
+                    clusterName = arg
                 elif opt in ("-v", "--volume"):
                     volumeName = arg
                 elif opt in ("-f", "--force"):
@@ -1614,7 +1614,7 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hi:w", ["help", "id=", "wait"])
-            except Exception as err:                
+            except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextSyncCloudSyncRelationship, invalidOptArg=True)
 
@@ -1641,14 +1641,14 @@ if __name__ == '__main__':
         elif target in ("snapmirror-relationship", "snapmirror"):
             uuid = None
             volumeName = None
-            svmName = None 
-            clusterName = None               
+            svmName = None
+            clusterName = None
             waitUntilComplete = False
 
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hi:wn:u:v:", ["help", "cluster-name=","svm=","name=","uuid=", "wait"])
-            except Exception as err:                
+            except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextSyncSnapMirrorRelationship, invalidOptArg=True)
 
@@ -1658,11 +1658,11 @@ if __name__ == '__main__':
                     print(helpTextSyncSnapMirrorRelationship)
                     sys.exit(0)
                 elif opt in ("-v", "--svm"):
-                    svmName = arg           
+                    svmName = arg
                 elif opt in ("-u", "--cluster-name"):
-                    clusterName = arg                              
+                    clusterName = arg
                 elif opt in ("-n", "--name"):
-                    volumeName = arg                    
+                    volumeName = arg
                 elif opt in ("-i", "--uuid"):
                     uuid = arg
                 elif opt in ("-w", "--wait"):
