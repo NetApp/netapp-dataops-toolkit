@@ -262,6 +262,7 @@ The following options/arguments are optional:
     -v, --svm=              Non default SVM name
     -f, --force             Do not prompt user to confirm operation.
     -m, --delete-mirror     Delete/release snapmirror relationship prior to volume deletion
+    -p, --mountpoint        Mount point where volume is locally mounted. If specified volume will be unmounted (optional).
         --delete-non-clone  Enable deletion of volume not created as clone by this tool
     -h, --help              Print help text.
 
@@ -1090,7 +1091,8 @@ def delete_volume(
     volume_name: str,                # Name of volume (required).
     print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
     cluster_name: str = None,        # Non default cluster name, same credentials as the default credentials should be used 
-    svm_name: str = None,            # Non default svm name, same credentials as the default credentials should be used 
+    svm_name: str = None,            # Non default svm name, same credentials as the default credentials should be used
+    mountpoint: str = None,          # Mount point where volume is locally mounted. If specified volume will be unmounted (optional).
     delete_mirror: bool = False,     # release snapmirror on source volume/delete snapmirror relation on destination volume
     delete_non_clone: bool = False,  # Enable deletion of non clone volume (extra step not to incedently delete important volume)
     print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
