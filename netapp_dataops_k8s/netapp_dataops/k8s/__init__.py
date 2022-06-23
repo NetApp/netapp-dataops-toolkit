@@ -24,7 +24,7 @@ from kubernetes.client.models.v1_object_meta import V1ObjectMeta
 from kubernetes.client.rest import ApiException
 from tabulate import tabulate
 import pandas as pd
-import astraSDK
+#import astraSDK
 
 
 # Using this decorator in lieu of using a dependency to manage deprecation
@@ -748,7 +748,7 @@ def clone_volume(new_pvc_name: str, source_pvc_name: str, source_snapshot_name: 
 def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str = None, storage_class: str = None,
                        load_balancer_service: bool = False, namespace: str = "default",
                        workspace_password: str = None, workspace_image: str = "nvcr.io/nvidia/tensorflow:22.05-tf2-py3",
-                       request_cpu: str = None, request_memory: str = None, request_nvidia_gpu: str = None, register_with_astra: bool = False,
+                       request_cpu: str = None, request_memory: str = None, request_nvidia_gpu: str = None, allocate_resource: str = None, register_with_astra: bool = False,
                        print_output: bool = False, pvc_already_exists: bool = False, labels: dict = None) -> str:
     # Retrieve kubeconfig
     try:
@@ -764,7 +764,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
 
     # Step 0 - Set password
     if not workspace_password:
-        print("Seting workspace password (this password will be required in order to access the workspace)...")
+        print("Setting workspace password (this password will be required in order to access the workspace)...")
         hashedPassword = jupyter_auth.passwd()
     else :
         hashedPassword = jupyter_auth.passwd(workspace_password)
@@ -964,6 +964,11 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
     if request_nvidia_gpu:
         deployment.spec.template.spec.containers[0].resources["requests"]["nvidia.com/gpu"] = request_nvidia_gpu
         deployment.spec.template.spec.containers[0].resources["limits"]["nvidia.com/gpu"] = request_nvidia_gpu
+    if allocate_resource:
+        allocate = (allocate_resource.partition('='))[0]
+        allocate_limit = allocate_resource.split("=",1)[1]
+        deployment.spec.template.spec.containers[0].resources["requests"][allocate] = allocate_limit
+        deployment.spec.template.spec.containers[0].resources["limits"][allocate] = allocate_limit
 
     # Create deployment
     if print_output:
@@ -1007,7 +1012,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
     return url
 
 def create_triton_server(server_name: str, model_pvc_name: str, load_balancer_service: bool = False, namespace: str = "default",
-                       server_image: str = "nvcr.io/nvidia/tritonserver:21.11-py3", request_cpu: str = None, request_memory: str = None, request_nvidia_gpu: str = None,
+                       server_image: str = "nvcr.io/nvidia/tritonserver:21.11-py3", request_cpu: str = None, request_memory: str = None, request_nvidia_gpu: str = None, allocate_resource: str = None,
                        print_output: bool = False, pvc_already_exists: bool = False, labels: dict = None) -> str:
     # Retrieve kubeconfig
     try:
@@ -1196,6 +1201,11 @@ def create_triton_server(server_name: str, model_pvc_name: str, load_balancer_se
     if request_nvidia_gpu:
         deployment.spec.template.spec.containers[0].resources["requests"]["nvidia.com/gpu"] = request_nvidia_gpu
         deployment.spec.template.spec.containers[0].resources["limits"]["nvidia.com/gpu"] = request_nvidia_gpu
+    if allocate_resource:
+        allocate = (allocate_resource.partition('='))[0]
+        allocate_limit = allocate_resource.split("=",1)[1]
+        deployment.spec.template.spec.containers[0].resources["requests"][allocate] = allocate_limit
+        deployment.spec.template.spec.containers[0].resources["limits"][allocate] = allocate_limit
 
     # Create deployment
     if print_output:
@@ -1813,7 +1823,7 @@ def list_triton_servers(namespace: str = "default", print_output: bool = False) 
             workspaceDict["HTTP Endpoint"] = "unavailable"
             workspaceDict["gRPC Endpoint"] = "unavailable"
             workspaceDict["Metrics Endpoint"] = "unavailable"
-            
+
         except APIConnectionError as err:
             if print_output:
                 print("Error: Kubernetes API Error: ", err)
@@ -2256,3 +2266,4 @@ def restoreJupyterLabSnapshot(snapshotName: str = None, namespace: str = "defaul
 @deprecated
 def restoreVolumeSnapshot(snapshotName: str, namespace: str = "default", printOutput: bool = False, pvcLabels: dict = {"created-by": "ntap-dsutil", "created-by-operation": "restore-volume-snapshot"}) :
     restore_volume_snapshot(snapshot_name=snapshotName, namespace=namespace, print_output=printOutput, pvc_labels=pvcLabels)
+
