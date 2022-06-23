@@ -2,7 +2,7 @@
 """NetApp DataOps Toolkit for Kubernetes Script Interface."""
 from netapp_dataops import k8s
 from netapp_dataops.k8s import (
-    backup_jupyter_lab_with_astra,
+#    backup_jupyter_lab_with_astra,
     clone_volume,
     create_volume_snapshot,
     create_volume,
@@ -20,8 +20,8 @@ from netapp_dataops.k8s import (
     list_jupyter_lab_snapshots,
     list_volumes,
     list_triton_servers,
-    register_jupyter_lab_with_astra,
-    restore_jupyter_lab_snapshot,
+    #register_jupyter_lab_with_astra,
+    #restore_jupyter_lab_snapshot,
     restore_volume_snapshot,
     APIConnectionError,
     AstraAppNotManagedError,
@@ -1047,12 +1047,13 @@ if __name__ == '__main__':
             register_with_astra = False
             load_balancer_service = False
             mount_pvc = None
+            allocate_resource = None
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hw:s:n:c:i:g:m:p:abv:",
+                opts, args = getopt.getopt(sys.argv[3:], "hw:s:n:c:i:g:m:p:abv:r:",
                                            ["help", "workspace-name=", "size=", "namespace=", "storage-class=",
-                                            "image=", "nvidia-gpu=", "memory=", "cpu=", "register-with-astra", "load-balancer", "mount-pvc="])
+                                            "image=", "nvidia-gpu=", "memory=", "cpu=", "register-with-astra", "load-balancer", "mount-pvc=", "allocate-resource="])
             except:
                 handleInvalidCommand(helpText=helpTextCreateJupyterLab, invalidOptArg=True)
 
@@ -1083,6 +1084,8 @@ if __name__ == '__main__':
                     load_balancer_service = True
                 elif opt in ("-v", "--mount-pvc"):
                     mount_pvc = arg
+                elif opt in ("-r", "--allocate-resource"):
+                    allocate_resource = arg
 
             # Check for required options
             if not workspaceName or not workspaceSize:
@@ -1092,7 +1095,7 @@ if __name__ == '__main__':
             try:
                 create_jupyter_lab(workspace_name=workspaceName, workspace_size=workspaceSize, storage_class=storageClass,
                                    load_balancer_service=load_balancer_service, namespace=namespace, workspace_image=workspaceImage, request_cpu=requestCpu, mount_pvc=mount_pvc,
-                                   request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu, register_with_astra=register_with_astra, print_output=True)
+                                   request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu, register_with_astra=register_with_astra, allocate_resource=allocate_resource, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1106,11 +1109,12 @@ if __name__ == '__main__':
             requestMemory = None
             requestCpu = None
             load_balancer_service = False
+            allocate_resource = None
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hs:v:n:i:g:m:p:b",
-                                           ["help", "server-name=", "model-repo-pvc-name=", "namespace=", "image=", "nvidia-gpu=", "memory=", "cpu=", "load-balancer"])
+                opts, args = getopt.getopt(sys.argv[3:], "hs:v:n:i:g:m:p:br:",
+                                           ["help", "server-name=", "model-repo-pvc-name=", "namespace=", "image=", "nvidia-gpu=", "memory=", "cpu=", "load-balancer", "allocate-resource="])
             except:
                 handleInvalidCommand(helpText=helpTextDeployTritonServer, invalidOptArg=True)
 
@@ -1135,6 +1139,8 @@ if __name__ == '__main__':
                     model_pvc_name = arg
                 elif opt in ("-b", "--load-balancer"):
                     load_balancer_service = True
+                elif opt in ("-r", "--allocate-resource"):
+                    allocate_resource = arg
 
 
             # Check for required options
@@ -1145,7 +1151,7 @@ if __name__ == '__main__':
             try:
                 create_triton_server(server_name=server_name,  model_pvc_name= model_pvc_name,
                                    load_balancer_service=load_balancer_service, namespace=namespace, server_image=server_image, request_cpu=requestCpu,
-                                   request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu,
+                                   request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu, allocate_resource=allocate_resource,
                                    print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
@@ -2350,3 +2356,4 @@ if __name__ == '__main__':
 
     else:
         handleInvalidCommand()
+
