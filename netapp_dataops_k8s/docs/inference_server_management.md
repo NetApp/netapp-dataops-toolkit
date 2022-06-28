@@ -212,7 +212,7 @@ APIConnectionError              # The Kubernetes API returned an error.
 
 <a name="lib-list-triton"></a>
 
-#### List All NVIDIA Triton Server instance
+#### List All NVIDIA Triton Server instances
 
 The NetApp DataOps Toolkit can be used to retrieve a list of all existing NVIDIA Triton Server instances in a specific namespace within a Kubernetes cluster as part of any Python program or workflow.
 
