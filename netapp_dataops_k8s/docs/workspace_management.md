@@ -639,11 +639,12 @@ def create_jupyter_lab(
     load_balancer_service: bool = False,                                # Option to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
     namespace: str = "default",                                         # Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
     workspace_password: str = None,                                     # Workspace password (this password will be required in order to access the workspace). If not specified, you will be prompted to enter a password via the console.
-    workspace_image: str = "nvcr.io/nvidia/tensorflow:22.05-tf2-py3",    # Container image to use when creating workspace. If not specified, "nvcr.io/nvidia/tensorflow:22.05-tf2-py3" will be used.
+    workspace_image: str = "nvcr.io/nvidia/tensorflow:22.05-tf2-py3",   # Container image to use when creating workspace. If not specified, "nvcr.io/nvidia/tensorflow:22.05-tf2-py3" will be used.
     request_cpu: str = None,                                            # Number of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
     request_memory: str = None,                                         # Amount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
     request_nvidia_gpu: str = None,                                     # Number of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
     register_with_astra: bool = False,                                  # Register new workspace with Astra Control (requires Astra Control).
+    allocate_resource: str = None,                                      # Option to specify custom resource allocations. If not specified, no custom resources will be specified.    
     print_output: bool = False                                          # Denotes whether or not to print messages to the console during execution.
 ) -> str :
 ```
