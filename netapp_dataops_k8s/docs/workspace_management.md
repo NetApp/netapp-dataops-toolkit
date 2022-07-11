@@ -183,6 +183,7 @@ The following options/arguments are optional:
     -b, --load-balancer         Option to choose a LoadBalancer service instead of using NodePort service. If not specified, NodePort service will be utilized.
     -a, --register-with-astra   Register new workspace with Astra Control (requires Astra Control).
     -v, --mount-pvc         	Option to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: -v/--mount-pvc=existing_pvc_name:mount_point. If not specified, no additional PVC will be attached.
+    -r, --allocate-resource=    Option to specify custom resource allocations. If not specified, no custom resources will be allocated.
 ```
 
 ##### Example Usage
