@@ -24,7 +24,7 @@ from kubernetes.client.models.v1_object_meta import V1ObjectMeta
 from kubernetes.client.rest import ApiException
 from tabulate import tabulate
 import pandas as pd
-#import astraSDK
+import astraSDK
 
 
 # Using this decorator in lieu of using a dependency to manage deprecation
