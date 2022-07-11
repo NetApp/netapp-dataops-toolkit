@@ -2,7 +2,7 @@
 """NetApp DataOps Toolkit for Kubernetes Script Interface."""
 from netapp_dataops import k8s
 from netapp_dataops.k8s import (
-#    backup_jupyter_lab_with_astra,
+    backup_jupyter_lab_with_astra,
     clone_volume,
     create_volume_snapshot,
     create_volume,
@@ -20,8 +20,8 @@ from netapp_dataops.k8s import (
     list_jupyter_lab_snapshots,
     list_volumes,
     list_triton_servers,
-    #register_jupyter_lab_with_astra,
-    #restore_jupyter_lab_snapshot,
+    register_jupyter_lab_with_astra,
+    restore_jupyter_lab_snapshot,
     restore_volume_snapshot,
     APIConnectionError,
     AstraAppNotManagedError,
@@ -212,6 +212,7 @@ Optional Options/Arguments:
 \t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
 \t-a, --register-with-astra\tRegister new workspace with Astra Control (requires Astra Control).
 \t-v, --mount-pvc\t\t\tOption to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: -v/--mount-pvc=existing_pvc_name:mount_point. If not specified, no additional PVC will be attached.
+\t-r, --allocate-resource=\t\t\Option to specify custom resource allocations.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py create jupyterlab --workspace-name=mike --size=10Gi --nvidia-gpu=2
@@ -235,6 +236,7 @@ Optional Options/Arguments:
 \t-n, --namespace=\t\tKubernetes namespace to create new instance in. If not specified, instance will be created in namespace "default".
 \t-p, --cpu=\t\t\tNumber of CPUs to reserve for Triton instance. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
 \t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
+\t-r, --allocate-resource\t\t\Option to specify custom resource allocations.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py create triton-server --server-name=Test --model-repo-pvc-name=model-pvc
