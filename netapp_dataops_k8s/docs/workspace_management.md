@@ -183,7 +183,7 @@ The following options/arguments are optional:
     -b, --load-balancer         Option to choose a LoadBalancer service instead of using NodePort service. If not specified, NodePort service will be utilized.
     -a, --register-with-astra   Register new workspace with Astra Control (requires Astra Control).
     -v, --mount-pvc         	Option to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: -v/--mount-pvc=existing_pvc_name:mount_point. If not specified, no additional PVC will be attached.
-    -r, --allocate-resource=    Option to specify custom resource allocations. If not specified, no custom resources will be allocated.
+    -r, --allocate-resource=    Option to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
 ```
 
 ##### Example Usage
@@ -644,7 +644,7 @@ def create_jupyter_lab(
     request_memory: str = None,                                         # Amount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
     request_nvidia_gpu: str = None,                                     # Number of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
     register_with_astra: bool = False,                                  # Register new workspace with Astra Control (requires Astra Control).
-    allocate_resource: str = None,                                      # Option to specify custom resource allocations. If not specified, no custom resources will be specified.    
+    allocate_resource: str = None,                                      # Option to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.    
     print_output: bool = False                                          # Denotes whether or not to print messages to the console during execution.
 ) -> str :
 ```
