@@ -587,7 +587,7 @@ class CAConfigMap:
 def clone_jupyter_lab(new_workspace_name: str, source_workspace_name: str, source_snapshot_name: str = None,
                       load_balancer_service: bool = False, new_workspace_password: str = None, volume_snapshot_class: str = "csi-snapclass",
                       namespace: str = "default", request_cpu: str = None, request_memory: str = None,
-                      request_nvidia_gpu: str = None, print_output: bool = False):
+                      request_nvidia_gpu: str = None, allocate_resource: str = None, print_output: bool = False):
     # Determine source PVC details
     if source_snapshot_name:
         sourcePvcName, workspaceSize = _retrieve_source_volume_details_for_volume_snapshot(snapshotName=source_snapshot_name,
@@ -628,7 +628,7 @@ def clone_jupyter_lab(new_workspace_name: str, source_workspace_name: str, sourc
     print()
     url = create_jupyter_lab(workspace_name=new_workspace_name, workspace_size=workspaceSize, namespace=namespace,
                        workspace_password=new_workspace_password, workspace_image=sourceWorkspaceImage, request_cpu=request_cpu,
-                       load_balancer_service=load_balancer_service, request_memory=request_memory, request_nvidia_gpu=request_nvidia_gpu, print_output=print_output,
+                       load_balancer_service=load_balancer_service, request_memory=request_memory, request_nvidia_gpu=request_nvidia_gpu, allocate_resource=allocate_resource, print_output=print_output,
                        pvc_already_exists=True, labels=labels)
 
     if print_output:
