@@ -129,6 +129,7 @@ Optional Options/Arguments:
 \t-p, --cpu=\t\t\tNumber of CPUs to reserve for new JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
 \t-s, --source-snapshot-name=\tName of Kubernetes VolumeSnapshot to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
 \t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
+\t-r, --allocate-resource\t\tOption to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment1 --source-workspace-name=project1 --nvidia-gpu=1
@@ -212,7 +213,7 @@ Optional Options/Arguments:
 \t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
 \t-a, --register-with-astra\tRegister new workspace with Astra Control (requires Astra Control).
 \t-v, --mount-pvc\t\t\tOption to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: -v/--mount-pvc=existing_pvc_name:mount_point. If not specified, no additional PVC will be attached.
-\t-r, --allocate-resource=\t\t\Option to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated. 
+\t-r, --allocate-resource=\t\t\Option to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py create jupyterlab --workspace-name=mike --size=10Gi --nvidia-gpu=2
@@ -236,7 +237,7 @@ Optional Options/Arguments:
 \t-n, --namespace=\t\tKubernetes namespace to create new instance in. If not specified, instance will be created in namespace "default".
 \t-p, --cpu=\t\t\tNumber of CPUs to reserve for Triton instance. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
 \t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
-\t-r, --allocate-resource\t\tOption to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated. 
+\t-r, --allocate-resource\t\tOption to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py create triton-server --server-name=Test --model-repo-pvc-name=model-pvc
@@ -856,13 +857,14 @@ if __name__ == '__main__':
             requestMemory = None
             requestCpu = None
             load_balancer_service= False
+            allocate_resource = None
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hw:c:n:s:j:g:m:p:b",
+                opts, args = getopt.getopt(sys.argv[3:], "hw:c:n:s:j:g:m:p:br:",
                                            ["help", "new-workspace-name=", "volume-snapshot-class=", "namespace=",
                                             "source-snapshot-name=", "source-workspace-name=", "nvidia-gpu=", "memory=",
-                                            "cpu=", "load-balancer"])
+                                            "cpu=", "load-balancer", "allocate-resource="])
             except:
                 handleInvalidCommand(helpText=helpTextCloneJupyterLab, invalidOptArg=True)
 
@@ -889,6 +891,8 @@ if __name__ == '__main__':
                     requestCpu = arg
                 elif opt in ("-b", "--load-balancer"):
                     load_balancer_service = True
+                elif opt in ("-r", "--allocate-resource"):
+                    allocate_resource = arg
 
             # Check for required options
             if not newWorkspaceName or (not sourceSnapshotName and not sourceWorkspaceName):
@@ -903,7 +907,7 @@ if __name__ == '__main__':
                 clone_jupyter_lab(new_workspace_name=newWorkspaceName, source_workspace_name=sourceWorkspaceName, load_balancer_service=load_balancer_service,
                                   source_snapshot_name=sourceSnapshotName, volume_snapshot_class=volumeSnapshotClass,
                                   namespace=namespace, request_cpu=requestCpu, request_memory=requestMemory,
-                                  request_nvidia_gpu=requestNvidiaGpu, print_output=True)
+                                  request_nvidia_gpu=requestNvidiaGpu, allocate_resource=allocate_resource, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
