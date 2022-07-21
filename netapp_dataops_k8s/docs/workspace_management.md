@@ -52,6 +52,7 @@ The following options/arguments are optional:
     -p, --cpu=                      Number of CPUs to reserve for new JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
     -s, --source-snapshot-name=     Name of Kubernetes VolumeSnapshot to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
     -b, --load-balancer             Option to choose a LoadBalancer service instead of using NodePort service. If not specified, NodePort service will be utilized.
+    -r, --allocate-resource=        Option to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
 ```
 
 ##### Example Usage
@@ -567,6 +568,7 @@ def clone_jupyter_lab(
     request_cpu: str = None,                          # Number of CPUs to reserve for new JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
     request_memory: str = None,                       # Amount of memory to reserve for newe JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
     request_nvidia_gpu: str = None,                   # Number of NVIDIA GPUs to allocate to new JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
+    allocate_resource: str = None,                    # Option to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
     print_output: bool = False                        # Denotes whether or not to print messages to the console during execution.
 ) :
 ```
