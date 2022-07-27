@@ -129,7 +129,7 @@ Optional Options/Arguments:
 \t-p, --cpu=\t\t\tNumber of CPUs to reserve for new JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
 \t-s, --source-snapshot-name=\tName of Kubernetes VolumeSnapshot to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
 \t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
-\t-r, --allocate-resource\t\tOption to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
+\t-r, --allocate-resource=\tOption to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment1 --source-workspace-name=project1 --nvidia-gpu=1
@@ -212,8 +212,8 @@ Optional Options/Arguments:
 \t-p, --cpu=\t\t\tNumber of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
 \t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
 \t-a, --register-with-astra\tRegister new workspace with Astra Control (requires Astra Control).
-\t-v, --mount-pvc\t\t\tOption to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: -v/--mount-pvc=existing_pvc_name:mount_point. If not specified, no additional PVC will be attached.
-\t-r, --allocate-resource=\t\t\Option to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
+\t-v, --mount-pvc=\t\tOption to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: -v/--mount-pvc=existing_pvc_name:mount_point. If not specified, no additional PVC will be attached.
+\t-r, --allocate-resource=\tOption to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py create jupyterlab --workspace-name=mike --size=10Gi --nvidia-gpu=2
@@ -237,7 +237,7 @@ Optional Options/Arguments:
 \t-n, --namespace=\t\tKubernetes namespace to create new instance in. If not specified, instance will be created in namespace "default".
 \t-p, --cpu=\t\t\tNumber of CPUs to reserve for Triton instance. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
 \t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
-\t-r, --allocate-resource\t\tOption to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
+\t-r, --allocate-resource=\tOption to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py create triton-server --server-name=Test --model-repo-pvc-name=model-pvc
