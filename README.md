@@ -6,7 +6,7 @@ The NetApp DataOps Toolkit is a Python-based tool that simplifies the management
 - Rapidly provision new NVIDIA Triton Inference Server instances that are backed by enterprise-class NetApp storage.
 - Near-instaneously clone high-capacity JupyterLab workspaces in order to enable experimentation or rapid iteration.
 - Near-instaneously save snapshots of high-capacity JupyterLab workspaces for backup and/or traceability/baselining.
-- Near-instaneously provision, clone, and snapshot scale-out data volumes.
+- Near-instaneously provision, clone, and snapshot high-capacity, high-performance data volumes.
 
 ## Getting Started
 
