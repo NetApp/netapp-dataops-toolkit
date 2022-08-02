@@ -4,7 +4,7 @@ This module provides the public functions available to be imported directly
 by applications using the import method of utilizing the toolkit.
 """
 
-__version__ = "2.4.0beta1"
+__version__ = "2.4.0"
 
 import base64
 from datetime import datetime
