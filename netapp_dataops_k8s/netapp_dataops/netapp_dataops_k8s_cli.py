@@ -26,6 +26,7 @@ from netapp_dataops.k8s import (
     APIConnectionError,
     AstraAppNotManagedError,
     AstraClusterDoesNotExistError,
+    AstraAppDoesNotExistError,
     CAConfigMap,
     InvalidConfigError
 )
@@ -787,10 +788,10 @@ if __name__ == '__main__':
             if not workspace_name or not backup_name:
                 handleInvalidCommand(helpText=helpTextBackupJupyterLab, invalidOptArg=True)
 
-            # Register JupyterLab workspace
+            # Back up JupyterLab workspace
             try:
                 backup_jupyter_lab_with_astra(workspace_name=workspace_name, backup_name=backup_name, namespace=namespace, print_output=True)
-            except (InvalidConfigError, APIConnectionError):
+            except (InvalidConfigError, APIConnectionError, AstraAppNotManagedError):
                 sys.exit(1)
 
         else:
@@ -2225,7 +2226,7 @@ if __name__ == '__main__':
             # Register JupyterLab workspace
             try:
                 register_jupyter_lab_with_astra(workspace_name=workspaceName, namespace=namespace, print_output=True)
-            except (InvalidConfigError, APIConnectionError):
+            except (InvalidConfigError, APIConnectionError, AstraAppDoesNotExistError):
                 sys.exit(1)
 
         else:

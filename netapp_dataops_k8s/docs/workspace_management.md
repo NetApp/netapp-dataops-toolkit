@@ -858,6 +858,7 @@ If an error is encountered, the function will raise an exception of one of the f
 ```py
 InvalidConfigError              # kubeconfig or AstraSDK config file is missing or is invalid.
 APIConnectionError              # The Kubernetes or Astra Control API returned an error.
+AstraAppDoesNotExistError       # App does not exist in Astra. Are you sure that the workspace name is correct?
 ```
 
 <a name="lib-backup-jupyterlab"></a>
@@ -890,4 +891,5 @@ If an error is encountered, the function will raise an exception of one of the f
 ```py
 InvalidConfigError              # kubeconfig or AstraSDK config file is missing or is invalid.
 APIConnectionError              # The Kubernetes or Astra Control API returned an error.
+AstraAppNotManagedError         # JupyterLab workspace has not been registered with Astra Control.
 ```

@@ -63,6 +63,11 @@ class AstraClusterDoesNotExistError(Exception):
     pass
 
 
+class AstraAppDoesNotExistError(Exception):
+    '''Error that will be raised when an app doesn't exist within Astra Control'''
+    pass
+
+
 class ServiceUnavailableError(Exception):
     '''Error that will be raised when a service is not available'''
     pass
@@ -511,7 +516,7 @@ def _wait_for_triton_dev_deployment(server_name: str, namespace: str = "default"
         sleep(5)
 
 
-def _retrieve_astra_app_id_for_jupyter_lab(astra_apps: dict, workspace_name: str) -> str :
+def _retrieve_astra_app_id_for_jupyter_lab(astra_apps: dict, workspace_name: str, include_full_app_details: bool = False) -> str :
     # Get Astra K8s cluster name
     try :
         astra_k8s_cluster_name = _get_astra_k8s_cluster_name()
@@ -519,12 +524,26 @@ def _retrieve_astra_app_id_for_jupyter_lab(astra_apps: dict, workspace_name: str
         raise InvalidConfigError()
 
     # Parse Astra Apps
-    for app_id,app_details in astra_apps.items() :
-        workspace_app_label = _get_jupyter_lab_labels(workspaceName=workspace_name)["app"]
-        if (app_details[0] == workspace_app_label) and (app_details[1] == astra_k8s_cluster_name) :
-            return app_id
+    for app_details in astra_apps["items"] :
+        # Check cluster name
+        if app_details["clusterName"] != astra_k8s_cluster_name :
+            pass
 
-    return ""
+        # Get app label for workspace
+        workspace_app_label = _get_jupyter_lab_labels(workspaceName=workspace_name)["app"]
+
+        # See if app label matches
+        for app_labels in app_details["appLabels"] :
+            if (app_labels["name"] == "app") and (app_labels["value"] == workspace_app_label) :
+                if include_full_app_details :
+                    return app_details["id"], app_details
+                else :
+                    return app_details["id"]
+
+    if include_full_app_details :
+        return "", None
+    else :
+        return ""
 
 
 #
@@ -648,7 +667,7 @@ def clone_jupyter_lab_to_new_namespace(source_workspace_name: str, new_namespace
 
     # Determine Astra App ID for source workspace
     try :
-        source_astra_app_id = _retrieve_astra_app_id_for_jupyter_lab(astra_apps=astra_apps, workspace_name=source_workspace_name)
+        source_astra_app_id, source_astra_app_details = _retrieve_astra_app_id_for_jupyter_lab(astra_apps=astra_apps, workspace_name=source_workspace_name, include_full_app_details=True)
     except InvalidConfigError :
         if print_output :
             _print_astra_k8s_cluster_name_error()
@@ -663,7 +682,7 @@ def clone_jupyter_lab_to_new_namespace(source_workspace_name: str, new_namespace
         raise AstraAppNotManagedError(error_message)
 
     # Determine Astra cluster ID for source workspace
-    source_astra_cluster_id = astra_apps[source_astra_app_id][2]
+    source_astra_cluster_id = source_astra_app_details["clusterID"]
 
     # Determine Astra cluster ID for "clone-to" cluster
     if clone_to_cluster_name :
@@ -675,9 +694,9 @@ def clone_jupyter_lab_to_new_namespace(source_workspace_name: str, new_namespace
                 print("Error: Astra Control API Error: ", err)
             raise APIConnectionError(err)
 
-        for cluster_id,cluster_info in astra_clusters.items() :
-            if cluster_info[0] == clone_to_cluster_name :
-                clone_to_cluster_id = cluster_id
+        for cluster_info in astra_clusters["items"] :
+            if cluster_info["name"] == clone_to_cluster_name :
+                clone_to_cluster_id = cluster_info["id"]
 
         if not clone_to_cluster_id :
             error_message = "Cluster '" + clone_to_cluster_name + "' does not exist in Astra Control."
@@ -2018,16 +2037,22 @@ def register_jupyter_lab_with_astra(workspace_name: str, namespace: str = "defau
 
     # Determine Astra App ID for workspace
     try :
-        astra_app_id = _retrieve_astra_app_id_for_jupyter_lab(astra_apps=astra_apps_unmanaged, workspace_name=workspace_name)
+        astra_app_id, astra_app_details = _retrieve_astra_app_id_for_jupyter_lab(astra_apps=astra_apps_unmanaged, workspace_name=workspace_name, include_full_app_details=True)
     except InvalidConfigError :
         if print_output :
             _print_astra_k8s_cluster_name_error()
         raise InvalidConfigError()
 
-    # Wait until app has a status of "running" in Astraa
+    # Fail if app doesn't exist in Astra
+    if not astra_app_details :
+        if print_output :
+            print("Error: App does not exist in Astra. Are you sure that the workspace name is correct?")
+        raise AstraAppDoesNotExistError()
+
+    # Wait until app has a status of "running" in Astra
     while True :
         try :
-            if astra_apps_unmanaged[astra_app_id][4] == "running" :
+            if astra_app_details["state"] == "running" :
                 break
         except KeyError :
             pass
@@ -2039,6 +2064,7 @@ def register_jupyter_lab_with_astra(workspace_name: str, namespace: str = "defau
         # Retrieve list of unmanaged Astra apps again
         try :
             astra_apps_unmanaged = astraSDK.getApps().main(discovered=True, namespace=namespace)
+            astra_app_id, astra_app_details = _retrieve_astra_app_id_for_jupyter_lab(astra_apps=astra_apps_unmanaged, workspace_name=workspace_name, include_full_app_details=True)
         except Exception as err :
             if print_output:
                 print("Error: Astra Control API Error: ", err)
