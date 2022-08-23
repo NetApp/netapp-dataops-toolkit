@@ -1076,7 +1076,7 @@ def delete_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = No
         raise ConnectionTypeError()
 
 
-def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = None, mountpoint: str = None, delete_mirror: bool = False,
+def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = None, mountpoint: str = None, check_local_mounts: bool = False, delete_mirror: bool = False,
                 delete_non_clone: bool = False, print_output: bool = False):
     # Retrieve config details from config file
     try:
@@ -1109,7 +1109,6 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
             if print_output :
                 _print_invalid_config_error()
             raise InvalidConfigError()
-
         try:
             # Retrieve volume
             volume = NetAppVolume.find(name=volume_name, svm=svm)
@@ -1167,13 +1166,29 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
                 if print_output:
                     print("Error: ONTAP Rest API Error: ", err)
 
-        if mountpoint:
-            #check if volume is mounted locally, and then unmount it.
-            try:
-                unmount_volume(mountpoint=mountpoint, print_output=True)
-            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
-                if print_output:
-                    print("Error: Error mounting volume.")
+        #Unmount volume and skip if not sudo or not locally mounted
+        try:
+            volumes = list_volumes(check_local_mounts=True)
+            for localmount in volumes:
+                if localmount["Volume Name"] == volume_name:
+                    x=localmount["Local Mountpoint"]
+                    if x == "":
+                        break
+                    elif x != "":
+                        if os.getuid() != 0:
+                            print("You need to have root privileges to run unmount command.")
+                            break
+                        else:
+                            try:
+                                unmount = unmount_volume(mountpoint=x)
+                            except (InvalidConfigError, APIConnectionError):
+                                if print_output:
+                                    print("Error: unmounting volume.")
+                                    raise MountOperationError(err)
+
+        except (InvalidConfigError, APIConnectionError):
+           if print_output:
+                print("Error: volume retrieval failed for unmount operation.")
                 raise
 
         try:
@@ -1419,7 +1434,7 @@ def list_snapshots(volume_name: str, cluster_name: str = None, svm_name: str = N
         raise ConnectionTypeError()
 
 
-def list_volumes(check_local_mounts: bool = False, include_space_usage_details: bool = False, print_output: bool = False, cluster_name: str = None, svm_name: str = None) -> list():
+def list_volumes(check_local_mounts: bool = False, include_space_usage_details: bool = False, print_output: bool = False, cluster_name: str = None, svm_name: str = None, localMountpoint: str = None) -> list():
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -1546,10 +1561,11 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
                     volumeDict["NFS Mount Target"] = nfsMountTarget
                     if check_local_mounts:
                         localMountpoint = ""
-                        for mount in mounts.split("\n") :
-                            mountDetails = mount.split(" ")
-                            if mountDetails[0] == nfsMountTarget :
-                                localMountpoint = mountDetails[2]
+                        if nfsMountTarget:
+                            for mount in mounts.split("\n") :
+                                mountDetails = mount.split(" ")
+                                if mountDetails[0].strip() == nfsMountTarget.strip() :
+                                    localMountpoint = mountDetails[2]
                         volumeDict["Local Mountpoint"] = localMountpoint
                     volumeDict["FlexCache"] = flexcache
                     volumeDict["Clone"] = clone
@@ -1565,18 +1581,17 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
 
+
         # Print list of volumes
         if print_output:
             # Convert volumes array to Pandas DataFrame
             volumesDF = pd.DataFrame.from_dict(volumesList, dtype="string")
             print(tabulate(volumesDF, showindex=False, headers=volumesDF.columns))
-
         return volumesList
-
     else:
         raise ConnectionTypeError()
 
-def mount_volume(volume_name: str, mountpoint: str, cluster_name: str = None, svm_name: str = None, mount_options: str = None, lif_name: str = None, is_sudo: bool = False, readonly: bool = False, print_output: bool = False):
+def mount_volume(volume_name: str, mountpoint: str, cluster_name: str = None, svm_name: str = None, mount_options: str = None, lif_name: str = None, readonly: bool = False, print_output: bool = False):
     nfsMountTarget = None
 
     svm = None
