@@ -262,7 +262,6 @@ The following options/arguments are optional:
     -v, --svm=              Non default SVM name
     -f, --force             Do not prompt user to confirm operation.
     -m, --delete-mirror     Delete/release snapmirror relationship prior to volume deletion
-    -p, --mountpoint        Mount point where volume is locally mounted. If specified volume will be unmounted (optional).
         --delete-non-clone  Enable deletion of volume not created as clone by this tool
     -h, --help              Print help text.
 
@@ -365,7 +364,7 @@ The following options/arguments are optional:
     -l, --lif=              non default lif (nfs server ip/name)
     -h, --help              Print help text.
     -x, --readonly          Mount volume locally as read-only.
-    -o, --options           Enables users to specify custom NFS mount options.
+    -o, --options           Specify custom NFS mount options.
 ```
 
 ##### Example Usage
@@ -1092,7 +1091,6 @@ def delete_volume(
     print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
     cluster_name: str = None,        # Non default cluster name, same credentials as the default credentials should be used 
     svm_name: str = None,            # Non default svm name, same credentials as the default credentials should be used
-    mountpoint: str = None,          # Mount point where volume is locally mounted. If specified volume will be unmounted (optional).
     delete_mirror: bool = False,     # release snapmirror on source volume/delete snapmirror relation on destination volume
     delete_non_clone: bool = False,  # Enable deletion of non clone volume (extra step not to incedently delete important volume)
     print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
@@ -1175,7 +1173,7 @@ def mount_volume(
     cluster_name: str = None,   # Non default cluster name, same credentials as the default credentials should be used 
     svm_name: str = None,       # Non default svm name, same credentials as the default credentials should be used    
     mountpoint: str,            # Local mountpoint to mount volume at (required).
-    mount_options: str = None   # Enables users to specify custom NFS mount options. 
+    mount_options: str = None   # Specify custom NFS mount options. 
     readonly: bool = False,     # Mount volume locally as "read-only." If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
     print_output: bool = False  # Denotes whether or not to print messages to the console during execution.
 ) :
