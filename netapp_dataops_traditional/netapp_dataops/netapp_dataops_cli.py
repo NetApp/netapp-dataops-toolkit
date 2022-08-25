@@ -229,7 +229,6 @@ Optional Options/Arguments:
 \t-u, --cluster-name=\tnon default hosting cluster
 \t-v, --svm \t\tnon default SVM name
 \t-f, --force\t\tDo not prompt user to confirm operation.
-\t-p, --mountpoint\t\tMount point for the locally mounted volume.
 \t-m, --delete-mirror\tdelete/release snapmirror relationship prior to volume deletion
 \t    --delete-non-clone\tEnable deletion of volume not created as clone by this tool
 \t-h, --help\t\tPrint help text.
@@ -322,7 +321,7 @@ Optional Options/Arguments:
 \t-l, --lif \t\tnon default lif (nfs server ip/name)
 \t-h, --help\t\tPrint help text.
 \t-x, --readonly\t\tMount volume locally as read-only.
-\t-o, --options\t\tEnables users to Specify custom NFS mount options.
+\t-o, --options\t\tSpecify custom NFS mount options.
 
 Examples:
 \tsudo -E netapp_dataops_cli.py mount volume --name=project1 --mountpoint=/mnt/project1
