@@ -1088,11 +1088,10 @@ if __name__ == '__main__':
             force = False
             deleteMirror = False
             deleteNonClone = False
-            mountpoint = None
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hfv:n:u:m:p:", ["cluster-name=","help", "svm=", "name=", "force", "delete-non-clone", "delete-mirror", "mountpoint="])
+                opts, args = getopt.getopt(sys.argv[3:], "hfv:n:u:m", ["cluster-name=","help", "svm=", "name=", "force", "delete-non-clone", "delete-mirror"])
             except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextDeleteVolume, invalidOptArg=True)
@@ -1108,8 +1107,6 @@ if __name__ == '__main__':
                     clusterName = arg
                 elif opt in ("-n", "--name"):
                     volumeName = arg
-                elif opt in ("-p", "--mountpoint"):
-                    mountpoint = arg
                 elif opt in ("-f", "--force"):
                     force = True
                 elif opt in ("-m", "--delete-mirror"):
