@@ -52,6 +52,7 @@ class CloudSyncSyncOperationError(Exception) :
     """Error that will be raised when a Cloud Sync sync operation fails"""
     pass
 
+  
 class ConnectionTypeError(Exception):
     """Error that will be raised when an invalid connection type is given"""
     pass
@@ -521,7 +522,6 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
                 junction=junction
             else:
                 junction = "/"+new_volume_name
-
 
             # Construct dict representing new volume
             newVolumeDict = {
@@ -1044,7 +1044,6 @@ def delete_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = No
             # Retrieve snapshot
             snapshot = NetAppSnapshot.find(volume.uuid, name=snapshot_name)
 
-
             if not snapshot:
                 if print_output:
                     print("Error: Invalid snapshot name.")
@@ -1076,7 +1075,7 @@ def delete_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = No
         raise ConnectionTypeError()
 
 
-def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = None, mountpoint: str = None, check_local_mounts: bool = False, delete_mirror: bool = False,
+def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = None, check_local_mounts: bool = False, delete_mirror: bool = False,
                 delete_non_clone: bool = False, print_output: bool = False):
     # Retrieve config details from config file
     try:
@@ -1434,7 +1433,7 @@ def list_snapshots(volume_name: str, cluster_name: str = None, svm_name: str = N
         raise ConnectionTypeError()
 
 
-def list_volumes(check_local_mounts: bool = False, include_space_usage_details: bool = False, print_output: bool = False, cluster_name: str = None, svm_name: str = None, localMountpoint: str = None) -> list():
+def list_volumes(check_local_mounts: bool = False, include_space_usage_details: bool = False, print_output: bool = False, cluster_name: str = None, svm_name: str = None) -> list():
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
