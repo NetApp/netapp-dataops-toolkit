@@ -1075,7 +1075,7 @@ def delete_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = No
         raise ConnectionTypeError()
 
 
-def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = None, check_local_mounts: bool = False, delete_mirror: bool = False,
+def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = None, delete_mirror: bool = False,
                 delete_non_clone: bool = False, print_output: bool = False):
     # Retrieve config details from config file
     try:
@@ -1108,6 +1108,7 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
             if print_output :
                 _print_invalid_config_error()
             raise InvalidConfigError()
+            
         try:
             # Retrieve volume
             volume = NetAppVolume.find(name=volume_name, svm=svm)
@@ -1580,13 +1581,14 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
 
-
         # Print list of volumes
         if print_output:
             # Convert volumes array to Pandas DataFrame
             volumesDF = pd.DataFrame.from_dict(volumesList, dtype="string")
             print(tabulate(volumesDF, showindex=False, headers=volumesDF.columns))
+            
         return volumesList
+      
     else:
         raise ConnectionTypeError()
 
@@ -1681,7 +1683,7 @@ def mount_volume(volume_name: str, mountpoint: str, cluster_name: str = None, sv
                 continue
             mount_cmd_opts_str = mount_cmd_opts_str + item + ","
         mount_cmd_opts_str = mount_cmd_opts_str[:-1]
-        exit("You need to have root privileges to run mount command."
+        sys.exit("You need to have root privileges to run mount command."
             "\nTo mount the volume run the following command as root:"
             "\n"+ "mount -o "+ mount_cmd_opts_str+ " " + nfsMountTarget + " " + mountpoint)
 
