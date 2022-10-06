@@ -1176,7 +1176,7 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
                         break
                     elif x != "":
                         if os.getuid() != 0:
-                            print("You need to have root privileges to run unmount command.")
+                            print("Warning: Volume was not unmounted. You need to have root privileges to run unmount command.")
                             break
                         else:
                             try:
@@ -1683,9 +1683,14 @@ def mount_volume(volume_name: str, mountpoint: str, cluster_name: str = None, sv
                 continue
             mount_cmd_opts_str = mount_cmd_opts_str + item + ","
         mount_cmd_opts_str = mount_cmd_opts_str[:-1]
-        sys.exit("You need to have root privileges to run mount command."
-            "\nTo mount the volume run the following command as root:"
-            "\n"+ "mount -o "+ mount_cmd_opts_str+ " " + nfsMountTarget + " " + mountpoint)
+        if mount_cmd_opts_str:
+            sys.exit("You need to have root privileges to run mount command."
+                "\nTo mount the volume run the following command as root:"
+                "\n"+ "mount -o "+ mount_cmd_opts_str+ " " + nfsMountTarget + " " + mountpoint)
+        else:
+            sys.exit("You need to have root privileges to run mount command."
+                "\nTo mount the volume run the following command as root:"
+                "\n"+ "mount"+ mount_cmd_opts_str+ " " + nfsMountTarget + " " + mountpoint)
 
     try:
         subprocess.check_call(mount_cmd)
