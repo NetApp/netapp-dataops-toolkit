@@ -1268,6 +1268,14 @@ if __name__ == '__main__':
             mountpoint = None
             mount_options = None
             readonly = False
+ 
+            # Check for required options
+            if not volumeName:
+                handleInvalidCommand(helpText=helpTextMountVolume, invalidOptArg=True)
+ 
+            if not mountpoint:
+                handleInvalidCommand(helpText=helpTextMountVolume, invalidOptArg=True)
+            
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hv:n:l:m:u:o:x", ["cluster-name=","help", "lif=","svm=", "name=", "mountpoint=", "readonly", "options="])
