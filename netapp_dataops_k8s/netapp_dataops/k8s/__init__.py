@@ -4,7 +4,7 @@ This module provides the public functions available to be imported directly
 by applications using the import method of utilizing the toolkit.
 """
 
-__version__ = "2.3.0"
+__version__ = "2.4.0"
 
 import base64
 from datetime import datetime
@@ -60,6 +60,11 @@ class AstraAppNotManagedError(Exception):
 
 class AstraClusterDoesNotExistError(Exception):
     '''Error that will be raised when a cluster doesn't exist within Astra Control'''
+    pass
+
+
+class AstraAppDoesNotExistError(Exception):
+    '''Error that will be raised when an app doesn't exist within Astra Control'''
     pass
 
 
@@ -511,7 +516,7 @@ def _wait_for_triton_dev_deployment(server_name: str, namespace: str = "default"
         sleep(5)
 
 
-def _retrieve_astra_app_id_for_jupyter_lab(astra_apps: dict, workspace_name: str) -> str :
+def _retrieve_astra_app_id_for_jupyter_lab(astra_apps: dict, workspace_name: str, include_full_app_details: bool = False) -> str :
     # Get Astra K8s cluster name
     try :
         astra_k8s_cluster_name = _get_astra_k8s_cluster_name()
@@ -519,12 +524,26 @@ def _retrieve_astra_app_id_for_jupyter_lab(astra_apps: dict, workspace_name: str
         raise InvalidConfigError()
 
     # Parse Astra Apps
-    for app_id,app_details in astra_apps.items() :
-        workspace_app_label = _get_jupyter_lab_labels(workspaceName=workspace_name)["app"]
-        if (app_details[0] == workspace_app_label) and (app_details[1] == astra_k8s_cluster_name) :
-            return app_id
+    for app_details in astra_apps["items"] :
+        # Check cluster name
+        if app_details["clusterName"] != astra_k8s_cluster_name :
+            pass
 
-    return ""
+        # Get app label for workspace
+        workspace_app_label = _get_jupyter_lab_labels(workspaceName=workspace_name)["app"]
+
+        # See if app label matches
+        for app_labels in app_details["appLabels"] :
+            if (app_labels["name"] == "app") and (app_labels["value"] == workspace_app_label) :
+                if include_full_app_details :
+                    return app_details["id"], app_details
+                else :
+                    return app_details["id"]
+
+    if include_full_app_details :
+        return "", None
+    else :
+        return ""
 
 
 #
@@ -587,7 +606,7 @@ class CAConfigMap:
 def clone_jupyter_lab(new_workspace_name: str, source_workspace_name: str, source_snapshot_name: str = None,
                       load_balancer_service: bool = False, new_workspace_password: str = None, volume_snapshot_class: str = "csi-snapclass",
                       namespace: str = "default", request_cpu: str = None, request_memory: str = None,
-                      request_nvidia_gpu: str = None, print_output: bool = False):
+                      request_nvidia_gpu: str = None, allocate_resource: str = None, print_output: bool = False):
     # Determine source PVC details
     if source_snapshot_name:
         sourcePvcName, workspaceSize = _retrieve_source_volume_details_for_volume_snapshot(snapshotName=source_snapshot_name,
@@ -628,7 +647,7 @@ def clone_jupyter_lab(new_workspace_name: str, source_workspace_name: str, sourc
     print()
     url = create_jupyter_lab(workspace_name=new_workspace_name, workspace_size=workspaceSize, namespace=namespace,
                        workspace_password=new_workspace_password, workspace_image=sourceWorkspaceImage, request_cpu=request_cpu,
-                       load_balancer_service=load_balancer_service, request_memory=request_memory, request_nvidia_gpu=request_nvidia_gpu, print_output=print_output,
+                       load_balancer_service=load_balancer_service, request_memory=request_memory, request_nvidia_gpu=request_nvidia_gpu, allocate_resource=allocate_resource, print_output=print_output,
                        pvc_already_exists=True, labels=labels)
 
     if print_output:
@@ -648,7 +667,7 @@ def clone_jupyter_lab_to_new_namespace(source_workspace_name: str, new_namespace
 
     # Determine Astra App ID for source workspace
     try :
-        source_astra_app_id = _retrieve_astra_app_id_for_jupyter_lab(astra_apps=astra_apps, workspace_name=source_workspace_name)
+        source_astra_app_id, source_astra_app_details = _retrieve_astra_app_id_for_jupyter_lab(astra_apps=astra_apps, workspace_name=source_workspace_name, include_full_app_details=True)
     except InvalidConfigError :
         if print_output :
             _print_astra_k8s_cluster_name_error()
@@ -663,7 +682,7 @@ def clone_jupyter_lab_to_new_namespace(source_workspace_name: str, new_namespace
         raise AstraAppNotManagedError(error_message)
 
     # Determine Astra cluster ID for source workspace
-    source_astra_cluster_id = astra_apps[source_astra_app_id][2]
+    source_astra_cluster_id = source_astra_app_details["clusterID"]
 
     # Determine Astra cluster ID for "clone-to" cluster
     if clone_to_cluster_name :
@@ -675,9 +694,9 @@ def clone_jupyter_lab_to_new_namespace(source_workspace_name: str, new_namespace
                 print("Error: Astra Control API Error: ", err)
             raise APIConnectionError(err)
 
-        for cluster_id,cluster_info in astra_clusters.items() :
-            if cluster_info[0] == clone_to_cluster_name :
-                clone_to_cluster_id = cluster_id
+        for cluster_info in astra_clusters["items"] :
+            if cluster_info["name"] == clone_to_cluster_name :
+                clone_to_cluster_id = cluster_info["id"]
 
         if not clone_to_cluster_id :
             error_message = "Cluster '" + clone_to_cluster_name + "' does not exist in Astra Control."
@@ -747,8 +766,8 @@ def clone_volume(new_pvc_name: str, source_pvc_name: str, source_snapshot_name: 
 
 def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str = None, storage_class: str = None,
                        load_balancer_service: bool = False, namespace: str = "default",
-                       workspace_password: str = None, workspace_image: str = "jupyter/tensorflow-notebook",
-                       request_cpu: str = None, request_memory: str = None, request_nvidia_gpu: str = None, register_with_astra: bool = False,
+                       workspace_password: str = None, workspace_image: str = "nvcr.io/nvidia/tensorflow:22.05-tf2-py3",
+                       request_cpu: str = None, request_memory: str = None, request_nvidia_gpu: str = None, allocate_resource: str = None, register_with_astra: bool = False,
                        print_output: bool = False, pvc_already_exists: bool = False, labels: dict = None) -> str:
     # Retrieve kubeconfig
     try:
@@ -764,7 +783,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
 
     # Step 0 - Set password
     if not workspace_password:
-        print("Seting workspace password (this password will be required in order to access the workspace)...")
+        print("Setting workspace password (this password will be required in order to access the workspace)...")
         hashedPassword = jupyter_auth.passwd()
     else :
         hashedPassword = jupyter_auth.passwd(workspace_password)
@@ -872,6 +891,20 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
                             }
                         )
                     ],
+                    init_containers=[
+                        client.V1Container(
+                            name="init-jupyterlab",
+                            image=workspace_image,
+                            command=["/bin/bash", "-c"],
+                            args=["cp -au /workspace/. /vol/ || true"],
+                            volume_mounts=[
+                                client.V1VolumeMount(
+                                    name="workspace",
+                                    mount_path="/vol"
+                                )
+                            ]
+                        )
+                    ],
                     containers=[
                         client.V1Container(
                             name="jupyterlab",
@@ -890,15 +923,15 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
                                     value="yes"
                                 )
                             ],
-                            args=["start-notebook.sh", "--ServerApp.password=" + hashedPassword, "--ServerApp.ip='0.0.0.0'",
-                                  "--no-browser"],
+                            command=["jupyter", "lab", "--LabApp.password=" + hashedPassword, "--LabApp.ip='0.0.0.0'",
+                                  "--no-browser", "--notebook-dir=/workspace"],
                             ports=[
                                 client.V1ContainerPort(container_port=8888)
                             ],
                             volume_mounts=[
                                 client.V1VolumeMount(
                                     name="workspace",
-                                    mount_path="/home/jovyan"
+                                    mount_path="/workspace"
                                 )
                             ],
                             resources={
@@ -950,6 +983,11 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
     if request_nvidia_gpu:
         deployment.spec.template.spec.containers[0].resources["requests"]["nvidia.com/gpu"] = request_nvidia_gpu
         deployment.spec.template.spec.containers[0].resources["limits"]["nvidia.com/gpu"] = request_nvidia_gpu
+    if allocate_resource:
+        allocate = (allocate_resource.partition('='))[0]
+        allocate_limit = allocate_resource.split("=",1)[1]
+        deployment.spec.template.spec.containers[0].resources["requests"][allocate] = allocate_limit
+        deployment.spec.template.spec.containers[0].resources["limits"][allocate] = allocate_limit
 
     # Create deployment
     if print_output:
@@ -993,7 +1031,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
     return url
 
 def create_triton_server(server_name: str, model_pvc_name: str, load_balancer_service: bool = False, namespace: str = "default",
-                       server_image: str = "nvcr.io/nvidia/tritonserver:21.11-py3", request_cpu: str = None, request_memory: str = None, request_nvidia_gpu: str = None,
+                       server_image: str = "nvcr.io/nvidia/tritonserver:21.11-py3", request_cpu: str = None, request_memory: str = None, request_nvidia_gpu: str = None, allocate_resource: str = None,
                        print_output: bool = False, pvc_already_exists: bool = False, labels: dict = None) -> str:
     # Retrieve kubeconfig
     try:
@@ -1182,6 +1220,11 @@ def create_triton_server(server_name: str, model_pvc_name: str, load_balancer_se
     if request_nvidia_gpu:
         deployment.spec.template.spec.containers[0].resources["requests"]["nvidia.com/gpu"] = request_nvidia_gpu
         deployment.spec.template.spec.containers[0].resources["limits"]["nvidia.com/gpu"] = request_nvidia_gpu
+    if allocate_resource:
+        allocate = (allocate_resource.partition('='))[0]
+        allocate_limit = allocate_resource.split("=",1)[1]
+        deployment.spec.template.spec.containers[0].resources["requests"][allocate] = allocate_limit
+        deployment.spec.template.spec.containers[0].resources["limits"][allocate] = allocate_limit
 
     # Create deployment
     if print_output:
@@ -1799,7 +1842,7 @@ def list_triton_servers(namespace: str = "default", print_output: bool = False) 
             workspaceDict["HTTP Endpoint"] = "unavailable"
             workspaceDict["gRPC Endpoint"] = "unavailable"
             workspaceDict["Metrics Endpoint"] = "unavailable"
-            
+
         except APIConnectionError as err:
             if print_output:
                 print("Error: Kubernetes API Error: ", err)
@@ -1994,16 +2037,22 @@ def register_jupyter_lab_with_astra(workspace_name: str, namespace: str = "defau
 
     # Determine Astra App ID for workspace
     try :
-        astra_app_id = _retrieve_astra_app_id_for_jupyter_lab(astra_apps=astra_apps_unmanaged, workspace_name=workspace_name)
+        astra_app_id, astra_app_details = _retrieve_astra_app_id_for_jupyter_lab(astra_apps=astra_apps_unmanaged, workspace_name=workspace_name, include_full_app_details=True)
     except InvalidConfigError :
         if print_output :
             _print_astra_k8s_cluster_name_error()
         raise InvalidConfigError()
 
-    # Wait until app has a status of "running" in Astraa
+    # Fail if app doesn't exist in Astra
+    if not astra_app_details :
+        if print_output :
+            print("Error: App does not exist in Astra. Are you sure that the workspace name is correct?")
+        raise AstraAppDoesNotExistError()
+
+    # Wait until app has a status of "running" in Astra
     while True :
         try :
-            if astra_apps_unmanaged[astra_app_id][4] == "running" :
+            if astra_app_details["state"] == "running" :
                 break
         except KeyError :
             pass
@@ -2015,6 +2064,7 @@ def register_jupyter_lab_with_astra(workspace_name: str, namespace: str = "defau
         # Retrieve list of unmanaged Astra apps again
         try :
             astra_apps_unmanaged = astraSDK.getApps().main(discovered=True, namespace=namespace)
+            astra_app_id, astra_app_details = _retrieve_astra_app_id_for_jupyter_lab(astra_apps=astra_apps_unmanaged, workspace_name=workspace_name, include_full_app_details=True)
         except Exception as err :
             if print_output:
                 print("Error: Astra Control API Error: ", err)
@@ -2242,3 +2292,4 @@ def restoreJupyterLabSnapshot(snapshotName: str = None, namespace: str = "defaul
 @deprecated
 def restoreVolumeSnapshot(snapshotName: str, namespace: str = "default", printOutput: bool = False, pvcLabels: dict = {"created-by": "ntap-dsutil", "created-by-operation": "restore-volume-snapshot"}) :
     restore_volume_snapshot(snapshot_name=snapshotName, namespace=namespace, print_output=printOutput, pvc_labels=pvcLabels)
+

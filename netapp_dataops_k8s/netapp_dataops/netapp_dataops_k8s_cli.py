@@ -26,6 +26,7 @@ from netapp_dataops.k8s import (
     APIConnectionError,
     AstraAppNotManagedError,
     AstraClusterDoesNotExistError,
+    AstraAppDoesNotExistError,
     CAConfigMap,
     InvalidConfigError
 )
@@ -129,6 +130,7 @@ Optional Options/Arguments:
 \t-p, --cpu=\t\t\tNumber of CPUs to reserve for new JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
 \t-s, --source-snapshot-name=\tName of Kubernetes VolumeSnapshot to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
 \t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
+\t-r, --allocate-resource=\tOption to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment1 --source-workspace-name=project1 --nvidia-gpu=1
@@ -205,17 +207,18 @@ Optional Options/Arguments:
 \t-c, --storage-class=\t\tKubernetes StorageClass to use when provisioning backing volume for new workspace. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident or the BeeGFS CSI driver.
 \t-g, --nvidia-gpu=\t\tNumber of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
 \t-h, --help\t\t\tPrint help text.
-\t-i, --image=\t\t\tContainer image to use when creating workspace. If not specified, "jupyter/tensorflow-notebook" will be used.
+\t-i, --image=\t\t\tContainer image to use when creating workspace. If not specified, "nvcr.io/nvidia/tensorflow:22.05-tf2-py3" will be used.
 \t-m, --memory=\t\t\tAmount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
 \t-n, --namespace=\t\tKubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
 \t-p, --cpu=\t\t\tNumber of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
 \t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
 \t-a, --register-with-astra\tRegister new workspace with Astra Control (requires Astra Control).
-\t-v, --mount-pvc\t\t\tOption to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: -v/--mount-pvc=existing_pvc_name:mount_point. If not specified, no additional PVC will be attached.
+\t-v, --mount-pvc=\t\tOption to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: -v/--mount-pvc=existing_pvc_name:mount_point. If not specified, no additional PVC will be attached.
+\t-r, --allocate-resource=\tOption to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py create jupyterlab --workspace-name=mike --size=10Gi --nvidia-gpu=2
-\tnetapp_dataops_k8s_cli.py create jupyterlab -n dst-test -w dave -i jupyter/scipy-notebook:latest -s 2Ti -c ontap-flexgroup -g 1 -p 0.5 -m 1Gi -b
+\tnetapp_dataops_k8s_cli.py create jupyterlab -n dst-test -w dave -i nvcr.io/nvidia/pytorch:22.04-py3 -s 2Ti -c ontap-flexgroup -g 1 -p 0.5 -m 1Gi -b
 '''
 
 helpTextDeployTritonServer = '''
@@ -235,6 +238,7 @@ Optional Options/Arguments:
 \t-n, --namespace=\t\tKubernetes namespace to create new instance in. If not specified, instance will be created in namespace "default".
 \t-p, --cpu=\t\t\tNumber of CPUs to reserve for Triton instance. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
 \t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
+\t-r, --allocate-resource=\tOption to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py create triton-server --server-name=Test --model-repo-pvc-name=model-pvc
@@ -784,10 +788,10 @@ if __name__ == '__main__':
             if not workspace_name or not backup_name:
                 handleInvalidCommand(helpText=helpTextBackupJupyterLab, invalidOptArg=True)
 
-            # Register JupyterLab workspace
+            # Back up JupyterLab workspace
             try:
                 backup_jupyter_lab_with_astra(workspace_name=workspace_name, backup_name=backup_name, namespace=namespace, print_output=True)
-            except (InvalidConfigError, APIConnectionError):
+            except (InvalidConfigError, APIConnectionError, AstraAppNotManagedError):
                 sys.exit(1)
 
         else:
@@ -854,13 +858,14 @@ if __name__ == '__main__':
             requestMemory = None
             requestCpu = None
             load_balancer_service= False
+            allocate_resource = None
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hw:c:n:s:j:g:m:p:b",
+                opts, args = getopt.getopt(sys.argv[3:], "hw:c:n:s:j:g:m:p:br:",
                                            ["help", "new-workspace-name=", "volume-snapshot-class=", "namespace=",
                                             "source-snapshot-name=", "source-workspace-name=", "nvidia-gpu=", "memory=",
-                                            "cpu=", "load-balancer"])
+                                            "cpu=", "load-balancer", "allocate-resource="])
             except:
                 handleInvalidCommand(helpText=helpTextCloneJupyterLab, invalidOptArg=True)
 
@@ -887,6 +892,8 @@ if __name__ == '__main__':
                     requestCpu = arg
                 elif opt in ("-b", "--load-balancer"):
                     load_balancer_service = True
+                elif opt in ("-r", "--allocate-resource"):
+                    allocate_resource = arg
 
             # Check for required options
             if not newWorkspaceName or (not sourceSnapshotName and not sourceWorkspaceName):
@@ -901,7 +908,7 @@ if __name__ == '__main__':
                 clone_jupyter_lab(new_workspace_name=newWorkspaceName, source_workspace_name=sourceWorkspaceName, load_balancer_service=load_balancer_service,
                                   source_snapshot_name=sourceSnapshotName, volume_snapshot_class=volumeSnapshotClass,
                                   namespace=namespace, request_cpu=requestCpu, request_memory=requestMemory,
-                                  request_nvidia_gpu=requestNvidiaGpu, print_output=True)
+                                  request_nvidia_gpu=requestNvidiaGpu, allocate_resource=allocate_resource, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1040,19 +1047,20 @@ if __name__ == '__main__':
             workspaceSize = None
             namespace = "default"
             storageClass = None
-            workspaceImage = "jupyter/tensorflow-notebook"
+            workspaceImage = "nvcr.io/nvidia/tensorflow:22.05-tf2-py3"
             requestNvidiaGpu = None
             requestMemory = None
             requestCpu = None
             register_with_astra = False
             load_balancer_service = False
             mount_pvc = None
+            allocate_resource = None
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hw:s:n:c:i:g:m:p:abv:",
+                opts, args = getopt.getopt(sys.argv[3:], "hw:s:n:c:i:g:m:p:abv:r:",
                                            ["help", "workspace-name=", "size=", "namespace=", "storage-class=",
-                                            "image=", "nvidia-gpu=", "memory=", "cpu=", "register-with-astra", "load-balancer", "mount-pvc="])
+                                            "image=", "nvidia-gpu=", "memory=", "cpu=", "register-with-astra", "load-balancer", "mount-pvc=", "allocate-resource="])
             except:
                 handleInvalidCommand(helpText=helpTextCreateJupyterLab, invalidOptArg=True)
 
@@ -1083,6 +1091,8 @@ if __name__ == '__main__':
                     load_balancer_service = True
                 elif opt in ("-v", "--mount-pvc"):
                     mount_pvc = arg
+                elif opt in ("-r", "--allocate-resource"):
+                    allocate_resource = arg
 
             # Check for required options
             if not workspaceName or not workspaceSize:
@@ -1092,7 +1102,7 @@ if __name__ == '__main__':
             try:
                 create_jupyter_lab(workspace_name=workspaceName, workspace_size=workspaceSize, storage_class=storageClass,
                                    load_balancer_service=load_balancer_service, namespace=namespace, workspace_image=workspaceImage, request_cpu=requestCpu, mount_pvc=mount_pvc,
-                                   request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu, register_with_astra=register_with_astra, print_output=True)
+                                   request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu, register_with_astra=register_with_astra, allocate_resource=allocate_resource, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1106,11 +1116,12 @@ if __name__ == '__main__':
             requestMemory = None
             requestCpu = None
             load_balancer_service = False
+            allocate_resource = None
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hs:v:n:i:g:m:p:b",
-                                           ["help", "server-name=", "model-repo-pvc-name=", "namespace=", "image=", "nvidia-gpu=", "memory=", "cpu=", "load-balancer"])
+                opts, args = getopt.getopt(sys.argv[3:], "hs:v:n:i:g:m:p:br:",
+                                           ["help", "server-name=", "model-repo-pvc-name=", "namespace=", "image=", "nvidia-gpu=", "memory=", "cpu=", "load-balancer", "allocate-resource="])
             except:
                 handleInvalidCommand(helpText=helpTextDeployTritonServer, invalidOptArg=True)
 
@@ -1135,6 +1146,8 @@ if __name__ == '__main__':
                     model_pvc_name = arg
                 elif opt in ("-b", "--load-balancer"):
                     load_balancer_service = True
+                elif opt in ("-r", "--allocate-resource"):
+                    allocate_resource = arg
 
 
             # Check for required options
@@ -1145,7 +1158,7 @@ if __name__ == '__main__':
             try:
                 create_triton_server(server_name=server_name,  model_pvc_name= model_pvc_name,
                                    load_balancer_service=load_balancer_service, namespace=namespace, server_image=server_image, request_cpu=requestCpu,
-                                   request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu,
+                                   request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu, allocate_resource=allocate_resource,
                                    print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
@@ -2213,7 +2226,7 @@ if __name__ == '__main__':
             # Register JupyterLab workspace
             try:
                 register_jupyter_lab_with_astra(workspace_name=workspaceName, namespace=namespace, print_output=True)
-            except (InvalidConfigError, APIConnectionError):
+            except (InvalidConfigError, APIConnectionError, AstraAppDoesNotExistError):
                 sys.exit(1)
 
         else:
@@ -2350,3 +2363,4 @@ if __name__ == '__main__':
 
     else:
         handleInvalidCommand()
+

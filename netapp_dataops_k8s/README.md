@@ -14,15 +14,11 @@ The toolkit is currently compatible with Kubernetes versions 1.17 and above, and
 The toolkit is currently compatible with Trident versions 20.07 and above. Additionally, the toolkit is compatible with the following Trident backend types:
 
 - ontap-nas
-- aws-cvs
+- ontap-nas-flexgroup
 - gcp-cvs
 - azure-netapp-files
 
-The toolkit is also compatible with all versions of the BeeGFS CSI driver, though not all functionality is supported by BeeGFS.
-For details on supported BeeGFS CSI driver functionality refer to the following documentation.
-- [Volume Management Command Line Operations](docs/volume_management.md#command-line-functionality)
-- [Workspace Management Command Line Operations](docs/workspace_management.md#command-line-functionality)
-
+The toolkit is currently compatible with all versions of the BeeGFS CSI driver, though not all functionality is supported by BeeGFS. Operations that are not supported by BeeGFS are noted within the documentation.
 
 ## Installation
 
@@ -77,7 +73,7 @@ The NetApp DataOps Toolkit provides several extended capabilities that require [
 
 The toolkit uses the Astra Control Python SDK to interface with the Astra Control API. The Astra Control Python SDK is installed automatically when you install the NetApp DataOps Toolkit using pip.
 
-In order for the Astra Control Python SDK to be able to communicate with the Astra Control API, you must create a 'config.yaml' file containing your Astra Control API connection details. Refer to the [Astra Control Python SDK README](https://github.com/NetApp/netapp-astra-toolkits/tree/b478109b084ad387753d085219a8a8d3d399a4e6) for formatting details. Note that you do not need to follow the installation instructions outlined in the Astra Control Python SDK README; you only need to create the 'config.yaml' file. Once you have created the 'config.yaml' file, you must store it in one of the following locations:
+In order for the Astra Control Python SDK to be able to communicate with the Astra Control API, you must create a 'config.yaml' file containing your Astra Control API connection details. Refer to the [Astra Control Python SDK README](https://github.com/NetApp/netapp-astra-toolkits/tree/v2.1.3) for formatting details. Note that you do not need to follow the installation instructions outlined in the Astra Control Python SDK README; you only need to create the 'config.yaml' file. Once you have created the 'config.yaml' file, you must store it in one of the following locations:
 - ~/.config/astra-toolkits/
 - /etc/astra-toolkits/
 - The directory pointed to by the shell environment variable 'ASTRATOOLKITS_CONF'
