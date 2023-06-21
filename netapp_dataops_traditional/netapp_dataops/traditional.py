@@ -819,7 +819,7 @@ def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = 
 
 def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = False, cluster_name: str = None, svm_name: str = None,
                   volume_type: str = "flexvol", unix_permissions: str = "0777",
-                  unix_uid: str = "0", unix_gid: str = "0", export_policy: str = "default",
+                  unix_uid: str = "0", unix_gid: str = "0", export_policy: str = "default", snaplock_type: str = None,
                   snapshot_policy: str = None, aggregate: str = None, mountpoint: str = None, junction: str = None, readonly: bool = False,
                   print_output: bool = False, tiering_policy: str = None, vol_dp: bool = False):
     # Retrieve config details from config file
