@@ -911,6 +911,7 @@ if __name__ == '__main__':
             exportPolicy = None
             snapshotPolicy = None
             mountpoint = None
+            snaplock_type = None
             aggregate = None
             junction = None
             readonly = False
@@ -919,8 +920,8 @@ if __name__ == '__main__':
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "l:hv:t:n:s:rt:p:u:g:e:d:m:a:j:xu:y", ["cluster-name=","help", "svm=", "name=", "size=", "guarantee-space", "type=", "permissions=", "uid=", "gid=", "export-policy=", "snapshot-policy=", "mountpoint=", "aggregate=", "junction=" ,"readonly","tiering-policy=","dp"])
-            except Exception as err:                
+                opts, args = getopt.getopt(sys.argv[3:], "l:hv:t:n:s:rt:p:u:g:e:d:m:a:j:xu:yw:", ["cluster-name=","help", "svm=", "name=", "size=", "guarantee-space", "type=", "permissions=", "uid=", "gid=", "export-policy=", "snapshot-policy=", "mountpoint=", "aggregate=", "junction=" ,"readonly","tiering-policy=","dp","snaplock-type="])
+            except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextCreateVolume, invalidOptArg=True)
 
@@ -963,6 +964,8 @@ if __name__ == '__main__':
                     tieringPolicy = arg
                 elif opt in ("-y", "--dp"):
                     volDP = True
+                elif opt in ("-w", "--snaplock-type"):
+                  	snaplock_type = arg
 
             # Check for required options
             if not volumeName or not volumeSize:
@@ -976,8 +979,8 @@ if __name__ == '__main__':
             # Create volume
             try:
                 create_volume(svm_name=svmName, volume_name=volumeName,  cluster_name=clusterName, volume_size=volumeSize, guarantee_space=guaranteeSpace, volume_type=volumeType, unix_permissions=unixPermissions, unix_uid=unixUID,
-                              unix_gid=unixGID, export_policy=exportPolicy, snapshot_policy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, junction=junction, readonly=readonly, 
-                              print_output=True, tiering_policy=tieringPolicy, vol_dp=volDP)
+                              unix_gid=unixGID, export_policy=exportPolicy, snapshot_policy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, junction=junction, readonly=readonly,
+                              print_output=True, tiering_policy=tieringPolicy, vol_dp=volDP, snaplock_type = snaplock_type)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
 
