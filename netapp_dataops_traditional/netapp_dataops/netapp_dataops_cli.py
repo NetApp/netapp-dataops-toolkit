@@ -180,6 +180,7 @@ Optional Options/Arguments:
 \t-r, --guarantee-space\tGuarantee sufficient storage space for full capacity of the volume (i.e. do not use thin provisioning).
 \t-t, --type=\t\tVolume type to use when creating new volume (flexgroup/flexvol).
 \t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
+\t-w, --snaplock_type=\t\tSnaplock type to apply for new volume. (can be 'compliance','enterprise',None)
 \t-x, --readonly\t\tRead-only option for mounting volumes locally.
 \t-j, --junction\t\tSpecify a custom junction path for the volume to be exported at.
 \t-f, --tiering-policy\tSpecify tiering policy for fabric-pool enabled systems (default is 'none').
@@ -198,6 +199,7 @@ Examples (advanced usage):
 \tnetapp_dataops_cli.py create volume -n testvol -s 10GB -t flexvol -p 0755 -u 1000 -g 1000 -j /project1
 \tsudo -E netapp_dataops_cli.py create volume -n vol1 -s 5GB -t flexvol --export-policy=team1 -m /mnt/vol1
 \tnetapp_dataops_cli.py create vol -n test2 -s 10GB -t flexvol --snapshot-policy=default --tiering-policy=auto
+\tnetapp_dataops_cli.py create volume --name=project1 --size=100GB --snaplock-type=compliance
 '''
 helpTextDeleteSnapshot = '''
 Command: delete snapshot
