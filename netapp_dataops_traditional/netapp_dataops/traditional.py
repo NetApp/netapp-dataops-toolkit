@@ -913,7 +913,7 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
         # Create option to choose snaplock type
         if snaplock_type not in ['compliance', 'enterprise', None]:
             if print_output:
-                print("Error: Invalid snaplock volume type specified. Value must be either 'Compliance' or 'Enterprise'")
+                print("Error: Invalid snaplock volume type specified. Value must be either 'compliance' or 'enterprise'")
             raise InvalidVolumeParameterError("snaplockVolume")
             
         # Create option to choose junction path.
