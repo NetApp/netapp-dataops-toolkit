@@ -1060,6 +1060,7 @@ def create_volume:
     print_output: bool = False,      # Denotes whether or not to print messages to the console during execution.
     tiering_policy: str = None,      # For fabric pool enabled system tiering policy can be: none,auto,snapshot-only,all
     vol_dp: bool = False             # Create volume as type DP which can be used as snapmirror destination
+    snaplock_type: str = None,		 # Snaplock type to apply for new volume (ex. 'compliance' or 'enterprise')
 ```
 
 ##### Return Value
