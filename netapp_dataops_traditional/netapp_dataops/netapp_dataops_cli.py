@@ -180,7 +180,7 @@ Optional Options/Arguments:
 \t-r, --guarantee-space\tGuarantee sufficient storage space for full capacity of the volume (i.e. do not use thin provisioning).
 \t-t, --type=\t\tVolume type to use when creating new volume (flexgroup/flexvol).
 \t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
-\t-w, --snaplock_type=\tSnaplock type to apply for new volume. (can be 'compliance','enterprise',None)
+\t-w, --snaplock-type=\tSnaplock type to apply for new volume. (can be 'compliance','enterprise',None)
 \t-x, --readonly\t\tRead-only option for mounting volumes locally.
 \t-j, --junction\t\tSpecify a custom junction path for the volume to be exported at.
 \t-f, --tiering-policy\tSpecify tiering policy for fabric-pool enabled systems (default is 'none').
