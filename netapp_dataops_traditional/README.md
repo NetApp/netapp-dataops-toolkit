@@ -217,7 +217,7 @@ The following options/arguments are optional:
     -j, --junction          Specify a custom junction path for the volume to be exported at.
     -f, --tiering-policy    Specify tiering policy for fabric-pool enabled systems (default is 'none').
     -y, --dp                Create volume as DP volume (the volume will be used as snapmirror target)
-    -w, --snaplock_type		Specify snaplock type to use when creating new volume (compliance/enterprise).
+    -w, --snaplock_type	Specify snaplock type to use when creating new volume (compliance/enterprise).
 ```
 
 ##### Example Usage
