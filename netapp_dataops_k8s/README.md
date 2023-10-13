@@ -9,7 +9,7 @@ The NetApp DataOps Toolkit for Kubernetes supports Linux and macOS hosts.
 
 The toolkit must be used in conjunction with a Kubernetes cluster in order to be useful. Additionally, [Trident](https://netapp.io/persistent-storage-provisioner-for-kubernetes/), NetApp's dynamic storage orchestrator for Kubernetes, and/or the [BeeGFS CSI driver](https://github.com/NetApp/beegfs-csi-driver/) must be installed within the Kubernetes cluster. The toolkit simplifies performing of various data management tasks that are actually executed by a NetApp maintained CSI driver. In order to facilitate this, the toolkit communicates with the appropriate driver via the Kubernetes API.
 
-The toolkit is currently compatible with Kubernetes versions 1.17 and above, and OpenShift versions 4.4 and above.
+The toolkit is currently compatible with Kubernetes versions 1.20 and above, and OpenShift versions 4.7 and above.
 
 The toolkit is currently compatible with Trident versions 20.07 and above. Additionally, the toolkit is compatible with the following Trident backend types:
 

@@ -443,7 +443,7 @@ def _get_snapshot_api_group() -> str:
 
 
 def _get_snapshot_api_version() -> str:
-    return "v1beta1"
+    return "v1"
 
 
 def _wait_for_jupyter_lab_deployment_ready(workspaceName: str, namespace: str = "default", printOutput: bool = False):
