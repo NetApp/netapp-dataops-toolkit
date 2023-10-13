@@ -67,23 +67,6 @@ In the [Examples](Examples/) directory, you will find the following examples per
 
 Refer to the [Kubernetes documentation](https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/) for more information on accessing the Kubernetes API from within a pod.
 
-## Extended Functionality with Astra Control
-
-The NetApp DataOps Toolkit provides several extended capabilities that require [Astra Control](https://cloud.netapp.com/astra). Any operation that requires Astra Control is specifically noted within the documentation as requiring Astra Control. The prerequisites outlined in this section are required in order to perform any operation that requires Astra Control.
-
-The toolkit uses the Astra Control Python SDK to interface with the Astra Control API. The Astra Control Python SDK is installed automatically when you install the NetApp DataOps Toolkit using pip.
-
-In order for the Astra Control Python SDK to be able to communicate with the Astra Control API, you must create a 'config.yaml' file containing your Astra Control API connection details. Refer to the [Astra Control Python SDK README](https://github.com/NetApp/netapp-astra-toolkits/tree/v2.1.3) for formatting details. Note that you do not need to follow the installation instructions outlined in the Astra Control Python SDK README; you only need to create the 'config.yaml' file. Once you have created the 'config.yaml' file, you must store it in one of the following locations:
-- ~/.config/astra-toolkits/
-- /etc/astra-toolkits/
-- The directory pointed to by the shell environment variable 'ASTRATOOLKITS_CONF'
-
-Additionally, you must set the shell environment variable 'ASTRA_K8S_CLUSTER_NAME' to the name of your specific Kubernetes cluster in Astra Control.
-
-```sh
-export ASTRA_K8S_CLUSTER_NAME="<Kubernetes_cluster_name_in_Astra_Control"
-```
-
 ## Capabilities
 
 The NetApp DataOps Toolkit for Kubernetes provides the following capabilities.
