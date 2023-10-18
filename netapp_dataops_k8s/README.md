@@ -24,7 +24,7 @@ The toolkit is currently compatible with all versions of the BeeGFS CSI driver, 
 
 ### Prerequisites
 
-The NetApp DataOps Toolkit for Kubernetes requires that Python 3.8 or above be installed on the local host. Additionally, the toolkit requires that pip for Python3 be installed on the local host. For more details regarding pip, including installation instructions, refer to the [pip documentation](https://pip.pypa.io/en/stable/installing/).
+The NetApp DataOps Toolkit for Kubernetes requires that Python 3.8, 3.9, 3.10, or 3.11 be installed on the local host. Additionally, the toolkit requires that pip for Python3 be installed on the local host. For more details regarding pip, including installation instructions, refer to the [pip documentation](https://pip.pypa.io/en/stable/installing/).
 
 ### Installation Instructions
 
