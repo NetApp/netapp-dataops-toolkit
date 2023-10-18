@@ -19,7 +19,7 @@ def clone_volume(
     
     # Create a clone of the source volume
     name = "clone-volume"
-    image = "python:3"
+    image = "python:3.11"
     command = ["/bin/bash", "-c"]
     file_outputs = {"new_volume_pvc_name": "/new_volume_pvc_name.txt"}
     args = "\

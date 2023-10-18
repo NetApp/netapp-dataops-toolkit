@@ -54,7 +54,7 @@ def netappSnapMirrorUpdate(
     syncSnapMirrorRelationship(uuid=uuid, waitUntilComplete=waitUntilComplete, printOutput=True)
 
 # Convert netappSnapMirrorUpdate function to Kubeflow Pipeline ContainerOp named 'NetappSnapMirrorUpdateOp'
-NetappSnapMirrorUpdateOp = comp.func_to_container_op(netappSnapMirrorUpdate, base_image='python:3')
+NetappSnapMirrorUpdateOp = comp.func_to_container_op(netappSnapMirrorUpdate, base_image='python:3.11')
 
 
 # Define Kubeflow Pipeline

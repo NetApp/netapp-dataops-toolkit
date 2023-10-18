@@ -30,7 +30,7 @@ def netappCloudSyncUpdate(relationshipId: str, printResponse: bool = True, keepC
     syncCloudSyncRelationship(relationshipID=relationshipId, waitUntilComplete=keepCheckingUntilComplete, printOutput=printResponse)
 
 # Convert netappCloudSyncUpdate function to Kubeflow Pipeline ContainerOp named 'NetappCloudSyncUpdateOp'
-NetappCloudSyncUpdateOp = comp.func_to_container_op(netappCloudSyncUpdate, base_image='python:3')
+NetappCloudSyncUpdateOp = comp.func_to_container_op(netappCloudSyncUpdate, base_image='python:3.11')
 
 
 # Define Kubeflow Pipeline

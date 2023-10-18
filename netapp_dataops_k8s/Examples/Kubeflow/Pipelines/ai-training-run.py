@@ -49,7 +49,7 @@ def ai_training_run(
     volume_snapshot_name = "dataset-{{workflow.uid}}"
     dataset_snapshot = dsl.ContainerOp(
         name="dataset-snapshot",
-        image="python:3",
+        image="python:3.11",
         command=["/bin/bash", "-c"],
         arguments=["\
             python3 -m pip install netapp-dataops-k8s && \
@@ -85,7 +85,7 @@ def ai_training_run(
     volume_snapshot_name = "kfp-model-{{workflow.uid}}"
     model_snapshot = dsl.ContainerOp(
         name="model-snapshot",
-        image="python:3",
+        image="python:3.11",
         command=["/bin/bash", "-c"],
         arguments=["\
             python3 -m pip install netapp-dataops-k8s && \

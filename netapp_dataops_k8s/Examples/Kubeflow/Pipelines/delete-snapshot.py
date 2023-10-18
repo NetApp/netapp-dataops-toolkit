@@ -17,7 +17,7 @@ def delete_volume(
     # Delete Snapshot
     delete_snapshot = dsl.ContainerOp(
         name="delete-snapshot",
-        image="python:3",
+        image="python:3.11",
         command=["/bin/bash", "-c"],
         arguments=["\
             python3 -m pip install netapp-dataops-k8s && \

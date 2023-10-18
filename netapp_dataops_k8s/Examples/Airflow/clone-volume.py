@@ -53,7 +53,7 @@ with clone_volume_dag as dag :
     # Define step to clone source volume
     clone_volume = KubernetesPodOperator(
         namespace=namespace,
-        image="python:3",
+        image="python:3.11",
         cmds=["/bin/bash", "-c"],
         arguments=[arg],
         name="clone-volume-clone-volume",
