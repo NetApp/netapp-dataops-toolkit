@@ -818,7 +818,7 @@ def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = 
 
 def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = False, cluster_name: str = None, svm_name: str = None,
                   volume_type: str = "flexvol", unix_permissions: str = "0777",
-                  unix_uid: str = "0", unix_gid: str = "0", export_policy: str = "default",
+                  unix_uid: str = "0", unix_gid: str = "0", export_policy: str = "default", snaplock_type: str = None,
                   snapshot_policy: str = None, aggregate: str = None, mountpoint: str = None, junction: str = None, readonly: bool = False,
                   print_output: bool = False, tiering_policy: str = None, vol_dp: bool = False):
     # Retrieve config details from config file
@@ -909,7 +909,13 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
             if print_output:
                 print("Error: Invalid volume size specified. Acceptable values are '1024MB', '100GB', '10TB', etc.")
             raise InvalidVolumeParameterError("size")
-
+		
+        # Create option to choose snaplock type
+        if snaplock_type not in ['compliance', 'enterprise', None]:
+            if print_output:
+                print("Error: Invalid snaplock volume type specified. Value must be either 'compliance' or 'enterprise'")
+            raise InvalidVolumeParameterError("snaplockVolume")
+            
         # Create option to choose junction path.
         if junction:
             junction=junction
@@ -967,6 +973,11 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
                 volumeDict["aggregates"] = []
                 for aggr in aggregate.split(','):
                     volumeDict["aggregates"].append({'name': aggr})
+                    
+        # if snaplock type is valid
+        if snaplock_type:
+            volumeDict['snaplock'] = {"type": snaplock_type}
+            
         #if tiering policy provided
         if tiering_policy:
             volumeDict['tiering'] = {'policy': tiering_policy}

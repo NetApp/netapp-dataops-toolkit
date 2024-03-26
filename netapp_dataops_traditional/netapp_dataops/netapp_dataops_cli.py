@@ -180,6 +180,7 @@ Optional Options/Arguments:
 \t-r, --guarantee-space\tGuarantee sufficient storage space for full capacity of the volume (i.e. do not use thin provisioning).
 \t-t, --type=\t\tVolume type to use when creating new volume (flexgroup/flexvol).
 \t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
+\t-w, --snaplock-type=\tSnaplock type to apply for new volume. (can be 'compliance','enterprise',None)
 \t-x, --readonly\t\tRead-only option for mounting volumes locally.
 \t-j, --junction\t\tSpecify a custom junction path for the volume to be exported at.
 \t-f, --tiering-policy\tSpecify tiering policy for fabric-pool enabled systems (default is 'none').
@@ -198,6 +199,7 @@ Examples (advanced usage):
 \tnetapp_dataops_cli.py create volume -n testvol -s 10GB -t flexvol -p 0755 -u 1000 -g 1000 -j /project1
 \tsudo -E netapp_dataops_cli.py create volume -n vol1 -s 5GB -t flexvol --export-policy=team1 -m /mnt/vol1
 \tnetapp_dataops_cli.py create vol -n test2 -s 10GB -t flexvol --snapshot-policy=default --tiering-policy=auto
+\tnetapp_dataops_cli.py create volume --name=project1 --size=100GB --snaplock-type=compliance
 '''
 helpTextDeleteSnapshot = '''
 Command: delete snapshot
@@ -911,6 +913,7 @@ if __name__ == '__main__':
             exportPolicy = None
             snapshotPolicy = None
             mountpoint = None
+            snaplock_type = None
             aggregate = None
             junction = None
             readonly = False
@@ -919,7 +922,7 @@ if __name__ == '__main__':
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "l:hv:t:n:s:rt:p:u:g:e:d:m:a:j:xu:y", ["cluster-name=","help", "svm=", "name=", "size=", "guarantee-space", "type=", "permissions=", "uid=", "gid=", "export-policy=", "snapshot-policy=", "mountpoint=", "aggregate=", "junction=" ,"readonly","tiering-policy=","dp"])
+                opts, args = getopt.getopt(sys.argv[3:], "l:hv:t:n:s:rt:p:u:g:e:d:m:a:j:xu:yw:", ["cluster-name=","help", "svm=", "name=", "size=", "guarantee-space", "type=", "permissions=", "uid=", "gid=", "export-policy=", "snapshot-policy=", "mountpoint=", "aggregate=", "junction=" ,"readonly","tiering-policy=","dp","snaplock-type="])
             except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextCreateVolume, invalidOptArg=True)
@@ -963,6 +966,8 @@ if __name__ == '__main__':
                     tieringPolicy = arg
                 elif opt in ("-y", "--dp"):
                     volDP = True
+                elif opt in ("-w", "--snaplock-type"):
+                  	snaplock_type = arg
 
             # Check for required options
             if not volumeName or not volumeSize:
@@ -977,7 +982,7 @@ if __name__ == '__main__':
             try:
                 create_volume(svm_name=svmName, volume_name=volumeName,  cluster_name=clusterName, volume_size=volumeSize, guarantee_space=guaranteeSpace, volume_type=volumeType, unix_permissions=unixPermissions, unix_uid=unixUID,
                               unix_gid=unixGID, export_policy=exportPolicy, snapshot_policy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, junction=junction, readonly=readonly,
-                              print_output=True, tiering_policy=tieringPolicy, vol_dp=volDP)
+                              print_output=True, tiering_policy=tieringPolicy, vol_dp=volDP, snaplock_type = snaplock_type)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
 
