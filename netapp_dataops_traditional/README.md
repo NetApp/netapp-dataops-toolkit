@@ -364,6 +364,7 @@ The following options/arguments are optional:
     -l, --lif=              non default lif (nfs server ip/name)
     -h, --help              Print help text.
     -x, --readonly          Mount volume locally as read-only.
+    -o, --options           Specify custom NFS mount options.
 ```
 
 ##### Example Usage
@@ -1089,7 +1090,7 @@ def delete_volume(
     volume_name: str,                # Name of volume (required).
     print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
     cluster_name: str = None,        # Non default cluster name, same credentials as the default credentials should be used 
-    svm_name: str = None,            # Non default svm name, same credentials as the default credentials should be used 
+    svm_name: str = None,            # Non default svm name, same credentials as the default credentials should be used
     delete_mirror: bool = False,     # release snapmirror on source volume/delete snapmirror relation on destination volume
     delete_non_clone: bool = False,  # Enable deletion of non clone volume (extra step not to incedently delete important volume)
     print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
@@ -1164,15 +1165,15 @@ APIConnectionError              # The storage system/service API returned an err
 #### Mount an Existing Data Volume Locally
 
 The NetApp DataOps Toolkit can be used to mount an existing data volume as "read-only" or "read-write" on your local host as part of any Python program or workflow. On Linux hosts, mounting requires root privileges, so any Python program that invokes this function must be run as root. It is usually not necessary to invoke this function as root on macOS hosts.
-
 ##### Function Definition
 
 ```py
 def mount_volume(
     volume_name: str,           # Name of volume (required).
-    cluster_name: str = None,        # Non default cluster name, same credentials as the default credentials should be used 
-    svm_name: str = None,            # Non default svm name, same credentials as the default credentials should be used    
+    cluster_name: str = None,   # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,       # Non default svm name, same credentials as the default credentials should be used    
     mountpoint: str,            # Local mountpoint to mount volume at (required).
+    mount_options: str = None   # Specify custom NFS mount options. 
     readonly: bool = False,     # Mount volume locally as "read-only." If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
     print_output: bool = False  # Denotes whether or not to print messages to the console during execution.
 ) :
