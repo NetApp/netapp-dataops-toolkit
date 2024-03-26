@@ -7,11 +7,11 @@ The NetApp DataOps Toolkit for Kubernetes can be used to manage inference server
 
 You can perform the following operation(s) using the toolkit's command line utility
 
-| Triton Inference Server operations                                                   | Supported by BeeGFS | Supported by Trident | Requires Astra Control |
-| ------------------------------------------------------------------------------------ | ------------------- | -------------------- | ---------------------- |
-| [Deploy a new NVIDIA Triton Inference Server.](#cli-create-triton-server)            | Yes                 | Yes                  | No                     |
-| [Delete an NVIDIA Triton Inference Server.](#cli-delete-triton-server)               | Yes                 | Yes                  | No                     |
-| [List all NVIDIA Triton Inference Servers in a specific namespace.](#cli-list-triton)| Yes                 | Yes                  | No                     |
+| Triton Inference Server operations                                                   | Supported by BeeGFS | Supported by Trident |
+| ------------------------------------------------------------------------------------ | ------------------- | -------------------- |
+| [Deploy a new NVIDIA Triton Inference Server.](#cli-create-triton-server)            | Yes                 | Yes                  |
+| [Delete an NVIDIA Triton Inference Server.](#cli-delete-triton-server)               | Yes                 | Yes                  |
+| [List all NVIDIA Triton Inference Servers in a specific namespace.](#cli-list-triton)| Yes                 | Yes                  |
 
 ### NVIDIA Triton Inference Server Management Operations
 
@@ -136,11 +136,11 @@ from netapp_dataops.k8s import list_triton_servers
 
 The following server management operations are available within the set of functions.
 
-| Triton Inference Server operations                                                   | Supported by BeeGFS | Supported by Trident | Requires Astra Control |
-| ------------------------------------------------------------------------------------ | ------------------- | -------------------- | ---------------------- |
-| [Deploy a new NVIDIA Triton Inference Server.](#lib-create-triton-server)            | Yes                 | Yes                  | No                     |
-| [Delete an NVIDIA Triton Inference Server.](#lib-delete-triton-server)               | Yes                 | Yes                  | No                     |
-| [List all NVIDIA Triton Inference Servers in a specific namespace.](#lib-list-triton)| Yes                 | Yes                  | No                     |
+| Triton Inference Server operations                                                   | Supported by BeeGFS | Supported by Trident |
+| ------------------------------------------------------------------------------------ | ------------------- | -------------------- |
+| [Deploy a new NVIDIA Triton Inference Server.](#lib-create-triton-server)            | Yes                 | Yes                  |
+| [Delete an NVIDIA Triton Inference Server.](#lib-delete-triton-server)               | Yes                 | Yes                  |
+| [List all NVIDIA Triton Inference Servers in a specific namespace.](#lib-list-triton)| Yes                 | Yes                  |
 
 ### NVIDIA Triton Inference Server instance Management Operations
 

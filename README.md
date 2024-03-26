@@ -10,7 +10,7 @@ The NetApp DataOps Toolkit is a Python-based tool that simplifies the management
 
 ## Getting Started
 
-The latest stable release of the NetApp DataOps Toolkit is version 2.4.0. It is recommended to always use the latest stable release. You can access the documentation for the latest stable release [here](https://github.com/NetApp/netapp-dataops-toolkit/tree/v2.4.0)
+The latest stable release of the NetApp DataOps Toolkit is version 2.5.0. It is recommended to always use the latest stable release. You can access the documentation for the latest stable release [here](https://github.com/NetApp/netapp-dataops-toolkit/tree/v2.5.0)
 
 The NetApp DataOps Toolkit comes in two different flavors. For access to the most capabilities, we recommend using the [NetApp DataOps Toolkit for Kubernetes](netapp_dataops_k8s/). This flavor supports the full functionality of the toolkit, including JupyterLab workspace and NVIDIA Triton Inference Server management capabilities, but requires access to a Kubernetes cluster. 
 

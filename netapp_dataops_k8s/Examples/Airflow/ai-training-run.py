@@ -109,7 +109,7 @@ with ai_training_run_dag as dag :
     # Define step to take a snapshot of the dataset volume for traceability
     dataset_snapshot = KubernetesPodOperator(
         namespace=namespace,
-        image="python:3",
+        image="python:3.11",
         cmds=["/bin/bash", "-c"],
         arguments=["\
             python3 -m pip install netapp-dataops-k8s && \
@@ -144,7 +144,7 @@ with ai_training_run_dag as dag :
     # Define step to take a snapshot of the model volume for versioning/baselining
     model_snapshot = KubernetesPodOperator(
         namespace=namespace,
-        image="python:3",
+        image="python:3.11",
         cmds=["/bin/bash", "-c"],
         arguments=["\
             python3 -m pip install netapp-dataops-k8s && \

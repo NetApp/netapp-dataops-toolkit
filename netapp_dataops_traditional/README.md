@@ -20,7 +20,7 @@ Note: The 'prepopulate flexcache' operation only supports ONTAP 9.8 and above. A
 
 ### Prerequisites
 
-The NetApp DataOps Toolkit for Traditional Environments requires that Python 3.8 or above be installed on the local host. Additionally, the toolkit requires that pip for Python3 be installed on the local host. For more details regarding pip, including installation instructions, refer to the [pip documentation](https://pip.pypa.io/en/stable/installing/).
+The NetApp DataOps Toolkit for Traditional Environments requires that Python 3.8, 3.9, 3.10, or 3.11 be installed on the local host. Additionally, the toolkit requires that pip for Python3 be installed on the local host. For more details regarding pip, including installation instructions, refer to the [pip documentation](https://pip.pypa.io/en/stable/installing/).
 
 ### Installation Instructions
 
@@ -217,6 +217,7 @@ The following options/arguments are optional:
     -j, --junction          Specify a custom junction path for the volume to be exported at.
     -f, --tiering-policy    Specify tiering policy for fabric-pool enabled systems (default is 'none').
     -y, --dp                Create volume as DP volume (the volume will be used as snapmirror target)
+    -w, --snaplock_type	    Specify snaplock type to use when creating new volume (compliance/enterprise).
 ```
 
 ##### Example Usage
@@ -364,6 +365,7 @@ The following options/arguments are optional:
     -l, --lif=              non default lif (nfs server ip/name)
     -h, --help              Print help text.
     -x, --readonly          Mount volume locally as read-only.
+    -o, --options           Specify custom NFS mount options.
 ```
 
 ##### Example Usage
@@ -1059,6 +1061,7 @@ def create_volume:
     print_output: bool = False,      # Denotes whether or not to print messages to the console during execution.
     tiering_policy: str = None,      # For fabric pool enabled system tiering policy can be: none,auto,snapshot-only,all
     vol_dp: bool = False             # Create volume as type DP which can be used as snapmirror destination
+    snaplock_type: str = None,		 # Snaplock type to apply for new volume (ex. 'compliance' or 'enterprise')
 ```
 
 ##### Return Value
@@ -1089,7 +1092,7 @@ def delete_volume(
     volume_name: str,                # Name of volume (required).
     print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
     cluster_name: str = None,        # Non default cluster name, same credentials as the default credentials should be used 
-    svm_name: str = None,            # Non default svm name, same credentials as the default credentials should be used 
+    svm_name: str = None,            # Non default svm name, same credentials as the default credentials should be used
     delete_mirror: bool = False,     # release snapmirror on source volume/delete snapmirror relation on destination volume
     delete_non_clone: bool = False,  # Enable deletion of non clone volume (extra step not to incedently delete important volume)
     print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
@@ -1164,15 +1167,15 @@ APIConnectionError              # The storage system/service API returned an err
 #### Mount an Existing Data Volume Locally
 
 The NetApp DataOps Toolkit can be used to mount an existing data volume as "read-only" or "read-write" on your local host as part of any Python program or workflow. On Linux hosts, mounting requires root privileges, so any Python program that invokes this function must be run as root. It is usually not necessary to invoke this function as root on macOS hosts.
-
 ##### Function Definition
 
 ```py
 def mount_volume(
     volume_name: str,           # Name of volume (required).
-    cluster_name: str = None,        # Non default cluster name, same credentials as the default credentials should be used 
-    svm_name: str = None,            # Non default svm name, same credentials as the default credentials should be used    
+    cluster_name: str = None,   # Non default cluster name, same credentials as the default credentials should be used 
+    svm_name: str = None,       # Non default svm name, same credentials as the default credentials should be used    
     mountpoint: str,            # Local mountpoint to mount volume at (required).
+    mount_options: str = None   # Specify custom NFS mount options. 
     readonly: bool = False,     # Mount volume locally as "read-only." If not specified volume will be mounted as "read-write". On Linux hosts - if specified, calling program must be run as root.
     print_output: bool = False  # Denotes whether or not to print messages to the console during execution.
 ) :

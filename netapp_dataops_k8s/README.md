@@ -9,7 +9,7 @@ The NetApp DataOps Toolkit for Kubernetes supports Linux and macOS hosts.
 
 The toolkit must be used in conjunction with a Kubernetes cluster in order to be useful. Additionally, [Trident](https://netapp.io/persistent-storage-provisioner-for-kubernetes/), NetApp's dynamic storage orchestrator for Kubernetes, and/or the [BeeGFS CSI driver](https://github.com/NetApp/beegfs-csi-driver/) must be installed within the Kubernetes cluster. The toolkit simplifies performing of various data management tasks that are actually executed by a NetApp maintained CSI driver. In order to facilitate this, the toolkit communicates with the appropriate driver via the Kubernetes API.
 
-The toolkit is currently compatible with Kubernetes versions 1.17 and above, and OpenShift versions 4.4 and above.
+The toolkit is currently compatible with Kubernetes versions 1.20 and above, and OpenShift versions 4.7 and above.
 
 The toolkit is currently compatible with Trident versions 20.07 and above. Additionally, the toolkit is compatible with the following Trident backend types:
 
@@ -24,7 +24,7 @@ The toolkit is currently compatible with all versions of the BeeGFS CSI driver, 
 
 ### Prerequisites
 
-The NetApp DataOps Toolkit for Kubernetes requires that Python 3.8 or above be installed on the local host. Additionally, the toolkit requires that pip for Python3 be installed on the local host. For more details regarding pip, including installation instructions, refer to the [pip documentation](https://pip.pypa.io/en/stable/installing/).
+The NetApp DataOps Toolkit for Kubernetes requires that Python 3.8, 3.9, 3.10, or 3.11 be installed on the local host. Additionally, the toolkit requires that pip for Python3 be installed on the local host. For more details regarding pip, including installation instructions, refer to the [pip documentation](https://pip.pypa.io/en/stable/installing/).
 
 ### Installation Instructions
 
@@ -66,23 +66,6 @@ In the [Examples](Examples/) directory, you will find the following examples per
 - [job-netapp-dataops.yaml](Examples/job-netapp-dataops.yaml): Manifest for a Kubernetes Job named 'netapp-dataops' that can be used as a template for executing toolkit operations.
 
 Refer to the [Kubernetes documentation](https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/) for more information on accessing the Kubernetes API from within a pod.
-
-## Extended Functionality with Astra Control
-
-The NetApp DataOps Toolkit provides several extended capabilities that require [Astra Control](https://cloud.netapp.com/astra). Any operation that requires Astra Control is specifically noted within the documentation as requiring Astra Control. The prerequisites outlined in this section are required in order to perform any operation that requires Astra Control.
-
-The toolkit uses the Astra Control Python SDK to interface with the Astra Control API. The Astra Control Python SDK is installed automatically when you install the NetApp DataOps Toolkit using pip.
-
-In order for the Astra Control Python SDK to be able to communicate with the Astra Control API, you must create a 'config.yaml' file containing your Astra Control API connection details. Refer to the [Astra Control Python SDK README](https://github.com/NetApp/netapp-astra-toolkits/tree/v2.1.3) for formatting details. Note that you do not need to follow the installation instructions outlined in the Astra Control Python SDK README; you only need to create the 'config.yaml' file. Once you have created the 'config.yaml' file, you must store it in one of the following locations:
-- ~/.config/astra-toolkits/
-- /etc/astra-toolkits/
-- The directory pointed to by the shell environment variable 'ASTRATOOLKITS_CONF'
-
-Additionally, you must set the shell environment variable 'ASTRA_K8S_CLUSTER_NAME' to the name of your specific Kubernetes cluster in Astra Control.
-
-```sh
-export ASTRA_K8S_CLUSTER_NAME="<Kubernetes_cluster_name_in_Astra_Control"
-```
 
 ## Capabilities
 
