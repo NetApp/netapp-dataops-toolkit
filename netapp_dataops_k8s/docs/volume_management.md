@@ -8,16 +8,16 @@ The NetApp DataOps Toolkit for Kubernetes can be used to manage persistent volum
 
 You can perform volume management operations using the toolkit's command line utility. The command line utility supports the following operations.
 
-| Kubernetes persistent volume management operations                                   | Supported by BeeGFS | Supported by Trident | Requires Astra Control |
-| ------------------------------------------------------------------------------------ | ------------------- | -------------------- | ---------------------- |
-| [Clone a persistent volume.](#cli-clone-volume)                                      | No                  | Yes                  | No                     |
-| [Create a new persistent volume.](#cli-create-volume)                                | Yes                 | Yes                  | No                     |
-| [Delete an existing persistent volume.](#cli-delete-volume)                          | Yes                 | Yes                  | No                     |
-| [List all persistent volumes.](#cli-list-volumes)                                    | Yes                 | Yes                  | No                     |
-| [Create a new snapshot for a persistent volume.](#cli-create-volume-snapshot)        | No                  | Yes                  | No                     |
-| [Delete an existing snapshot.](#cli-delete-volume-snapshot)                          | No                  | Yes                  | No                     |
-| [List all snapshots.](#cli-list-volume-snapshots)                                    | No                  | Yes                  | No                     |
-| [Restore a snapshot.](#cli-restore-volume-snapshot)                                  | No                  | Yes                  | No                     |
+| Kubernetes persistent volume management operations                                   | Supported by BeeGFS | Supported by Trident |
+| ------------------------------------------------------------------------------------ | ------------------- | -------------------- |
+| [Clone a persistent volume.](#cli-clone-volume)                                      | No                  | Yes                  |
+| [Create a new persistent volume.](#cli-create-volume)                                | Yes                 | Yes                  |
+| [Delete an existing persistent volume.](#cli-delete-volume)                          | Yes                 | Yes                  |
+| [List all persistent volumes.](#cli-list-volumes)                                    | Yes                 | Yes                  |
+| [Create a new snapshot for a persistent volume.](#cli-create-volume-snapshot)        | No                  | Yes                  |
+| [Delete an existing snapshot.](#cli-delete-volume-snapshot)                          | No                  | Yes                  |
+| [List all snapshots.](#cli-list-volume-snapshots)                                    | No                  | Yes                  |
+| [Restore a snapshot.](#cli-restore-volume-snapshot)                                  | No                  | Yes                  |
 
 ### Kubernetes Persistent Volume Management Operations
 
@@ -329,16 +329,16 @@ from netapp_dataops.k8s import clone_volume, create_volume, delete_volume, list_
 
 The following volume management operations are available within the set of functions.
 
-| Kubernetes persistent volume management operations                                   | Supported by BeeGFS | Supported by Trident | Requires Astra Control |
-| ------------------------------------------------------------------------------------ | ------------------- | -------------------- | ---------------------- |
-| [Clone a persistent volume.](#lib-clone-volume)                                      | No                  | Yes                  | No                     |
-| [Create a new persistent volume.](#lib-create-volume)                                | Yes                 | Yes                  | No                     |
-| [Delete an existing persistent volume.](#lib-delete-volume)                          | Yes                 | Yes                  | No                     |
-| [List all persistent volumes.](#lib-list-volumes)                                    | Yes                 | Yes                  | No                     |
-| [Create a new snapshot for a persistent volume.](#lib-create-volume-snapshot)        | No                  | Yes                  | No                     |
-| [Delete an existing snapshot.](#lib-delete-volume-snapshot)                          | No                  | Yes                  | No                     |
-| [List all snapshots.](#lib-list-volume-snapshots)                                    | No                  | Yes                  | No                     |
-| [Restore a snapshot.](#lib-restore-volume-snapshot)                                  | No                  | Yes                  | No                     |
+| Kubernetes persistent volume management operations                                   | Supported by BeeGFS | Supported by Trident |
+| ------------------------------------------------------------------------------------ | ------------------- | -------------------- |
+| [Clone a persistent volume.](#lib-clone-volume)                                      | No                  | Yes                  |
+| [Create a new persistent volume.](#lib-create-volume)                                | Yes                 | Yes                  |
+| [Delete an existing persistent volume.](#lib-delete-volume)                          | Yes                 | Yes                  |
+| [List all persistent volumes.](#lib-list-volumes)                                    | Yes                 | Yes                  |
+| [Create a new snapshot for a persistent volume.](#lib-create-volume-snapshot)        | No                  | Yes                  |
+| [Delete an existing snapshot.](#lib-delete-volume-snapshot)                          | No                  | Yes                  |
+| [List all snapshots.](#lib-list-volume-snapshots)                                    | No                  | Yes                  |
+| [Restore a snapshot.](#lib-restore-volume-snapshot)                                  | No                  | Yes                  |
 
 ### Kubernetes Persistent Volume Management Operations
 

@@ -8,19 +8,16 @@ The NetApp DataOps Toolkit for Kubernetes can be used to manage data science wor
 
 You can perform volume management operations using the toolkit's command line utility. The command line utility supports the following operations.
 
-| JupyterLab workspace management operations                                           | Supported by BeeGFS | Supported by Trident | Requires Astra Control |
-| ------------------------------------------------------------------------------------ | ------------------- | -------------------- | ---------------------- |
-| [Clone a JupyterLab workspace within the same namespace.](#cli-clone-jupyterlab)     | No                  | Yes                  | No                     |
-| [Clone a JupyterLab workspace to a brand new namespace.](#cli-clone-new-jupyterlab)  | No                  | Yes                  | Yes                    |
-| [Create a new JupyterLab workspace.](#cli-create-jupyterlab)                         | Yes                 | Yes                  | No                     |
-| [Delete an existing JupyterLab workspace.](#cli-delete-jupyterlab)                   | Yes                 | Yes                  | No                     |
-| [List all JupyterLab workspaces.](#cli-list-jupyterlabs)                             | Yes                 | Yes                  | No                     |
-| [Create a new snapshot for a JupyterLab workspace.](#cli-create-jupyterlab-snapshot) | No                  | Yes                  | No                     |
-| [Delete an existing snapshot.](#cli-delete-jupyterlab-snapshot)                      | No                  | Yes                  | No                     |
-| [List all snapshots.](#cli-list-jupyterlab-snapshots)                                | No                  | Yes                  | No                     |
-| [Restore a snapshot.](#cli-restore-jupyterlab-snapshot)                              | No                  | Yes                  | No                     |
-| [Register a JupyterLab workspace with Astra Control.](#cli-register-jupyterlab)      | No                  | Yes                  | Yes                    |
-| [Backup a JupyterLab workspace using Astra Control.](#cli-backup-jupyterlab)         | No                  | Yes                  | Yes                    |
+| JupyterLab workspace management operations                                           | Supported by BeeGFS | Supported by Trident |
+| ------------------------------------------------------------------------------------ | ------------------- | -------------------- |
+| [Clone a JupyterLab workspace within the same namespace.](#cli-clone-jupyterlab)     | No                  | Yes                  |
+| [Create a new JupyterLab workspace.](#cli-create-jupyterlab)                         | Yes                 | Yes                  |
+| [Delete an existing JupyterLab workspace.](#cli-delete-jupyterlab)                   | Yes                 | Yes                  |
+| [List all JupyterLab workspaces.](#cli-list-jupyterlabs)                             | Yes                 | Yes                  |
+| [Create a new snapshot for a JupyterLab workspace.](#cli-create-jupyterlab-snapshot) | No                  | Yes                  |
+| [Delete an existing snapshot.](#cli-delete-jupyterlab-snapshot)                      | No                  | Yes                  |
+| [List all snapshots.](#cli-list-jupyterlab-snapshots)                                | No                  | Yes                  |
+| [Restore a snapshot.](#cli-restore-jupyterlab-snapshot)                              | No                  | Yes                  |
 
 ### JupyterLab Workspace Management Operations
 
@@ -117,45 +114,6 @@ To access workspace, navigate to http://10.61.188.112:30677
 JupyterLab workspace successfully cloned.
 ```
 
-<a name="cli-clone-new-jupyterlab"></a>
-
-#### Clone a JupyterLab Workspace to a Brand New Namespace
-
-The NetApp DataOps Toolkit can be used to rapidly provision a new JupyterLab workspace (within a brand new Kubernetes namespace) that is an exact copy of an existing JupyterLab workspace. In other words, the NetApp DataOps Toolkit can be used to rapidly clone a JupyterLab workspace to a brand new namespace. The command for cloning a JupyterLab workspace to a brand new namespace is `netapp_dataops_k8s_cli.py clone-to-new-ns jupyterlab`.
-
-Note: This command requires Astra Control.
-
-The following options/arguments are required:
-
-```
-    -j, --source-workspace-name=    Name of JupyterLab workspace to use as source for clone.
-    -n, --new-namespace=            Kubernetes namespace to create new workspace in. This namespace must not exist; it will be created during this operation.
-```
-
-The following options/arguments are optional:
-
-```
-    -c, --clone-to-cluster-name=    Name of destination Kubernetes cluster within Astra Control. Workspace will be cloned a to a new namespace in this cluster. If not specified, then the workspace will be cloned to a new namespace within the user's current cluster.
-    -h, --help                      Print help text.
-    -s, --source-namespace=         Kubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
-```
-
-##### Example Usage
-
-Clone the JupyterLab workspace 'ws1' in namespace 'default' to a brand new namespace named 'team2'.
-
-```sh
-netapp_dataops_k8s_cli.py clone-to-new-ns jupyterlab --source-workspace-name=ws1 --new-namespace=team2
-Creating new JupyterLab workspace 'ws1' in namespace 'team2' within your cluster using Astra Control...
-New workspace is being cloned from source workspace 'ws1' in namespace 'default' within your cluster...
-
-Astra SDK output:
-{'type': 'application/astra-managedApp', 'version': '1.1', 'id': '9949c21c-8c36-44e8-b3cf-317eb393177f', 'name': 'ntap-dsutil-jupyterlab-ws1', 'state': 'provisioning', 'stateUnready': [], 'managedState': 'managed', 'managedStateUnready': [], 'managedTimestamp': '2021-10-11T20:36:09Z', 'protectionState': '', 'protectionStateUnready': [], 'appDefnSource': 'other', 'appLabels': [], 'system': 'false', 'namespace': 'team2', 'clusterName': 'ocp1', 'clusterID': '50b1e635-075f-42bb-bf81-3a6fd5518d2b', 'clusterType': 'openshift', 'sourceAppID': 'e6ac2e92-6abf-43c9-ac94-0437dc543149', 'sourceClusterID': '50b1e635-075f-42bb-bf81-3a6fd5518d2b', 'backupID': 'ee24afec-93c7-4226-9da3-006b2a870458', 'metadata': {'labels': [{'name': 'astra.netapp.io/labels/read-only/appType', 'value': 'clone'}], 'creationTimestamp': '2021-10-11T20:36:09Z', 'modificationTimestamp': '2021-10-11T20:36:09Z', 'createdBy': '946d8bb0-0d88-4469-baf4-8cfef52a7a90'}}
-
-Clone operation has been initiated. The operation may take several minutes to complete.
-If the new workspace is being created within your cluster, run 'netapp_dataops_k8s_cli.py list jupyterlabs -n team2 -a' to check the status of the new workspace.
-```
-
 <a name="cli-create-jupyterlab"></a>
 
 #### Create a New JupyterLab Workspace
@@ -182,7 +140,6 @@ The following options/arguments are optional:
     -n, --namespace=            Kubernetes namespace to create new workspace in. If not specified, workspace will be created in namespace "default".
     -p, --cpu=                  Number of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
     -b, --load-balancer         Option to choose a LoadBalancer service instead of using NodePort service. If not specified, NodePort service will be utilized.
-    -a, --register-with-astra   Register new workspace with Astra Control (requires Astra Control).
     -v, --mount-pvc         	Option to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: -v/--mount-pvc=existing_pvc_name:mount_point. If not specified, no additional PVC will be attached.
     -r, --allocate-resource=    Option to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
 ```
@@ -284,7 +241,6 @@ The following options/arguments are optional:
 ```
     -h, --help                  Print help text.
     -n, --namespace=            Kubernetes namespace for which to retrieve list of workspaces. If not specified, namespace "default" will be used.
-    -a, --include-astra-app-id  Include Astra Control app IDs in the output (requires Astra Control API access).
 ```
 
 ##### Example Usage
@@ -450,74 +406,6 @@ Waiting for Deployment 'ntap-dsutil-jupyterlab-mike' to reach Ready state.
 JupyterLab workspace snapshot successfully restored.
 ```
 
-<a name="cli-register-jupyterlab"></a>
-
-#### Register an Existing JupyterLab Workspace with Astra Control
-
-The NetApp DataOps Toolkit can be used to register an existing JupyterLab workspace with Astra Control. The command for registering an existing JupyterLab workspace with Astra Control is `netapp_dataops_k8s_cli.py register-with-astra jupyterlab`.
-
-Note: This command requires Astra Control.
-
-The following options/arguments are required:
-
-```
-    -w, --workspace-name=   Name of JupyterLab workspace to be registered.
-```
-
-The following options/arguments are optional:
-
-```
-    -h, --help              Print help text.
-    -n, --namespace=        Kubernetes namespace that the workspace is located in. If not specified, namespace "default" will be used.
-```
-
-##### Example Usage
-
-Register the workspace 'mike' in namespace 'project1' with Astra Control.
-
-```sh
-netapp_dataops_k8s_cli.py register-with-astra jupyterlab -n project1 -w mike
-Registering JupyterLab workspace 'mike' in namespace 'project1' with Astra Control...
-JupyterLab workspace is now managed by Astra Control.
-```
-
-<a name="cli-backup-jupyterlab"></a>
-
-#### Backup a JupyterLab Workspace Using Astra Control
-
-The NetApp DataOps Toolkit can be used to trigger a backup of an existing JupyterLab workspace using Astra Control. The command for triggering a backup of an existing JupyterLab workspace using Astra Control is `netapp_dataops_k8s_cli.py backup-with-astra jupyterlab`.
-
-Note: This command requires Astra Control.
-
-The following options/arguments are required:
-
-```
-    -w, --workspace-name=   Name of JupyterLab workspace to be backed up.
-    -b, --backup-name=      Name to be applied to new backup.
-```
-
-The following options/arguments are optional:
-
-```
-    -h, --help              Print help text.
-    -n, --namespace=        Kubernetes namespace that the workspace is located in. If not specified, namespace "default" will be used.
-```
-
-##### Example Usage
-
-Backup the workspace 'ws1' in namespace 'default' using Astra Control; name the backup 'backup1'.
-
-```sh
-netapp_dataops_k8s_cli.py backup-with-astra jupyterlab --workspace-name=ws1 --backup-name=backup1
-Trigerring backup of workspace 'ws1' in namespace 'default' using Astra Control...
-
-Astra SDK output:
-{'type': 'application/astra-appBackup', 'version': '1.1', 'id': 'bd4ee39e-a3f6-4cf4-a75e-2a09d71b2b03', 'name': 'backup1', 'bucketID': '1e547cee-fbb9-4097-9a64-f542a79d6e80', 'state': 'pending', 'stateUnready': [], 'metadata': {'labels': [], 'creationTimestamp': '2021-10-11T20:39:59Z', 'modificationTimestamp': '2021-10-11T20:39:59Z', 'createdBy': '946d8bb0-0d88-4469-baf4-8cfef52a7a90'}}
-
-Backup operation has been initiated. The operation may take several minutes to complete.
-Access the Astra Control dashboard to check the status of the backup operation.
-```
-
 <a name="library-of-functions"></a>
 
 ## Advanced: Set of Functions
@@ -525,24 +413,21 @@ Access the Astra Control dashboard to check the status of the backup operation.
 The NetApp DataOps Toolkit for Kubernetes provides a set of functions that can be imported into any Python program or Jupyter Notebook. In this manner, data scientists and data engineers can easily incorporate Kubernetes-native data management tasks into their existing projects, programs, and workflows. This functionality is only recommended for advanced users who are proficient in Python.
 
 ```py
-from netapp_dataops.k8s import clone_jupyter_lab, clone_jupyter_lab_to_new_namespace, create_jupyter_lab, delete_jupyter_lab, list_jupyter_labs, create_jupyter_lab_snapshot, list_jupyter_lab_snapshots, restore_jupyter_lab_snapshot, register_jupyter_lab_with_astra, backup_jupyter_lab_with_astra
+from netapp_dataops.k8s import clone_jupyter_lab, create_jupyter_lab, delete_jupyter_lab, list_jupyter_labs, create_jupyter_lab_snapshot, list_jupyter_lab_snapshots, restore_jupyter_lab_snapshot
 ```
 
 The following workspace management operations are available within the set of functions.
 
-| JupyterLab workspace management operations                                           | Supported by BeeGFS | Supported by Trident | Requires Astra Control |
-| ------------------------------------------------------------------------------------ | ------------------- | -------------------- | ---------------------- |
-| [Clone a JupyterLab workspace within the same namespace.](#lib-clone-jupyterlab)     | No                  | Yes                  | No                     |
-| [Clone a JupyterLab workspace to a brand new namespace.](#lib-clone-new-jupyterlab)  | No                  | Yes                  | Yes                    |
-| [Create a new JupyterLab workspace.](#lib-create-jupyterlab)                         | Yes                 | Yes                  | No                     |
-| [Delete an existing JupyterLab workspace.](#lib-delete-jupyterlab)                   | Yes                 | Yes                  | No                     |
-| [List all JupyterLab workspaces.](#lib-list-jupyterlabs)                             | Yes                 | Yes                  | No                     |
-| [Create a new snapshot for a JupyterLab workspace.](#lib-create-jupyterlab-snapshot) | No                  | Yes                  | No                     |
-| [Delete an existing snapshot.](#lib-delete-jupyterlab-snapshot)                      | No                  | Yes                  | No                     |
-| [List all snapshots.](#lib-list-jupyterlab-snapshots)                                | No                  | Yes                  | No                     |
-| [Restore a snapshot.](#lib-restore-jupyterlab-snapshot)                              | No                  | Yes                  | No                     |
-| [Register a JupyterLab workspace with Astra Control.](#lib-register-jupyterlab)      | No                  | Yes                  | Yes                    |
-| [Backup a JupyterLab workspace using Astra Control.](#lib-backup-jupyterlab)         | No                  | Yes                  | Yes                    |
+| JupyterLab workspace management operations                                           | Supported by BeeGFS | Supported by Trident |
+| ------------------------------------------------------------------------------------ | ------------------- | -------------------- |
+| [Clone a JupyterLab workspace within the same namespace.](#lib-clone-jupyterlab)     | No                  | Yes                  |
+| [Create a new JupyterLab workspace.](#lib-create-jupyterlab)                         | Yes                 | Yes                  |
+| [Delete an existing JupyterLab workspace.](#lib-delete-jupyterlab)                   | Yes                 | Yes                  |
+| [List all JupyterLab workspaces.](#lib-list-jupyterlabs)                             | Yes                 | Yes                  |
+| [Create a new snapshot for a JupyterLab workspace.](#lib-create-jupyterlab-snapshot) | No                  | Yes                  |
+| [Delete an existing snapshot.](#lib-delete-jupyterlab-snapshot)                      | No                  | Yes                  |
+| [List all snapshots.](#lib-list-jupyterlab-snapshots)                                | No                  | Yes                  |
+| [Restore a snapshot.](#lib-restore-jupyterlab-snapshot)                              | No                  | Yes                  |
 
 ### JupyterLab Workspace Management Operations
 
@@ -587,41 +472,6 @@ APIConnectionError              # The Kubernetes API returned an error.
 ServiceUnavailableError         # A Kubernetes service is not available.
 ```
 
-<a name="lib-clone-new-jupyterlab"></a>
-
-#### Clone a JupyterLab Workspace to a Brand New Naamespace
-
-The NetApp DataOps Toolkit can be used to rapidly provision a new JupyterLab workspace (within a brand new Kubernetes namespace) that is an exact copy of an existing JupyterLab workspace, as part of any Python program or workflow. In other words, the NetApp DataOps Toolkit can be used to rapidly clone a JupyterLab workspace to a brand new namespace.
-
-Note: This function requires Astra Control.
-
-##### Function Definition
-
-```py
-def clone_jupyter_lab_to_new_namespace(
-    source_workspace_name: str,                     # Name of JupyterLab workspace to use as source for clone (required).
-    new_namespace: str,                             # Kubernetes namespace to create new workspace in (required). This namespace must not exist; it will be created during this operation.
-    source_workspace_namespace: str = "default",    # Kubernetes namespace that source workspace is located in. If not specified, namespace "default" will be used.
-    clone_to_cluster_name: str = None,              # Name of destination Kubernetes cluster within Astra Control. Workspace will be cloned a to a new namespace in this cluster. If not specified, then the workspace will be cloned to a new namespace within the user's current cluster.
-    print_output: bool = False                      # Denotes whether or not to print messages to the console during execution.
-) :
-```
-
-##### Return Value
-
-None
-
-##### Error Handling
-
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.k8s`.
-
-```py
-InvalidConfigError              # kubeconfig file is missing or is invalid.
-APIConnectionError              # The Kubernetes or Astra API returned an error.
-AstraAppNotManagedError         # The source JupyterLab workspace has not been registered with Astra Control.
-AstraClusterDoesNotExistError   # The destination cluster does not exist in Astra Control.
-```
-
 <a name="lib-create-jupyterlab"></a>
 
 #### Create a New JupyterLab Workspace
@@ -645,7 +495,6 @@ def create_jupyter_lab(
     request_cpu: str = None,                                            # Number of CPUs to reserve for JupyterLab workspace. Format: '0.5', '1', etc. If not specified, no CPUs will be reserved.
     request_memory: str = None,                                         # Amount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
     request_nvidia_gpu: str = None,                                     # Number of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
-    register_with_astra: bool = False,                                  # Register new workspace with Astra Control (requires Astra Control).
     allocate_resource: str = None,                                      # Option to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.    
     print_output: bool = False                                          # Denotes whether or not to print messages to the console during execution.
 ) -> str :
@@ -706,14 +555,13 @@ The NetApp DataOps Toolkit can be used to retrieve a list of all existing Jupyte
 ```py
 def list_jupyter_labs(
     namespace: str = "default",             # Kubernetes namespace for which to retrieve list of workspaces. If not specified, namespace "default" will be used.
-    include_astra_app_id: bool = False,     # Include Astra Control app IDs in the output (requires Astra Control API access).
     print_output: bool = False              # Denotes whether or not to print messages to the console during execution.
 ) -> list :
 ```
 
 ##### Return Value
 
-The function returns a list of all existing JupyterLab workspaces. Each item in the list will be a dictionary containing details regarding a specific workspace. The keys for the values in this dictionary are "Workspace Name", "Status", "Size", "StorageClass", "Access URL", "Clone" (Yes/No), "Source Workspace", and "Source VolumeSnapshot". If `include_astra_app_id` is set to `True`, then "Astra Control App ID" will also be included as a key in the dictionary.
+The function returns a list of all existing JupyterLab workspaces. Each item in the list will be a dictionary containing details regarding a specific workspace. The keys for the values in this dictionary are "Workspace Name", "Status", "Size", "StorageClass", "Access URL", "Clone" (Yes/No), "Source Workspace", and "Source VolumeSnapshot".
 
 Note: The value of the "Clone" field will be "Yes" only if the workspace was cloned, using the DataOps Toolkit, from a source workspace within the same namespace.
 
@@ -827,69 +675,4 @@ If an error is encountered, the function will raise an exception of one of the f
 ```py
 InvalidConfigError              # kubeconfig file is missing or is invalid.
 APIConnectionError              # The Kubernetes API returned an error.
-```
-
-<a name="lib-register-jupyterlab"></a>
-
-#### Register an Existing JupyterLab Workspace with Astra Control
-
-The NetApp DataOps Toolkit can be used to register an existing JupyterLab workspace with Astra Control as part of any Python program or workflow.
-
-Note: This function requires Astra Control.
-
-##### Function Definition
-
-```py
-def register_jupyter_lab_with_astra(
-    workspace_name: str,            # Name of JupyterLab workspace to be registered (required).
-    namespace: str = "default",     # Kubernetes namespace that the workspace is located in. If not specified, namespace "default" will be used.
-    print_output: bool = False      # Denotes whether or not to print messages to the console during execution.
-) :
-```
-
-##### Return Value
-
-None
-
-##### Error Handling
-
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.k8s`.
-
-```py
-InvalidConfigError              # kubeconfig or AstraSDK config file is missing or is invalid.
-APIConnectionError              # The Kubernetes or Astra Control API returned an error.
-AstraAppDoesNotExistError       # App does not exist in Astra. Are you sure that the workspace name is correct?
-```
-
-<a name="lib-backup-jupyterlab"></a>
-
-#### Backup a JupyterLab Workspace Using Astra Control
-
-The NetApp DataOps Toolkit can be used to trigger a backup of an existing JupyterLab workspace using Astra Control as part of any Python program or workflow.
-
-Note: This function requires Astra Control.
-
-##### Function Definition
-
-```py
-def backup_jupyter_lab_with_astra(
-    workspace_name: str,            # Name of JupyterLab workspace to be backed up (required).
-    backup_name: str,               # Name to be applied to new backup (required)
-    namespace: str = "default",     # Kubernetes namespace that the workspace is located in. If not specified, namespace "default" will be used.
-    print_output: bool = False      # Denotes whether or not to print messages to the console during execution.
-) :
-```
-
-##### Return Value
-
-None
-
-##### Error Handling
-
-If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.k8s`.
-
-```py
-InvalidConfigError              # kubeconfig or AstraSDK config file is missing or is invalid.
-APIConnectionError              # The Kubernetes or Astra Control API returned an error.
-AstraAppNotManagedError         # JupyterLab workspace has not been registered with Astra Control.
 ```
