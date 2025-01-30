@@ -1362,6 +1362,8 @@ def create_volume_snapshot(pvc_name: str, snapshot_name: str = None, volume_snap
     if print_output:
         print("Snapshot successfully created.")
 
+    return snapshot_name
+
 
 def delete_jupyter_lab(workspace_name: str, namespace: str = "default", preserve_snapshots: bool = False,
                        print_output: bool = False):
