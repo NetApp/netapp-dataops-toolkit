@@ -1148,8 +1148,10 @@ def create_jupyter_lab_snapshot(workspace_name: str, snapshot_name: str = None, 
     if print_output:
         print(
             "Creating VolumeSnapshot for JupyterLab workspace '" + workspace_name + "' in namespace '" + namespace + "'...")
-    create_volume_snapshot(pvc_name=_get_jupyter_lab_workspace_pvc_name(workspaceName=workspace_name), snapshot_name=snapshot_name,
+    snapshot_name = create_volume_snapshot(pvc_name=_get_jupyter_lab_workspace_pvc_name(workspaceName=workspace_name), snapshot_name=snapshot_name,
                            volume_snapshot_class=volume_snapshot_class, namespace=namespace, print_output=print_output)
+    
+    return snapshot_name 
 
 
 def create_k8s_config_map(name: str, data: dict, namespace: str = 'default', labels: dict = None,
