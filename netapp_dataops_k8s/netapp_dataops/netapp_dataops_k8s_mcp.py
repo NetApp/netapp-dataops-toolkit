@@ -36,10 +36,8 @@ def create_jupyter_lab_tool(
     request_memory: str = None, 
     request_nvidia_gpu: str = None, 
     allocate_resource: str = None, 
-    register_with_astra: bool = False,
     print_output: bool = False, 
-    pvc_already_exists: bool = False, 
-    labels: dict = None
+    pvc_already_exists: bool = False
 ) -> str:
     """
     Create a new JupyterLab workspace.
@@ -61,10 +59,8 @@ def create_jupyter_lab_tool(
     - request_memory (str, optional): Memory request for the workspace.
     - request_nvidia_gpu (str, optional): NVIDIA GPU request for the workspace.
     - allocate_resource (str, optional): Additional resource allocation in the format "resource=limit".
-    - register_with_astra (bool, optional): Whether to register the workspace with Astra Control. Default is False.
     - print_output (bool, optional): Whether to print output messages. Default is False.
     - pvc_already_exists (bool, optional): Whether the PVC already exists. Default is False.
-    - labels (dict, optional): Labels to apply to the workspace resources.
 
     Returns:
     - str: URL of the newly created JupyterLab workspace.
@@ -88,10 +84,8 @@ def create_jupyter_lab_tool(
             request_memory, 
             request_nvidia_gpu, 
             allocate_resource, 
-            register_with_astra,
             print_output, 
-            pvc_already_exists, 
-            labels
+            pvc_already_exists
         )
         return url
     except Exception as e:
@@ -162,7 +156,6 @@ def clone_jupyter_lab_tool(
 @mcp.tool(name="ListJupyterLabs")
 def list_jupyter_labs_tool(
     namespace: str = "default", 
-    include_astra_app_id: bool = False, 
     print_output: bool = False
 ) -> list:
     """
@@ -173,7 +166,6 @@ def list_jupyter_labs_tool(
 
     Parameters:
     - namespace (str, optional): Kubernetes namespace. Default is "default".
-    - include_astra_app_id (bool, optional): Whether to include Astra app ID. Default is False.
     - print_output (bool, optional): Whether to print output messages. Default is False.
 
     Returns:
@@ -186,7 +178,6 @@ def list_jupyter_labs_tool(
     try:
         workspaces_list = list_jupyter_labs(
             namespace,
-            include_astra_app_id,
             print_output
         )
         return workspaces_list
@@ -275,10 +266,7 @@ def create_volume_tool(
     volume_size: str, 
     storage_class: str = None, 
     namespace: str = "default",
-    print_output: bool = False,
-    pvc_labels: dict = {"created-by": "ntap-dsutil", "created-by-operation": "create-volume"},
-    source_snapshot: str = None, 
-    source_pvc: str = None
+    print_output: bool = False
 ) -> None:
     """
     Create a new volume.
@@ -292,9 +280,6 @@ def create_volume_tool(
     - storage_class (str, optional): Storage class to use for the PVC. Default is None.
     - namespace (str, optional): Kubernetes namespace. Default is "default".
     - print_output (bool, optional): Whether to print output messages. Default is False.
-    - pvc_labels (dict, optional): Labels to apply to the new PVC. Default is {"created-by": "ntap-dsutil", "created-by-operation": "create-volume"}.
-    - source_snapshot (str, optional): Name of the source snapshot to use for cloning. Default is None.
-    - source_pvc (str, optional): Name of the source PVC to use for cloning. Default is None.
 
     Returns:
     - None
@@ -309,10 +294,7 @@ def create_volume_tool(
             volume_size,
             storage_class,
             namespace,
-            print_output,
-            pvc_labels,
-            source_snapshot,
-            source_pvc
+            print_output
         )
     except Exception as e:
         print(f"Error creating volume: {e}")
@@ -325,8 +307,7 @@ def clone_volume_tool(
     source_snapshot_name: str = None,
     volume_snapshot_class: str = "csi-snapclass", 
     namespace: str = "default", 
-    print_output: bool = False,
-    pvc_labels: dict = None
+    print_output: bool = False
 ):
     """
     Clone an existing volume.
@@ -341,7 +322,6 @@ def clone_volume_tool(
     - volume_snapshot_class (str, optional): Volume snapshot class to use. Default is "csi-snapclass".
     - namespace (str, optional): Kubernetes namespace. Default is "default".
     - print_output (bool, optional): Whether to print output messages. Default is False.
-    - pvc_labels (dict, optional): Labels to apply to the new PVC. If not provided, default labels will be used.
 
     Returns:
     - None
@@ -356,8 +336,7 @@ def clone_volume_tool(
             source_snapshot_name,
             volume_snapshot_class,
             namespace,
-            print_output,
-            pvc_labels
+            print_output
         )
     except Exception as e:
         print(f"Error cloning volume: {e}")
@@ -439,8 +418,7 @@ def create_volume_snapshot_tool(
 def list_volume_snapshots_tool(
     pvc_name: str = None, 
     namespace: str = "default", 
-    print_output: bool = False,
-    jupyter_lab_workspaces_only: bool = False
+    print_output: bool = False
 ) -> list:
     """
     List all snapshots of volumes.
@@ -453,7 +431,6 @@ def list_volume_snapshots_tool(
     - pvc_name (str, optional): Name of the PVC. If not provided, lists snapshots for all PVCs.
     - namespace (str, optional): Kubernetes namespace. Default is "default".
     - print_output (bool, optional): Whether to print output messages. Default is False.
-    - jupyter_lab_workspaces_only (bool, optional): Whether to include only snapshots associated with JupyterLab workspaces. Default is False.
 
     Returns:
     - list: A list of dictionaries, each containing details of a VolumeSnapshot.
@@ -466,8 +443,7 @@ def list_volume_snapshots_tool(
         snapshots_list = list_volume_snapshots(
             pvc_name,
             namespace,
-            print_output,
-            jupyter_lab_workspaces_only
+            print_output
         )
         return snapshots_list
     except Exception as e:
