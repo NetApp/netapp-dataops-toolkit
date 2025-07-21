@@ -1,8 +1,10 @@
+#!/usr/bin/env python3
+
 import logging
 import sys
 import asyncio
 from fastmcp import FastMCP
-from .config import load_credentials
+from netapp_dataops.mcp_server.config import load_credentials
 from netapp_dataops.traditional import (
     create_volume, 
     clone_volume, 
