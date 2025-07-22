@@ -25,6 +25,10 @@ from kubernetes.client.rest import ApiException
 from tabulate import tabulate
 import pandas as pd
 
+import yaml
+from netapp_ontap.error import NetAppRestError
+from netapp_ontap.host_connection import HostConnection as NetAppHostConnection
+from netapp_ontap.resources import Flexcache as NetAppFlexCache
 
 # Using this decorator in lieu of using a dependency to manage deprecation
 def deprecated(func):
@@ -498,6 +502,62 @@ def _wait_for_triton_dev_deployment(server_name: str, namespace: str = "default"
         if deploymentStatus.status.ready_replicas == 1:
             break
         sleep(5)
+
+
+def _create_flexcache_in_ontap(origin_volume: str, cache_volume: str, aggregate: str, svm: str, ontap_cluster: str, ontap_username: str, ontap_password: str):
+    connection = NetAppHostConnection(host=ontap_cluster, username=ontap_username, password=ontap_password, verify=False)
+    flexcache = NetAppFlexCache(
+        name=cache_volume,
+        svm={"name": svm},
+        origins={"volume": {"name": origin_volume}, "svm": {"name": svm}},
+        aggregates=[{"name": aggregate}]
+    )
+    try:
+        flexcache.post(hydrate=True, connection=connection)
+        print("FlexCache created successfully in ONTAP.")
+    except NetAppRestError as err:
+        print("Error: ONTAP Rest API Error: ", err)
+        raise APIConnectionError(err)
+
+def _create_pv_yaml(pv_name: str, path: str, server: str, storage: str = "100Gi"):
+    pv_yaml = f"""
+    apiVersion: v1
+    kind: PersistentVolume
+    metadata:
+      name: {pv_name}
+    spec:
+      capacity:
+        storage: {storage}
+      accessModes:
+        - ReadWriteMany
+      nfs:
+        path: {path}
+        server: {server}
+    """
+    return yaml.safe_load(pv_yaml)
+
+def _create_pvc_yaml(pvc_name: str, storage: str = "100Gi", namespace: str = "default"):
+    pvc_yaml = f"""
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: {pvc_name}
+    spec:
+      accessModes:
+        - ReadWriteMany
+      resources:
+        requests:
+          storage: {storage}
+    """
+    return yaml.safe_load(pvc_yaml)
+
+def _create_k8s_pv(pv_yaml):
+    k8s_client = client.CoreV1Api()
+    k8s_client.create_persistent_volume(body=pv_yaml)
+
+def _create_k8s_pvc(pvc_yaml, namespace: str = "default"):
+    k8s_client = client.CoreV1Api()
+    k8s_client.create_namespaced_persistent_volume_claim(namespace=namespace, body=pvc_yaml)
 
 
 #
@@ -1963,6 +2023,41 @@ def restore_volume_snapshot(snapshot_name: str, namespace: str = "default", prin
 
     if print_output:
         print("VolumeSnapshot successfully restored.")
+
+
+def create_flexcache(origin_volume: str, cache_volume: str, aggregate: str, pv_name: str, pvc_name: str, path: str, server: str, namespace: str = "default", storage: str = "100Gi", svm: str = "svm_name", ontap_cluster: str = "your-ontap-cluster", ontap_username: str = "username", ontap_password: str = "password", print_output: bool = False):
+    # Load kubeconfig
+    try:
+        _load_kube_config()
+    except:
+        if print_output:
+            print("Invalid kubeconfig")
+        raise InvalidConfigError()
+
+    # Create FlexCache in ONTAP
+    try:
+        _create_flexcache_in_ontap(origin_volume, cache_volume, aggregate, svm, ontap_cluster, ontap_username, ontap_password)
+    except ApiException:
+        raise
+
+    # Create PV and PVC YAML
+    pv_yaml = _create_pv_yaml(pv_name, path, server, storage)
+    pvc_yaml = _create_pvc_yaml(pvc_name, storage, namespace)
+
+    # Create PV
+    try:
+        _create_k8s_pv(pv_yaml, print_output=print_output)
+    except APIConnectionError:
+        raise
+
+    # Create PVC
+    try:
+        _create_k8s_pvc(pvc_yaml, namespace, print_output=print_output)
+    except APIConnectionError:
+        raise
+
+    if print_output:
+        print(f"FlexCache created and bound to PersistentVolumeClaim (PVC) '{pvc_name}' in namespace '{namespace}'.")
 
 
 #
