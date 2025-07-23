@@ -18,7 +18,7 @@ The NetApp DataOps Toolkit Traditional MCP Server is an open-source server compo
 
 ### Prerequisites
 
-The NetApp DataOps Toolkit for Traditional Environments requires that Python 3.8, 3.9, 3.10, or 3.11 be installed on the local host. Additionally, the toolkit requires that pip for Python3 be installed on the local host. For more details regarding pip, including installation instructions, refer to the [pip documentation](https://pip.pypa.io/en/stable/installing/).
+The NetApp DataOps Toolkit for Traditional Environments requires that Python >= 3.8 be installed on the local host. Additionally, the toolkit requires that pip for Python3 be installed on the local host. For more details regarding pip, including installation instructions, refer to the [pip documentation](https://pip.pypa.io/en/stable/installing/).
 
 ### Installation Instructions
 To install the NetApp DataOps Toolkit for Traditional Environments, run the following command.
@@ -28,6 +28,8 @@ python3 -m pip install netapp-dataops-traditional
 ```
 
 ### Usage
+
+A config file must be created before the NetApp Data Management Toolkit for Traditional Environments can be used to perform data management operations. For more details [click here](https://github.com/NetApp/netapp-dataops-toolkit/tree/main/netapp_dataops_traditional#getting-started).
 
 Start the MCP server:
     ```
