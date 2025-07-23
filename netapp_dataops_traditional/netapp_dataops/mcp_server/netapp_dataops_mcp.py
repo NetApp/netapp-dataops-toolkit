@@ -92,6 +92,7 @@ async def create_volume_tool(
         )
     except Exception as e:
         print(f"Error creating volume: {e}")
+        raise
 
 
 @mcp.tool(name="Clone Volume")
@@ -166,6 +167,7 @@ async def clone_volume_tool(
         )
     except Exception as e:
         print(f"Error cloning volume: {e}")
+        raise
 
 
 @mcp.tool(name="List Volumes")
@@ -210,7 +212,7 @@ async def list_volumes_tool(
         return volumes
     except Exception as e:
         print(f"Error listing volumes: {e}")
-        return []
+        raise
 
 
 @mcp.tool(name="Mount Volume")
@@ -253,6 +255,7 @@ async def mount_volume_tool(
         )
     except Exception as e:
         print(f"Error mounting volume: {e}")
+        raise
 
 
 @mcp.tool(name="Create Snapshot")
@@ -297,6 +300,7 @@ async def create_snapshot_tool(
         )
     except Exception as e:
         print(f"Error creating snapshot: {e}")
+        raise
 
 
 @mcp.tool(name="List Snapshots")
@@ -329,7 +333,7 @@ async def list_snapshots_tool(
         return snapshots
     except Exception as e:
         print(f"Error listing snapshots: {e}")
-        return []
+        raise
 
 
 @mcp.tool(name="Create SnapMirror Relationship")
@@ -379,6 +383,7 @@ async def create_snap_mirror_relationship_tool(
         )
     except Exception as e:
         print(f"Error creating snapmirror relationship: {e}")
+        raise
 
 
 @mcp.tool(name="List SnapMirror Relationships")
@@ -412,7 +417,7 @@ async def list_snap_mirror_relationships_tool(
         return snap_mirror_relationships
     except Exception as e:
         print(f"Error listing snapmirror relationships: {e}")
-        return []
+        raise
 
 
 
