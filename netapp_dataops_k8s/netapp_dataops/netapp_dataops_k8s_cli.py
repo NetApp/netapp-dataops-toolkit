@@ -20,6 +20,7 @@ from netapp_dataops.k8s import (
     list_triton_servers,
     restore_jupyter_lab_snapshot,
     restore_volume_snapshot,
+    create_flexcache,
     APIConnectionError,
     CAConfigMap,
     InvalidConfigError
@@ -69,6 +70,7 @@ Note: To view details regarding options/arguments for a specific command, run th
 \tdelete volume-snapshot\t\tDelete an existing snapshot.
 \tlist volume-snapshots\t\tList all snapshots.
 \trestore volume-snapshot\t\tRestore a snapshot.
+\tcreate flexcache\t\t\tCreate a new FlexCache volume.
 
 Data Movement Commands:
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
@@ -660,6 +662,25 @@ Examples:
 \tnetapp_dataops_k8s_cli.py show s3-job --job=job1
 \tnetapp_dataops_k8s_cli.py show s3-job -j job1 -n team1
 '''
+helpTextCreateFlexCache = '''
+Command: create flexcache
+
+Create a new FlexCache volume.
+
+Required Options/Arguments:
+\t-p, --pvc-name=\t\tName of the new FlexCache volume (name to be applied to new Kubernetes PersistentVolumeClaim/PVC).
+\t-s, --size=\t\tSize of the new FlexCache volume. Format: '1024Mi', '100Gi', '10Ti', etc.
+\t-o, --origin-pvc-name=\tName of the origin volume to cache.
+
+Optional Options/Arguments:
+\t-c, --storage-class=\tKubernetes StorageClass to use when provisioning the new FlexCache volume. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident.
+\t-h, --help\t\tPrint help text.
+\t-n, --namespace=\tKubernetes namespace to create the new PersistentVolumeClaim (PVC) in. If not specified, the PVC will be created in the "default" namespace.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py create flexcache --pvc-name=cache1 --size=10Gi --origin-pvc-name=origin1
+\tnetapp_dataops_k8s_cli.py create flexcache -p cache2 -s 20Gi -o origin2 -n team1
+'''
 
 
 ## Function for handling situation in which user enters invalid command
@@ -1160,6 +1181,40 @@ if __name__ == '__main__':
                 print("Kubernetes CA config-map successfully created.")
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
+
+        elif target == "flexcache":
+            flexcache_name = None
+            source_volume_name = None
+            namespace = "default"
+            storage_class = None
+
+            # Get command line options
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hf:s:n:c:", ["help", "flexcache-name=", "source-volume-name=", "namespace=", "storage-class="])
+            except:
+                handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextCreateFlexCache)
+                    sys.exit(0)
+                elif opt in ("-f", "--flexcache-name"):
+                    flexcache_name = arg
+                elif opt in ("-s", "--source-volume-name"):
+                    source_volume_name = arg
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+                elif opt in ("-c", "--storage-class"):
+                    storage_class = arg
+
+            # Check for required options
+            if not flexcache_name or not source_volume_name:
+                handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
+
+            # Create FlexCache volume
+            create_flexcache(flexcache_name=flexcache_name, source_volume_name=source_volume_name, namespace=namespace, storage_class=storage_class, print_output=True)
+
 
         else:
             handleInvalidCommand()
