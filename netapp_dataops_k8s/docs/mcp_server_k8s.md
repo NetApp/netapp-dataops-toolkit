@@ -22,6 +22,10 @@ Install with pip:
 
 After installation, the netapp_dataops_k8s_mcp.py command will be available in your PATH for direct usage.
 
+## Getting Started
+
+To run the MCP tools from the MCP server, a valid kubeconfig file must be present on the local host. Refer [this section from the main README](../README.md#getting-started-standard-usage) of the NetApp DataOps Toolkit for Kubernetes to learn more.
+
 ### Usage
 
 Run the MCP server with:
@@ -29,3 +33,23 @@ Run the MCP server with:
     ```sh
     netapp_dataops_k8s_mcp.py
     ```
+
+## Available Tools
+
+The MCP server provides the following tools for managing JupyterLab workspaces and volumes in a Kubernetes environment:
+
+### Workspace Management Tools
+
+- **CreateJupyterLab**: Create a new JupyterLab workspace.
+- **CloneJupyterLab**: Clone an existing JupyterLab workspace.
+- **ListJupyterLabs**: List all JupyterLab workspaces.
+- **CreateJupyterLabSnapshot**: Create a snapshot of a JupyterLab workspace.
+- **ListJupyterLabSnapshots**: List all snapshots of JupyterLab workspaces.
+
+### Volume Management Tools
+
+- **CreateVolume**: Create a new volume.
+- **CloneVolume**: Clone an existing volume.
+- **ListVolumes**: List all volumes.
+- **CreateVolumeSnapshot**: Create a snapshot of a volume.
+- **ListVolumeSnapshots**: List all snapshots of volumes.
