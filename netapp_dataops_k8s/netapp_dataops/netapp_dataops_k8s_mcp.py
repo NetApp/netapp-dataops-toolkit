@@ -2,6 +2,7 @@
 
 import logging
 import sys
+from typing import Optional
 from fastmcp import FastMCP
 
 from netapp_dataops.k8s import (
@@ -26,16 +27,16 @@ mcp = FastMCP("NetApp DataOps K8s MCP Server")
 def create_jupyter_lab_tool(
     workspace_name: str, 
     workspace_size: str, 
-    mount_pvc: str = None, 
-    storage_class: str = None,
+    mount_pvc: Optional[str] = None, 
+    storage_class: Optional[str] = None,
     load_balancer_service: bool = False, 
     namespace: str = "default",
-    workspace_password: str = None, 
+    workspace_password: Optional[str] = None, 
     workspace_image: str = "nvcr.io/nvidia/tensorflow:22.05-tf2-py3",
-    request_cpu: str = None, 
-    request_memory: str = None, 
-    request_nvidia_gpu: str = None, 
-    allocate_resource: str = None, 
+    request_cpu: Optional[str] = None, 
+    request_memory: Optional[str] = None, 
+    request_nvidia_gpu: Optional[str] = None, 
+    allocate_resource: Optional[str] = None, 
     print_output: bool = False, 
     pvc_already_exists: bool = False
 ) -> str:
@@ -96,15 +97,15 @@ def create_jupyter_lab_tool(
 def clone_jupyter_lab_tool(
     new_workspace_name: str,
     source_workspace_name: str,
-    source_snapshot_name: str = None,
+    source_snapshot_name: Optional[str] = None,
     load_balancer_service: bool = False, 
-    new_workspace_password: str = None, 
+    new_workspace_password: Optional[str] = None, 
     volume_snapshot_class: str = "csi-snapclass",
     namespace: str = "default", 
-    request_cpu: str = None, 
-    request_memory: str = None,
-    request_nvidia_gpu: str = None, 
-    allocate_resource: str = None, 
+    request_cpu: Optional[str] = None, 
+    request_memory: Optional[str] = None,
+    request_nvidia_gpu: Optional[str] = None, 
+    allocate_resource: Optional[str] = None, 
     print_output: bool = False
 ) -> str:
     """
@@ -188,7 +189,7 @@ def list_jupyter_labs_tool(
 @mcp.tool(name="CreateJupyterLabSnapshot")
 def create_jupyter_lab_snapshot_tool(
     workspace_name: str, 
-    snapshot_name: str = None, 
+    snapshot_name: Optional[str] = None, 
     volume_snapshot_class: str = "csi-snapclass", 
     namespace: str = "default", 
     print_output: bool = False
@@ -226,7 +227,7 @@ def create_jupyter_lab_snapshot_tool(
 
 @mcp.tool(name="ListJupyterLabSnapshots")
 def list_jupyter_lab_snapshots_tool(
-    workspace_name: str = None, 
+    workspace_name: Optional[str] = None, 
     namespace: str = "default", 
     print_output: bool = False
 ) -> list:
@@ -264,7 +265,7 @@ def list_jupyter_lab_snapshots_tool(
 def create_volume_tool(
     pvc_name: str, 
     volume_size: str, 
-    storage_class: str = None, 
+    storage_class: Optional[str] = None, 
     namespace: str = "default",
     print_output: bool = False
 ) -> None:
@@ -304,7 +305,7 @@ def create_volume_tool(
 def clone_volume_tool(
     new_pvc_name: str, 
     source_pvc_name: str, 
-    source_snapshot_name: str = None,
+    source_snapshot_name: Optional[str] = None,
     volume_snapshot_class: str = "csi-snapclass", 
     namespace: str = "default", 
     print_output: bool = False
@@ -377,7 +378,7 @@ def list_volumes_tool(
 @mcp.tool(name="CreateVolumeSnapshot")
 def create_volume_snapshot_tool(
     pvc_name: str, 
-    snapshot_name: str = None, 
+    snapshot_name: Optional[str] = None, 
     volume_snapshot_class: str = "csi-snapclass",
     namespace: str = "default", 
     print_output: bool = False
@@ -416,7 +417,7 @@ def create_volume_snapshot_tool(
 
 @mcp.tool(name="ListVolumeSnapshots")
 def list_volume_snapshots_tool(
-    pvc_name: str = None, 
+    pvc_name: Optional[str] = None, 
     namespace: str = "default", 
     print_output: bool = False
 ) -> list:
