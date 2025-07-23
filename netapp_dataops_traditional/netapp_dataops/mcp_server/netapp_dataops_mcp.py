@@ -388,8 +388,7 @@ async def create_snap_mirror_relationship_tool(
 
 @mcp.tool(name="List SnapMirror Relationships")
 async def list_snap_mirror_relationships_tool(
-    cluster_name: Optional[str] = None,    
-    svm_name: Optional[str] = None,      
+    cluster_name: Optional[str] = None,          
     print_output: bool = False  
 ) -> list:
     
@@ -398,7 +397,6 @@ async def list_snap_mirror_relationships_tool(
 
     Args:
         cluster_name (str): Non-default cluster name, same credentials as the default credentials should be used. Defaults to None.
-        svm_name (str): Non-default SVM name, same credentials as the default credentials should be used. Defaults to None.
         print_output (bool): Denotes whether or not to print messages to the console during execution. Defaults to False.
 
     Returns:
@@ -409,7 +407,6 @@ async def list_snap_mirror_relationships_tool(
     try:
         snap_mirror_relationships = list_snap_mirror_relationships(
             cluster_name=cluster_name,
-            svm_name=svm_name,
             print_output=print_output
         )
         if snap_mirror_relationships is None:
