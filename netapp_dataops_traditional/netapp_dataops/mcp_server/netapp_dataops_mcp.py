@@ -3,6 +3,7 @@
 import logging
 import sys
 import asyncio
+from typing import Optional
 from fastmcp import FastMCP
 from netapp_dataops.mcp_server.config import load_credentials
 from netapp_dataops.traditional import (
@@ -23,22 +24,22 @@ async def create_volume_tool(
     volume_name: str,
     volume_size: str,
     guarantee_space: bool = False,
-    cluster_name: str = None,
-    svm_name: str = None,
+    cluster_name: Optional[str] = None,
+    svm_name: Optional[str] = None,
     volume_type: str = "flexvol",
     unix_permissions: str = "0777",
     unix_uid: str = "0",
     unix_gid: str = "0",
     export_policy: str = "default",
     snapshot_policy: str = "none",
-    aggregate: str = None,
-    mountpoint: str = None,
-    junction: str = None,
+    aggregate: Optional[str] = None,
+    mountpoint: Optional[str] = None,
+    junction: Optional[str] = None,
     readonly: bool = False,
     print_output: bool = False,
-    tiering_policy: str = None,
+    tiering_policy: Optional[str] = None,
     vol_dp: bool = False,
-    snaplock_type: str = None
+    snaplock_type: Optional[str] = None
 ) -> None:
     """
     Use this tool to rapidly provision a new data volume.
@@ -97,18 +98,18 @@ async def create_volume_tool(
 async def clone_volume_tool(
     new_volume_name: str,
     source_volume_name: str,
-    cluster_name: str = None,
-    source_snapshot_name: str = None,
-    source_svm: str = None,
-    target_svm: str = None,
-    export_hosts: str = None,
-    export_policy: str = None,
-    snapshot_policy: str = None,
+    cluster_name: Optional[str] = None,
+    source_snapshot_name: Optional[str] = None,
+    source_svm: Optional[str] = None,
+    target_svm: Optional[str] = None,
+    export_hosts: Optional[str] = None,
+    export_policy: Optional[str] = None,
+    snapshot_policy: Optional[str] = None,
     split: bool = False,
-    unix_uid: str = None,
-    unix_gid: str = None,
-    mountpoint: str = None,
-    junction: str = None,
+    unix_uid: Optional[str] = None,
+    unix_gid: Optional[str] = None,
+    mountpoint: Optional[str] = None,
+    junction: Optional[str] = None,
     readonly: bool = False,
     refresh: bool = False,
     svm_dr_unprotect: bool = False,
@@ -171,8 +172,8 @@ async def clone_volume_tool(
 async def list_volumes_tool(
     check_local_mounts: bool = False,
     include_space_usage_details: bool = False,
-    cluster_name: str = None,
-    svm_name: str = None,
+    cluster_name: Optional[str] = None,
+    svm_name: Optional[str] = None,
     print_output: bool = False
 ) -> list:
     """
@@ -197,24 +198,28 @@ async def list_volumes_tool(
         A list of all existing volumes. Each item in the list will be a dictionary containing details regarding a specific volume.
     """
     try:
-        return list_volumes(
+        volumes = list_volumes(
             check_local_mounts=check_local_mounts,
             include_space_usage_details=include_space_usage_details,
             cluster_name=cluster_name,
             svm_name=svm_name,
             print_output=print_output
         )
+        if volumes is None:
+            return []
+        return volumes
     except Exception as e:
         print(f"Error listing volumes: {e}")
+        return []
 
 
 @mcp.tool(name="Mount Volume")
 async def mount_volume_tool(
     volume_name: str,          
     mountpoint: str,            
-    cluster_name: str = None,   
-    svm_name: str = None,      
-    mount_options: str = None,  
+    cluster_name: Optional[str] = None,   
+    svm_name: Optional[str] = None,      
+    mount_options: Optional[str] = None,  
     readonly: bool = False,     
     print_output: bool = False  
 ) -> None:
@@ -253,12 +258,12 @@ async def mount_volume_tool(
 @mcp.tool(name="Create Snapshot")
 async def create_snapshot_tool(
     volume_name: str,                    
-    snapshot_name: str = None,           
-    cluster_name: str = None,            
-    svm_name: str = None,                
+    snapshot_name: Optional[str] = None,           
+    cluster_name: Optional[str] = None,            
+    svm_name: Optional[str] = None,                
     retention_count: int = 0,            
     retention_days: bool = False,        
-    snapmirror_label: str = None,        
+    snapmirror_label: Optional[str] = None,        
     print_output: bool = False
 ) -> None:
     
@@ -297,8 +302,8 @@ async def create_snapshot_tool(
 @mcp.tool(name="List Snapshots")
 async def list_snapshots_tool(
     volume_name: str,            
-    cluster_name: str = None,    
-    svm_name: str = None,            
+    cluster_name: Optional[str] = None,    
+    svm_name: Optional[str] = None,            
     print_output: bool = False  
 ) -> list :
     
@@ -318,9 +323,13 @@ async def list_snapshots_tool(
         The keys for the values in this dictionary are "Snapshot Name", "Create Time".
     """
     try:
-        return list_snapshots(volume_name=volume_name, cluster_name=cluster_name, svm_name=svm_name, print_output=print_output)
+        snapshots = list_snapshots(volume_name=volume_name, cluster_name=cluster_name, svm_name=svm_name, print_output=print_output)
+        if snapshots is None:
+            return []
+        return snapshots
     except Exception as e:
         print(f"Error listing snapshots: {e}")
+        return []
 
 
 @mcp.tool(name="Create SnapMirror Relationship")
@@ -328,11 +337,11 @@ async def create_snap_mirror_relationship_tool(
     source_svm: str,                    
     source_vol: str,                    
     target_vol: str,                    
-    target_svm: str = None,             
-    cluster_name: str = None,           
+    target_svm: Optional[str] = None,             
+    cluster_name: Optional[str] = None,           
     schedule: str = '',                 
     policy: str = 'MirrorAllSnapshots', 
-    action: str = None,                 
+    action: Optional[str] = None,                 
     print_output: bool = False          
 ) -> None:
     
@@ -374,8 +383,8 @@ async def create_snap_mirror_relationship_tool(
 
 @mcp.tool(name="List SnapMirror Relationships")
 async def list_snap_mirror_relationships_tool(
-    cluster_name: str = None,    
-    svm_name: str = None,      
+    cluster_name: Optional[str] = None,    
+    svm_name: Optional[str] = None,      
     print_output: bool = False  
 ) -> list:
     
@@ -393,13 +402,17 @@ async def list_snap_mirror_relationships_tool(
         The keys for the values in this dictionary are "UUID", "Type", "Healthy", "Current Transfer Status", "Source Cluster", "Source SVM", "Source Volume", "Dest Cluster", "Dest SVM", "Dest Volume".
     """
     try:
-        return list_snap_mirror_relationships(
+        snap_mirror_relationships = list_snap_mirror_relationships(
             cluster_name=cluster_name,
             svm_name=svm_name,
             print_output=print_output
         )
+        if snap_mirror_relationships is None:
+            return []
+        return snap_mirror_relationships
     except Exception as e:
         print(f"Error listing snapmirror relationships: {e}")
+        return []
 
 
 
