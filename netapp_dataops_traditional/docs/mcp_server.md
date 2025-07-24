@@ -33,7 +33,7 @@ A config file must be created before the NetApp Data Management Toolkit for Trad
 
 Start the MCP server:
     ```
-    netapp_dataops_mcp.py
+    netapp_dataops_ontap_mcp.py
     ```
 
 ### Support
