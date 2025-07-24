@@ -222,6 +222,7 @@ async def mount_volume_tool(
     cluster_name: Optional[str] = None,   
     svm_name: Optional[str] = None,      
     mount_options: Optional[str] = None,  
+    lif_name: Optional[str] = None,
     readonly: bool = False,     
     print_output: bool = False  
 ) -> None:
@@ -237,6 +238,7 @@ async def mount_volume_tool(
         cluster_name (str): Non-default cluster name, same credentials as the default credentials should be used. Defaults to None.
         svm_name (str): Non-default SVM name, same credentials as the default credentials should be used. Defaults to None.
         mount_options (str): Specify custom NFS mount options. Defaults to None.
+        lif_name(str): Non-default lif (nfs server ip/name). Defaults to None.
         readonly (bool): Option to mount the volume locally as "read-only." If not specified volume will be mounted as "read-write". On Linux hosts, if specified, the calling program must be run as root. Defaults to False.
         print_output (bool): Denotes whether or not to print messages to the console during execution. Defaults to False.
 
@@ -250,6 +252,7 @@ async def mount_volume_tool(
             svm_name=svm_name,
             mountpoint=mountpoint,
             mount_options=mount_options,
+            lif_name=lif_name,
             readonly=readonly,
             print_output=print_output
         )
