@@ -2175,6 +2175,80 @@ def create_snap_mirror_relationship(source_svm: str, source_vol: str, target_vol
                 if print_output:
                     print("Error: ONTAP Rest API Error: ", err)
                 raise APIConnectionError(err)
+            
+def create_flexcache(source_vol: str, source_svm: str, flexcache_vol: str, flexcache_svm: str = None, cluster_name: str = None, 
+                     print_output: bool = False):
+    # Retrieve config details from config file
+    try:
+        config = _retrieve_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+    try:
+        connectionType = config["connectionType"]
+    except:
+        if print_output:
+            _print_invalid_config_error()
+        raise InvalidConfigError()
+
+    if cluster_name:
+        config["hostname"] = cluster_name
+
+    if connectionType == "ONTAP":
+        # Instantiate connection to ONTAP cluster
+        try:
+            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
+        except InvalidConfigError:
+            raise
+
+        svm = config["svm"]
+        if not flexcache_svm:
+            flexcache_svm = svm
+
+        try:
+            newFlexCacheDict = {
+                "name": flexcache_vol,
+                "svm": {"name": flexcache_svm},
+                "origins": {
+                    "svm": {"name": source_svm},
+                    "volume": {"name": source_vol}
+                },
+            }
+            if print_output:
+                print("Creating FlexCache: " + source_svm + ":" + source_vol + " -> " + flexcache_svm + ":" + flexcache_vol)
+            newFlexCache = NetAppFlexCache.from_dict(newFlexCacheDict)
+            newFlexCache.post(poll=True, poll_timeout=120)
+        except NetAppRestError as err:
+            if print_output:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+        
+        # Check if FlexCache was created successfully
+        try:
+            uuid = None
+            relation = None
+            flexcache_relationship = NetAppFlexCache.get_collection(**{"name": flexcache_vol, "svm.name": flexcache_svm})
+            for relation in flexcache_relationship:
+            # Retrieve relationship details
+                try:
+                    relation.get()
+                    uuid = relation.uuid
+                except NetAppRestError as err:
+                    if print_output:
+                        print("Error: ONTAP Rest API Error: ", err)
+                    raise APIConnectionError(err)
+            if not uuid:
+                if print_output:
+                    print("Error: FlexCache was not created: " + flexcache_svm + ":" + flexcache_vol)
+                raise InvalidConfigError()
+        except NetAppRestError as err:
+            if print_output:
+                print("Error: ONTAP Rest API Error: ", err)
+            raise APIConnectionError(err)
+
+        if print_output:
+            print("FlexCache created successfully.")
+    else:
+        raise ConnectionTypeError()
 
 def sync_snap_mirror_relationship(uuid: str = None, svm_name: str = None, volume_name: str = None, cluster_name: str = None, wait_until_complete: bool = False, print_output: bool = False):
     # Retrieve config details from config file
