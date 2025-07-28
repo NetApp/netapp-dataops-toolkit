@@ -2177,7 +2177,7 @@ def create_snap_mirror_relationship(source_svm: str, source_vol: str, target_vol
                 raise APIConnectionError(err)
             
 def create_flexcache(source_vol: str, source_svm: str, flexcache_vol: str, flexcache_svm: str = None, cluster_name: str = None, 
-                     print_output: bool = False):
+                    flexcache_size: str = None, print_output: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -2204,15 +2204,35 @@ def create_flexcache(source_vol: str, source_svm: str, flexcache_vol: str, flexc
         if not flexcache_svm:
             flexcache_svm = svm
 
+        flexcache_size_bytes = None
+
+        if flexcache_size:
+            # Convert volume size to Bytes
+            if re.search("^[0-9]+MB$", flexcache_size):
+                # Convert from MB to Bytes
+                flexcache_size_bytes = int(flexcache_size[:len(flexcache_size)-2]) * 1024**2
+            elif re.search("^[0-9]+GB$", flexcache_size):
+                # Convert from GB to Bytes
+                flexcache_size_bytes = int(flexcache_size[:len(flexcache_size)-2]) * 1024**3
+            elif re.search("^[0-9]+TB$", flexcache_size):
+                # Convert from TB to Bytes
+                flexcache_size_bytes = int(flexcache_size[:len(flexcache_size)-2]) * 1024**4
+            else :
+                if print_output:
+                    print("Error: Invalid flexcache volume size specified. Acceptable values are '1024MB', '100GB', '10TB', etc.")
+                raise InvalidVolumeParameterError("size")
+
         try:
             newFlexCacheDict = {
                 "name": flexcache_vol,
                 "svm": {"name": flexcache_svm},
-                "origins": {
+                "origins": [{
                     "svm": {"name": source_svm},
                     "volume": {"name": source_vol}
-                },
+                }],
             }
+            if flexcache_size_bytes:
+                newFlexCacheDict["size"] = flexcache_size_bytes
             if print_output:
                 print("Creating FlexCache: " + source_svm + ":" + source_vol + " -> " + flexcache_svm + ":" + flexcache_vol)
             newFlexCache = NetAppFlexCache.from_dict(newFlexCacheDict)

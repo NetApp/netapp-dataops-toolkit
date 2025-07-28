@@ -529,6 +529,7 @@ Required Options/Arguments:
 
 Optional Options/Arguments:
 \t-u, --cluster-name=\tnon default hosting cluster
+\t-z, --flexcache-size=\tSize of flexcache volume (default is 10% of source volume size)
 \t-h, --help\t\tPrint help text.
 
 Examples:
@@ -1066,10 +1067,11 @@ if __name__ == '__main__':
             flexCacheSvm = None
             sourceVol = None
             flexCacheVol = None
+            flexCacheSize = None
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:t:s:v:u:", ["cluster-name=", "help", "flexcache-vol=", "flexcache-svm=", "source-svm=", "source-vol="])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:t:s:v:u:z:", ["cluster-name=", "help", "flexcache-vol=", "flexcache-svm=", "source-svm=", "source-vol=", "flexcache-size="])
             except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextCreateFlexCacheVolume, invalidOptArg=True)
@@ -1089,6 +1091,8 @@ if __name__ == '__main__':
                     sourceVol = arg
                 elif opt in ("-u", "--cluster-name"):
                     clusterName = arg
+                elif opt in ("-z", "--flexcache-size"):
+                    flexCacheSize = arg
 
             # Check for required options
             if not flexCacheVol or not flexCacheSvm or not sourceSvm or not sourceVol:
@@ -1097,7 +1101,7 @@ if __name__ == '__main__':
             # Create flexcache
             try:
                 create_flexcache(source_svm=sourceSvm, flexcache_svm=flexCacheSvm, source_vol=sourceVol, flexcache_vol=flexCacheVol,
-                        cluster_name=clusterName, print_output=True)
+                        cluster_name=clusterName, flexcache_size = flexCacheSize, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
 
