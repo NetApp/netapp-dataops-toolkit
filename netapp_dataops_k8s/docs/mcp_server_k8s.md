@@ -1,4 +1,4 @@
-# mcp_server_k8s
+# NetApp DataOps Toolkit for Kubernetes MCP Server
 
 ## Description
 
