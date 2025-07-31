@@ -2,9 +2,9 @@
 
 The NetApp DataOps Toolkit includes multiple MCP Servers. These MCP Servers expose DataOps Toolkit capabilities as "tools" that can be utilized by AI agents.
 
-## NetApp DataOps Toolkit Traditional MCP Server
+## NetApp DataOps Toolkit MCP Server for ONTAP
 
-The [NetApp DataOps Toolkit Traditional MCP Server](netapp_dataops_traditional/docs/mcp_server.md) is an MCP Server that enables AI agents to manage volumes and snapshots on an ONTAP system, including NetApp AFF and FAS appliances, Amazon FSx for NetApp ONTAP instances, and NetApp Cloud Volumes ONTAP instances.
+The [NetApp DataOps Toolkit MCP Server for ONTAP](netapp_dataops_traditional/docs/mcp_server.md) is an MCP Server that enables AI agents to manage volumes and snapshots on an ONTAP system, including NetApp AFF and FAS appliances, Amazon FSx for NetApp ONTAP instances, and NetApp Cloud Volumes ONTAP instances.
 
 ### Available Tools
 
