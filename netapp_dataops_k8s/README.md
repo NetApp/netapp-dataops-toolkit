@@ -1,7 +1,7 @@
 NetApp DataOps Toolkit for Kubernetes
 =========
 
-The NetApp DataOps Toolkit for Kubernetes is a Python library that makes it simple for developers, data scientists, DevOps engineers, and data engineers to perform various data management tasks within a Kubernetes cluster. Some of the key capabilities that the toolkit provides are the ability to provision a new persistent volume or data science workspace, the ability to almost instantaneously clone a volume or workspace, the ability to almost instantaneously save off a snapshot of a volume or workspace for traceability/baselining, and the ability to move data between S3 compatible object storage and a Kubernetes persistent volume.
+The NetApp DataOps Toolkit for Kubernetes is a Python library that makes it simple for developers, data scientists, DevOps engineers, and data engineers to perform various data management tasks within a Kubernetes cluster. Some of the key capabilities that the toolkit provides are the ability to provision a new persistent volume or data science workspace, the ability to almost instantaneously clone a volume or workspace, the ability to almost instantaneously save off a snapshot of a volume or workspace for traceability/baselining, and the ability to move data between S3 compatible object storage and a Kubernetes persistent volume. The toolkit also includes an MCP server that exposes many of the capabilities as "tools" that can be utilized by AI agents.
 
 ## Compatibility
 
@@ -15,8 +15,9 @@ The toolkit is currently compatible with Trident versions 20.07 and above. Addit
 
 - ontap-nas
 - ontap-nas-flexgroup
-- gcp-cvs
 - azure-netapp-files
+- google-cloud-netapp-volume
+- gcp-cvs
 
 The toolkit is currently compatible with all versions of the BeeGFS CSI driver, though not all functionality is supported by BeeGFS. Operations that are not supported by BeeGFS are noted within the documentation.
 
@@ -38,9 +39,9 @@ python3 -m pip install netapp-dataops-k8s
 
 ## Getting Started: Standard Usage
 
-The NetApp DataOps Toolkit for Kubernetes can be utilized from any Linux or macOS host that has network access to the Kubernetes cluster.
+The NetApp DataOps Toolkit for Kubernetes can be utilized from any Linux or macOS client that has network access to the Kubernetes cluster.
 
-The toolkit requires that a valid kubeconfig file be present on the local host, located at `$HOME/.kube/config` or at another path specified by the `KUBECONFIG` environment variable. Refer to the [Kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/) for more information regarding kubeconfig files.
+The toolkit requires that a valid kubeconfig file be present on the client, located at `$HOME/.kube/config` or at another path specified by the `KUBECONFIG` environment variable. Refer to the [Kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/) for more information regarding kubeconfig files.
 
 ## Getting Started: In-cluster Usage (for advanced Kubernetes users)
 
@@ -71,11 +72,19 @@ Refer to the [Kubernetes documentation](https://kubernetes.io/docs/tasks/run-app
 
 The NetApp DataOps Toolkit for Kubernetes provides the following capabilities.
 
+### MCP Server
+
+The NetApp DataOps Toolkit for Kubernetes includes an [MCP Server](docs/mcp_server_k8s.md) that exposes many of the [Workspace Management](#workspace-mgmt) and [Volume Management](vol-mgmt) capabilities as tools that can be utilized by AI agents.
+
+<a name="workspace-mgmt"></a>
+
 ### Workspace Management
 
 The NetApp DataOps Toolkit can be used to manage data science workspaces within a Kubernetes cluster. Some of the key capabilities that the toolkit provides are the ability to provision a new JupyterLab workspace, the ability to almost instantaneously clone a JupyterLab workspace, and the ability to almost instantaneously save off a snapshot of a JupyterLab workspace for traceability/baselining.
 
 Refer to the [NetApp DataOps Toolkit for Kubernetes Workspace Management](docs/workspace_management.md) documentation for more details.
+
+<a name="vol-mgmt"></a>
 
 ### Volume Management
 
