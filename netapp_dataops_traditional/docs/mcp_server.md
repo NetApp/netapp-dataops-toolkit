@@ -1,6 +1,6 @@
 # NetApp DataOps Toolkit MCP Server for ONTAP
 
-The NetApp DataOps Toolkit Traditional MCP Server is an open-source server component written in Python that provides access to Traditional DataOps Toolkit through the Model Context Protocol (MCP). The server provides a set of tools for managing NetApp ONTAP storage systems, including volume creation, cloning, snapshot management, and SnapMirror relationships.
+The NetApp DataOps Toolkit MCP Server for ONTAP is an open-source server component written in Python that provides access to Traditional DataOps Toolkit capabilities through the Model Context Protocol (MCP). The server provides a set of tools for managing NetApp ONTAP storage systems, including volume creation, cloning, snapshot management, and SnapMirror relationships.
 
 >[!NOTE]
 >This MCP server uses the stdio transport, as shown in the [MCP Server Quickstart](https://modelcontextprotocol.io/quickstart/server), making it a "local MCP server".
