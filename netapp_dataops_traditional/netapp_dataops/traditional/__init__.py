@@ -2176,7 +2176,7 @@ def create_snap_mirror_relationship(source_svm: str, source_vol: str, target_vol
                     print("Error: ONTAP Rest API Error: ", err)
                 raise APIConnectionError(err)
             
-def create_flexcache(source_vol: str, source_svm: str, flexcache_vol: str, flexcache_svm: str = None, cluster_name: str = None, 
+def create_flexcache(source_vol: str, source_svm: str, flexcache_vol: str, flexcache_svm: str, cluster_name: str = None, 
                     flexcache_size: str = None, print_output: bool = False):
     # Retrieve config details from config file
     try:
@@ -2199,10 +2199,6 @@ def create_flexcache(source_vol: str, source_svm: str, flexcache_vol: str, flexc
             _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
         except InvalidConfigError:
             raise
-
-        svm = config["svm"]
-        if not flexcache_svm:
-            flexcache_svm = svm
 
         flexcache_size_bytes = None
 
