@@ -1,20 +1,20 @@
 NetApp DataOps Toolkit
 =========
 
-The NetApp DataOps Toolkit is a Python-based tool that simplifies the management of development/training workspaces and inference servers that are backed by high-performance, scale-out NetApp storage. Key capabilities include:
-- Rapidly provision new high-capacity JupyterLab workspaces that are backed by high-performance, scale-out NetApp storage.
-- Rapidly provision new NVIDIA Triton Inference Server instances that are backed by enterprise-class NetApp storage.
-- Near-instantaneously clone high-capacity JupyterLab workspaces in order to enable experimentation or rapid iteration.
-- Near-instantaneously save snapshots of high-capacity JupyterLab workspaces for backup and/or traceability/baselining.
-- Near-instantaneously provision, clone, and snapshot high-capacity, high-performance data volumes.
+The NetApp DataOps Toolkit is a collection of Python-based client tools that simplify the management of data volumes and data science/engineering workspaces that are backed by high-performance, scale-out NetApp storage. Key capabilities include:
+- Rapidly provision new data volumes (file shares) or JupyterLab workspaces that are backed by high-performance, scale-out NetApp storage.
+- Near-instantaneously clone data volumes (file shares) or JupyterLab workspaces in order to enable experimentation or rapid iteration.
+- Near-instantaneously save snapshots of data volumes (file shares) or JupyterLab workspaces for backup and/or traceability/baselining.
+- Replicate data volumes (file shares) across different environments.
+
+The toolkit includes MCP servers that expose many of these capabilities as "tools" that can be utilized by AI agents.
 
 ## Getting Started
 
-The latest stable release of the NetApp DataOps Toolkit is version 2.5.0. It is recommended to always use the latest stable release. You can access the documentation for the latest stable release [here](https://github.com/NetApp/netapp-dataops-toolkit/tree/v2.5.0)
+The NetApp DataOps Toolkit includes the following client tools:
 
-The NetApp DataOps Toolkit comes in two different flavors. For access to the most capabilities, we recommend using the [NetApp DataOps Toolkit for Kubernetes](netapp_dataops_k8s/). This flavor supports the full functionality of the toolkit, including JupyterLab workspace and NVIDIA Triton Inference Server management capabilities, but requires access to a Kubernetes cluster. 
-
-If you do not have access to a Kubernetes cluster, then you can use the [NetApp DataOps Toolkit for Traditional Environments](netapp_dataops_traditional/). However, this flavor only supports data volume management capabilities. It does not support the JupyterLab workspace and NVIDIA Triton Inference Server management capabilities that are available with the NetApp DataOps Toolkit for Kubernetes.
+- The [NetApp DataOps Toolkit for Kubernetes](netapp_dataops_k8s/) includes data volume management, JupyterLab management, and data movement capabilities for users that have access to a Kubernetes cluster. 
+- The [NetApp DataOps Toolkit for Traditional Environments](netapp_dataops_traditional/) includes basic data volume management capabilities. It will run on most Linux and macOS clients, and does not require Kubernetes.
 
 ## Support
 
