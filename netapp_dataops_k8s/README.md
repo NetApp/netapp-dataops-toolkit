@@ -74,17 +74,13 @@ The NetApp DataOps Toolkit for Kubernetes provides the following capabilities.
 
 ### MCP Server
 
-The NetApp DataOps Toolkit for Kubernetes includes an [MCP Server](docs/mcp_server_k8s.md) that exposes many of the [Workspace Management](#workspace-mgmt) and [Volume Management](vol-mgmt) capabilities as tools that can be utilized by AI agents.
-
-<a name="workspace-mgmt"></a>
+The NetApp DataOps Toolkit for Kubernetes includes an [MCP Server](docs/mcp_server_k8s.md) that exposes many of the [Workspace Management](docs/workspace_management.md) and [Volume Management](docs/volume_management.md) capabilities as tools that can be utilized by AI agents.
 
 ### Workspace Management
 
 The NetApp DataOps Toolkit can be used to manage data science workspaces within a Kubernetes cluster. Some of the key capabilities that the toolkit provides are the ability to provision a new JupyterLab workspace, the ability to almost instantaneously clone a JupyterLab workspace, and the ability to almost instantaneously save off a snapshot of a JupyterLab workspace for traceability/baselining.
 
 Refer to the [NetApp DataOps Toolkit for Kubernetes Workspace Management](docs/workspace_management.md) documentation for more details.
-
-<a name="vol-mgmt"></a>
 
 ### Volume Management
 
