@@ -7,7 +7,7 @@ The NetApp DataOps Toolkit is a collection of Python-based client tools that sim
 - Near-instantaneously save snapshots of data volumes (file shares) or JupyterLab workspaces for backup and/or traceability/baselining.
 - Replicate data volumes (file shares) across different environments.
 
-The toolkit includes MCP servers that expose many of these capabilities as "tools" that can be utilized by AI agents.
+The toolkit includes [MCP Servers](mcp_servers.md) that expose many of these capabilities as "tools" that can be utilized by AI agents.
 
 ## Getting Started
 
