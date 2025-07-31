@@ -16,9 +16,9 @@ NetApp DataOps Toolkit MCP Server is an open-source, Python-based server compone
 
 Install with pip:
 
-    ```sh
-    pip install netapp_dataops_k8s
-    ```
+```sh
+pip install netapp_dataops_k8s
+```
 
 After installation, the netapp_dataops_k8s_mcp.py command will be available in your PATH for direct usage.
 
@@ -30,9 +30,9 @@ To run the MCP tools from the MCP server, a valid kubeconfig file must be presen
 
 Run the MCP server with:
 
-    ```sh
-    netapp_dataops_k8s_mcp.py
-    ```
+```sh
+netapp_dataops_k8s_mcp.py
+```
 
 ## Available Tools
 
