@@ -668,18 +668,21 @@ Command: create flexcache
 Create a new FlexCache volume.
 
 Required Options/Arguments:
-\t-p, --pvc-name=\t\tName of the new FlexCache volume (name to be applied to new Kubernetes PersistentVolumeClaim/PVC).
-\t-s, --size=\t\tSize of the new FlexCache volume. Format: '1024Mi', '100Gi', '10Ti', etc.
-\t-o, --origin-pvc-name=\tName of the origin volume to cache.
+\t-n, --flexcache-vol=\tName of flexcache volume
+\t-t, --flexcache-svm=\tnon default flexcache SVM
+\t-s, --source-svm=\tSource SVM name
+\t-v, --source-vol=\tSource volume name
+\t-z, --flexcache-size=\tSize of flexcache volume (Format: '1024Mi', '100Gi', '10Ti', etc.).
 
 Optional Options/Arguments:
 \t-c, --storage-class=\tKubernetes StorageClass to use when provisioning the new FlexCache volume. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident.
 \t-h, --help\t\tPrint help text.
 \t-n, --namespace=\tKubernetes namespace to create the new PersistentVolumeClaim (PVC) in. If not specified, the PVC will be created in the "default" namespace.
+\t-u, --cluster-name=\tnon default hosting cluster
 
 Examples:
-\tnetapp_dataops_k8s_cli.py create flexcache --pvc-name=cache1 --size=10Gi --origin-pvc-name=origin1
-\tnetapp_dataops_k8s_cli.py create flexcache -p cache2 -s 20Gi -o origin2 -n team1
+\tnetapp_dataops_k8s_cli.py create flexcache --flexcache-vol=cache1 --flexcache-size=10Gi --source-vol=origin1 --source-svm=svm1 --flexcache-svm=svm2
+\tnetapp_dataops_k8s_cli.py create flexcache -u cluster1 -s svm1 -t svm2 -v vol1 -n vol2
 '''
 
 
@@ -1183,15 +1186,19 @@ if __name__ == '__main__':
                 sys.exit(1)
 
         elif target == "flexcache":
-            flexcache_name = None
-            source_volume_name = None
             namespace = "default"
-            storage_class = None
+            storageClass = None
+            clusterName = None
+            sourceSvm = None
+            flexCacheSvm = None
+            sourceVol = None
+            flexCacheVol = None
+            flexCacheSize = None
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hf:s:n:c:", ["help", "flexcache-name=", "source-volume-name=", "namespace=", "storage-class="])
-            except:
+                opts, args = getopt.getopt(sys.argv[2:], "hp:s:o:n:c:v:", ["help", "flexcache-vol=", "flexcache-svm=", "flexcache-size=", "source-vol=", "source-svm=", "namespace=", "storage-class=", "cluster-name="])
+            except getopt.GetoptError:
                 handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
 
             # Parse command line options
@@ -1199,22 +1206,29 @@ if __name__ == '__main__':
                 if opt in ("-h", "--help"):
                     print(helpTextCreateFlexCache)
                     sys.exit(0)
-                elif opt in ("-f", "--flexcache-name"):
-                    flexcache_name = arg
-                elif opt in ("-s", "--source-volume-name"):
-                    source_volume_name = arg
+                elif opt in ("-p", "--flexcache-vol="):
+                    flexCacheVol = arg
+                elif opt in ("-s", "--flexcache-size="):
+                    flexCacheSize = arg
+                elif opt in ("-p", "--flexcache-svm="):
+                    flexCacheSvm = arg
+                elif opt in ("-o", "--source-vol="):
+                    sourceVol = arg
+                elif opt in ("-o", "--source-svm="):
+                    sourceSvm = arg
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
                 elif opt in ("-c", "--storage-class"):
-                    storage_class = arg
+                    storageClass = arg
+                elif opt in ("-v", "--cluster-name"):
+                    clusterName = arg
 
             # Check for required options
-            if not flexcache_name or not source_volume_name:
+            if not flexCacheVol or not sourceVol or not flexCacheSvm or not sourceSvm or not flexCacheSize:
                 handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
 
             # Create FlexCache volume
-            create_flexcache(flexcache_name=flexcache_name, source_volume_name=source_volume_name, namespace=namespace, storage_class=storage_class, print_output=True)
-
+            create_flexcache(flexcache_vol=flexCacheVol, flexcache_svm=flexCacheSvm, flexcache_size=flexCacheSize, source_vol=sourceVol, source_svm=sourceSvm, namespace=namespace, storage_class=storageClass, cluster_name=clusterName, print_output=True)
 
         else:
             handleInvalidCommand()
