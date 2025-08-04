@@ -2156,6 +2156,14 @@ def create_flexcache(
             print("FlexCache created successfully.")
     else:
         raise ConnectionTypeError()
+    
+    # Retrieve kubeconfig
+    try:
+        _load_kube_config()
+    except:
+        if print_output:
+            _print_invalid_config_error()
+        raise InvalidConfigError()
 
     core_v1 = client.CoreV1Api()
     pvc_name = f"pvc-{flexcache_vol}"
