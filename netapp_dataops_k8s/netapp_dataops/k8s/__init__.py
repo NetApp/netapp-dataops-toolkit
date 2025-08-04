@@ -587,6 +587,12 @@ def _convert_size_to_bytes(size_str):
     raise InvalidVolumeParameterError("size")
 
 
+def _validate_volume_name(name):
+    # Replace invalid characters with underscores
+    valid_name = re.sub(r'[^a-zA-Z0-9_]', '_', name)
+    return valid_name
+
+
 #
 # Public classes
 #
@@ -2066,6 +2072,10 @@ def create_flexcache(
     """
     Created a FlexCache in ONTAP and create FlexCache
     """
+
+    # Validate volume names
+    source_vol = _validate_volume_name(source_vol)
+    flexcache_vol = _validate_volume_name(flexcache_vol)
     
     try:
         config = _retrieve_config(print_output=print_output)
