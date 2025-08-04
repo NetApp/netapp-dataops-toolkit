@@ -2168,33 +2168,44 @@ def create_flexcache(
     core_v1 = client.CoreV1Api()
     pvc_name = f"pvc-{flexcache_vol}"
     pv_name = f"pv-{flexcache_vol}"
+    labels = {
+        "app": "flexcache"
+    }
+
+    if not storage_class:
+        storage_v1 = client.StorageV1Api()
+        storage_classes = storage_v1.list_storage_class()
+        for sc in storage_classes.items:
+            if sc.metadata.annotations and sc.metadata.annotations.get("storageclass.kubernetes.io/is-default-class") == "true":
+                storage_class = sc.metadata.name
+                if not storage_class:
+                    if print_output:
+                        print("Error: No default StorageClass found. Please specify a storageClass.")
+                    raise InvalidConfigError()
 
     # Create PV in Kubernetes
     if print_output:
         print(f"[K8s] Creating PV '{pv_name}' in namespace '{namespace}' with storageClass '{storage_class}'...")
 
-    pv_manifest = {
-        "apiVersion": "v1",
-        "kind": "PersistentVolume",
-        "metadata": {
-            "name": pv_name
-        },
-        "spec": {
-            "capacity": {
-                "storage": flexcache_size
-            },
-            "accessModes": ["ReadWriteMany"],
-            "persistentVolumeReclaimPolicy": "Retain",
-            "storageClassName": storage_class,
-            "flexVolume": {
-                "driver": "netapp/flexcache",
-                "options": {
+    pv_manifest = client.V1PersistentVolume(
+        metadata=client.V1ObjectMeta(
+            name=pv_name,
+            labels=labels
+        ),
+        spec=client.V1PersistentVolumeSpec(
+            capacity={"storage": flexcache_size},
+            access_modes=["ReadWriteMany"],
+            persistent_volume_reclaim_policy="Retain",
+            storage_class_name=storage_class,
+            flex_volume=client.V1FlexVolumeSource(
+                driver="netapp/flexcache",
+                options={
                     "svm": flexcache_svm,
                     "volume": flexcache_vol
                 }
-            }
-        }
-    }
+            )
+        )
+    )
 
     try:
         core_v1.create_persistent_volume(body=pv_manifest)
@@ -2209,24 +2220,21 @@ def create_flexcache(
     if print_output:
         print(f"[K8s] Creating PVC '{pvc_name}' in namespace '{namespace}' with storageClass '{storage_class}'...")
 
-    pvc_manifest = {
-        "apiVersion": "v1",
-        "kind": "PersistentVolumeClaim",
-        "metadata": {
-            "name": pvc_name,
-            "namespace": namespace
-        },
-        "spec": {
-            "accessModes": ["ReadWriteMany"],
-            "resources": {
-                "requests": {
-                    "storage": flexcache_size
-                }
-            },
-            "storageClassName": storage_class,
-            "volumeName": pv_name
-        }
-    }
+    pvc_manifest = client.V1PersistentVolumeClaim(
+        metadata=client.V1ObjectMeta(
+            name=pvc_name,
+            namespace=namespace,
+            labels=labels
+        ),
+        spec=client.V1PersistentVolumeClaimSpec(
+            access_modes=["ReadWriteMany"],
+            resources=client.V1ResourceRequirements(
+                requests={"storage": flexcache_size}
+            ),
+            storage_class_name=storage_class,
+            volume_name=pv_name
+        )
+    )
 
     try:
         core_v1.create_namespaced_persistent_volume_claim(namespace=namespace, body=pvc_manifest)
