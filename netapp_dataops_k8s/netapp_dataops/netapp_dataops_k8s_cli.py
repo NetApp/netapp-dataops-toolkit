@@ -668,7 +668,7 @@ Command: create flexcache
 Create a new FlexCache volume.
 
 Required Options/Arguments:
-\t-n, --flexcache-vol=\tName of flexcache volume
+\t-f, --flexcache-vol=\tName of flexcache volume
 \t-t, --flexcache-svm=\tnon default flexcache SVM
 \t-s, --source-svm=\tSource SVM name
 \t-v, --source-vol=\tSource volume name
@@ -1197,7 +1197,7 @@ if __name__ == '__main__':
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[2:], "hn:t:s:v:z:c:u:", ["help", "flexcache-vol=", "flexcache-svm=", "flexcache-size=", "source-vol=", "source-svm=", "namespace=", "storage-class=", "cluster-name="])
+                opts, args = getopt.getopt(sys.argv[2:], "hn:f:t:z:v:s:n:c:u:", ["help", "flexcache-vol=", "flexcache-svm=", "flexcache-size=", "source-vol=", "source-svm=", "namespace=", "storage-class=", "cluster-name="])
             except getopt.GetoptError:
                 handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
 
@@ -1206,7 +1206,7 @@ if __name__ == '__main__':
                 if opt in ("-h", "--help"):
                     print(helpTextCreateFlexCache)
                     sys.exit(0)
-                elif opt in ("-n", "--flexcache-vol"):
+                elif opt in ("-f", "--flexcache-vol"):
                     flexCacheVol = arg
                 elif opt in ("-t", "--flexcache-svm"):
                     flexCacheSvm = arg
