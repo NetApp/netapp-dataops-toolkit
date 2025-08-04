@@ -2121,7 +2121,7 @@ def create_flexcache(
             if flexcache_size_bytes:
                 newFlexCacheDict["size"] = flexcache_size_bytes
             if print_output:
-                print("Creating FlexCache: " + source_svm + ":" + source_vol + " -> " + flexcache_svm + ":" + flexcache_vol)
+                print("Creating FlexCache: " + source_svm + ":" + source_vol_modified + " -> " + flexcache_svm + ":" + flexcache_vol_modified)
             newFlexCache = NetAppFlexCache.from_dict(newFlexCacheDict)
             newFlexCache.post(poll=True, poll_timeout=120)
         except NetAppRestError as err:
@@ -2133,7 +2133,7 @@ def create_flexcache(
         try:
             uuid = None
             relation = None
-            flexcache_relationship = NetAppFlexCache.get_collection(**{"name": flexcache_vol, "svm.name": flexcache_svm})
+            flexcache_relationship = NetAppFlexCache.get_collection(**{"name": flexcache_vol_modified, "svm.name": flexcache_svm})
             for relation in flexcache_relationship:
                 # Retrieve relationship details
                 try:
@@ -2145,7 +2145,7 @@ def create_flexcache(
                     raise APIConnectionError(err)
             if not uuid:
                 if print_output:
-                    print("Error: FlexCache was not created: " + flexcache_svm + ":" + flexcache_vol)
+                    print("Error: FlexCache was not created: " + flexcache_svm + ":" + flexcache_vol_modified)
                 raise InvalidConfigError()
         except NetAppRestError as err:
             if print_output:
