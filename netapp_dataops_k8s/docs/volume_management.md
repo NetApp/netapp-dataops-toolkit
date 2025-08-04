@@ -18,6 +18,7 @@ You can perform volume management operations using the toolkit's command line ut
 | [Delete an existing snapshot.](#cli-delete-volume-snapshot)                          | No                  | Yes                  |
 | [List all snapshots.](#cli-list-volume-snapshots)                                    | No                  | Yes                  |
 | [Restore a snapshot.](#cli-restore-volume-snapshot)                                  | No                  | Yes                  |
+| [Create a new FlexCache volume](#cli-create-flexcache)                               | No                  | Yes                  |
 
 ### Kubernetes Persistent Volume Management Operations
 
@@ -317,6 +318,38 @@ Restoring VolumeSnapshot 'snap1' for PersistentVolumeClaim 'project1' in namespa
 VolumeSnapshot successfully restored.
 ```
 
+<a name="cli-create-flexcache"></a>
+
+#### Create a FlexCache Volume
+
+The NetApp DataOps Toolkit can be used to create a FlexCache volume in ONTAP and then create a PV and PVC representing the FlexCache in Kubernetes. The command to create a FlexCache volume is `netapp_dataops_k8s_cli.py create flexcache`.
+
+The following options/arguments are required:
+
+```
+    -p, --flexcache-name=         Name of the new FlexCache volume (name to be applied to new Kubernetes PersistentVolumeClaim/PVC).
+    -s, --size=                   Size of the new FlexCache volume. Format: '1024Mi', '100Gi', '10Ti', etc.
+    -o, --origin-volume=          Name of the origin volume to cache.
+```
+
+The following options/arguments are optional:
+
+```
+    -c, --storage-class=    Kubernetes StorageClass to use when provisioning the new FlexCache volume. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident.
+    -h, --help              Print help text.
+    -n, --namespace=        Kubernetes namespace to create the new PersistentVolumeClaim (PVC) in. If not specified, the PVC will be created in the "default" namespace.
+    -v, --svm=              Storage Virtual Machine to create the new FlexCache in. If not specified, a "svm_default" SVM will be created by default, which will be used to create the FlexCache.
+```
+
+##### Example Usage
+
+Create a FlexCache volume 'cache1' of size 10GB and attach it to a Kubernetes PersistentVolumeClaim (PVC) named 'origin1' in namespace 'default'.
+
+```sh
+netapp_dataops_k8s_cli.py create flexcache --flexcache-name=cache1 --size=10Gi --origin-volume=origin1
+
+```
+
 <a name="library-of-functions"></a>
 
 ## Advanced: Set of Functions
@@ -339,6 +372,7 @@ The following volume management operations are available within the set of funct
 | [Delete an existing snapshot.](#lib-delete-volume-snapshot)                          | No                  | Yes                  |
 | [List all snapshots.](#lib-list-volume-snapshots)                                    | No                  | Yes                  |
 | [Restore a snapshot.](#lib-restore-volume-snapshot)                                  | No                  | Yes                  |
+| [Create a new FlexCache volume.](#lib-restore-volume-snapshot)                       | No                  | Yes                  |
 
 ### Kubernetes Persistent Volume Management Operations
 
@@ -574,6 +608,35 @@ Tip: If the PVC associated with the snapshot is currently mounted to a pod that 
 ```py
 def restore_volume_snapshot(
     snapshot_name: str,             # Name of Kubernetes VolumeSnapshot to be restored (required).
+    namespace: str = "default",     # Kubernetes namespace that VolumeSnapshot is located in. If not specified, namespace "default" will be used.
+    print_output: bool = False      # Denotes whether or not to print messages to the console during execution.
+) :
+```
+
+##### Return Value
+
+None
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.k8s`.
+
+```py
+InvalidConfigError              # kubeconfig file is missing or is invalid.
+APIConnectionError              # The Kubernetes API returned an error.
+```
+
+<a name="lib-clone-volume"></a>
+
+#### Create a FlexCache Volume
+
+The NetApp DataOps Toolkit can be used to create a FlexCache volume in ONTAP and then create a PV and PVC representing the FlexCache in Kubernetes.
+
+##### Function Definition
+
+```py
+def create_flexcache(
+    origin_volume: str,             # Name of Kubernetes VolumeSnapshot to be restored (required).
     namespace: str = "default",     # Kubernetes namespace that VolumeSnapshot is located in. If not specified, namespace "default" will be used.
     print_output: bool = False      # Denotes whether or not to print messages to the console during execution.
 ) :
