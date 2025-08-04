@@ -70,7 +70,7 @@ Note: To view details regarding options/arguments for a specific command, run th
 \tdelete volume-snapshot\t\tDelete an existing snapshot.
 \tlist volume-snapshots\t\tList all snapshots.
 \trestore volume-snapshot\t\tRestore a snapshot.
-\tcreate flexcache\t\t\tCreate a new FlexCache volume.
+\tcreate flexcache\t\tCreate a new FlexCache volume.
 
 Data Movement Commands:
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
@@ -1197,7 +1197,7 @@ if __name__ == '__main__':
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[2:], "hp:s:o:n:c:v:", ["help", "flexcache-vol=", "flexcache-svm=", "flexcache-size=", "source-vol=", "source-svm=", "namespace=", "storage-class=", "cluster-name="])
+                opts, args = getopt.getopt(sys.argv[2:], "hn:t:s:v:z:c:u:", ["help", "flexcache-vol=", "flexcache-svm=", "flexcache-size=", "source-vol=", "source-svm=", "namespace=", "storage-class=", "cluster-name="])
             except getopt.GetoptError:
                 handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
 
@@ -1206,21 +1206,21 @@ if __name__ == '__main__':
                 if opt in ("-h", "--help"):
                     print(helpTextCreateFlexCache)
                     sys.exit(0)
-                elif opt in ("-p", "--flexcache-vol="):
+                elif opt in ("-n", "--flexcache-vol"):
                     flexCacheVol = arg
-                elif opt in ("-s", "--flexcache-size="):
-                    flexCacheSize = arg
-                elif opt in ("-p", "--flexcache-svm="):
+                elif opt in ("-t", "--flexcache-svm"):
                     flexCacheSvm = arg
-                elif opt in ("-o", "--source-vol="):
-                    sourceVol = arg
-                elif opt in ("-o", "--source-svm="):
+                elif opt in ("-s", "--source-svm"):
                     sourceSvm = arg
+                elif opt in ("-v", "--source-vol"):
+                    sourceVol = arg
+                elif opt in ("-z", "--flexcache-size"):
+                    flexCacheSize = arg
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
                 elif opt in ("-c", "--storage-class"):
                     storageClass = arg
-                elif opt in ("-v", "--cluster-name"):
+                elif opt in ("-u", "--cluster-name"):
                     clusterName = arg
 
             # Check for required options
