@@ -2074,8 +2074,8 @@ def create_flexcache(
     """
 
     # Validate volume names
-    source_vol = _validate_volume_name(source_vol)
-    flexcache_vol = _validate_volume_name(flexcache_vol)
+    source_vol_modified = _validate_volume_name(source_vol)
+    flexcache_vol_modified = _validate_volume_name(flexcache_vol)
     
     try:
         config = _retrieve_config(print_output=print_output)
@@ -2111,11 +2111,11 @@ def create_flexcache(
 
         try:
             newFlexCacheDict = {
-                "name": flexcache_vol,
+                "name": flexcache_vol_modified,
                 "svm": {"name": flexcache_svm},
                 "origins": [{
                     "svm": {"name": source_svm},
-                    "volume": {"name": source_vol}
+                    "volume": {"name": source_vol_modified}
                 }],
             }
             if flexcache_size_bytes:
