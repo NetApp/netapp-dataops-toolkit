@@ -1198,8 +1198,6 @@ if __name__ == '__main__':
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hn:f:t:z:v:s:n:c:u:", ["help", "flexcache-vol=", "flexcache-svm=", "flexcache-size=", "source-vol=", "source-svm=", "namespace=", "storage-class=", "cluster-name="])
-                print("Parsed options:", opts)
-                print("Parsed arguments:", args)
             except getopt.GetoptError:
                 handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
 

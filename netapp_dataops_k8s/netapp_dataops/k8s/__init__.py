@@ -565,15 +565,33 @@ def _instantiate_connection(config: dict, connectionType: str = "ONTAP", print_o
         raise ConnectionTypeError()
     
 
-def _convert_size_to_bytes(size: str) -> int:
-    if re.search("^[0-9]+MB$", size):
-        return int(size[:-2]) * 1024**2
-    elif re.search("^[0-9]+GB$", size):
-        return int(size[:-2]) * 1024**3
-    elif re.search("^[0-9]+TB$", size):
-        return int(size[:-2]) * 1024**4
-    else:
-        raise InvalidVolumeParameterError("size")
+def _convert_size_to_bytes(size_str):
+    size_str = size_str.strip().upper()
+    size_units = {
+        'B': 1,
+        'KB': 1024,
+        'MB': 1024**2,
+        'GB': 1024**3,
+        'TB': 1024**4,
+        'PB': 1024**5,
+        'EB': 1024**6,
+        'KIB': 1024,
+        'MIB': 1024**2,
+        'GIB': 1024**3,
+        'TIB': 1024**4,
+        'PIB': 1024**5,
+        'EIB': 1024**6,
+    }
+
+    for unit in size_units:
+        if size_str.endswith(unit):
+            try:
+                size_value = float(size_str[:-len(unit)])
+                return int(size_value * size_units[unit])
+            except ValueError:
+                raise InvalidVolumeParameterError("size")
+
+    raise InvalidVolumeParameterError("size")
 
 
 #
