@@ -568,22 +568,15 @@ def _instantiate_connection(config: dict, connectionType: str = "ONTAP", print_o
 def _convert_size_to_bytes(size_str):
     size_str = size_str.strip().upper()
     size_units = {
-        'B': 1,
-        'KB': 1024,
-        'MB': 1024**2,
-        'GB': 1024**3,
-        'TB': 1024**4,
-        'PB': 1024**5,
-        'EB': 1024**6,
-        'KIB': 1024,
-        'MIB': 1024**2,
-        'GIB': 1024**3,
-        'TIB': 1024**4,
-        'PIB': 1024**5,
-        'EIB': 1024**6,
+        'KI': 1024,
+        'MI': 1024**2,
+        'GI': 1024**3,
+        'TI': 1024**4,
+        'PI': 1024**5,
+        'EI': 1024**6,
     }
 
-    for unit in size_units:
+    for unit in sorted(size_units, key=len, reverse=True):
         if size_str.endswith(unit):
             try:
                 size_value = float(size_str[:-len(unit)])
