@@ -1069,10 +1069,11 @@ if __name__ == '__main__':
             sourceVol = None
             flexCacheVol = None
             flexCacheSize = None
+            junction = None
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:t:s:v:u:z:", ["cluster-name=", "help", "flexcache-vol=", "flexcache-svm=", "source-svm=", "source-vol=", "flexcache-size="])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:t:s:v:u:z:j:", ["cluster-name=", "help", "flexcache-vol=", "flexcache-svm=", "source-svm=", "source-vol=", "flexcache-size=", "junction="])
             except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextCreateFlexCacheVolume, invalidOptArg=True)
@@ -1094,6 +1095,8 @@ if __name__ == '__main__':
                     clusterName = arg
                 elif opt in ("-z", "--flexcache-size"):
                     flexCacheSize = arg
+                elif opt in ("-j", "--junction"):
+                    junction = arg
 
             # Check for required options
             if not flexCacheVol or not flexCacheSvm or not sourceSvm or not sourceVol:
@@ -1102,7 +1105,7 @@ if __name__ == '__main__':
             # Create flexcache
             try:
                 create_flexcache(source_svm=sourceSvm, flexcache_svm=flexCacheSvm, source_vol=sourceVol, flexcache_vol=flexCacheVol,
-                        cluster_name=clusterName, flexcache_size = flexCacheSize, print_output=True)
+                        cluster_name=clusterName, flexcache_size = flexCacheSize, junction=junction, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
 

@@ -2177,7 +2177,7 @@ def create_snap_mirror_relationship(source_svm: str, source_vol: str, target_vol
                 raise APIConnectionError(err)
             
 def create_flexcache(source_vol: str, source_svm: str, flexcache_vol: str, flexcache_svm: str, cluster_name: str = None, 
-                    flexcache_size: str = None, print_output: bool = False):
+                    flexcache_size: str = None, junction: str = None, print_output: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -2217,6 +2217,12 @@ def create_flexcache(source_vol: str, source_svm: str, flexcache_vol: str, flexc
                 if print_output:
                     print("Error: Invalid flexcache volume size specified. Acceptable values are '1024MB', '100GB', '10TB', etc.")
                 raise InvalidVolumeParameterError("size")
+            
+        # Create option to choose junction path.
+        if junction:
+            junction = junction
+        else:
+            junction = "/" + flexcache_vol
 
         try:
             newFlexCacheDict = {
@@ -2226,6 +2232,7 @@ def create_flexcache(source_vol: str, source_svm: str, flexcache_vol: str, flexc
                     "svm": {"name": source_svm},
                     "volume": {"name": source_vol}
                 }],
+                "path": junction
             }
             if flexcache_size_bytes:
                 newFlexCacheDict["size"] = flexcache_size_bytes
