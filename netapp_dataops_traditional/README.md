@@ -423,7 +423,7 @@ The following options/arguments are optional:
 ```
     -u, --cluster-name=     Non-default hosting cluster.
     -j, --junction=         Custom junction path for the FlexCache volume to be exported at. If not specified, junction path will be: ("/"+FlexCache Volume Name).
-    -z, -flexcache-size=    Size of the FlexCache volume. Format: '1024MB', '100GB', '10TB', etc. (default is 10% of the origin volume size or 1GB per constituent, whichever is greater).
+    -z, --flexcache-size=    Size of the FlexCache volume. Format: '1024MB', '100GB', '10TB', etc. (default is 10% of the origin volume size or 1GB per constituent, whichever is greater).
     -h, --help              Print help text.
 ```
 
