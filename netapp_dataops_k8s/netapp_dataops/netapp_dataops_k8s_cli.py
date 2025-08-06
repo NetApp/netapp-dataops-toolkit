@@ -675,7 +675,7 @@ Required Options/Arguments:
 \t-z, --flexcache-size=\tSize of flexcache volume (Format: '1024Mi', '100Gi', '10Ti', etc.).
 
 Optional Options/Arguments:
-\t-c, --storage-class=\tKubernetes StorageClass to use when provisioning the new FlexCache volume. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident.
+\t-c, --junction=\tThe junction path for the FlexCache volume.
 \t-h, --help\t\tPrint help text.
 \t-n, --namespace=\tKubernetes namespace to create the new PersistentVolumeClaim (PVC) in. If not specified, the PVC will be created in the "default" namespace.
 \t-u, --cluster-name=\tnon default hosting cluster
@@ -1187,7 +1187,7 @@ if __name__ == '__main__':
 
         elif target == "flexcache":
             namespace = "default"
-            storageClass = None
+            junction = None
             clusterName = None
             sourceSvm = None
             flexCacheSvm = None
@@ -1197,7 +1197,7 @@ if __name__ == '__main__':
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:f:t:z:v:s:n:c:u:", ["help", "flexcache-vol=", "flexcache-svm=", "flexcache-size=", "source-vol=", "source-svm=", "namespace=", "storage-class=", "cluster-name="])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:f:t:z:v:s:n:c:u:", ["help", "flexcache-vol=", "flexcache-svm=", "flexcache-size=", "source-vol=", "source-svm=", "namespace=", "junction=", "cluster-name="])
             except getopt.GetoptError:
                 handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
 
@@ -1218,8 +1218,8 @@ if __name__ == '__main__':
                     flexCacheSize = arg
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
-                elif opt in ("-c", "--storage-class"):
-                    storageClass = arg
+                elif opt in ("-c", "--junction"):
+                    junction = arg
                 elif opt in ("-u", "--cluster-name"):
                     clusterName = arg
 
@@ -1228,7 +1228,7 @@ if __name__ == '__main__':
                 handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
 
             # Create FlexCache volume
-            create_flexcache(flexcache_vol=flexCacheVol, flexcache_svm=flexCacheSvm, flexcache_size=flexCacheSize, source_vol=sourceVol, source_svm=sourceSvm, namespace=namespace, storage_class=storageClass, cluster_name=clusterName, print_output=True)
+            create_flexcache(flexcache_vol=flexCacheVol, flexcache_svm=flexCacheSvm, flexcache_size=flexCacheSize, source_vol=sourceVol, source_svm=sourceSvm, namespace=namespace, junction=junction, cluster_name=clusterName, print_output=True)
 
         else:
             handleInvalidCommand()
