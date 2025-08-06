@@ -2195,6 +2195,7 @@ def create_flexcache(
                 path=junction,
                 server=data_lif
             ),
+            storage_class_name=""
         )
     )
 
@@ -2222,7 +2223,8 @@ def create_flexcache(
             resources=client.V1ResourceRequirements(
                 requests={"storage": flexcache_size}
             ),
-            volume_name=pv_name
+            volume_name=pv_name,
+            storage_class_name=""
         )
     )
 
