@@ -12,27 +12,31 @@ NetApp DataOps Toolkit MCP Server is an open-source, Python-based server compone
 ### Prerequisites
 
 - Python >= 3.10
-- Access to a Kubernetes environment with NetApp DataOps Toolkit setup.
+- Access to a Kubernetes environment with NetApp Trident installed and configured.
 
-Install with pip:
-
-```sh
-pip install netapp_dataops_k8s
-```
-
-After installation, the netapp_dataops_k8s_mcp.py command will be available in your PATH for direct usage.
-
-## Getting Started
+### Getting Started
 
 To run the MCP tools from the MCP server, a valid kubeconfig file must be present on the local host. Refer [this section from the main README](../README.md#getting-started-standard-usage) of the NetApp DataOps Toolkit for Kubernetes to learn more.
 
-### Usage
+### Usage Instructions
 
-Run the MCP server with:
+#### Run with uv (recommended)
+
+To run the MCP server using uv, run the following command. You do not need to install the NetApp DataOps Toolkit package before running this command.
 
 ```sh
-netapp_dataops_k8s_mcp.py
+uvx --from netapp-dataops-k8s netapp_dataops_k8s_mcp.py
 ```
+
+#### Install with pip and run from PATH
+
+To install the NetApp DataOps Toolkit for Kubernetes, run the following command.
+
+```sh
+python3 -m pip install netapp-dataops-k8s
+```
+
+After installation, the netapp_dataops_k8s_mcp.py command will be available in your PATH for direct usage.
 
 ## Available Tools
 
