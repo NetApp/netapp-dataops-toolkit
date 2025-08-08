@@ -52,4 +52,4 @@ uvx --from netapp-dataops-traditional netapp_dataops_cli.py config
 
 ### Support
 
-Report any issues via GitHub: https://github.com/NetApp/netapp-data-science-toolkit/issues.
+Report any issues via GitHub: https://github.com/NetApp/netapp-dataops-toolkit/issues.
