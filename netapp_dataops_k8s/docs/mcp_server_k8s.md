@@ -7,6 +7,26 @@ NetApp DataOps Toolkit MCP Server is an open-source, Python-based server compone
 >[!NOTE]
 >This MCP server uses the stdio transport, as shown in the [MCP Server Quickstart](https://modelcontextprotocol.io/quickstart/server), making it a "local MCP server". 
 
+## Available Tools
+
+The MCP server provides the following tools for managing JupyterLab workspaces and volumes in a Kubernetes environment:
+
+### Workspace Management Tools
+
+- **CreateJupyterLab**: Create a new JupyterLab workspace.
+- **CloneJupyterLab**: Clone an existing JupyterLab workspace.
+- **ListJupyterLabs**: List all JupyterLab workspaces.
+- **CreateJupyterLabSnapshot**: Create a snapshot of a JupyterLab workspace.
+- **ListJupyterLabSnapshots**: List all snapshots of JupyterLab workspaces.
+
+### Volume Management Tools
+
+- **CreateVolume**: Create a new volume.
+- **CloneVolume**: Clone an existing volume.
+- **ListVolumes**: List all volumes.
+- **CreateVolumeSnapshot**: Create a snapshot of a volume.
+- **ListVolumeSnapshots**: List all snapshots of volumes.
+
 ## Quick Start
 
 ### Prerequisites
@@ -58,23 +78,3 @@ To use the MCP server with an MCP client, you need to configure the client to us
   }
 }
 ```
-
-## Available Tools
-
-The MCP server provides the following tools for managing JupyterLab workspaces and volumes in a Kubernetes environment:
-
-### Workspace Management Tools
-
-- **CreateJupyterLab**: Create a new JupyterLab workspace.
-- **CloneJupyterLab**: Clone an existing JupyterLab workspace.
-- **ListJupyterLabs**: List all JupyterLab workspaces.
-- **CreateJupyterLabSnapshot**: Create a snapshot of a JupyterLab workspace.
-- **ListJupyterLabSnapshots**: List all snapshots of JupyterLab workspaces.
-
-### Volume Management Tools
-
-- **CreateVolume**: Create a new volume.
-- **CloneVolume**: Clone an existing volume.
-- **ListVolumes**: List all volumes.
-- **CreateVolumeSnapshot**: Create a snapshot of a volume.
-- **ListVolumeSnapshots**: List all snapshots of volumes.
