@@ -37,6 +37,28 @@ python3 -m pip install netapp-dataops-k8s
 
 After installation, the netapp_dataops_k8s_mcp.py command will be available in your PATH for direct usage.
 
+#### Usage
+
+##### Example JSON Config
+
+To use the MCP server with an MCP client, you need to configure the client to use the server. For many clients (such as [VS Code](https://code.visualstudio.com/docs/copilot/chat/mcp-servers), [Claude Desktop](https://modelcontextprotocol.io/quickstart/user), and [AnythingLLM](https://docs.anythingllm.com/mcp-compatibility/overview)), this requires editing a config file that is in JSON format. Below is an example. Refer to the documentation for your MCP client for specific formatting details.
+
+```json
+{
+  "mcpServers": {
+    "netapp_dataops_k8s_mcp": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "netapp-dataops-k8s",
+        "netapp_dataops_k8s_mcp.py"
+      ]
+    }
+  }
+}
+```
+
 ## Available Tools
 
 The MCP server provides the following tools for managing JupyterLab workspaces and volumes in a Kubernetes environment:
