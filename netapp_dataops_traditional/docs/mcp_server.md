@@ -43,12 +43,34 @@ After installation, the netapp_dataops_ontap_mcp.py command will be available in
 
 #### Usage
 
+##### DataOps Toolkit Config File
+
 A config file must be created before the NetApp Data Management Toolkit for Traditional Environments can be used to perform data management operations. For more details [click here](https://github.com/NetApp/netapp-dataops-toolkit/tree/main/netapp_dataops_traditional#getting-started).
 
 If you do not have a config file, you can run the following command to create one.
 
 ```sh
 uvx --from netapp-dataops-traditional netapp_dataops_cli.py config
+```
+
+##### Example JSON Config
+
+To use the MCP server with an MCP client, you need to configure the client to use the server. For many clients (such as [VS Code](https://code.visualstudio.com/docs/copilot/chat/mcp-servers), [Claude Desktop](https://modelcontextprotocol.io/quickstart/user), and [AnythingLLM](https://docs.anythingllm.com/mcp-compatibility/overview)), this requires editing a config file that is in JSON format. Below is an example. Refer to the documentation for your MCP client for specific formatting details.
+
+```json
+{
+  "mcpServers": {
+    "netapp_dataops_ontap_mcp": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "/home/ailab/git/bitbucket/netapp-dataops-toolkit/netapp_dataops_traditional",
+        "netapp_dataops_ontap_mcp.py"
+      ]
+    }
+  }
+}
 ```
 
 ### Support
