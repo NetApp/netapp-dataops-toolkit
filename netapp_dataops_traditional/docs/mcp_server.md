@@ -45,7 +45,7 @@ After installation, the netapp_dataops_ontap_mcp.py command will be available in
 
 ##### DataOps Toolkit Config File
 
-A config file must be created before the MCP server can be used to perform data management operations. For more details, [click here](https://github.com/NetApp/netapp-dataops-toolkit/tree/main/netapp_dataops_traditional#getting-started).
+A DataOps Toolkit config file must be created before the MCP server can be used to perform data management operations. For more details, [click here](https://github.com/NetApp/netapp-dataops-toolkit/tree/main/netapp_dataops_traditional#getting-started).
 
 If you do not have a config file, you can run the following command to create one.
 
