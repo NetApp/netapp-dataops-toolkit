@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Entry point to setup and run the MCP server
 
 import logging
