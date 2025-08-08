@@ -12,6 +12,7 @@ NetApp DataOps Toolkit MCP Server is an open-source, Python-based server compone
 ### Prerequisites
 
 - Python >= 3.10
+- [uv](https://docs.astral.sh/uv/) or [pip](https://pypi.org/project/pip/)
 - Access to a Kubernetes environment with NetApp Trident installed and configured. Refer to [the main README](../README.md) for full compatibility details.
 
 To run the MCP tools from the MCP server, a valid kubeconfig file must be present on the local host. Refer to [the "Getting Started: Standard Usage" section from the main README](../README.md#getting-started) of the NetApp DataOps Toolkit for Kubernetes to learn more.
