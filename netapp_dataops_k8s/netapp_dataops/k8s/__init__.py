@@ -12,6 +12,7 @@ import functools
 from getpass import getpass
 import json
 import re
+import subprocess
 from time import sleep
 import warnings
 import os
@@ -514,6 +515,22 @@ def _wait_for_triton_dev_deployment(server_name: str, namespace: str = "default"
         if deploymentStatus.status.ready_replicas == 1:
             break
         sleep(5)
+
+
+def _get_trident_backend_config(backend_name: str, namespace: str = "default", print_output: bool = False) -> dict:
+    try:
+        result = subprocess.run(
+            ["tridentctl", "get", "backend", backend_name, "-n", namespace, "-o", "json"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        backend_config = json.loads(result.stdout)
+        return backend_config
+    except subprocess.CalledProcessError as e:
+        if print_output:
+            print(f"Error retrieving Trident backend config: {e}")
+        raise InvalidConfigError()
 
 
 def _print_invalid_config_error() :
@@ -2064,6 +2081,7 @@ def create_flexcache(
     flexcache_vol: str,
     flexcache_svm: str,
     flexcache_size: str,
+    backend_name: str,
     cluster_name: str = None,
     junction: str = None,
     namespace: str = "default",
@@ -2078,90 +2096,88 @@ def create_flexcache(
     flexcache_vol_modified = _validate_volume_name(flexcache_vol)
     
     try:
-        config = _retrieve_config(print_output=print_output)
+        backend_config = _get_trident_backend_config(backend_name=backend_name, namespace=namespace, print_output=print_output)
+
+        config = {
+            "data_lif": backend_config["spec"]["config"]["dataLIF"],
+            "hostname": backend_config["spec"]["config"]["managementLIF"],
+            "username": backend_config["spec"]["config"]["username"],
+            "password": backend_config["spec"]["config"]["password"],
+            "verifySSLCert": backend_config["spec"]["config"].get("verifySSL", False)   # Default to False if not specified
+        }
+
     except InvalidConfigError:
         raise
-
-    try:
-        connectionType = config["connectionType"]
-        data_lif = config["dataLif"]
-    except:
-        if print_output:
-            _print_invalid_config_error()
-        raise InvalidConfigError()
 
     if cluster_name:
         config["hostname"] = cluster_name
 
-    if connectionType == "ONTAP":
-        # Instantiate connection to ONTAP cluster
+    # Instantiate connection to ONTAP cluster
+    try:
+        _instantiate_connection(config=config, connectionType="ONTAP", print_output=print_output)
+    except InvalidConfigError:
+        raise
+
+    flexcache_size_bytes = None
+
+    if flexcache_size:
         try:
-            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
-        except InvalidConfigError:
+            flexcache_size_bytes = _convert_size_to_bytes(flexcache_size)
+        except InvalidVolumeParameterError:
+            if print_output:
+                print("Error: Invalid flexcache volume size specified. Acceptable values are '1024MB', '100GB', '10TB', etc.")
             raise
 
-        flexcache_size_bytes = None
+    # Create option to choose junction path.
+    if not junction:
+        junction = f"/{flexcache_vol}"
 
-        if flexcache_size:
-            try:
-                flexcache_size_bytes = _convert_size_to_bytes(flexcache_size)
-            except InvalidVolumeParameterError:
-                if print_output:
-                    print("Error: Invalid flexcache volume size specified. Acceptable values are '1024MB', '100GB', '10TB', etc.")
-                raise
-
-        # Create option to choose junction path.
-        if not junction:
-            junction = f"/{flexcache_vol}"
-
-        try:
-            newFlexCacheDict = {
-                "name": flexcache_vol_modified,
-                "svm": {"name": flexcache_svm},
-                "origins": [{
-                    "svm": {"name": source_svm},
-                    "volume": {"name": source_vol_modified}
-                }],
-                "path": junction,
-            }
-            if flexcache_size_bytes:
-                newFlexCacheDict["size"] = flexcache_size_bytes
-            if print_output:
-                print("Creating FlexCache: " + source_svm + ":" + source_vol_modified + " -> " + flexcache_svm + ":" + flexcache_vol_modified)
-            newFlexCache = NetAppFlexCache.from_dict(newFlexCacheDict)
-            newFlexCache.post(poll=True, poll_timeout=120)
-        except NetAppRestError as err:
-            if print_output:
-                print("Error: ONTAP Rest API Error: ", err)
-            raise APIConnectionError(err)
-        
-        # Check if FlexCache was created successfully
-        try:
-            uuid = None
-            relation = None
-            flexcache_relationship = NetAppFlexCache.get_collection(**{"name": flexcache_vol_modified, "svm.name": flexcache_svm})
-            for relation in flexcache_relationship:
-                # Retrieve relationship details
-                try:
-                    relation.get()
-                    uuid = relation.uuid
-                except NetAppRestError as err:
-                    if print_output:
-                        print("Error: ONTAP Rest API Error: ", err)
-                    raise APIConnectionError(err)
-            if not uuid:
-                if print_output:
-                    print("Error: FlexCache was not created: " + flexcache_svm + ":" + flexcache_vol_modified)
-                raise InvalidConfigError()
-        except NetAppRestError as err:
-            if print_output:
-                print("Error: ONTAP Rest API Error: ", err)
-            raise APIConnectionError(err)
-
+    try:
+        newFlexCacheDict = {
+            "name": flexcache_vol_modified,
+            "svm": {"name": flexcache_svm},
+            "origins": [{
+                "svm": {"name": source_svm},
+                "volume": {"name": source_vol_modified}
+            }],
+            "path": junction,
+        }
+        if flexcache_size_bytes:
+            newFlexCacheDict["size"] = flexcache_size_bytes
         if print_output:
-            print("FlexCache created successfully.")
-    else:
-        raise ConnectionTypeError()
+            print("Creating FlexCache: " + source_svm + ":" + source_vol_modified + " -> " + flexcache_svm + ":" + flexcache_vol_modified)
+        newFlexCache = NetAppFlexCache.from_dict(newFlexCacheDict)
+        newFlexCache.post(poll=True, poll_timeout=120)
+    except NetAppRestError as err:
+        if print_output:
+            print("Error: ONTAP Rest API Error: ", err)
+        raise APIConnectionError(err)
+    
+    # Check if FlexCache was created successfully
+    try:
+        uuid = None
+        relation = None
+        flexcache_relationship = NetAppFlexCache.get_collection(**{"name": flexcache_vol_modified, "svm.name": flexcache_svm})
+        for relation in flexcache_relationship:
+            # Retrieve relationship details
+            try:
+                relation.get()
+                uuid = relation.uuid
+            except NetAppRestError as err:
+                if print_output:
+                    print("Error: ONTAP Rest API Error: ", err)
+                raise APIConnectionError(err)
+        if not uuid:
+            if print_output:
+                print("Error: FlexCache was not created: " + flexcache_svm + ":" + flexcache_vol_modified)
+            raise InvalidConfigError()
+    except NetAppRestError as err:
+        if print_output:
+            print("Error: ONTAP Rest API Error: ", err)
+        raise APIConnectionError(err)
+
+    if print_output:
+        print("FlexCache created successfully.")
     
     # Retrieve kubeconfig
     try:
@@ -2193,7 +2209,7 @@ def create_flexcache(
             persistent_volume_reclaim_policy="Retain",
             nfs=client.V1NFSVolumeSource(
                 path=junction,
-                server=data_lif
+                server=config["data_lif"]
             ),
             storage_class_name=""
         )
