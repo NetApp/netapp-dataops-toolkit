@@ -18,7 +18,8 @@ The NetApp DataOps Toolkit MCP Server for ONTAP is an open-source server compone
 
 ### Prerequisites
 
-The NetApp DataOps Toolkit for Traditional Environments requires that Python >= 3.8 be installed on the local host. Additionally, the toolkit requires that pip for Python3 be installed on the local host. For more details regarding pip, including installation instructions, refer to the [pip documentation](https://pip.pypa.io/en/stable/installing/).
+- Python >= 3.8
+- [uv](https://docs.astral.sh/uv/) or [pip](https://pypi.org/project/pip/)
 
 ### Usage Instructions
 
