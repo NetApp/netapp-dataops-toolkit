@@ -1,7 +1,7 @@
 NetApp DataOps Toolkit for Traditional Environments
 =========
 
-The NetApp DataOps Toolkit for Traditional Environments is a Python library that makes it simple for developers, data scientists, DevOps engineers, and data engineers to perform various data management tasks, such as provisioning a new data volume, near-instantaneously cloning a data volume, and near-instantaneously snapshotting a data volume for traceability/baselining. This Python library can function as either a [command line utility](#command-line-functionality) or a [library of functions](#library-of-functions) that can be imported into any Python program or Jupyter Notebook.
+The NetApp DataOps Toolkit for Traditional Environments is a Python library that makes it simple for developers, data scientists, DevOps engineers, and data engineers to perform various data management tasks, such as provisioning a new data volume, near-instantaneously cloning a data volume, and near-instantaneously snapshotting a data volume for traceability/baselining. This Python library can function as either a [command line utility](#command-line-functionality) or a [library of functions](#library-of-functions) that can be imported into any Python program or Jupyter Notebook. The toolkit also includes an [MCP Server](docs/mcp_server.md) that exposes many of the capabilities as "tools" that can be utilized by AI agents.
 
 ## Compatibility
 
@@ -74,11 +74,9 @@ Created config file: '/Users/moglesby/.netapp_dataops/config.json'.
 
 If you experience an error and do not know how to resolve it, visit the [Troubleshooting](troubleshooting.md) page.
 
-## Tips and Tricks
+## MCP Server
 
-- [Accelerating the AI training workflow with the NetApp DataOps Toolkit.](https://netapp.io/2020/12/14/accelerating-the-ai-training-workflow-with-the-netapp-data-science-toolkit/)
-- [Easy AI dataset-to-model traceability with the NetApp DataOps Toolkit.](https://netapp.io/2021/01/13/easy-ai-dataset-to-model-traceability-with-the-netapp-data-science-toolkit/)
-- [Automatically mount newly cloned workspaces without needing sudo/root access.](https://netapp.io/2021/11/17/automatically-mount-newly-cloned-workspaces-using-the-netapp-dataops-toolkit/)
+The NetApp DataOps Toolkit for Traditional Environments includes an [MCP Server](docs/mcp_server.md) that exposes many of the toolkit's [functions](#library-of-functions) as "tools" that can be utilized by AI agents.
 
 <a name="command-line-functionality"></a>
 
