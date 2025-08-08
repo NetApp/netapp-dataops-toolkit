@@ -65,7 +65,7 @@ To use the MCP server with an MCP client, you need to configure the client to us
       "command": "uvx",
       "args": [
         "--from",
-        "/home/ailab/git/bitbucket/netapp-dataops-toolkit/netapp_dataops_traditional",
+        "netapp-dataops-traditional",
         "netapp_dataops_ontap_mcp.py"
       ]
     }
