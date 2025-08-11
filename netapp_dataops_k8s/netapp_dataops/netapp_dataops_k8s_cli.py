@@ -1194,10 +1194,11 @@ if __name__ == '__main__':
             sourceVol = None
             flexCacheVol = None
             flexCacheSize = None
+            backendName = None
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:f:t:z:v:s:n:c:u:", ["help", "flexcache-vol=", "flexcache-svm=", "flexcache-size=", "source-vol=", "source-svm=", "namespace=", "junction=", "cluster-name="])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:f:t:z:v:s:n:c:u:", ["help", "flexcache-vol=", "flexcache-svm=", "flexcache-size=", "source-vol=", "source-svm=", "backend-name=", "namespace=", "junction=", "cluster-name="])
             except getopt.GetoptError:
                 handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
 
@@ -1216,6 +1217,8 @@ if __name__ == '__main__':
                     sourceVol = arg
                 elif opt in ("-z", "--flexcache-size"):
                     flexCacheSize = arg
+                elif opt in ("-z", "--backend-name"):
+                    backendName = arg
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
                 elif opt in ("-c", "--junction"):
@@ -1224,11 +1227,11 @@ if __name__ == '__main__':
                     clusterName = arg
 
             # Check for required options
-            if not flexCacheVol or not sourceVol or not flexCacheSvm or not sourceSvm or not flexCacheSize:
+            if not flexCacheVol or not sourceVol or not flexCacheSvm or not sourceSvm or not flexCacheSize or not backendName:
                 handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
 
             # Create FlexCache volume
-            create_flexcache(flexcache_vol=flexCacheVol, flexcache_svm=flexCacheSvm, flexcache_size=flexCacheSize, source_vol=sourceVol, source_svm=sourceSvm, namespace=namespace, junction=junction, cluster_name=clusterName, print_output=True)
+            create_flexcache(flexcache_vol=flexCacheVol, flexcache_svm=flexCacheSvm, flexcache_size=flexCacheSize, source_vol=sourceVol, source_svm=sourceSvm, backend_name=backendName, namespace=namespace, junction=junction, cluster_name=clusterName, print_output=True)
 
         else:
             handleInvalidCommand()
