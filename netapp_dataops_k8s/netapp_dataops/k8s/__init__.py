@@ -560,11 +560,6 @@ def _get_trident_backend_config(backend_config_name: str, namespace: str = "trid
     username = base64.b64decode(secret.data['username']).decode('utf-8')
     password = base64.b64decode(secret.data['password']).decode('utf-8')
 
-    # Print the decoded username and password for debugging
-    if print_output:
-        print("Decoded username:", username)
-        print("Decoded password:", password)
-
     # Extract verifyssl if available, default to False if not present
     verifyssl = secret.data.get('verifyssl')
     if verifyssl:
@@ -588,19 +583,12 @@ def _instantiate_connection(config: dict, connectionType: str = "ONTAP", print_o
         try:
             ontapClusterMgmtHostname = config["hostname"]
             ontapClusterAdminUsername = config["username"]
-            ontapClusterAdminPasswordBase64 = config["password"]
+            ontapClusterAdminPassword = config["password"]
             verifySSLCert = config["verifySSLCert"]
         except:
             if print_output:
                 _print_invalid_config_error()
             raise InvalidConfigError()
-
-        # Decode base64-encoded password
-        ontapClusterAdminPasswordBase64Bytes = ontapClusterAdminPasswordBase64.encode("ascii")
-        ontapClusterAdminPasswordBytes = base64.b64decode(ontapClusterAdminPasswordBase64Bytes)
-        ontapClusterAdminPassword = ontapClusterAdminPasswordBytes.decode("ascii")
-
-        print("Decoded password:", ontapClusterAdminPassword)
 
         # Instantiate connection to ONTAP cluster
         netappConfig.CONNECTION = NetAppHostConnection(
