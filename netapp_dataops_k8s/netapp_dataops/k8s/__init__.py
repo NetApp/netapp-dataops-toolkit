@@ -2122,6 +2122,7 @@ def create_flexcache(
     
     try:
         config = _get_trident_backend_config(backend_config_name=backend_name, namespace=namespace, print_output=print_output)
+        print("Config:", config)
     except InvalidConfigError:
         raise
 
