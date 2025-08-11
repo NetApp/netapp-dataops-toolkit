@@ -332,6 +332,7 @@ The following options/arguments are required:
     -s, --source-svm=       Name of the source Storage Virtual Machine (SVM) that contains the origin volume to be cached.
     -v, --source-vol=       Name of the source volume in the source SVM that will be cached by the FlexCache volume.
     -z, --flexcache-size=   Size of the FlexCache volume to be created. The size must be specified in a format such as '1024Mi', '100Gi', '10Ti', etc. Note: The size must be at least 50Gi.
+    -b, --backend-name=     Name of the tridentbackendconfig.
 
 ```
 
@@ -652,6 +653,7 @@ def create_flexcache(
     flexcache_vol: str,             # Name of the FlexCache volume to be created (required).
     flexcache_svm: str,             # Name of the Storage Virtual Machine (SVM) where the FlexCache volume will be created (required).
     flexcache_size: str,            # Size of the FlexCache volume to be created. Format: '1024Mi', '100Gi', '10Ti', etc. Note: The size must be at least 50Gi (required).
+    backend_name: str,              # Name of the tridentbackendconfig (required).
     cluster_name: str = None,       # Name of the non-default hosting cluster where the FlexCache volume will be created (optional).
     storage_class: str = None,      # Kubernetes StorageClass to use when provisioning the new FlexCache volume. If not specified, the default StorageClass will be used (optional).
     namespace: str = "default",     # Kubernetes namespace to create the new PersistentVolumeClaim (PVC) in. If not specified, the PVC will be created in the "default" namespace (optional).

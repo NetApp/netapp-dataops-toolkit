@@ -673,6 +673,7 @@ Required Options/Arguments:
 \t-s, --source-svm=\tSource SVM name
 \t-v, --source-vol=\tSource volume name
 \t-z, --flexcache-size=\tSize of flexcache volume (Format: '1024Mi', '100Gi', '10Ti', etc.).
+\t-b, --backend-name=\tName of tridentbackendconfig.
 
 Optional Options/Arguments:
 \t-c, --junction=\tThe junction path for the FlexCache volume.
@@ -681,8 +682,8 @@ Optional Options/Arguments:
 \t-u, --cluster-name=\tnon default hosting cluster
 
 Examples:
-\tnetapp_dataops_k8s_cli.py create flexcache --flexcache-vol=cache1 --flexcache-size=10Gi --source-vol=origin1 --source-svm=svm1 --flexcache-svm=svm2
-\tnetapp_dataops_k8s_cli.py create flexcache -u cluster1 -s svm1 -t svm2 -v vol1 -n vol2
+\tnetapp_dataops_k8s_cli.py create flexcache --flexcache-vol=cache1 --flexcache-size=10Gi --source-vol=origin1 --source-svm=svm1 --flexcache-svm=svm2 --backend-name=backend1
+\tnetapp_dataops_k8s_cli.py create flexcache -u cluster1 -s svm1 -t svm2 -v vol1 -n vol2 -b backend1 -z 100Gi -c /cache1
 '''
 
 
