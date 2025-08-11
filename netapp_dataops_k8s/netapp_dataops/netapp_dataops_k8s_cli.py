@@ -1198,7 +1198,7 @@ if __name__ == '__main__':
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:f:t:z:v:s:n:c:u:", ["help", "flexcache-vol=", "flexcache-svm=", "flexcache-size=", "source-vol=", "source-svm=", "backend-name=", "namespace=", "junction=", "cluster-name="])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:f:t:z:v:s:b:n:c:u:", ["help", "flexcache-vol=", "flexcache-svm=", "flexcache-size=", "source-vol=", "source-svm=", "backend-name=", "namespace=", "junction=", "cluster-name="])
             except getopt.GetoptError:
                 handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
 
@@ -1217,7 +1217,7 @@ if __name__ == '__main__':
                     sourceVol = arg
                 elif opt in ("-z", "--flexcache-size"):
                     flexCacheSize = arg
-                elif opt in ("-z", "--backend-name"):
+                elif opt in ("-b", "--backend-name"):
                     backendName = arg
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
