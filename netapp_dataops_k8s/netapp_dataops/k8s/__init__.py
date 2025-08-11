@@ -571,8 +571,8 @@ def _get_trident_backend_config(backend_config_name: str, namespace: str = "trid
         'username': username,
         'password': password,
         'hostname': managementLIF,
-        'verifyssl': verifyssl,
-        'datalif': dataLIF,
+        'verifySSLCert': verifyssl,
+        'dataLIF': dataLIF,
         'storage_driver_name': storage_driver_name
     }
 
@@ -2122,12 +2122,11 @@ def create_flexcache(
     
     try:
         config = _get_trident_backend_config(backend_config_name=backend_name, namespace=namespace, print_output=print_output)
-        print("Config:", config)
     except InvalidConfigError:
         raise
 
     try:
-        data_lif = config["datalif"]
+        data_lif = config["dataLIF"]
         storage_driver_name = config["storage_driver_name"]
     except:
         if print_output:
