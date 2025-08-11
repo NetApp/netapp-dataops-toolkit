@@ -2126,7 +2126,7 @@ def create_flexcache(
         raise
 
     try:
-        data_lif = config["dataLif"]
+        data_lif = config["datalif"]
         storage_driver_name = config["storageDriverName"]
     except:
         if print_output:
