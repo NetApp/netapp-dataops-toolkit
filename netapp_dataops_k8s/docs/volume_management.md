@@ -347,19 +347,19 @@ The following options/arguments are optional:
 
 ##### Example Usage
 
-Create a FlexCache volume 'test-cache-vol0' of size 50Gi at 'svm1', and attach it to a Kubernetes PersistentVolumeClaim (PVC) named 'test-vol0' at 'svm0' in namespace 'default'.
+Create a FlexCache volume 'test-cache-vol5' of size 52Gi at 'svm1', and attach it to a Kubernetes PersistentVolumeClaim (PVC) named 'test-vol0' at 'svm0' in namespace 'trident', using 'ontap' tridentbackendconfig.
 
 ```sh
-netapp_dataops_k8s_cli.py create flexcache --flexcache-vol=test-cache-vol0 --flexcache-svm=svm1 --flexcache-size=50Gi --source-vol=test-vol0 --source-svm=svm0
-Creating FlexCache: svm0:test_vol0 -> svm1:test_cache_vol0
+netapp_dataops_k8s_cli.py create flexcache --flexcache-vol=test-cache-vol5 --flexcache-svm=svm1 --source-vol=test-vol0 --source-svm=svm0 --flexcache-size=52Gi --backend-name=ontap --namespace=trident
+Creating FlexCache: svm0:trident_pvc_5dd70386_7611_4ecf_adc4_271d3ca05355 -> svm0:test_cache_vol5
 FlexCache created successfully.
-[K8s] Creating PV 'pv-test-cache-vol0' in namespace 'default' with storageClass 'ontap-nas'...
-[K8s] PV 'pv-test-cache-vol0' created successfully.
-[K8s] Creating PVC 'pvc-test-cache-vol0' in namespace 'default' with storageClass 'ontap-nas'...
-[K8s] PVC 'pvc-test-cache-vol0' created successfully.
+[K8s] Creating PV 'pv-test-cache-vol5' in namespace 'trident'...
+[K8s] PV 'pv-test-cache-vol5' created successfully.
+[K8s] Creating PVC 'pvc-test-cache-vol5' in namespace 'trident'...
+[K8s] PVC 'pvc-test-cache-vol5' created successfully.
 Waiting for Kubernetes to bind volume to PVC.
-[K8s] PVC 'pvc-test-cache-vol0' is bound to PV 'pv-test-cache-vol0'.
-Volume successfully created and bound to PersistentVolumeClaim (PVC) 'pvc-test-cache-vol0' in namespace 'default'.
+[K8s] PVC 'pvc-test-cache-vol5' is bound to PV 'pv-test-cache-vol5'.
+Volume successfully created and bound to PersistentVolumeClaim (PVC) 'pvc-test-cache-vol5' in namespace 'trident'.
 ```
 
 <a name="library-of-functions"></a>
