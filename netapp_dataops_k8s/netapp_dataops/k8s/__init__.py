@@ -593,7 +593,7 @@ def _instantiate_connection(config: dict, connectionType: str = "ONTAP", print_o
         # Decode base64-encoded password
         ontapClusterAdminPasswordBase64Bytes = ontapClusterAdminPasswordBase64.encode("ascii")
         ontapClusterAdminPasswordBytes = base64.b64decode(ontapClusterAdminPasswordBase64Bytes)
-        ontapClusterAdminPassword = ontapClusterAdminPasswordBytes.decode("ascii")
+        ontapClusterAdminPassword = ontapClusterAdminPasswordBytes.decode("utf-8")
 
         # Instantiate connection to ONTAP cluster
         netappConfig.CONNECTION = NetAppHostConnection(
