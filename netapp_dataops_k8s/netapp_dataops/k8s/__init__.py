@@ -560,6 +560,11 @@ def _get_trident_backend_config(backend_config_name: str, namespace: str = "trid
     username = base64.b64decode(secret.data['username']).decode('utf-8')
     password = base64.b64decode(secret.data['password']).decode('utf-8')
 
+    # Print the decoded username and password for debugging
+    if print_output:
+        print("Decoded username:", username)
+        print("Decoded password:", password)
+
     # Extract verifyssl if available, default to False if not present
     verifyssl = secret.data.get('verifyssl')
     if verifyssl:
