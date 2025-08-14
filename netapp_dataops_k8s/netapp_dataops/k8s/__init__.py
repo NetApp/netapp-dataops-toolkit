@@ -2102,7 +2102,6 @@ def create_flexcache(
     flexcache_svm: str,
     flexcache_size: str,
     backend_name: str,
-    cluster_name: str = None,
     junction: str = None,
     namespace: str = "default",
     print_output: bool = False
@@ -2127,9 +2126,6 @@ def create_flexcache(
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
-
-    if cluster_name:
-        config["hostname"] = cluster_name
 
     if "ontap" in storage_driver_name.lower():
 
