@@ -328,7 +328,6 @@ The following options/arguments are required:
 
 ```
     -f, --flexcache-vol=    Name of the FlexCache volume to be created. This is the name that will be applied to the new Kubernetes PersistentVolumeClaim (PVC).
-    -t, --flexcache-svm=    Name of the Storage Virtual Machine (SVM) where the FlexCache volume will be created. This is required if the FlexCache volume is to be created in a non-default SVM.
     -s, --source-svm=       Name of the source Storage Virtual Machine (SVM) that contains the origin volume to be cached.
     -v, --source-vol=       Name of the source volume in the source SVM that will be cached by the FlexCache volume.
     -z, --flexcache-size=   Size of the FlexCache volume to be created. The size must be specified in a format such as '1024Mi', '100Gi', '10Ti', etc. Note: The size must be at least 50Gi.
@@ -339,15 +338,14 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
-    -c, --storage-class=    Kubernetes StorageClass to use when provisioning the new FlexCache volume. If not specified, the default StorageClass will be used. Note: The StorageClass must be configured to use Trident.
+    -c, --junction          The junction path for the FlexCache volume.
     -h, --help              Print help text.
     -n, --namespace=        Kubernetes namespace to create the new PersistentVolumeClaim (PVC) in. If not specified, the PVC will be created in the "default" namespace.
-    -u, --cluster-name=     Name of the non-default hosting cluster where the FlexCache volume will be created.
 ```
 
 ##### Example Usage
 
-Create a FlexCache volume 'test-cache-vol5' of size 52Gi at 'svm1', and attach it to a Kubernetes PersistentVolumeClaim (PVC) named 'test-vol0' at 'svm0' in namespace 'trident', using 'ontap' tridentbackendconfig.
+Create a FlexCache volume 'test-cache-vol5' of size 52Gi at 'svm1', and attach it to a Kubernetes PersistentVolumeClaim (PVC) named 'test-vol0' in namespace 'trident', using 'ontap' tridentbackendconfig.
 
 ```sh
 netapp_dataops_k8s_cli.py create flexcache --flexcache-vol=test-cache-vol5 --flexcache-svm=svm1 --source-vol=test-vol0 --source-svm=svm0 --flexcache-size=52Gi --backend-name=ontap --namespace=trident
@@ -369,7 +367,7 @@ Volume successfully created and bound to PersistentVolumeClaim (PVC) 'pvc-test-c
 The NetApp DataOps Toolkit for Kubernetes provides a set of functions that can be imported into any Python program or Jupyter Notebook. In this manner, data scientists and data engineers can easily incorporate Kubernetes-native data management tasks into their existing projects, programs, and workflows. This functionality is only recommended for advanced users who are proficient in Python.
 
 ```py
-from netapp_dataops.k8s import clone_volume, create_volume, delete_volume, list_volumes, create_volume_snapshot, delete_volume_snapshot, list_volume_snapshots, restore_volume_snapshot
+from netapp_dataops.k8s import clone_volume, create_volume, delete_volume, list_volumes, create_volume_snapshot, delete_volume_snapshot, list_volume_snapshots, restore_volume_snapshot, create_flexcache
 ```
 
 The following volume management operations are available within the set of functions.
@@ -651,11 +649,9 @@ def create_flexcache(
     source_vol: str,                # Name of the source volume in the source SVM that will be cached by the FlexCache volume (required).
     source_svm: str,                # Name of the source Storage Virtual Machine (SVM) that contains the origin volume to be cached (required).
     flexcache_vol: str,             # Name of the FlexCache volume to be created (required).
-    flexcache_svm: str,             # Name of the Storage Virtual Machine (SVM) where the FlexCache volume will be created (required).
     flexcache_size: str,            # Size of the FlexCache volume to be created. Format: '1024Mi', '100Gi', '10Ti', etc. Note: The size must be at least 50Gi (required).
     backend_name: str,              # Name of the tridentbackendconfig (required).
-    cluster_name: str = None,       # Name of the non-default hosting cluster where the FlexCache volume will be created (optional).
-    storage_class: str = None,      # Kubernetes StorageClass to use when provisioning the new FlexCache volume. If not specified, the default StorageClass will be used (optional).
+    junction: str = None,           # The junction path for the FlexCache volume (optional).
     namespace: str = "default",     # Kubernetes namespace to create the new PersistentVolumeClaim (PVC) in. If not specified, the PVC will be created in the "default" namespace (optional).
     print_output: bool = False      # Denotes whether or not to print messages to the console during execution (optional).
 ) :
@@ -666,7 +662,7 @@ def create_flexcache(
 
 The function returns a dictionary containing details about the created FlexCache volume and the associated Kubernetes PersistentVolumeClaim (PVC). The keys for the values in this dictionary are:
 
-- "ontap_flexcache": The FlexCache volume in ONTAP in the format "{flexcache_svm}: {flexcache_vol}".
+- "ontap_flexcache": The FlexCache volume in ONTAP in the format "{svm}: {flexcache_vol}".
 - "k8s_pvc": The name of the Kubernetes PersistentVolumeClaim (PVC) created.
 
 ##### Error Handling
@@ -678,4 +674,5 @@ InvalidConfigError              # kubeconfig file is missing or is invalid.
 APIConnectionError              # The Kubernetes API returned an error.
 InvalidVolumeParameterError     # Invalid parameters specified for the FlexCache volume.
 ConnectionTypeError             # Invalid connection type specified.
+NetAppRestError                 # Error with the NetApp REST API.
 ```

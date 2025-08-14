@@ -669,7 +669,6 @@ Create a new FlexCache volume.
 
 Required Options/Arguments:
 \t-f, --flexcache-vol=\tName of flexcache volume
-\t-t, --flexcache-svm=\tnon default flexcache SVM
 \t-s, --source-svm=\tSource SVM name
 \t-v, --source-vol=\tSource volume name
 \t-z, --flexcache-size=\tSize of flexcache volume (Format: '1024Mi', '100Gi', '10Ti', etc.).
@@ -679,11 +678,10 @@ Optional Options/Arguments:
 \t-c, --junction=\tThe junction path for the FlexCache volume.
 \t-h, --help\t\tPrint help text.
 \t-n, --namespace=\tKubernetes namespace to create the new PersistentVolumeClaim (PVC) in. If not specified, the PVC will be created in the "default" namespace.
-\t-u, --cluster-name=\tnon default hosting cluster
 
 Examples:
-\tnetapp_dataops_k8s_cli.py create flexcache --flexcache-vol=cache1 --flexcache-size=10Gi --source-vol=origin1 --source-svm=svm1 --flexcache-svm=svm2 --backend-name=backend1
-\tnetapp_dataops_k8s_cli.py create flexcache -u cluster1 -s svm1 -t svm2 -v vol1 -n vol2 -b backend1 -z 100Gi -c /cache1
+\tnetapp_dataops_k8s_cli.py create flexcache --flexcache-vol=cache1 --flexcache-size=50Gi --source-vol=origin1 --source-svm=svm1 --backend-name=backend1
+\tnetapp_dataops_k8s_cli.py create flexcache -s svm1 -v vol1 -n vol2 -b backend1 -z 100Gi -c /cache1
 '''
 
 
@@ -1189,9 +1187,7 @@ if __name__ == '__main__':
         elif target == "flexcache":
             namespace = "default"
             junction = None
-            clusterName = None
             sourceSvm = None
-            flexCacheSvm = None
             sourceVol = None
             flexCacheVol = None
             flexCacheSize = None
@@ -1199,7 +1195,7 @@ if __name__ == '__main__':
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:f:t:z:v:s:b:n:c:u:", ["help", "flexcache-vol=", "flexcache-svm=", "flexcache-size=", "source-vol=", "source-svm=", "backend-name=", "namespace=", "junction=", "cluster-name="])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:f:z:v:s:b:n:c:", ["help", "flexcache-vol=", "flexcache-size=", "source-vol=", "source-svm=", "backend-name=", "namespace=", "junction="])
             except getopt.GetoptError:
                 handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
 
@@ -1210,8 +1206,6 @@ if __name__ == '__main__':
                     sys.exit(0)
                 elif opt in ("-f", "--flexcache-vol"):
                     flexCacheVol = arg
-                elif opt in ("-t", "--flexcache-svm"):
-                    flexCacheSvm = arg
                 elif opt in ("-s", "--source-svm"):
                     sourceSvm = arg
                 elif opt in ("-v", "--source-vol"):
@@ -1224,15 +1218,13 @@ if __name__ == '__main__':
                     namespace = arg
                 elif opt in ("-c", "--junction"):
                     junction = arg
-                elif opt in ("-u", "--cluster-name"):
-                    clusterName = arg
 
             # Check for required options
-            if not flexCacheVol or not sourceVol or not flexCacheSvm or not sourceSvm or not flexCacheSize or not backendName:
+            if not flexCacheVol or not sourceVol or not sourceSvm or not flexCacheSize or not backendName:
                 handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
 
             # Create FlexCache volume
-            create_flexcache(flexcache_vol=flexCacheVol, flexcache_svm=flexCacheSvm, flexcache_size=flexCacheSize, source_vol=sourceVol, source_svm=sourceSvm, backend_name=backendName, namespace=namespace, junction=junction, cluster_name=clusterName, print_output=True)
+            create_flexcache(flexcache_vol=flexCacheVol, flexcache_size=flexCacheSize, source_vol=sourceVol, source_svm=sourceSvm, backend_name=backendName, namespace=namespace, junction=junction, print_output=True)
 
         else:
             handleInvalidCommand()
