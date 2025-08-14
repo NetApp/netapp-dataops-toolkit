@@ -2207,7 +2207,7 @@ def create_flexcache(
             raise InvalidConfigError()
 
         core_v1 = client.CoreV1Api()
-        pvc_name = f"pvc-{flexcache_vol}"
+        pvc_name = flexcache_vol
         pv_name = f"pv-{flexcache_vol}"
         labels = {
             "app": "flexcache"
