@@ -554,6 +554,7 @@ def _get_trident_backend_config(backend_config_name: str, namespace: str = "trid
     managementLIF = spec.get('managementLIF')
     credentials_name = spec['credentials']['name']
     storage_driver_name = spec['storageDriverName']
+    svm = spec['svm']
 
     # Get the secret containing the credentials
     secret = v1.read_namespaced_secret(credentials_name, namespace)
@@ -573,7 +574,8 @@ def _get_trident_backend_config(backend_config_name: str, namespace: str = "trid
         'hostname': managementLIF,
         'verifySSLCert': verifyssl,
         'dataLIF': dataLIF,
-        'storage_driver_name': storage_driver_name
+        'storage_driver_name': storage_driver_name,
+        'svm': svm
     }
 
 
@@ -2099,7 +2101,6 @@ def create_flexcache(
     source_vol: str,
     source_svm: str,
     flexcache_vol: str,
-    flexcache_svm: str,
     flexcache_size: str,
     backend_name: str,
     junction: str = None,
@@ -2122,6 +2123,7 @@ def create_flexcache(
     try:
         data_lif = config["dataLIF"]
         storage_driver_name = config["storage_driver_name"]
+        svm = config["svm"]
     except:
         if print_output:
             _print_invalid_config_error()
@@ -2152,7 +2154,7 @@ def create_flexcache(
         try:
             newFlexCacheDict = {
                 "name": flexcache_vol_modified,
-                "svm": {"name": flexcache_svm},
+                "svm": {"name": svm},
                 "origins": [{
                     "svm": {"name": source_svm},
                     "volume": {"name": source_vol_modified}
@@ -2162,7 +2164,7 @@ def create_flexcache(
             if flexcache_size_bytes:
                 newFlexCacheDict["size"] = flexcache_size_bytes
             if print_output:
-                print("Creating FlexCache: " + source_svm + ":" + source_vol_modified + " -> " + flexcache_svm + ":" + flexcache_vol_modified)
+                print("Creating FlexCache: " + source_svm + ":" + source_vol_modified + " -> " + svm + ":" + flexcache_vol_modified)
             newFlexCache = NetAppFlexCache.from_dict(newFlexCacheDict)
             newFlexCache.post(poll=True, poll_timeout=120)
         except NetAppRestError as err:
@@ -2174,7 +2176,7 @@ def create_flexcache(
         try:
             uuid = None
             relation = None
-            flexcache_relationship = NetAppFlexCache.get_collection(**{"name": flexcache_vol_modified, "svm.name": flexcache_svm})
+            flexcache_relationship = NetAppFlexCache.get_collection(**{"name": flexcache_vol_modified, "svm.name": svm})
             for relation in flexcache_relationship:
                 # Retrieve relationship details
                 try:
@@ -2186,7 +2188,7 @@ def create_flexcache(
                     raise APIConnectionError(err)
             if not uuid:
                 if print_output:
-                    print("Error: FlexCache was not created: " + flexcache_svm + ":" + flexcache_vol_modified)
+                    print("Error: FlexCache was not created: " + svm + ":" + flexcache_vol_modified)
                 raise InvalidConfigError()
         except NetAppRestError as err:
             if print_output:
@@ -2291,7 +2293,7 @@ def create_flexcache(
             print(f"Volume successfully created and bound to PersistentVolumeClaim (PVC) '{pvc_name}' in namespace '{namespace}'.")
 
         return {
-            "ontap_flexcache": f"{flexcache_svm}: {flexcache_vol}",
+            "ontap_flexcache": f"{svm}: {flexcache_vol}",
             "k8s_pvc": pvc_name
         }
     
