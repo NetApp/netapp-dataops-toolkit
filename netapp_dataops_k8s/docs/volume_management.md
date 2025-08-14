@@ -345,19 +345,19 @@ The following options/arguments are optional:
 
 ##### Example Usage
 
-Create a FlexCache volume 'test-cache-vol5' of size 52Gi at 'svm1', and attach it to a Kubernetes PersistentVolumeClaim (PVC) named 'test-vol0' in namespace 'trident', using 'ontap' tridentbackendconfig.
+Create a FlexCache volume 'test-cache-vol1' of size '53Gi', and attach it to a Kubernetes PersistentVolumeClaim (PVC) named 'test-vol1' in namespace 'trident', using 'ontap' tridentbackendconfig.
 
 ```sh
-netapp_dataops_k8s_cli.py create flexcache --flexcache-vol=test-cache-vol5 --flexcache-svm=svm1 --source-vol=test-vol0 --source-svm=svm0 --flexcache-size=52Gi --backend-name=ontap --namespace=trident
-Creating FlexCache: svm0:trident_pvc_5dd70386_7611_4ecf_adc4_271d3ca05355 -> svm0:test_cache_vol5
+netapp_dataops_k8s_cli.py create flexcache --flexcache-vol=test-cache-vol1 --source-vol=test-vol1 --source-svm=svm0 --flexcache-size=53Gi --backend-name=ontap --namespace=trident
+Creating FlexCache: svm0:test-vol1 -> svm0:test-cache-vol1
 FlexCache created successfully.
-[K8s] Creating PV 'pv-test-cache-vol5' in namespace 'trident'...
-[K8s] PV 'pv-test-cache-vol5' created successfully.
-[K8s] Creating PVC 'pvc-test-cache-vol5' in namespace 'trident'...
-[K8s] PVC 'pvc-test-cache-vol5' created successfully.
+[K8s] Creating PV 'pv-test-cache-vol1' in namespace 'trident'...
+[K8s] PV 'pv-test-cache-vol1' created successfully.
+[K8s] Creating PVC 'test-cache-vol1' in namespace 'trident'...
+[K8s] PVC 'test-cache-vol1' created successfully.
 Waiting for Kubernetes to bind volume to PVC.
-[K8s] PVC 'pvc-test-cache-vol5' is bound to PV 'pv-test-cache-vol5'.
-Volume successfully created and bound to PersistentVolumeClaim (PVC) 'pvc-test-cache-vol5' in namespace 'trident'.
+[K8s] PVC 'test-cache-vol1' is bound to PV 'pv-test-cache-vol1'.
+Volume successfully created and bound to PersistentVolumeClaim (PVC) 'test-cache-vol1' in namespace 'trident'.
 ```
 
 <a name="library-of-functions"></a>

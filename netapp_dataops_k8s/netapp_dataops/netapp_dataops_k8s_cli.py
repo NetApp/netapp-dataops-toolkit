@@ -675,8 +675,8 @@ Required Options/Arguments:
 \t-b, --backend-name=\tName of tridentbackendconfig.
 
 Optional Options/Arguments:
-\t-c, --junction=\tThe junction path for the FlexCache volume.
 \t-h, --help\t\tPrint help text.
+\t-c, --junction=\t\tThe junction path for the FlexCache volume.
 \t-n, --namespace=\tKubernetes namespace to create the new PersistentVolumeClaim (PVC) in. If not specified, the PVC will be created in the "default" namespace.
 
 Examples:
