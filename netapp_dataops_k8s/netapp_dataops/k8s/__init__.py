@@ -541,7 +541,7 @@ def _get_trident_backend_config(backend_config_name: str, namespace: str = "trid
             version="v1",
             namespace=namespace,
             plural="tridentbackendconfigs",
-        name=backend_config_name
+            name=backend_config_name
     )
     except ApiException as e:
         if print_output:
