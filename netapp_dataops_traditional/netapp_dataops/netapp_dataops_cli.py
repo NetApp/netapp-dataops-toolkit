@@ -524,13 +524,17 @@ create flexcache volume
 
 Required Options/Arguments:
 \t-n, --flexcache-vol=\tName of flexcache volume
-\t-t, --flexcache-svm=\tnon default flexcache SVM
 \t-s, --source-svm=\tSource SVM name
 \t-v, --source-vol=\tSource volume name
 
 Optional Options/Arguments:
+\t-t, --flexcache-svm=\tnon default flexcache SVM
 \t-u, --cluster-name=\tnon default hosting cluster
 \t-z, --flexcache-size=\tSize of flexcache volume (default is 10% of source volume size)
+\t-j, --junction\t\tSpecify a custom junction path for the flexcache volume to be exported at.
+\t-e, --export-policy=\tNFS export policy to use when exporting new flexcache volume.
+\t-m, --mountpoint=\tLocal mountpoint to mount new flexcache volume at after creating. If not specified, new flexcache volume will not be mounted locally. On Linux hosts - if specified, must be run as root.
+\t-x, --readonly\t\tRead-only option for mounting flexcache volumes locally.
 \t-h, --help\t\tPrint help text.
 
 Examples:
