@@ -2230,7 +2230,12 @@ def create_flexcache(
                     path=junction,
                     server=data_lif
                 ),
-                storage_class_name=""
+                storage_class_name="",
+                claim_ref=client.V1ObjectReference(
+                    kind="PersistentVolumeClaim",
+                    namespace=namespace,
+                    name=pvc_name
+                )
             )
         )
 
