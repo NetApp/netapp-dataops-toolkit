@@ -2176,8 +2176,8 @@ def create_snap_mirror_relationship(source_svm: str, source_vol: str, target_vol
                     print("Error: ONTAP Rest API Error: ", err)
                 raise APIConnectionError(err)
 
-def create_flexcache(source_vol: str, source_svm: str, flexcache_vol: str, flexcache_svm: str = None, cluster_name: str = None,
-                    flexcache_size: str = None, junction: str = None, print_output: bool = False):
+def create_flexcache(source_vol: str, source_svm: str, flexcache_vol: str, flexcache_svm: str = None, cluster_name: str = None, flexcache_size: str = None, 
+                     junction: str = None, export_policy: str = "default", mountpoint: str = None, readonly: bool = False, print_output: bool = False):
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -2203,6 +2203,8 @@ def create_flexcache(source_vol: str, source_svm: str, flexcache_vol: str, flexc
         svm = config["svm"]
         if not flexcache_svm:
             flexcache_svm = svm
+        if not export_policy :
+            export_policy = config["defaultExportPolicy"]
         
         flexcache_size_bytes = None
 
@@ -2236,6 +2238,9 @@ def create_flexcache(source_vol: str, source_svm: str, flexcache_vol: str, flexc
                     "svm": {"name": source_svm},
                     "volume": {"name": source_vol}
                 }],
+                "nas": {
+                    "export_policy": {"name": export_policy},
+                },
                 "path": junction
             }
             if flexcache_size_bytes:
@@ -2274,6 +2279,15 @@ def create_flexcache(source_vol: str, source_svm: str, flexcache_vol: str, flexc
 
         if print_output:
             print("FlexCache created successfully.")
+
+        # Optionally mount newly created flexcache volume
+        if mountpoint:
+            try:
+                mount_volume(volume_name=flexcache_vol, svm_name=flexcache_svm, mountpoint=mountpoint, readonly=readonly, print_output=True)
+            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
+                if print_output:
+                    print("Error: Error mounting flexcache volume.")
+                raise
     else:
         raise ConnectionTypeError()
 

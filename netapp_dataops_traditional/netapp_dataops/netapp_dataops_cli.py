@@ -1070,10 +1070,13 @@ if __name__ == '__main__':
             flexCacheVol = None
             flexCacheSize = None
             junction = None
+            exportPolicy = None
+            mountpoint = None
+            readonly = False
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:t:s:v:u:z:j:", ["cluster-name=", "help", "flexcache-vol=", "flexcache-svm=", "source-svm=", "source-vol=", "flexcache-size=", "junction="])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:t:s:v:u:z:j:e:m:x", ["cluster-name=", "help", "flexcache-vol=", "flexcache-svm=", "source-svm=", "source-vol=", "flexcache-size=", "junction=", "export-policy=", "mountpoint=", "readonly"])
             except Exception as err:
                 print(err)
                 handleInvalidCommand(helpText=helpTextCreateFlexCacheVolume, invalidOptArg=True)
@@ -1097,6 +1100,12 @@ if __name__ == '__main__':
                     flexCacheSize = arg
                 elif opt in ("-j", "--junction"):
                     junction = arg
+                elif opt in ("-e", "--export-policy"):
+                    exportPolicy = arg
+                elif opt in ("-m", "--mountpoint"):
+                    mountpoint = arg
+                elif opt in ("-x", "--readonly"):
+                    readonly = True
 
             # Check for required options
             if not flexCacheVol or not sourceSvm or not sourceVol:
@@ -1104,8 +1113,8 @@ if __name__ == '__main__':
 
             # Create flexcache
             try:
-                create_flexcache(source_svm=sourceSvm, flexcache_svm=flexCacheSvm, source_vol=sourceVol, flexcache_vol=flexCacheVol,
-                        cluster_name=clusterName, flexcache_size=flexCacheSize, junction=junction, print_output=True)
+                create_flexcache(source_svm=sourceSvm, flexcache_svm=flexCacheSvm, source_vol=sourceVol, flexcache_vol=flexCacheVol, cluster_name=clusterName, 
+                                 flexcache_size=flexCacheSize, junction=junction, export_policy=exportPolicy, mountpoint=mountpoint, readonly=readonly, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
 
