@@ -2178,6 +2178,30 @@ def create_snap_mirror_relationship(source_svm: str, source_vol: str, target_vol
 
 def create_flexcache(source_vol: str, source_svm: str, flexcache_vol: str, flexcache_svm: str = None, cluster_name: str = None, flexcache_size: str = None, 
                      junction: str = None, export_policy: str = "default", mountpoint: str = None, readonly: bool = False, print_output: bool = False):
+    """
+    Creates a FlexCache volume from a specified source volume.
+
+    Required Arguments:
+        source_vol (str): Name of the source volume.
+        source_svm (str): Name of the source SVM.
+        flexcache_vol (str): Name of the FlexCache volume to create.
+
+    Optional Arguments:
+        flexcache_svm (str): Name of the FlexCache SVM (defaults to config SVM).
+        cluster_name (str): Name of the hosting cluster (defaults to config cluster).
+        flexcache_size (str): Size of the FlexCache volume (e.g., '100GB', '10TB'). Default is 10% of source volume size if not specified.
+        junction (str): Custom junction path for the FlexCache volume export.
+        export_policy (str): NFS export policy to use for the FlexCache volume (default: 'default').
+        mountpoint (str): Local mountpoint to mount the FlexCache volume after creation. If not specified, the volume will not be mounted locally. On Linux hosts, must be run as root if specified.
+        readonly (bool): Mount the FlexCache volume as read-only if True.
+        print_output (bool): Print detailed output if True.
+
+    Raises:
+        InvalidConfigError: If configuration is missing or invalid.
+        InvalidVolumeParameterError: If provided parameters are invalid.
+        APIConnectionError: If there is an error connecting to the API.
+        ConnectionTypeError: If the connection type is not supported.
+    """
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
