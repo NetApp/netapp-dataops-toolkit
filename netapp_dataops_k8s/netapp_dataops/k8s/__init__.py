@@ -2109,6 +2109,28 @@ def create_flexcache(
 ):
     """
     Created a FlexCache in ONTAP and create FlexCache
+
+    Required parameters:
+    - source_vol: The name of the source volume
+    - source_svm: The name of the source SVM
+    - flexcache_vol: The name of the FlexCache volume
+    - flexcache_size: The size of the FlexCache volume
+    - backend_name: The name of the backend storage
+
+    Optional parameters:
+    - junction: The junction path for the FlexCache volume
+    - namespace: The Kubernetes namespace, default is "default"
+    - print_output: Flag to print output messages, default is False
+
+    Returns:
+    - dict: A dictionary containing the FlexCache volume and PVC information.
+
+    Raises:
+    - APIConnectionError: If there is an error connecting to the API.
+    - InvalidVolumeParameterError: If the volume parameters are invalid.
+    - InvalidConfigError: If the configuration is invalid.
+    - NetAppRestError: If there is an error with the NetApp REST API.
+    - ConnectionTypeError: If the connection type is invalid.
     """
 
     # Validate volume names
