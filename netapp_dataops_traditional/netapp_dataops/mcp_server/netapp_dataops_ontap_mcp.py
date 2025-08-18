@@ -14,7 +14,8 @@ from netapp_dataops.traditional import (
     create_snapshot, 
     list_snapshots, 
     create_snap_mirror_relationship, 
-    list_snap_mirror_relationships
+    list_snap_mirror_relationships,
+    create_flexcache
 )
 
 mcp = FastMCP("NetApp DataOps Traditional Toolkit MCP")
@@ -419,6 +420,57 @@ async def list_snap_mirror_relationships_tool(
         print(f"Error listing snapmirror relationships: {e}")
         raise
 
+@mcp.tool(name="Create FlexCache")
+async def create_flexcache_tool(
+    source_vol: str,
+    source_svm: str,
+    flexcache_vol: str,
+    flexcache_svm: Optional[str] = None,
+    cluster_name: Optional[str] = None,
+    flexcache_size: Optional[str] = None,
+    junction: Optional[str] = None,
+    export_policy: str = "default",
+    mountpoint: Optional[str] = None,
+    readonly: bool = False,
+    print_output: bool = False
+) -> None:
+    
+    """
+    Use this tool to create a FlexCache volume from a specified source volume.
+
+    Args:
+        source_vol (str): Name of the source volume (required).
+        source_svm (str): Name of the SVM hosting the source volume (required).
+        flexcache_vol (str): Name of the FlexCache volume to create (required).
+        flexcache_svm (str): Name of the SVM hosting the FlexCache volume. Defaults to None.
+        cluster_name (str): Non-default cluster name, same credentials as the default credentials should be used. Defaults to None.
+        flexcache_size (str): Size of the FlexCache volume (e.g., '100GB', '10TB'). Defaults to 10% of source volume size if not specified.
+        junction (str): Custom junction path for the FlexCache volume to be exported at. If not specified, the junction path will be: ("/"+FlexCache Volume Name). Defaults to None.
+        export_policy (str): NFS export policy to use when exporting the FlexCache volume. Defaults to "default".
+        mountpoint (str): Local mountpoint to mount the FlexCache volume at. If not specified, the volume will not be mounted locally. On Linux hosts - if specified, the calling program must be run as root. Defaults to None.
+        readonly (bool): Mount the FlexCache volume locally as "read-only." If not specified, the volume will be mounted as "read-write". On Linux hosts - if specified, the calling program must be run as root. Defaults to False.
+        print_output (bool): Denotes whether or not to print messages to the console during execution. Defaults to False.
+
+    Returns:
+        None
+    """
+    try:
+        create_flexcache(
+            source_vol=source_vol,
+            source_svm=source_svm,
+            flexcache_vol=flexcache_vol,
+            flexcache_svm=flexcache_svm,
+            cluster_name=cluster_name,
+            flexcache_size=flexcache_size,
+            junction=junction,
+            export_policy=export_policy,
+            mountpoint=mountpoint,
+            readonly=readonly,
+            print_output=print_output
+        )
+    except Exception as e:
+        print(f"Error creating FlexCache: {e}")
+        raise
 
 
 if __name__ == "__main__":
