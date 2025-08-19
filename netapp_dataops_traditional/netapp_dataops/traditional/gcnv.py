@@ -1,13 +1,5 @@
 from google.cloud import netapp_v1
 
-# from google.cloud.netapp_v1.types import (
-#     Volume, ExportPolicy, SnapshotPolicy, BackupConfig,
-#     TieringPolicy, RestoreParameters, Replication, DestinationVolumeParameters,
-#     RestrictedAction, Snapshot, CreateSnapshotRequest, DeleteSnapshotRequest
-# )
-
-# from google.api_core.exceptions import GoogleAPICallError, InvalidArgument
- 
 def create_volume(
     project_id: str,
     location: str,
@@ -61,6 +53,7 @@ def create_volume(
     if smb_settings:
         volume.smb_settings = smb_settings
 
+    # Build ExportPolicy if provided
     if export_policy_rules:
         volume.export_policy = netapp_v1.ExportPolicy(
             rules=[
@@ -74,14 +67,17 @@ def create_volume(
             ]
         )
 
+    # Build SnapshotPolicy if provided
     if snapshot_policy:
         volume.snapshot_policy = netapp_v1.SnapshotPolicy(**snapshot_policy)
 
+    # Build TieringPolicy if provided
     if tiering_enabled:
         volume.tiering_policy = netapp_v1.TieringPolicy(
             cooling_period_days=cooling_threshold_days or 0
         )
 
+    # Build BackupConfig if provided
     if backup_policies or backup_vault:
         volume.backup_config = netapp_v1.BackupConfig(
             backup_policies=backup_policies or [],
@@ -89,9 +85,11 @@ def create_volume(
             scheduled_backup_enabled=scheduled_backup_enabled or False
         )
 
+    # Build RestrictedAction if provided
     if block_deletion_when_clients_connected:
         volume.restricted_actions = [netapp_v1.RestrictedAction.BLOCK_VOLUME_DELETION]
 
+    # Construct the request
     request = netapp_v1.CreateVolumeRequest(
         parent=parent,
         volume_id=volume_id,
@@ -170,20 +168,24 @@ def clone_volume(
  
     if smb_settings:
         volume.smb_settings = smb_settings
- 
+
+    # Build ExportPolicy if provided
     if export_policy_rules:
         volume.export_policy = netapp_v1.ExportPolicy(
             rules=[netapp_v1.ExportPolicyRule(**rule) for rule in export_policy_rules]
         )
  
+    # Build SnapshotPolicy if provided
     if snapshot_policy:
         volume.snapshot_policy = netapp_v1.SnapshotPolicy(**snapshot_policy)
  
+    # Build TieringPolicy if provided
     if tiering_enabled:
         volume.tiering_policy = netapp_v1.TieringPolicy(
             cooling_period_days=cooling_threshold_days or 0
         )
  
+    # Build BackupConfig if provided
     if backup_policies or backup_vault:
         volume.backup_config = netapp_v1.BackupConfig(
             backup_policies=backup_policies or [],
@@ -191,9 +193,11 @@ def clone_volume(
             scheduled_backup_enabled=scheduled_backup_enabled or False
         )
  
+    # Build RestrictedAction if provided
     if block_deletion_when_clients_connected:
         volume.restricted_actions = [netapp_v1.RestrictedAction.BLOCK_VOLUME_DELETION]
  
+    # Construct the request
     request = netapp_v1.CreateVolumeRequest(
         parent=parent,
         volume_id=volume_id,
@@ -343,11 +347,13 @@ def create_replication(
         description=destination_volume_description
     )
  
+    # Build TieringPolicy if provided
     if tiering_enabled:
         destination_params.tiering_policy = netapp_v1.TieringPolicy(
             cooling_period_days=cooling_threshold_days or 0
         )
  
+    # Construct the replication object
     replication = netapp_v1.Replication(
         replication_schedule=replication_schedule,
         destination_volume_parameters=destination_params,
@@ -355,6 +361,7 @@ def create_replication(
         labels=labels or {}
     )
  
+    # Construct the request
     request = netapp_v1.CreateReplicationRequest(
         parent=parent,
         replication=replication,
