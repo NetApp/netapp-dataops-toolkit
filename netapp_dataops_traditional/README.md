@@ -413,7 +413,6 @@ The following options/arguments are required:
 
 ```
     -n, --flexcache-vol=    Name of the FlexCache volume to be created.
-    -t, --flexcache-svm=    Name of the SVM where the FlexCache volume will reside
     -v, --source-volume=    Name of the source volume.
     -s, --source-svm=       Name of the source SVM.
 ```
@@ -421,9 +420,13 @@ The following options/arguments are required:
 The following options/arguments are optional:
 
 ```
+    -t, --flexcache-svm=    Name of the SVM where the FlexCache volume will reside.
     -u, --cluster-name=     Non-default hosting cluster.
     -j, --junction=         Custom junction path for the FlexCache volume to be exported at. If not specified, junction path will be: ("/"+FlexCache Volume Name).
-    -z, --flexcache-size=    Size of the FlexCache volume. Format: '1024MB', '100GB', '10TB', etc. (default is 10% of the origin volume size or 1GB per constituent, whichever is greater).
+    -z, --flexcache-size=   Size of the FlexCache volume. Format: '1024MB', '100GB', '10TB', etc. (default is 10% of the origin volume size or 1GB per constituent, whichever is greater).
+    -e, --export-policy=    NFS export policy to use for the FlexCache volume (default: 'default').
+    -m, --mountpoint=       Local mountpoint to mount the FlexCache volume after creation. If not specified, the volume will not be mounted locally. On Linux hosts, must be run as root if specified.
+    -x, --readonly=         Mount the FlexCache volume as read-only if True. (default is False).
     -h, --help              Print help text.
 ```
 
@@ -1282,10 +1285,13 @@ def create_flexcache(
     source_vol: str,                # Name of the source volume (required).
     source_svm: str,                # Name of the source SVM (required).
     flexcache_vol: str,             # Name of the FlexCache volume to be created (required).
-    flexcache_svm: str,             # Name of the SVM where the FlexCache volume will reside (required).
-    cluster_name: str = None,       # Non-default cluster name, same credentials as the default credentials should be used.
-    flexcache_size: str = None,     # Size of the FlexCache volume. Format: '1024MB', '100GB', '10TB', etc. (optional). Default value is 10% of the origin volume size or 1GB per constituent, whichever is greater.
+    flexcache_svm: str = None,      # Name of the SVM where the FlexCache volume will reside (optional, defaults to config SVM).
+    cluster_name: str = None,       # Non-default cluster name, same credentials as the default credentials should be used (optional).
+    flexcache_size: str = None,     # Size of the FlexCache volume. Format: '1024MB', '100GB', '10TB', etc. (optional). Default is 10% of the source volume size or 1GB per constituent, whichever is greater.
     junction: str = None,           # Custom junction path for the FlexCache volume to be exported at. If not specified, junction path will be: ("/"+FlexCache Volume Name).
+    export_policy: str = "default", # NFS export policy to use for the FlexCache volume (default: 'default').
+    mountpoint: str = None,         # Local mountpoint to mount the FlexCache volume after creation. If not specified, the volume will not be mounted locally. On Linux hosts, must be run as root if specified.
+    readonly: bool = False,         # Mount the FlexCache volume as read-only if True.
     print_output: bool = False      # Denotes whether or not to print messages to the console during execution.
 ):
 ```
