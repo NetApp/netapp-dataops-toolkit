@@ -324,6 +324,9 @@ VolumeSnapshot successfully restored.
 
 The NetApp DataOps Toolkit can be used to create a FlexCache volume in ONTAP and then create a PV and PVC representing the FlexCache in Kubernetes. The command to create a FlexCache volume is `netapp_dataops_k8s_cli.py create flexcache`.
 
+>[!NOTE]
+>The source and target Storage Virtual Machines (SVMs) need to have been peered as a prerequisite to running this command.
+
 The following options/arguments are required:
 
 ```
@@ -641,6 +644,9 @@ APIConnectionError              # The Kubernetes API returned an error.
 #### Create a FlexCache Volume
 
 The NetApp DataOps Toolkit can be used to create a FlexCache volume in ONTAP and then create a PV and PVC representing the FlexCache in Kubernetes.
+
+>[!NOTE]
+>The source and target Storage Virtual Machines (SVMs) need to have been peered as a prerequisite to running this command.
 
 ##### Function Definition
 
