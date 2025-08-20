@@ -364,7 +364,7 @@ async def list_volumes_tool(
         mcp.log_error(f"Error listing volumes: {e}")
         raise e
     
-@mcp.tool(name = "Create Snapshop")
+@mcp.tool(name = "Create Snapshot")
 async def create_snapshot_tool(
     project_id: str,
     location: str,
