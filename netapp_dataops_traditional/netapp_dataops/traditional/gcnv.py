@@ -27,7 +27,6 @@ def create_volume(
     tiering_enabled: bool = None,
     cooling_threshold_days: int = None
 ):
-    
     # Create a client
     client = netapp_v1.NetAppClient()
 
@@ -107,6 +106,7 @@ def create_volume(
     print(response)
 
     return response
+
  
 def clone_volume(
     project_id: str,
@@ -252,6 +252,7 @@ def list_volumes(project_id: str, location: str):
     # Handle the response
     for response in page_result:
         print(response)
+        
  
 def create_snapshot(project_id: str, location: str, volume_id: str, snapshot_id: str, description: str = None, labels: dict = None):
     # Create a client
