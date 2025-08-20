@@ -385,7 +385,7 @@ The following volume management operations are available within the set of funct
 | [Delete an existing snapshot.](#lib-delete-volume-snapshot)                          | No                  | Yes                  |
 | [List all snapshots.](#lib-list-volume-snapshots)                                    | No                  | Yes                  |
 | [Restore a snapshot.](#lib-restore-volume-snapshot)                                  | No                  | Yes                  |
-| [Create a new FlexCache volume.](#lib-restore-volume-snapshot)                       | No                  | Yes                  |
+| [Create a new FlexCache volume.](#lib-create-flexcache)                              | No                  | Yes                  |
 
 ### Kubernetes Persistent Volume Management Operations
 
@@ -639,7 +639,7 @@ InvalidConfigError              # kubeconfig file is missing or is invalid.
 APIConnectionError              # The Kubernetes API returned an error.
 ```
 
-<a name="lib-clone-volume"></a>
+<a name="lib-create-flexcache"></a>
 
 #### Create a FlexCache Volume
 
