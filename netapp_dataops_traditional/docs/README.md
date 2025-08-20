@@ -70,4 +70,4 @@ The `gcnv.py` module extends the Traditional DataOps Toolkit to support Google C
 
 ## Support
 
-- For issues or feature requests, contact the DataOps Toolkit maintainers or open an issue in the project repository.
+- Report any issues via GitHub: https://github.com/NetApp/netapp-dataops-toolkit/issues.
