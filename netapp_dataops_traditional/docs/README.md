@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `gcnv.py` module extends the Traditional DataOps Toolkit to support Google Cloud NetApp Volumes (GCNV). Previously, the toolkit only supported ONTAP storage systems. With this addition, users can now manage NetApp volumes hosted in Google Cloud, leveraging Google’s managed NetApp service.
+The [`gcnv.py`](https://bitbucket.ngage.netapp.com/projects/SIE-BB/repos/netapp-dataops-toolkit/browse/netapp_dataops_traditional/netapp_dataops/traditional/gcnv.py?at=refs%2Fheads%2Ffeature%2Fgcnv-traditional) module extends the Traditional DataOps Toolkit to support Google Cloud NetApp Volumes (GCNV). Previously, the toolkit only supported ONTAP storage systems. With this addition, users can now manage NetApp volumes hosted in Google Cloud, leveraging Google’s managed NetApp service.
 
 ## Setup
 
@@ -13,7 +13,7 @@ The `gcnv.py` module extends the Traditional DataOps Toolkit to support Google C
 
 ### 2. Installation
 
-**Install the Google Cloud NetApp SDK:**
+Install the Google Cloud NetApp SDK:
 
    ```bash
    python3 -m pip install google-cloud-netapp
