@@ -344,6 +344,7 @@ The following options/arguments are optional:
     -c, --junction          The junction path for the FlexCache volume.
     -h, --help              Print help text.
     -n, --namespace=        Kubernetes namespace to create the new PersistentVolumeClaim (PVC) in. If not specified, the PVC will be created in the "default" namespace.
+    -t, --trident-namespace= Kubernetes namespace where Trident is installed. Default is "trident".
 ```
 
 ##### Example Usage
@@ -351,7 +352,7 @@ The following options/arguments are optional:
 Create a FlexCache volume 'test-cache-vol1' of size '53Gi', and attach it to a Kubernetes PersistentVolumeClaim (PVC) named 'test-vol1' in namespace 'trident', using 'ontap' tridentbackendconfig.
 
 ```sh
-netapp_dataops_k8s_cli.py create flexcache --flexcache-vol=test-cache-vol1 --source-vol=test-vol1 --source-svm=svm0 --flexcache-size=53Gi --backend-name=ontap --namespace=trident
+netapp_dataops_k8s_cli.py create flexcache --flexcache-vol=test-cache-vol1 --source-vol=test-vol1 --source-svm=svm0 --flexcache-size=53Gi --backend-name=ontap --namespace=trident --trident-namespace=netapp-trident
 Creating FlexCache: svm0:test-vol1 -> svm0:test-cache-vol1
 FlexCache created successfully.
 [K8s] Creating PV 'pv-test-cache-vol1' in namespace 'trident'...
@@ -659,9 +660,9 @@ def create_flexcache(
     backend_name: str,              # Name of the tridentbackendconfig (required).
     junction: str = None,           # The junction path for the FlexCache volume (optional).
     namespace: str = "default",     # Kubernetes namespace to create the new PersistentVolumeClaim (PVC) in. If not specified, the PVC will be created in the "default" namespace (optional).
+    trident_namespace: str = "trident", # Kubernetes namespace where Trident is installed (optional).
     print_output: bool = False      # Denotes whether or not to print messages to the console during execution (optional).
 ) :
-
 ```
 
 ##### Return Value

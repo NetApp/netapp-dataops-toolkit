@@ -1192,10 +1192,11 @@ if __name__ == '__main__':
             flexCacheVol = None
             flexCacheSize = None
             backendName = None
+            tridentNamespace = "trident"
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:f:z:v:s:b:n:c:", ["help", "flexcache-vol=", "flexcache-size=", "source-vol=", "source-svm=", "backend-name=", "namespace=", "junction="])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:f:z:v:s:b:n:c:t:", ["help", "flexcache-vol=", "flexcache-size=", "source-vol=", "source-svm=", "backend-name=", "namespace=", "junction=", "trident-namespace="])
             except getopt.GetoptError:
                 handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
 
@@ -1218,13 +1219,15 @@ if __name__ == '__main__':
                     namespace = arg
                 elif opt in ("-c", "--junction"):
                     junction = arg
+                elif opt in ("-t", "--trident-namespace"):
+                    tridentNamespace = arg
 
             # Check for required options
             if not flexCacheVol or not sourceVol or not sourceSvm or not flexCacheSize or not backendName:
                 handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
 
             # Create FlexCache volume
-            create_flexcache(flexcache_vol=flexCacheVol, flexcache_size=flexCacheSize, source_vol=sourceVol, source_svm=sourceSvm, backend_name=backendName, namespace=namespace, junction=junction, print_output=True)
+            create_flexcache(flexcache_vol=flexCacheVol, flexcache_size=flexCacheSize, source_vol=sourceVol, source_svm=sourceSvm, backend_name=backendName, namespace=namespace, junction=junction, trident_namespace=tridentNamespace, print_output=True)
 
         else:
             handleInvalidCommand()
