@@ -24,21 +24,21 @@ Install the Google Cloud NetApp SDK:
 
 ## Features
 
-### 1. **Volume Management**
+### 1. Volume Management
 - **Creation:** Users can provision new NetApp volumes in Google Cloud, specifying parameters such as size, protocols (NFS, SMB), storage pools, and access policies.
 - **Cloning:** The module supports creating a new volume as a clone of an existing volume, using a specific snapshot as the source. This is useful for rapid environment duplication or testing.
 - **Listing:** Users can retrieve a list of all volumes in a given project and location.
 - **Deletion:** Volumes can be deleted, with options for forced deletion if necessary.
 
-### 2. **Snapshot Management**
+### 2. Snapshot Management
 - **Creation:** Snapshots capture the state of a volume at a point in time, enabling backup and recovery scenarios.
 - **Listing:** Users can enumerate all snapshots associated with a particular volume.
 - **Deletion:** Snapshots can be removed when no longer needed.
 
-### 3. **Replication Management**
+### 3. Replication Management
 - **Setup:** Replication allows data to be mirrored between volumes, supporting disaster recovery and high availability. The module enables configuration of replication schedules and destination parameters.
 
-### 4. **Advanced Configuration**
+### 4. Advanced Configuration
 - **Export Policies:** Define which clients can access a volume and with what permissions.
 - **SMB Settings:** Configure SMB protocol options for Windows-based access.
 - **Snapshot Policies:** Automate snapshot creation on schedules (hourly, daily, weekly).
