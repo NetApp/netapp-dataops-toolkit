@@ -1536,8 +1536,13 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
                     # Determine if FlexCache
                     if volume.flexcache_endpoint_type == "cache":
                         flexcache = "yes"
-                        flexcacheParentSvm = volume.flexcache.parent_svm.name
-                        flexcacheParentVolume = volume.flexcache.parent_volume.name
+                        try:
+                            flexcache_relationship = NetAppFlexCache.get_collection(**{"name": volume.name, "svm.name": volume.svm.name})
+                            flexcacheParentSvm = flexcache_relationship.origins.svm.name
+                            flexcacheParentVolume = flexcache_relationship.origins.volume.name
+                        except NetAppRestError as err:
+                            print("Error: ONTAP Rest API Error: ", err)
+                            pass
 
                     # Convert size in bytes to "pretty" size (size in KB, MB, GB, or TB)
                     prettySize = _convert_bytes_to_pretty_size(size_in_bytes=volume.size)
