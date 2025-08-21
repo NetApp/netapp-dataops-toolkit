@@ -1936,13 +1936,14 @@ def list_volumes(namespace: str = "default", print_output: bool = False) -> list
             volumeDict["Source VolumeSnapshot"] = ""
         # Check if the volume is a FlexCache volume
         try:
-            print('debug flexcache metadata; name:' , pvc.metadata.name,' svm name: ', pvc.metadata.labels.get("svm", "") )
+            print('debug flexcache metadata; name:', pvc.metadata.name, 'svm name:', pvc.metadata.labels.get("svm", ""))
             flexcache_relationship = NetAppFlexCache.get_collection(**{"name": pvc.metadata.name, "svm.name": pvc.metadata.labels.get("svm", "")})
-            print('debug flexcache relationship: ', flexcache_relationship)
-            if flexcache_relationship:
-                print('debug flexcache relationship exists for ', pvc.metadata.name)
+            flexcache_relationship_list = list(flexcache_relationship)
+            print('debug flexcache relationship:', flexcache_relationship_list)
+            if flexcache_relationship_list:
+                print('debug flexcache relationship exists for', pvc.metadata.name)
                 volumeDict["FlexCache"] = "Yes"
-                for relation in flexcache_relationship:
+                for relation in flexcache_relationship_list:
                     relation.get()
                     volumeDict["Source SVM"] = relation.origins[0]["svm"]["name"]
                     volumeDict["Source Volume"] = relation.origins[0]["volume"]["name"]
