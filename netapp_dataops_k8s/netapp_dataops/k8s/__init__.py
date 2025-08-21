@@ -2168,7 +2168,7 @@ def create_flexcache(
                 flexcache_size_bytes = _convert_size_to_bytes(flexcache_size)
             except InvalidVolumeParameterError:
                 if print_output:
-                    print("Error: Invalid flexcache volume size specified. Acceptable values are '1024MB', '100GB', '10TB', etc.")
+                    print("Error: Invalid flexcache volume size specified. Acceptable values are '1024Mi', '100Gi', '10Ti', etc.")
                 raise
 
         # Create option to choose junction path.
