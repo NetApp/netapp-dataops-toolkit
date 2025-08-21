@@ -1934,6 +1934,26 @@ def list_volumes(namespace: str = "default", print_output: bool = False) -> list
             volumeDict["Clone"] = "No"
             volumeDict["Source PVC"] = ""
             volumeDict["Source VolumeSnapshot"] = ""
+        # Check if the volume is a FlexCache volume
+        try:
+            flexcache_relationship = NetAppFlexCache.get_collection(**{"name": pvc.metadata.name, "svm.name": pvc.metadata.labels.get("svm", "")})
+            if flexcache_relationship:
+                volumeDict["FlexCache"] = "Yes"
+                for relation in flexcache_relationship:
+                    relation.get()
+                    volumeDict["Source SVM"] = relation.origins[0]["svm"]["name"]
+                    volumeDict["Source Volume"] = relation.origins[0]["volume"]["name"]
+                    volumeDict["Trident Namespace"] = pvc.metadata.labels.get("trident-namespace", "trident")
+            else:
+                volumeDict["FlexCache"] = "No"
+                volumeDict["Source SVM"] = ""
+                volumeDict["Source Volume"] = ""
+                volumeDict["Trident Namespace"] = ""
+        except NetAppRestError as err:
+            volumeDict["FlexCache"] = "No"
+            volumeDict["Source SVM"] = ""
+            volumeDict["Source Volume"] = ""
+            volumeDict["Trident Namespace"] = ""
 
         # Append dict to list of volumes
         volumesList.append(volumeDict)
