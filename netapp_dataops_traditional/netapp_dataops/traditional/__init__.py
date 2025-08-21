@@ -1528,11 +1528,16 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
                     except:
                         pass
 
+                    # Construct flexcache source
+                    flexcache = "no"
+                    flexcacheParentSvm = ""
+                    flexcacheParentVolume = ""
+
                     # Determine if FlexCache
                     if volume.flexcache_endpoint_type == "cache":
                         flexcache = "yes"
-                    else:
-                        flexcache = "no"
+                        flexcacheParentSvm = volume.flexcache.parent_svm.name
+                        flexcacheParentVolume = volume.flexcache.parent_volume.name
 
                     # Convert size in bytes to "pretty" size (size in KB, MB, GB, or TB)
                     prettySize = _convert_bytes_to_pretty_size(size_in_bytes=volume.size)
@@ -1580,8 +1585,12 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
                         volumeDict["Local Mountpoint"] = localMountpoint
                     volumeDict["FlexCache"] = flexcache
                     volumeDict["Clone"] = clone
-                    volumeDict["Source SVM"] = cloneParentSvm
-                    volumeDict["Source Volume"] = cloneParentVolume
+                    if flexcache == "yes":
+                        volumeDict["Source SVM"] = flexcacheParentSvm
+                        volumeDict["Source Volume"] = flexcacheParentVolume
+                    else:
+                        volumeDict["Source SVM"] = cloneParentSvm
+                        volumeDict["Source Volume"] = cloneParentVolume
                     volumeDict["Source Snapshot"] = cloneParentSnapshot
 
                     # Append dict to list of volumes
