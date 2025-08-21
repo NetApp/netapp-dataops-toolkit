@@ -515,11 +515,7 @@ def _wait_for_triton_dev_deployment(server_name: str, namespace: str = "default"
         if deploymentStatus.status.ready_replicas == 1:
             break
         sleep(5)
-
-
-def _print_invalid_config_error() :
-    print("Error: Missing or invalid config file. Run `netapp_dataops_cli.py config` to create config file.")
-
+        
 
 def _get_trident_backend_config(backend_config_name: str, namespace: str = "trident", print_output: bool = False):
     # Retrieve kubeconfig
