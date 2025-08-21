@@ -1540,8 +1540,8 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
                             flexcache_relationship = NetAppFlexCache.get_collection(**{"name": volume.name})
                             for relation in flexcache_relationship:
                                 relation.get()
-                                flexcacheParentSvm = relation.origins.svm.name
-                                flexcacheParentVolume = relation.origins.volume.name
+                                flexcacheParentSvm = relation.origins[0].svm.name
+                                flexcacheParentVolume = relation.origins[0].volume.name
                         except NetAppRestError as err:
                             print("Error: ONTAP Rest API Error: ", err)
                             pass
