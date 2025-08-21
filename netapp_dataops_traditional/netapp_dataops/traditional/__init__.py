@@ -1538,6 +1538,7 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
                         flexcache = "yes"
                         try:
                             flexcache_relationship = NetAppFlexCache.get_collection(**{"name": volume.name})
+                            flexcache_relationship.get()
                             flexcacheParentSvm = flexcache_relationship.origins.svm.name
                             flexcacheParentVolume = flexcache_relationship.origins.volume.name
                         except NetAppRestError as err:
