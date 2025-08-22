@@ -1938,8 +1938,8 @@ def list_volumes(namespace: str = "default", print_output: bool = False) -> list
         try:
             if pvc.metadata.labels and pvc.metadata.labels.get("app") == "flexcache":
                 volumeDict["FlexCache"] = "Yes"
-                volumeDict["Source SVM"] = pvc.metadata.labels.get("svm", "")
-                volumeDict["Source Volume"] = pvc.metadata.labels.get("volume", "")
+                volumeDict["Source SVM"] = pvc.metadata.labels.get("source_svm", "")
+                volumeDict["Source Volume"] = pvc.metadata.labels.get("source_volume", "")
             else:
                 volumeDict["FlexCache"] = "No"
                 volumeDict["Source SVM"] = ""
