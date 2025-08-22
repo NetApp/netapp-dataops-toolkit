@@ -1201,25 +1201,39 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
            if print_output:
                 print("Error: volume retrieval failed for unmount operation.")
                 raise
+           
+        if getattr(volume, "flexcache_endpoint_type", None) == "cache":
+            try:
+                if print_output:
+                    print("Deleting flexcache volume '" + svm+':'+volume_name + "'.")
+                
+                NetAppFlexCache.delete(name=volume_name, **{"svm.name": svm})
 
-        try:
-            if print_output:
-                print("Deleting volume '" + svm+':'+volume_name + "'.")
-            # Delete volume
-            volume.delete(poll=True)
-
-            if print_output:
-                print("Volume deleted successfully.")
-
-        except NetAppRestError as err:
-            if print_output:
-                if "You must delete the SnapMirror relationships before" in str(err):
-                    print("Error: volume is snapmirror destination. add --delete-mirror to delete snapmirror relationship before deleting the volume")
-                elif "the source endpoint of one or more SnapMirror relationships" in str(err):
-                    print("Error: volume is snapmirror source. add --delete-mirror to release snapmirror relationship before deleting the volume")
-                else:
+                if print_output:
+                    print("Flexcache volume deleted successfully.")
+            except NetAppRestError as err:
+                if print_output:
                     print("Error: ONTAP Rest API Error: ", err)
-            raise APIConnectionError(err)
+                raise APIConnectionError(err)
+        else:
+            try:
+                if print_output:
+                    print("Deleting volume '" + svm+':'+volume_name + "'.")
+                # Delete volume
+                volume.delete(poll=True)
+
+                if print_output:
+                    print("Volume deleted successfully.")
+
+            except NetAppRestError as err:
+                if print_output:
+                    if "You must delete the SnapMirror relationships before" in str(err):
+                        print("Error: volume is snapmirror destination. add --delete-mirror to delete snapmirror relationship before deleting the volume")
+                    elif "the source endpoint of one or more SnapMirror relationships" in str(err):
+                        print("Error: volume is snapmirror source. add --delete-mirror to release snapmirror relationship before deleting the volume")
+                    else:
+                        print("Error: ONTAP Rest API Error: ", err)
+                raise APIConnectionError(err)
 
     else:
         raise ConnectionTypeError()
