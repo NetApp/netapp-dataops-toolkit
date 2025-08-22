@@ -1207,7 +1207,7 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
                 if print_output:
                     print("Deleting flexcache volume '" + svm+':'+volume_name + "'.")
                 
-                NetAppFlexCache.delete(name=volume_name, **{"svm.name": svm})
+                NetAppFlexCache(name=volume_name, svm={"name": svm}).delete(poll=True)
 
                 if print_output:
                     print("Flexcache volume deleted successfully.")
