@@ -1122,7 +1122,7 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
             
         try:
             # Retrieve volume
-            volume = NetAppVolume.find(name=volume_name, svm=svm, fields="flexcache_endpoint_type")
+            volume = NetAppVolume.find(name=volume_name, svm=svm, fields="comment,flexcache_endpoint_type")
             if not volume:
                 if print_output:
                     print("Error: Invalid volume name.")
