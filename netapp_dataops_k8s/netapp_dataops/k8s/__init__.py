@@ -1934,30 +1934,20 @@ def list_volumes(namespace: str = "default", print_output: bool = False) -> list
             volumeDict["Clone"] = "No"
             volumeDict["Source PVC"] = ""
             volumeDict["Source VolumeSnapshot"] = ""
-        # Check if the volume is a FlexCache volume
+        # Handle flexcache volumes
         try:
-            print('debug flexcache metadata; name:', pvc.metadata.name, 'svm name:', pvc.metadata.labels.get("svm", ""))
-            flexcache_relationship = NetAppFlexCache.get_collection(**{"name": pvc.metadata.name, "svm.name": pvc.metadata.labels.get("svm", "")})
-            flexcache_relationship_list = list(flexcache_relationship)
-            print('debug flexcache relationship:', flexcache_relationship_list)
-            if flexcache_relationship_list:
-                print('debug flexcache relationship exists for', pvc.metadata.name)
+            if pvc.metadata.labels and pvc.metadata.labels.get("app") == "flexcache":
                 volumeDict["FlexCache"] = "Yes"
-                for relation in flexcache_relationship_list:
-                    relation.get()
-                    volumeDict["Source SVM"] = relation.origins[0]["svm"]["name"]
-                    volumeDict["Source Volume"] = relation.origins[0]["volume"]["name"]
-                    volumeDict["Trident Namespace"] = pvc.metadata.labels.get("trident-namespace", "trident")
+                volumeDict["Source SVM"] = pvc.metadata.labels.get("svm", "")
+                volumeDict["Source Volume"] = pvc.metadata.labels.get("volume", "")
             else:
                 volumeDict["FlexCache"] = "No"
                 volumeDict["Source SVM"] = ""
                 volumeDict["Source Volume"] = ""
-                volumeDict["Trident Namespace"] = ""
         except NetAppRestError as err:
             volumeDict["FlexCache"] = "No"
             volumeDict["Source SVM"] = ""
             volumeDict["Source Volume"] = ""
-            volumeDict["Trident Namespace"] = ""
 
         # Append dict to list of volumes
         volumesList.append(volumeDict)
@@ -2254,7 +2244,9 @@ def create_flexcache(
         pvc_name = flexcache_vol
         pv_name = f"pv-{flexcache_vol}"
         labels = {
-            "app": "flexcache"
+            "app": "flexcache",
+            "source_svm": source_svm,
+            "source_volume": source_vol
         }
 
         # Create PV in Kubernetes
