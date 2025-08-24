@@ -8,7 +8,6 @@ and type safety. Each configuration section has its own model with validation.
 import re
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any
-from pathlib import Path
 
 from .exceptions import ConfigValidationError
 

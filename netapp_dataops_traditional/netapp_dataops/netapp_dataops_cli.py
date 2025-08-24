@@ -2,9 +2,9 @@
 
 import base64
 import json
-import os
 import re
 from getpass import getpass
+from pathlib import Path
 
 import sys
 sys.path.insert(0, "/root/netapp-dataops-toolkit/netapp_dataops_traditional/netapp_dataops")
@@ -69,19 +69,27 @@ from netapp_dataops.traditional import (
 
 
 ## Function for creating config file
-def createConfig(configDirPath: str = "~/.netapp_dataops", configFilename: str = "config.json", connectionType: str = "ONTAP"):
+def createConfig(configDirPath: str = "~/.netapp_dataops", configFilename: str = "config.json", connectionType: str = "ONTAP", config_manager: ConfigManager = None):
     """
-    Create configuration file using the new ConfigManager.
+    Create configuration file using dependency injection with ConfigManager.
     
-    This function maintains compatibility with the original interface while
-    using the new object-oriented configuration management system.
+    This function demonstrates dependency injection by accepting a ConfigManager
+    instance, making it more testable and flexible while maintaining compatibility.
+    
+    Args:
+        configDirPath: Directory path for config file
+        configFilename: Name of config file
+        connectionType: Type of connection (currently only ONTAP)
+        config_manager: Injectable ConfigManager instance (optional)
     """
-    # Expand user path and create full config file path
-    configDirPath = os.path.expanduser(configDirPath)
-    configFilePath = os.path.join(configDirPath, configFilename)
-    
-    # Initialize ConfigManager with the target file path
-    config_manager = ConfigManager(configFilePath)
+    # If no config manager injected, create default one (Dependency Injection with fallback)
+    if config_manager is None:
+        # Use pathlib for modern path handling
+        config_dir = Path(configDirPath).expanduser()
+        config_file_path = config_dir / configFilename
+        
+        # Create default ConfigManager instance
+        config_manager = ConfigManager(str(config_file_path))
     
     # Check if config file already exists
     if config_manager.config_exists():
@@ -102,16 +110,11 @@ def createConfig(configDirPath: str = "~/.netapp_dataops", configFilename: str =
         raise ConnectionTypeError()
     
     try:
-        # Create configuration directory if it doesn't exist
-        os.makedirs(configDirPath, exist_ok=True)
-        
-        # Create configuration through interactive prompts
+        # Let ConfigManager handle directory creation and configuration management
         config = config_manager.create_interactive_config()
-        
-        # Save the configuration
         config_manager.save_config(config)
         
-        print(f"Created config file: '{configFilePath}'.")
+        print(f"Created config file: '{config_manager.config_file}'.")
         
         # Display configuration summary
         print("\n" + config_manager.get_config_summary(config))

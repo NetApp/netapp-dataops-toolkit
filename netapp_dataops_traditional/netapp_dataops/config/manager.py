@@ -79,6 +79,9 @@ class ConfigManager:
             ConfigFileError: If file cannot be written
         """
         try:
+            # Ensure parent directory exists
+            self.config_file.parent.mkdir(parents=True, exist_ok=True)
+            
             with open(self.config_file, 'w') as f:
                 json.dump(config.to_dict(), f, indent=4)
                 
