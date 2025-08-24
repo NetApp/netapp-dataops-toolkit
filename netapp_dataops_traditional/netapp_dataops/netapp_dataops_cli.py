@@ -10,6 +10,30 @@ import sys
 sys.path.insert(0, "/root/netapp-dataops-toolkit/netapp_dataops_traditional/netapp_dataops")
 
 from netapp_dataops import traditional
+from netapp_dataops.help_text import (
+    HELP_TEXT_STANDARD,
+    HELP_TEXT_CONFIG,
+    HELP_TEXT_CLONE_VOLUME,
+    HELP_TEXT_CREATE_VOLUME,
+    HELP_TEXT_DELETE_VOLUME,
+    HELP_TEXT_LIST_VOLUMES,
+    HELP_TEXT_MOUNT_VOLUME,
+    HELP_TEXT_UNMOUNT_VOLUME,
+    HELP_TEXT_CREATE_SNAPSHOT,
+    HELP_TEXT_DELETE_SNAPSHOT,
+    HELP_TEXT_LIST_SNAPSHOTS,
+    HELP_TEXT_RESTORE_SNAPSHOT,
+    HELP_TEXT_CREATE_SNAPMIRROR_RELATIONSHIP,
+    HELP_TEXT_LIST_SNAPMIRROR_RELATIONSHIPS,
+    HELP_TEXT_SYNC_SNAPMIRROR_RELATIONSHIP,
+    HELP_TEXT_LIST_CLOUD_SYNC_RELATIONSHIPS,
+    HELP_TEXT_SYNC_CLOUD_SYNC_RELATIONSHIP,
+    HELP_TEXT_PULL_FROM_S3_BUCKET,
+    HELP_TEXT_PULL_FROM_S3_OBJECT,
+    HELP_TEXT_PUSH_TO_S3_DIRECTORY,
+    HELP_TEXT_PUSH_TO_S3_FILE,
+    HELP_TEXT_PREPOPULATE_FLEXCACHE
+)
 from netapp_dataops.traditional import (
     clone_volume,
     InvalidConfigError,
@@ -42,478 +66,6 @@ from netapp_dataops.traditional import (
     SnapMirrorSyncOperationError
 )
 
-
-## Define contents of help text
-helpTextStandard = '''
-The NetApp DataOps Toolkit is a Python library that makes it simple for data scientists and data engineers to perform various data management tasks, such as provisioning a new data volume, near-instantaneously cloning a data volume, and near-instantaneously snapshotting a data volume for traceability/baselining.
-
-Basic Commands:
-
-\tconfig\t\t\t\tCreate a new config file (a config file is required to perform other commands).
-\thelp\t\t\t\tPrint help text.
-\tversion\t\t\t\tPrint version details.
-
-Data Volume Management Commands:
-Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
-
-\tclone volume\t\t\tCreate a new data volume that is an exact copy of an existing volume.
-\tcreate volume\t\t\tCreate a new data volume.
-\tdelete volume\t\t\tDelete an existing data volume.
-\tlist volumes\t\t\tList all data volumes.
-\tmount volume\t\t\tMount an existing data volume locally. Note: on Linux hosts - must be run as root.
-\tunmount volume\t\t\tUnmount an existing data volume. Note: on Linux hosts - must be run as root.
-
-Snapshot Management Commands:
-Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
-
-\tcreate snapshot\t\t\tCreate a new snapshot for a data volume.
-\tdelete snapshot\t\t\tDelete an existing snapshot for a data volume.
-\tlist snapshots\t\t\tList all snapshots for a data volume.
-\trestore snapshot\t\tRestore a snapshot for a data volume (restore the volume to its exact state at the time that the snapshot was created).
-
-Data Fabric Commands:
-Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
-
-\tlist cloud-sync-relationships\tList all existing Cloud Sync relationships.
-\tsync cloud-sync-relationship\tTrigger a sync operation for an existing Cloud Sync relationship.
-\tpull-from-s3 bucket\t\tPull the contents of a bucket from S3.
-\tpull-from-s3 object\t\tPull an object from S3.
-\tpush-to-s3 directory\t\tPush the contents of a directory to S3 (multithreaded).
-\tpush-to-s3 file\t\t\tPush a file to S3.
-
-Advanced Data Fabric Commands:
-Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
-
-\tprepopulate flexcache\t\tPrepopulate specific files/directories on a FlexCache volume (ONTAP 9.8 and above ONLY).
-\tlist snapmirror-relationships\tList all existing SnapMirror relationships.
-\tsync snapmirror-relationship\tTrigger a sync operation for an existing SnapMirror relationship.
-\tcreate snapmirror-relationship\tCreate new SnapMirror relationship.
-'''
-helpTextCloneVolume = '''
-Command: clone volume
-
-Create a new data volume that is an exact copy of an existing volume.
-
-Required Options/Arguments:
-\t-n, --name=\t\tName of new volume..
-\t-v, --source-volume=\tName of volume to be cloned.
-
-Optional Options/Arguments:
-\t-l, --cluster-name=\tnon default hosting cluster
-\t-c, --source-svm=\tnon default source svm name
-\t-t, --target-svm=\tnon default target svm name
-\t-g, --gid=\t\tUnix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
-\t-h, --help\t\tPrint help text.
-\t-m, --mountpoint=\tLocal mountpoint to mount new volume at after creating. If not specified, new volume will not be mounted locally. On Linux hosts - if specified, must be run as root.
-\t-s, --source-snapshot=\tName of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
-\t\t\t\twhen snapshot name suffixed with * the latest snapshot will be used (hourly* will use the latest snapshot prefixed with hourly )
-\t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
-\t-x, --readonly\t\tRead-only option for mounting volumes locally.
-\t-j, --junction\t\tSpecify a custom junction path for the volume to be exported at.
-\t-e, --export-hosts\tcolon(:) seperated hosts/cidrs to to use for export. hosts will be exported for rw and root access
-\t-e, --export-policy\texport policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
-\t-d, --snapshot-policy\tsnapshot-policy to attach to the volume, default snapshot policy will be used if not provided
-\t-s, --split\t\tstart clone split after creation
-\t-r, --refresh\t\tdelete existing clone if exists before creating a new one
-\t-d, --svm-dr-unprotect\tdisable svm dr protection if svm-dr protection exists
-
-Examples (basic usage):
-\tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset
-\tnetapp_dataops_cli.py clone volume -n project2 -v gold_dataset -s snap1
-\tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset --mountpoint=~/project1 --readonly
-
-
-Examples (advanced usage):
-\tnetapp_dataops_cli.py clone volume -n testvol -v gold_dataset -u 1000 -g 1000 -x -j /project1 -d snappolicy1
-\tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset --source-svm=svm1 --target-svm=svm2 --source-snapshot=daily* --export-hosts 10.5.5.3:host1:10.6.4.0/24 --split
-'''
-helpTextConfig = '''
-Command: config
-
-Create a new config file (a config file is required to perform other commands).
-
-No additional options/arguments required.
-'''
-helpTextCreateSnapshot = '''
-Command: create snapshot
-
-Create a new snapshot for a data volume.
-
-Required Options/Arguments:
-\t-v, --volume=\tName of volume.
-
-Optional Options/Arguments:
-\t-u, --cluster-name=\tnon default hosting cluster
-\t-s, --svm=\t\tNon defaul svm name.
-\t-h, --help\t\tPrint help text.
-\t-n, --name=\t\tName of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
-\t-r, --retention=\tSnapshot name will be suffixed by <timestamp> and excesive snapshots will be deleted.
-\t                \tCan be count of snapshots when int (ex. 10) or days when retention is suffixed by d (ex. 10d)
-\t-l, --snapmirror-label=\tif provided snapmirror label will be configured on the created snapshot
-
-Examples:
-\tnetapp_dataops_cli.py create snapshot --volume=project1 --name=snap1
-\tnetapp_dataops_cli.py create snapshot -v project2 -n final_dataset
-\tnetapp_dataops_cli.py create snapshot --volume=test1
-\tnetapp_dataops_cli.py create snapshot -v project2 -n daily_consistent -r 7 -l daily
-\tnetapp_dataops_cli.py create snapshot -v project2 -n daily_for_month -r 30d -l daily
-'''
-helpTextCreateVolume = '''
-Command: create volume
-
-Create a new data volume.
-
-Required Options/Arguments:
-\t-n, --name=\t\tName of new volume.
-\t-s, --size=\t\tSize of new volume. Format: '1024MB', '100GB', '10TB', etc.
-
-Optional Options/Arguments:
-\t-l, --cluster-name=\tnon default hosting cluster
-\t-v, --svm=\t\tnon default svm name
-\t-a, --aggregate=\tAggregate to use when creating new volume (flexvol) or optional comma seperated aggrlist when specific aggregates are required for FG.
-\t-d, --snapshot-policy=\tSnapshot policy to apply for new volume.
-\t-e, --export-policy=\tNFS export policy to use when exporting new volume.
-\t-g, --gid=\t\tUnix filesystem group id (gid) to apply when creating new volume (ex. '0' for root group).
-\t-h, --help\t\tPrint help text.
-\t-m, --mountpoint=\tLocal mountpoint to mount new volume at after creating. If not specified, new volume will not be mounted locally. On Linux hosts - if specified, must be run as root.
-\t-p, --permissions=\tUnix filesystem permissions to apply when creating new volume (ex. '0777' for full read/write permissions for all users and groups).
-\t-r, --guarantee-space\tGuarantee sufficient storage space for full capacity of the volume (i.e. do not use thin provisioning).
-\t-t, --type=\t\tVolume type to use when creating new volume (flexgroup/flexvol).
-\t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
-\t-w, --snaplock-type=\tSnaplock type to apply for new volume. (can be 'compliance','enterprise',None)
-\t-x, --readonly\t\tRead-only option for mounting volumes locally.
-\t-j, --junction\t\tSpecify a custom junction path for the volume to be exported at.
-\t-f, --tiering-policy\tSpecify tiering policy for fabric-pool enabled systems (default is 'none').
-\t-y, --dp\t\tCreate volume as DP volume (the volume will be used as snapmirror target)
-
-
-Examples (basic usage):
-\tnetapp_dataops_cli.py create volume --name=project1 --size=10GB
-\tnetapp_dataops_cli.py create volume -n datasets -s 10TB
-\tsudo -E netapp_dataops_cli.py create volume --name=project2 --size=2TB --mountpoint=~/project2 --readonly
-
-Examples (advanced usage):
-\tsudo -E netapp_dataops_cli.py create volume --name=project1 --size=10GB --permissions=0755 --type=flexvol --mountpoint=~/project1 --readonly --junction=/project1
-\tsudo -E netapp_dataops_cli.py create volume --name=project2_flexgroup --size=2TB --type=flexgroup --mountpoint=/mnt/project2
-\tnetapp_dataops_cli.py create volume --name=testvol --size=10GB --type=flexvol --aggregate=n2_data
-\tnetapp_dataops_cli.py create volume -n testvol -s 10GB -t flexvol -p 0755 -u 1000 -g 1000 -j /project1
-\tsudo -E netapp_dataops_cli.py create volume -n vol1 -s 5GB -t flexvol --export-policy=team1 -m /mnt/vol1
-\tnetapp_dataops_cli.py create vol -n test2 -s 10GB -t flexvol --snapshot-policy=default --tiering-policy=auto
-\tnetapp_dataops_cli.py create volume --name=project1 --size=100GB --snaplock-type=compliance
-'''
-helpTextDeleteSnapshot = '''
-Command: delete snapshot
-
-Delete an existing snapshot for a data volume.
-
-Required Options/Arguments:
-\t-n, --name=\tName of snapshot to be deleted.
-\t-v, --volume=\tName of volume.
-
-Optional Options/Arguments:
-\t-u, --cluster-name=\tNon default hosting cluster
-\t-s, --svm=\t\tNon default svm
-\t-h, --help\t\tPrint help text.
-
-Examples:
-\tnetapp_dataops_cli.py delete snapshot --volume=project1 --name=snap1
-\tnetapp_dataops_cli.py delete snapshot -v project2 -n netapp_dataops_20201113_221917
-'''
-helpTextDeleteVolume = '''
-Command: delete volume
-
-Delete an existing data volume.
-
-Required Options/Arguments:
-\t-n, --name=\tName of volume to be deleted.
-
-Optional Options/Arguments:
-\t-u, --cluster-name=\tnon default hosting cluster
-\t-v, --svm \t\tnon default SVM name
-\t-f, --force\t\tDo not prompt user to confirm operation.
-\t-m, --delete-mirror\tdelete/release snapmirror relationship prior to volume deletion
-\t    --delete-non-clone\tEnable deletion of volume not created as clone by this tool
-\t-h, --help\t\tPrint help text.
-
-Examples:
-\tnetapp_dataops_cli.py delete volume --name=project1
-\tnetapp_dataops_cli.py delete volume -n project2
-'''
-
-helpTextUnmountVolume = '''
-Command: unmount volume
-
-Unmount an existing data volume that is currently mounted locally.
-
-Required Options/Arguments:
-\t-m, --mountpoint=\tMountpoint where volume is mounted at.
-
-Optional Options/Arguments:
-\t-h, --help\t\tPrint help text.
-
-Examples:
-\tnetapp_dataops_cli.py unmount volume --mountpoint=/project2
-\tnetapp_dataops_cli.py unmount volume -m /project2
-'''
-
-helpTextListCloudSyncRelationships = '''
-Command: list cloud-sync-relationships
-
-List all existing Cloud Sync relationships.
-
-No additional options/arguments required.
-'''
-helpTextListSnapMirrorRelationships = '''
-Command: list snapmirror-relationships
-
-List all SnapMirror relationships.
-
-Optional Options/Arguments:
-\t-u, --cluster-name=\tNon default hosting cluster
-\t-s, --svm=\t\tNon default svm.
-\t-h, --help\t\tPrint help text.
-'''
-helpTextListSnapshots = '''
-Command: list snapshots
-
-List all snapshots for a data volume.
-
-Required Options/Arguments:
-\t-v, --volume=\tName of volume.
-
-Optional Options/Arguments:
-\t-u, --cluster-name=\tNon default hosting cluster
-\t-s, --svm=\t\tNon default svm.
-\t-h, --help\t\tPrint help text.
-
-Examples:
-\tnetapp_dataops_cli.py list snapshots --volume=project1
-\tnetapp_dataops_cli.py list snapshots -v test1
-'''
-helpTextListVolumes = '''
-Command: list volumes
-
-List all data volumes.
-
-No options/arguments are required.
-
-Optional Options/Arguments:
-\t-u, --cluster-name=\t\t\tnon default hosting cluster
-\t-v, --svm=\t\t\t\tlist volume on non default svm
-\t-h, --help\t\t\t\tPrint help text.
-\t-s, --include-space-usage-details\tInclude storage space usage details in output (see README for explanation).
-
-Examples:
-\tnetapp_dataops_cli.py list volumes
-\tnetapp_dataops_cli.py list volumes --include-space-usage-details
-'''
-helpTextMountVolume = '''
-Command: mount volume
-
-Mount an existing data volume locally.
-
-Requirement: On Linux hosts, must be run as root.
-
-Required Options/Arguments:
-\t-m, --mountpoint=\tLocal mountpoint to mount volume at.
-\t-n, --name=\t\tName of volume.
-
-Optional Options/Arguments:
-\t-v, --svm \t\tnon default SVM name
-\t-l, --lif \t\tnon default lif (nfs server ip/name)
-\t-h, --help\t\tPrint help text.
-\t-x, --readonly\t\tMount volume locally as read-only.
-\t-o, --options\t\tSpecify custom NFS mount options.
-
-Examples:
-\tsudo -E netapp_dataops_cli.py mount volume --name=project1 --mountpoint=/mnt/project1
-\tsudo -E netapp_dataops_cli.py mount volume -m ~/testvol -n testvol -x
-\tsudo -E netapp_dataops_cli.py mount volume --name=project1 --mountpoint=/mnt/project1 --readonly
-\tsudo -E netapp_dataops_cli.py mount volume --name=project1 --mountpoint=/mnt/project1 --readonly --options=rsize=262144,wsize=262144,nconnect=16
-'''
-helpTextPullFromS3Bucket = '''
-Command: pull-from-s3 bucket
-
-Pull the contents of a bucket from S3 (multithreaded).
-
-Note: To pull to a data volume, the volume must be mounted locally.
-
-Warning: This operation has not been tested at scale and may not be appropriate for extremely large datasets.
-
-Required Options/Arguments:
-\t-b, --bucket=\t\tS3 bucket to pull from.
-\t-d, --directory=\tLocal directory to save contents of bucket to.
-
-Optional Options/Arguments:
-\t-h, --help\t\tPrint help text.
-\t-p, --key-prefix=\tObject key prefix (pull will be limited to objects with key that starts with this prefix).
-
-Examples:
-\tnetapp_dataops_cli.py pull-from-s3 bucket --bucket=project1 --directory=/mnt/project1
-\tnetapp_dataops_cli.py pull-from-s3 bucket -b project1 -p project1/ -d ./project1/
-'''
-helpTextPullFromS3Object = '''
-Command: pull-from-s3 object
-
-Pull an object from S3.
-
-Note: To pull to a data volume, the volume must be mounted locally.
-
-Required Options/Arguments:
-\t-b, --bucket=\t\tS3 bucket to pull from.
-\t-k, --key=\t\tKey of S3 object to pull.
-
-Optional Options/Arguments:
-\t-f, --file=\t\tLocal filepath (including filename) to save object to (if not specified, value of -k/--key argument will be used)
-\t-h, --help\t\tPrint help text.
-
-Examples:
-\tnetapp_dataops_cli.py pull-from-s3 object --bucket=project1 --key=data.csv --file=./project1/data.csv
-\tnetapp_dataops_cli.py pull-from-s3 object -b project1 -k data.csv
-'''
-helpTextPushToS3Directory = '''
-Command: push-to-s3 directory
-
-Push the contents of a directory to S3 (multithreaded).
-
-Note: To push from a data volume, the volume must be mounted locally.
-
-Warning: This operation has not been tested at scale and may not be appropriate for extremely large datasets.
-
-Required Options/Arguments:
-\t-b, --bucket=\t\tS3 bucket to push to.
-\t-d, --directory=\tLocal directory to push contents of.
-
-Optional Options/Arguments:
-\t-e, --extra-args=\tExtra args to apply to newly-pushed S3 objects (For details on this field, refer to https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-uploading-files.html#the-extraargs-parameter).
-\t-h, --help\t\tPrint help text.
-\t-p, --key-prefix=\tPrefix to add to key for newly-pushed S3 objects (Note: by default, key will be local filepath relative to directory being pushed).
-
-Examples:
-\tnetapp_dataops_cli.py push-to-s3 directory --bucket=project1 --directory=/mnt/project1
-\tnetapp_dataops_cli.py push-to-s3 directory -b project1 -d /mnt/project1 -p project1/ -e '{"Metadata": {"mykey": "myvalue"}}'
-'''
-helpTextPushToS3File = '''
-Command: push-to-s3 file
-
-Push a file to S3.
-
-Note: To push from a data volume, the volume must be mounted locally.
-
-Required Options/Arguments:
-\t-b, --bucket=\t\tS3 bucket to push to.
-\t-f, --file=\t\tLocal file to push.
-
-Optional Options/Arguments:
-\t-e, --extra-args=\tExtra args to apply to newly-pushed S3 object (For details on this field, refer to https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-uploading-files.html#the-extraargs-parameter).
-\t-h, --help\t\tPrint help text.
-\t-k, --key=\t\tKey to assign to newly-pushed S3 object (if not specified, key will be set to value of -f/--file argument).
-
-Examples:
-\tnetapp_dataops_cli.py push-to-s3 file --bucket=project1 --file=data.csv
-\tnetapp_dataops_cli.py push-to-s3 file -b project1 -k data.csv -f /mnt/project1/data.csv -e '{"Metadata": {"mykey": "myvalue"}}'
-'''
-helpTextPrepopulateFlexCache = '''
-Command: prepopulate flexcache
-
-Prepopulate specific files/directories on a FlexCache volume.
-
-Compatibility: ONTAP 9.8 and above ONLY
-
-Required Options/Arguments:
-\t-n, --name=\tName of FlexCache volume.
-\t-p, --paths=\tComma-separated list of dirpaths/filepaths to prepopulate.
-
-Optional Options/Arguments:
-\t-h, --help\tPrint help text.
-
-Examples:
-\tnetapp_dataops_cli.py prepopulate flexcache --name=project1 --paths=/datasets/project1,/datasets/project2
-\tnetapp_dataops_cli.py prepopulate flexcache -n test1 -p /datasets/project1,/datasets/project2
-'''
-helpTextRestoreSnapshot = '''
-Command: restore snapshot
-
-Restore a snapshot for a data volume (restore the volume to its exact state at the time that the snapshot was created).
-
-Required Options/Arguments:
-\t-n, --name=\tName of snapshot to be restored.
-\t-v, --volume=\tName of volume.
-
-Optional Options/Arguments:
-\t-u, --cluster-name=\tNon default hosting cluster
-\t-s, --svm=\t\tNon default svm.
-\t-f, --force\t\tDo not prompt user to confirm operation.
-\t-h, --help\t\tPrint help text.
-
-Examples:
-\tnetapp_dataops_cli.py restore snapshot --volume=project1 --name=snap1
-\tnetapp_dataops_cli.py restore snapshot -v project2 -n netapp_dataops_20201113_221917
-'''
-helpTextSyncCloudSyncRelationship = '''
-Command: sync cloud-sync-relationship
-
-Trigger a sync operation for an existing Cloud Sync relationship.
-
-Tip: Run `netapp_dataops_cli.py list cloud-sync-relationships` to obtain relationship ID.
-
-Required Options/Arguments:
-\t-i, --id=\tID of the relationship for which the sync operation is to be triggered.
-
-Optional Options/Arguments:
-\t-h, --help\tPrint help text.
-\t-w, --wait\tWait for sync operation to complete before exiting.
-
-Examples:
-\tnetapp_dataops_cli.py sync cloud-sync-relationship --id=5ed00996ca85650009a83db2
-\tnetapp_dataops_cli.py sync cloud-sync-relationship -i 5ed00996ca85650009a83db2 -w
-'''
-helpTextSyncSnapMirrorRelationship = '''
-Command: sync snapmirror-relationship
-
-Trigger a sync operation for an existing SnapMirror relationship.
-
-Tip: Run `netapp_dataops_cli.py list snapmirror-relationships` to obtain relationship UUID.
-
-Required Options/Arguments:
-\t-i, --uuid=\tUUID of the relationship for which the sync operation is to be triggered.
-or
-\t-n, --name=\tName of target volume to be sync .
-
-Optional Options/Arguments:
-\t-u, --cluster-name=\tnon default hosting cluster
-\t-v, --svm \t\tnon default target SVM name
-\t-h, --help\t\tPrint help text.
-\t-w, --wait\t\tWait for sync operation to complete before exiting.
-
-Examples:
-\tnetapp_dataops_cli.py sync snapmirror-relationship --uuid=132aab2c-4557-11eb-b542-005056932373
-\tnetapp_dataops_cli.py sync snapmirror-relationship -i 132aab2c-4557-11eb-b542-005056932373 -w
-\tnetapp_dataops_cli.py sync snapmirror-relationship -u cluster1 -v svm1 -n vol1 -w
-'''
-
-helpTextCreateSnapMirrorRelationship = '''
-Command: create snapmirror-relationship
-
-create snapmirror relationship
-
-Required Options/Arguments:
-\t-n, --target-vol=\tName of target volume
-\t-s, --source-svm=\tSource SVM name
-\t-v, --source-vol=\tSource volume name
-
-Optional Options/Arguments:
-\t-u, --cluster-name=\tnon default hosting cluster
-\t-t, --target-svm=\tnon default target SVM
-\t-c, --schedule=\t\tnon default schedule (default is hourly)
-\t-p, --policy=\t\tnon default policy (default is MirrorAllSnapshots
-\t-a, --action=\t\tresync,initialize following creation
-\t-h, --help\t\tPrint help text.
-
-Examples:
-\tnetapp_dataops_cli.py create snapmirror-relationship -u cluster1 -s svm1 -t svm2 -v vol1 -n vol1 -p MirrorAllSnapshots -c hourly
-\tnetapp_dataops_cli.py create snapmirror-relationship -u cluster1 -s svm1 -t svm2 -v vol1 -n vol1 -p MirrorAllSnapshots -c hourly -a resync
-'''
 
 ## Function for creating config file
 def createConfig(configDirPath: str = "~/.netapp_dataops", configFilename: str = "config.json", connectionType: str = "ONTAP"):
@@ -714,7 +266,7 @@ def getTarget(args: list) -> str:
     return target
 
 
-def handleInvalidCommand(helpText: str = helpTextStandard, invalidOptArg: bool = False):
+def handleInvalidCommand(helpText: str = HELP_TEXT_STANDARD, invalidOptArg: bool = False):
     if invalidOptArg:
         print("Error: Invalid option/argument.")
     else:
@@ -763,12 +315,12 @@ if __name__ == '__main__':
                 opts, args = getopt.getopt(sys.argv[3:], "hl:c:t:n:v:s:m:u:g:j:xe:p:i:srd", ["help", "cluster-name=", "source-svm=","target-svm=","name=", "source-volume=", "source-snapshot=", "mountpoint=", "uid=", "gid=", "junction=", "readonly","export-hosts=","export-policy=","snapshot-policy=","split","refresh","svm-dr-unprotect"])
             except Exception as err:
                 print(err)
-                handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_CLONE_VOLUME, invalidOptArg=True)
 
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextCloneVolume)
+                    print(HELP_TEXT_CLONE_VOLUME)
                     sys.exit(0)
                 elif opt in ("-l", "--cluster-name"):
                     clusterName = arg
@@ -807,13 +359,13 @@ if __name__ == '__main__':
 
             # Check for required options
             if not newVolumeName or not sourceVolumeName:
-                handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_CLONE_VOLUME, invalidOptArg=True)
             if (unixUID and not unixGID) or (unixGID and not unixUID):
                 print("Error: if either one of -u/--uid or -g/--gid is spefied, then both must be specified.")
-                handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_CLONE_VOLUME, invalidOptArg=True)
             if exportHosts and exportPolicy:
                 print("Error: cannot use both --export-policy and --export-hosts. only one of them can be specified.")
-                handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_CLONE_VOLUME, invalidOptArg=True)
 
             # Clone volume
             try:
@@ -831,10 +383,10 @@ if __name__ == '__main__':
     elif action in ("config", "setup"):
         if len(sys.argv) > 2 :
             if sys.argv[2] in ("-h", "--help"):
-                print(helpTextConfig)
+                print(HELP_TEXT_CONFIG)
                 sys.exit(0)
             else:
-                handleInvalidCommand(helpTextConfig, invalidOptArg=True)
+                handleInvalidCommand(HELP_TEXT_CONFIG, invalidOptArg=True)
 
         #connectionType = input("Enter connection type (ONTAP): ")
         connectionType = "ONTAP"
@@ -861,12 +413,12 @@ if __name__ == '__main__':
                 opts, args = getopt.getopt(sys.argv[3:], "hn:v:s:r:u:l:", ["cluster-name=","help", "svm=", "name=", "volume=", "retention=", "snapmirror-label="])
             except Exception as err:
                 print(err)
-                handleInvalidCommand(helpText=helpTextCreateSnapshot, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_CREATE_SNAPSHOT, invalidOptArg=True)
 
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help") :
-                    print(helpTextCreateSnapshot)
+                    print(HELP_TEXT_CREATE_SNAPSHOT)
                     sys.exit(0)
                 elif opt in ("-n", "--name"):
                     snapshotName = arg
@@ -883,13 +435,13 @@ if __name__ == '__main__':
 
             # Check for required options
             if not volumeName:
-                handleInvalidCommand(helpText=helpTextCreateSnapshot, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_CREATE_SNAPSHOT, invalidOptArg=True)
 
             if retentionCount:
                 if not retentionCount.isnumeric():
                     matchObj = re.match(r"^(\d+)d$",retentionCount)
                     if not matchObj:
-                        handleInvalidCommand(helpText=helpTextCreateSnapshot, invalidOptArg=True)
+                        handleInvalidCommand(helpText=HELP_TEXT_CREATE_SNAPSHOT, invalidOptArg=True)
                     else:
                         retentionCount = matchObj.group(1)
                         retentionDays = True
@@ -925,12 +477,12 @@ if __name__ == '__main__':
                 opts, args = getopt.getopt(sys.argv[3:], "l:hv:t:n:s:rt:p:u:g:e:d:m:a:j:xu:yw:", ["cluster-name=","help", "svm=", "name=", "size=", "guarantee-space", "type=", "permissions=", "uid=", "gid=", "export-policy=", "snapshot-policy=", "mountpoint=", "aggregate=", "junction=" ,"readonly","tiering-policy=","dp","snaplock-type="])
             except Exception as err:
                 print(err)
-                handleInvalidCommand(helpText=helpTextCreateVolume, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_CREATE_VOLUME, invalidOptArg=True)
 
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextCreateVolume)
+                    print(HELP_TEXT_CREATE_VOLUME)
                     sys.exit(0)
                 elif opt in ("-v", "--svm"):
                     svmName = arg
@@ -967,16 +519,16 @@ if __name__ == '__main__':
                 elif opt in ("-y", "--dp"):
                     volDP = True
                 elif opt in ("-w", "--snaplock-type"):
-                  	snaplock_type = arg
+                    snaplock_type = arg
 
             # Check for required options
             if not volumeName or not volumeSize:
-                handleInvalidCommand(helpText=helpTextCreateVolume, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_CREATE_VOLUME, invalidOptArg=True)
             if (unixUID and not unixGID) or (unixGID and not unixUID):
                 print("Error: if either one of -u/--uid or -g/--gid is spefied, then both must be specified.")
-                handleInvalidCommand(helpText=helpTextCreateVolume, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_CREATE_VOLUME, invalidOptArg=True)
             if (volDP and (junction or mountpoint or snapshotPolicy or exportPolicy)):
-                handleInvalidCommand(helpText=helpTextCreateVolume, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_CREATE_VOLUME, invalidOptArg=True)
 
             # Create volume
             try:
@@ -1002,12 +554,12 @@ if __name__ == '__main__':
                 opts, args = getopt.getopt(sys.argv[3:], "hn:t:s:v:u:y:c:p:a:h", ["cluster-name=","help", "target-vol=", "target-svm=", "source-svm=", "source-vol=", "schedule=", "policy=", "action="])
             except Exception as err:
                 print(err)
-                handleInvalidCommand(helpText=helpTextCreateSnapMirrorRelationship, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_CREATE_SNAPMIRROR_RELATIONSHIP, invalidOptArg=True)
 
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextCreateSnapMirrorRelationship)
+                    print(HELP_TEXT_CREATE_SNAPMIRROR_RELATIONSHIP)
                     sys.exit(0)
                 elif opt in ("-t", "--target-svm"):
                     targetSvm = arg
@@ -1028,10 +580,10 @@ if __name__ == '__main__':
 
             # Check for required options
             if not targetVol or not sourceSvm or not sourceVol:
-                handleInvalidCommand(helpText=helpTextCreateSnapMirrorRelationship, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_CREATE_SNAPMIRROR_RELATIONSHIP, invalidOptArg=True)
 
             if action not in [None,'resync','initialize']:
-                handleInvalidCommand(helpText=helpTextCreateSnapMirrorRelationship, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_CREATE_SNAPMIRROR_RELATIONSHIP, invalidOptArg=True)
 
             # Create snapmirror
             try:
@@ -1059,12 +611,12 @@ if __name__ == '__main__':
                 opts, args = getopt.getopt(sys.argv[3:], "hn:v:s:u:", ["cluster-name=","help", "svm=", "name=", "volume="])
             except Exception as err:
                 print(err)
-                handleInvalidCommand(helpText=helpTextDeleteSnapshot, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_DELETE_SNAPSHOT, invalidOptArg=True)
 
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextDeleteSnapshot)
+                    print(HELP_TEXT_DELETE_SNAPSHOT)
                     sys.exit(0)
                 elif opt in ("-n", "--name"):
                     snapshotName = arg
@@ -1077,7 +629,7 @@ if __name__ == '__main__':
 
             # Check for required options
             if not volumeName or not snapshotName:
-                handleInvalidCommand(helpText=helpTextDeleteSnapshot, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_DELETE_SNAPSHOT, invalidOptArg=True)
 
             # Delete snapshot
             try:
@@ -1098,12 +650,12 @@ if __name__ == '__main__':
                 opts, args = getopt.getopt(sys.argv[3:], "hfv:n:u:m", ["cluster-name=","help", "svm=", "name=", "force", "delete-non-clone", "delete-mirror"])
             except Exception as err:
                 print(err)
-                handleInvalidCommand(helpText=helpTextDeleteVolume, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_DELETE_VOLUME, invalidOptArg=True)
 
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextDeleteVolume)
+                    print(HELP_TEXT_DELETE_VOLUME)
                     sys.exit(0)
                 elif opt in ("-v", "--svm"):
                     svmName = arg
@@ -1120,7 +672,7 @@ if __name__ == '__main__':
 
             # Check for required options
             if not volumeName:
-                handleInvalidCommand(helpText=helpTextDeleteVolume, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_DELETE_VOLUME, invalidOptArg=True)
 
             # Confirm delete operation
             if not force:
@@ -1144,7 +696,7 @@ if __name__ == '__main__':
             handleInvalidCommand()
 
     elif action in ("help", "h", "-h", "--help"):
-        print(helpTextStandard)
+        print(HELP_TEXT_STANDARD)
 
     elif action in ("list", "ls"):
         # Get desired target from command line args
@@ -1155,10 +707,10 @@ if __name__ == '__main__':
             # Check command line options
             if len(sys.argv) > 3:
                 if sys.argv[3] in ("-h", "--help"):
-                    print(helpTextListCloudSyncRelationships)
+                    print(HELP_TEXT_LIST_CLOUD_SYNC_RELATIONSHIPS)
                     sys.exit(0)
                 else:
-                    handleInvalidCommand(helpTextListCloudSyncRelationships, invalidOptArg=True)
+                    handleInvalidCommand(HELP_TEXT_LIST_CLOUD_SYNC_RELATIONSHIPS, invalidOptArg=True)
 
             # List cloud sync relationships
             try:
@@ -1175,12 +727,12 @@ if __name__ == '__main__':
                 opts, args = getopt.getopt(sys.argv[3:], "hv:u:", ["cluster-name=","help", "svm="])
             except Exception as err:
                 print(err)
-                handleInvalidCommand(helpText=helpTextListSnapMirrorRelationships, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_LIST_SNAPMIRROR_RELATIONSHIPS, invalidOptArg=True)
 
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextListSnapMirrorRelationships)
+                    print(HELP_TEXT_LIST_SNAPMIRROR_RELATIONSHIPS)
                     sys.exit(0)
                 elif opt in ("-v", "--svm"):
                     svmName = arg
@@ -1203,12 +755,12 @@ if __name__ == '__main__':
                 opts, args = getopt.getopt(sys.argv[3:], "hv:s:u:", ["cluster-name=","help", "volume=","svm="])
             except Exception as err:
                 print(err)
-                handleInvalidCommand(helpText=helpTextListSnapshots, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_LIST_SNAPSHOTS, invalidOptArg=True)
 
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help") :
-                    print(helpTextListSnapshots)
+                    print(HELP_TEXT_LIST_SNAPSHOTS)
                     sys.exit(0)
                 elif opt in ("-v", "--volume"):
                     volumeName = arg
@@ -1219,7 +771,7 @@ if __name__ == '__main__':
 
             # Check for required options
             if not volumeName:
-                handleInvalidCommand(helpText=helpTextListSnapshots, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_LIST_SNAPSHOTS, invalidOptArg=True)
 
             # List snapsots
             try:
@@ -1237,12 +789,12 @@ if __name__ == '__main__':
                 opts, args = getopt.getopt(sys.argv[3:], "hsv:u:", ["cluster-name=","help", "include-space-usage-details","svm="])
             except Exception as err:
                 print(err)
-                handleInvalidCommand(helpText=helpTextListVolumes, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_LIST_VOLUMES, invalidOptArg=True)
 
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help") :
-                    print(helpTextListVolumes)
+                    print(HELP_TEXT_LIST_VOLUMES)
                     sys.exit(0)
                 elif opt in ("-v", "--svm") :
                     svmName = arg
@@ -1279,12 +831,12 @@ if __name__ == '__main__':
                 opts, args = getopt.getopt(sys.argv[3:], "hv:n:l:m:u:o:x", ["cluster-name=","help", "lif=","svm=", "name=", "mountpoint=", "readonly", "options="])
             except Exception as err:
                 print(err)
-                handleInvalidCommand(helpText=helpTextMountVolume, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_MOUNT_VOLUME, invalidOptArg=True)
 
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextMountVolume)
+                    print(HELP_TEXT_MOUNT_VOLUME)
                     sys.exit(0)
                 elif opt in ("-v", "--svm"):
                     svmName = arg
@@ -1303,10 +855,10 @@ if __name__ == '__main__':
 
             # Check for required options
             if not volumeName:
-                handleInvalidCommand(helpText=helpTextMountVolume, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_MOUNT_VOLUME, invalidOptArg=True)
 
             if not mountpoint:
-                handleInvalidCommand(helpText=helpTextMountVolume, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_MOUNT_VOLUME, invalidOptArg=True)
                 
             # Mount volume
             try:
@@ -1329,19 +881,19 @@ if __name__ == '__main__':
                 opts, args = getopt.getopt(sys.argv[3:], "hm:", ["help", "mountpoint="])
             except Exception as err:
                 print(err)
-                handleInvalidCommand(helpText=helpTextUnmountVolume, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_UNMOUNT_VOLUME, invalidOptArg=True)
 
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextUnmountVolume)
+                    print(HELP_TEXT_UNMOUNT_VOLUME)
                     sys.exit(0)
                 elif opt in ("-m", "--mountpoint"):
                     mountpoint = arg
 
             # Check for required options
             if not mountpoint:
-                handleInvalidCommand(helpText=helpTextUnmountVolume, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_UNMOUNT_VOLUME, invalidOptArg=True)
 
             # Unmount volume
             try:
@@ -1365,12 +917,12 @@ if __name__ == '__main__':
                 opts, args = getopt.getopt(sys.argv[3:], "hn:p:", ["help", "name=", "paths="])
             except Exception as err:
                 print(err)
-                handleInvalidCommand(helpText=helpTextPrepopulateFlexCache, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_PREPOPULATE_FLEXCACHE, invalidOptArg=True)
 
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextPrepopulateFlexCache)
+                    print(HELP_TEXT_PREPOPULATE_FLEXCACHE)
                     sys.exit(0)
                 elif opt in ("-n", "--name"):
                     volumeName = arg
@@ -1379,7 +931,7 @@ if __name__ == '__main__':
 
             # Check for required options
             if not volumeName or not paths :
-                handleInvalidCommand(helpText=helpTextPrepopulateFlexCache, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_PREPOPULATE_FLEXCACHE, invalidOptArg=True)
 
             # Convert paths string to list
             pathsList = paths.split(",")
@@ -1408,12 +960,12 @@ if __name__ == '__main__':
                 opts, args = getopt.getopt(sys.argv[3:], "hb:p:d:e:", ["help", "bucket=", "key-prefix=", "directory="])
             except Exception as err:
                 print(err)
-                handleInvalidCommand(helpText=helpTextPullFromS3Bucket, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_PULL_FROM_S3_BUCKET, invalidOptArg=True)
 
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help") :
-                    print(helpTextPullFromS3Bucket)
+                    print(HELP_TEXT_PULL_FROM_S3_BUCKET)
                     sys.exit(0)
                 elif opt in ("-b", "--bucket"):
                     s3Bucket = arg
@@ -1424,7 +976,7 @@ if __name__ == '__main__':
 
             # Check for required options
             if not s3Bucket or not localDirectory:
-                handleInvalidCommand(helpText=helpTextPullFromS3Bucket, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_PULL_FROM_S3_BUCKET, invalidOptArg=True)
 
             # Push file to S3
             try:
@@ -1442,12 +994,12 @@ if __name__ == '__main__':
                 opts, args = getopt.getopt(sys.argv[3:], "hb:k:f:", ["help", "bucket=", "key=", "file=", "extra-args="])
             except Exception as err:
                 print(err)
-                handleInvalidCommand(helpText=helpTextPullFromS3Object, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_PULL_FROM_S3_OBJECT, invalidOptArg=True)
 
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextPullFromS3Object)
+                    print(HELP_TEXT_PULL_FROM_S3_OBJECT)
                     sys.exit(0)
                 elif opt in ("-b", "--bucket"):
                     s3Bucket = arg
@@ -1458,7 +1010,7 @@ if __name__ == '__main__':
 
             # Check for required options
             if not s3Bucket or not s3ObjectKey:
-                handleInvalidCommand(helpText=helpTextPullFromS3Object, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_PULL_FROM_S3_OBJECT, invalidOptArg=True)
 
             # Push file to S3
             try:
@@ -1485,12 +1037,12 @@ if __name__ == '__main__':
                 opts, args = getopt.getopt(sys.argv[3:], "hb:p:d:e:", ["help", "bucket=", "key-prefix=", "directory=", "extra-args="])
             except Exception as err:
                 print(err)
-                handleInvalidCommand(helpText=helpTextPushToS3Directory, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_PUSH_TO_S3_DIRECTORY, invalidOptArg=True)
 
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help") :
-                    print(helpTextPushToS3Directory)
+                    print(HELP_TEXT_PUSH_TO_S3_DIRECTORY)
                     sys.exit(0)
                 elif opt in ("-b", "--bucket"):
                     s3Bucket = arg
@@ -1503,7 +1055,7 @@ if __name__ == '__main__':
 
             # Check for required options
             if not s3Bucket or not localDirectory:
-                handleInvalidCommand(helpText=helpTextPushToS3Directory, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_PUSH_TO_S3_DIRECTORY, invalidOptArg=True)
 
             # Push file to S3
             try:
@@ -1522,12 +1074,12 @@ if __name__ == '__main__':
                 opts, args = getopt.getopt(sys.argv[3:], "hb:k:f:e:", ["help", "bucket=", "key=", "file=", "extra-args="])
             except Exception as err:
                 print(err)
-                handleInvalidCommand(helpText=helpTextPushToS3File, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_PUSH_TO_S3_FILE, invalidOptArg=True)
 
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextPushToS3File)
+                    print(HELP_TEXT_PUSH_TO_S3_FILE)
                     sys.exit(0)
                 elif opt in ("-b", "--bucket"):
                     s3Bucket = arg
@@ -1540,7 +1092,7 @@ if __name__ == '__main__':
 
             # Check for required options
             if not s3Bucket or not localFile:
-                handleInvalidCommand(helpText=helpTextPushToS3File, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_PUSH_TO_S3_FILE, invalidOptArg=True)
 
             # Push file to S3
             try:
@@ -1568,12 +1120,12 @@ if __name__ == '__main__':
                 opts, args = getopt.getopt(sys.argv[3:], "hs:n:v:fu:", ["cluster-name=","help", "svm=", "name=", "volume=", "force"])
             except Exception as err:
                 print(err)
-                handleInvalidCommand(helpText=helpTextRestoreSnapshot, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_RESTORE_SNAPSHOT, invalidOptArg=True)
 
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextRestoreSnapshot)
+                    print(HELP_TEXT_RESTORE_SNAPSHOT)
                     sys.exit(0)
                 elif opt in ("-n", "--name"):
                     snapshotName = arg
@@ -1588,7 +1140,7 @@ if __name__ == '__main__':
 
             # Check for required options
             if not volumeName or not snapshotName:
-                handleInvalidCommand(helpText=helpTextRestoreSnapshot, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_RESTORE_SNAPSHOT, invalidOptArg=True)
 
             # Confirm restore operation
             if not force:
@@ -1625,12 +1177,12 @@ if __name__ == '__main__':
                 opts, args = getopt.getopt(sys.argv[3:], "hi:w", ["help", "id=", "wait"])
             except Exception as err:
                 print(err)
-                handleInvalidCommand(helpText=helpTextSyncCloudSyncRelationship, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_SYNC_CLOUD_SYNC_RELATIONSHIP, invalidOptArg=True)
 
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextSyncCloudSyncRelationship)
+                    print(HELP_TEXT_SYNC_CLOUD_SYNC_RELATIONSHIP)
                     sys.exit(0)
                 elif opt in ("-i", "--id"):
                     relationshipID = arg
@@ -1639,7 +1191,7 @@ if __name__ == '__main__':
 
             # Check for required options
             if not relationshipID:
-                handleInvalidCommand(helpText=helpTextSyncCloudSyncRelationship, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_SYNC_CLOUD_SYNC_RELATIONSHIP, invalidOptArg=True)
 
             # Update cloud sync relationship
             try:
@@ -1659,12 +1211,12 @@ if __name__ == '__main__':
                 opts, args = getopt.getopt(sys.argv[3:], "hi:wn:u:v:", ["help", "cluster-name=","svm=","name=","uuid=", "wait"])
             except Exception as err:
                 print(err)
-                handleInvalidCommand(helpText=helpTextSyncSnapMirrorRelationship, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_SYNC_SNAPMIRROR_RELATIONSHIP, invalidOptArg=True)
 
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextSyncSnapMirrorRelationship)
+                    print(HELP_TEXT_SYNC_SNAPMIRROR_RELATIONSHIP)
                     sys.exit(0)
                 elif opt in ("-v", "--svm"):
                     svmName = arg
@@ -1679,10 +1231,10 @@ if __name__ == '__main__':
 
             # Check for required options
             if not uuid and not volumeName:
-                handleInvalidCommand(helpText=helpTextSyncSnapMirrorRelationship, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_SYNC_SNAPMIRROR_RELATIONSHIP, invalidOptArg=True)
 
             if uuid and volumeName:
-                handleInvalidCommand(helpText=helpTextSyncSnapMirrorRelationship, invalidOptArg=True)
+                handleInvalidCommand(helpText=HELP_TEXT_SYNC_SNAPMIRROR_RELATIONSHIP, invalidOptArg=True)
 
             # Update SnapMirror relationship
             try:
