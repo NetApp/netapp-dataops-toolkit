@@ -83,7 +83,7 @@ Optional Options/Arguments:
 \t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
 \t-x, --readonly\t\tRead-only option for mounting volumes locally.
 \t-j, --junction\t\tSpecify a custom junction path for the volume to be exported at.
-\t-e, --export-hosts\tcolon(:) seperated hosts/cidrs to to use for export. hosts will be exported for rw and root access
+\t-e, --export-hosts\tcolon(:) separated hosts/cidrs to use for export. hosts will be exported for rw and root access
 \t-e, --export-policy\texport policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
 \t-d, --snapshot-policy\tsnapshot-policy to attach to the volume, default snapshot policy will be used if not provided
 \t-s, --split\t\tstart clone split after creation
@@ -113,7 +113,7 @@ Required Options/Arguments:
 Optional Options/Arguments:
 \t-l, --cluster-name=\tnon default hosting cluster
 \t-v, --svm=\t\tnon default svm name
-\t-a, --aggregate=\tAggregate to use when creating new volume (flexvol) or optional comma seperated aggrlist when specific aggregates are required for FG.
+\t-a, --aggregate=\tAggregate to use when creating new volume (flexvol) or optional comma separated aggrlist when specific aggregates are required for FG.
 \t-d, --snapshot-policy=\tSnapshot policy to apply for new volume.
 \t-e, --export-policy=\tNFS export policy to use when exporting new volume.
 \t-g, --gid=\t\tUnix filesystem group id (gid) to apply when creating new volume (ex. '0' for root group).
@@ -236,10 +236,10 @@ Required Options/Arguments:
 
 Optional Options/Arguments:
 \t-u, --cluster-name=\tnon default hosting cluster
-\t-s, --svm=\t\tNon defaul svm name.
+\t-s, --svm=\t\tNon default svm name.
 \t-h, --help\t\tPrint help text.
 \t-n, --name=\t\tName of new snapshot. If not specified, will be set to 'netapp_dataops_<timestamp>'.
-\t-r, --retention=\tSnapshot name will be suffixed by <timestamp> and excesive snapshots will be deleted.
+\t-r, --retention=\tSnapshot name will be suffixed by <timestamp> and excessive snapshots will be deleted.
 \t                \tCan be count of snapshots when int (ex. 10) or days when retention is suffixed by d (ex. 10d)
 \t-l, --snapmirror-label=\tif provided snapmirror label will be configured on the created snapshot
 
