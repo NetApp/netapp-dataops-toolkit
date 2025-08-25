@@ -1681,7 +1681,7 @@ def delete_flexcache_volume(
             print("Error: Kubernetes API Error: ", err)
         raise APIConnectionError(err)
 
-    if pvc.metadata and pvc.metadata.labels("app") == 'flexcache':
+    if pvc.metadata and pvc.metadata.labels.get("app") == 'flexcache':
 
         # Delete PVC
         if print_output:
