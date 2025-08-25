@@ -1222,7 +1222,7 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
                     #             print("Error: unmounting flexcache volume.")
                     #             raise MountOperationError(err)
                     # Unmounting flexcache volume
-                    volume.nas.path = None
+                    volume.nas.path = ""
                     volume.patch()
                     # flexcache.patch(path="")
                     flexcache.delete(poll=True)
