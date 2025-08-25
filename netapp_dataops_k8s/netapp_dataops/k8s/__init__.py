@@ -1671,8 +1671,17 @@ def delete_flexcache_volume(
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
+    
+    # Retrieve the PVC object
+    try:
+        api = client.CoreV1Api()
+        pvc = api.read_namespaced_persistent_volume_claim(name=pvc_name, namespace=namespace)
+    except ApiException as err:
+        if print_output:
+            print("Error: Kubernetes API Error: ", err)
+        raise APIConnectionError(err)
 
-    if pvc_name.metadata and pvc_name.metadata.labels("app") == 'flexcache':
+    if pvc.metadata and pvc.metadata.labels("app") == 'flexcache':
 
         # Delete PVC
         if print_output:
