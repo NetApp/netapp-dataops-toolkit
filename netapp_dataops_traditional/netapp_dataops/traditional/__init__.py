@@ -1122,7 +1122,7 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
             
         try:
             # Retrieve volume
-            volume = NetAppVolume.find(name=volume_name, svm=svm, fields="comment,flexcache_endpoint_type")
+            volume = NetAppVolume.find(name=volume_name, svm=svm, fields="comment,flexcache_endpoint_type,nas.path")
             if not volume:
                 if print_output:
                     print("Error: Invalid volume name.")
@@ -1222,7 +1222,9 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
                     #             print("Error: unmounting flexcache volume.")
                     #             raise MountOperationError(err)
                     # Unmounting flexcache volume
-                    flexcache.patch(path="")
+                    volume.nas.path = None
+                    volume.patch()
+                    # flexcache.patch(path="")
                     flexcache.delete(poll=True)
                 else:
                     if print_output:
