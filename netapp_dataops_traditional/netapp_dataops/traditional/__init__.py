@@ -1207,8 +1207,17 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
                 if print_output:
                     print("Deleting flexcache volume '" + svm+':'+volume_name + "'.")
                 
-                flexcache = NetAppFlexCache.find(name=volume_name, svm={"name": svm})
+                flexcache = NetAppFlexCache.find(name=volume_name, svm={"name": svm}, fields="path")
                 if flexcache:
+                    if os.getuid() != 0:
+                        print("Warning: FlexCache Volume was not unmounted. You need to have root privileges to run unmount command.")
+                    else:
+                        try:
+                            unmount = unmount_volume(mountpoint=flexcache.path)
+                        except (InvalidConfigError, APIConnectionError):
+                            if print_output:
+                                print("Error: unmounting flexcache volume.")
+                                raise MountOperationError(err)
                     flexcache.delete(poll=True)
                 else:
                     if print_output:
