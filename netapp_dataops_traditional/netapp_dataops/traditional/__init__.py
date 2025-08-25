@@ -1213,7 +1213,10 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
                         print("Warning: FlexCache Volume was not unmounted. You need to have root privileges to run unmount command.")
                     else:
                         try:
-                            unmount = unmount_volume(mountpoint=flexcache.path)
+                            mountpoint = flexcache.path
+                            if mountpoint.startswith("/"):
+                                mountpoint = mountpoint[1:]
+                            unmount = unmount_volume(mountpoint=mountpoint)
                         except (InvalidConfigError, APIConnectionError):
                             if print_output:
                                 print("Error: unmounting flexcache volume.")
