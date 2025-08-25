@@ -1675,19 +1675,25 @@ def delete_flexcache_volume(
     # Retrieve the PVC object
     try:
         api = client.CoreV1Api()
+    except ApiException as err:
+        if print_output:
+            print("Error: Kubernetes API Error: ", err)
+        raise APIConnectionError(err)
+    
+    try:
         pvc = api.read_namespaced_persistent_volume_claim(name=pvc_name, namespace=namespace)
     except ApiException as err:
         if print_output:
             print("Error: Kubernetes API Error: ", err)
         raise APIConnectionError(err)
 
+    # Check if the PVC is a FlexCache volume
     if pvc.metadata and pvc.metadata.labels.get("app") == 'flexcache':
 
         # Delete PVC
         if print_output:
             print("Deleting PVC '" + pvc_name + "' in namespace '" + namespace + "'.")
         try:
-            api = client.CoreV1Api()
             api.delete_namespaced_persistent_volume_claim(name=pvc_name, namespace=namespace)
         except ApiException as err:
             if print_output:
@@ -1697,7 +1703,6 @@ def delete_flexcache_volume(
         # Wait for PVC to disappear
         while True:
             try:
-                api = client.CoreV1Api()
                 api.read_namespaced_persistent_volume_claim(name=pvc_name,
                                                             namespace=namespace)  # Confirm that source PVC still exists
             except:
@@ -1750,6 +1755,13 @@ def delete_flexcache_volume(
             try:
                 flexcache = NetAppFlexCache.find(name=flexcache_vol_modified, svm={"name": svm})
                 if flexcache:
+
+                    if print_output:
+                        print(f"Unmounting FlexCache volume '{flexcache_vol_modified}' in SVM '{svm}'.")
+                    flexcache.unmount()
+                    if print_output:
+                        print(f"Taking FlexCache volume '{flexcache_vol_modified}' offline in SVM '{svm}'.")
+                    flexcache.offline()
                     if print_output:
                         print(f"Deleting FlexCache volume '{flexcache_vol_modified}' in SVM '{svm}'.")
                     flexcache.delete()
