@@ -1657,6 +1657,109 @@ def delete_volume(pvc_name: str, namespace: str = "default", preserve_snapshots:
         print("PersistentVolumeClaim (PVC) successfully deleted.")
 
 
+def delete_flexcache_volume(
+        pvc_name: str,
+        backend_name: str,
+        namespace: str = "default",
+        trident_namespace: str = "trident",
+        print_output: bool = False
+):
+    # Retrieve kubeconfig
+    try:
+        _load_kube_config()
+    except:
+        if print_output:
+            _print_invalid_config_error()
+        raise InvalidConfigError()
+
+    if pvc_name.metadata and pvc_name.metadata.labels("app") == 'flexcache':
+
+        # Delete PVC
+        if print_output:
+            print("Deleting PVC '" + pvc_name + "' in namespace '" + namespace + "'.")
+        try:
+            api = client.CoreV1Api()
+            api.delete_namespaced_persistent_volume_claim(name=pvc_name, namespace=namespace)
+        except ApiException as err:
+            if print_output:
+                print("Error: Kubernetes API Error: ", err)
+            raise APIConnectionError(err)
+        
+        # Wait for PVC to disappear
+        while True:
+            try:
+                api = client.CoreV1Api()
+                api.read_namespaced_persistent_volume_claim(name=pvc_name,
+                                                            namespace=namespace)  # Confirm that source PVC still exists
+            except:
+                break  # Break loop when source PVC no longer exists
+            sleep(5)
+
+        if print_output:
+            print("PVC '" + pvc_name + "' successfully deleted.")
+
+        # Delete the associated PV
+        pv_name = f"pv-{pvc_name}"
+        if print_output:
+            print(f"Deleting PersistentVolume (PV) '{pv_name}' associated with FlexCache PVC '{pvc_name}'.")
+
+        try:
+            api.delete_persistent_volume(name=pv_name)
+        except ApiException as err:
+            if print_output:
+                print("Error: Kubernetes API Error: ", err)
+            raise APIConnectionError(err)
+
+        if print_output:
+            print(f"PersistentVolume (PV) '{pv_name}' successfully deleted.")
+
+        # Connect to ONTAP and delete the FlexCache volume
+        try:
+            config = _get_trident_backend_config(backend_name=backend_name, namespace=trident_namespace, print_output=print_output)
+        except InvalidConfigError:
+            raise
+
+        try:
+            storage_driver_name = config["storage_driver_name"]
+            svm = config["svm"]
+        except:
+            if print_output:
+                _print_invalid_config_error()
+            raise InvalidConfigError()
+        
+        if "ontap" in storage_driver_name.lower():
+
+            # Instantiate connection to ONTAP cluster
+            try:
+                _instantiate_connection(config=config, connectionType="ONTAP", print_output=print_output)
+            except InvalidConfigError:
+                raise
+
+            flexcache_vol_modified = _validate_volume_name(pvc_name)
+
+            # Find and delete the FlexCache volume
+            try:
+                flexcache = NetAppFlexCache.find(name=flexcache_vol_modified, svm={"name": svm})
+                if flexcache:
+                    if print_output:
+                        print(f"Deleting FlexCache volume '{flexcache_vol_modified}' in SVM '{svm}'.")
+                    flexcache.delete()
+                    if print_output:
+                        print(f"FlexCache volume '{flexcache_vol_modified}' successfully deleted.")
+                else:
+                    if print_output:
+                        print(f"FlexCache volume '{flexcache_vol_modified}' not found in SVM '{svm}'.")
+            except NetAppRestError as err:
+                if print_output:
+                    print("Error: ONTAP Rest API Error: ", err)
+                raise APIConnectionError(err)
+
+    else:
+        if print_output:
+            print("The provided PVC is not a FlexCache volume. Aborting operation.")
+        return
+
+
 def delete_volume_snapshot(snapshot_name: str, namespace: str = "default", print_output: bool = False):
     # Retrieve kubeconfig
     try:

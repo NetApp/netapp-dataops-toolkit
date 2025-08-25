@@ -11,6 +11,7 @@ from netapp_dataops.k8s import (
     create_jupyter_lab_snapshot,
     delete_volume_snapshot,
     delete_volume,
+    delete_flexcache_volume,
     delete_jupyter_lab,
     delete_triton_server,
     list_jupyter_labs,
@@ -407,6 +408,25 @@ Optional Options/Arguments:
 Examples:
 \tnetapp_dataops_k8s_cli.py delete volume --pvc-name=project1
 \tnetapp_dataops_k8s_cli.py delete volume -p project2 -n team1
+'''
+helpTextDeleteFlexCacheVolume = '''
+Command: delete flexcache volume
+
+Delete an existing FlexCache volume.
+
+Required Options/Arguments:
+\t-p, --pvc-name=\t\t\tName of Kubernetes PersistentVolumeClaim (PVC) to be deleted.
+\t-b, --backend-name=\t\tName of tridentbackendconfig.
+
+Optional Options/Arguments:
+\t-f, --force\t\t\tDo not prompt user to confirm operation.
+\t-h, --help\t\t\tPrint help text.
+\t-n, --namespace=\t\tKubernetes namespace that PersistentVolumeClaim (PVC) is located in. If not specified, namespace "default" will be used.
+\t-t, --trident-namespace=\tKubernetes namespace where Trident is installed. If not specified, the namespace "trident" will be used.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py delete volume --pvc-name=cache1
+\tnetapp_dataops_k8s_cli.py delete volume -p cache2 -n team1
 '''
 helpTextGetS3Bucket = '''
 Command: get-s3 bucket
@@ -1334,6 +1354,59 @@ if __name__ == '__main__':
             try:
                 delete_volume(pvc_name=pvcName, namespace=namespace, preserve_snapshots=preserveSnapshots,
                               print_output=True)
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
+        elif target in ("flexcache-volume", "flexcache"):
+            pvcName = None
+            backendName = None
+            namespace = "default"
+            tridentNamespace = "trident"
+            force = False
+
+            # Get command line options
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hp:b:fn:t:",
+                                        ["help", "pvc-name=", "backend-name=", "force", "namespace=", "trident-namespace="])
+            except:
+                handleInvalidCommand(helpText=helpTextDeleteFlexCacheVolume, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextDeleteFlexCacheVolume)
+                    sys.exit(0)
+                elif opt in ("-p", "--pvc-name"):
+                    pvcName = arg
+                elif opt in ("-b", "--backend-name"):
+                    backendName = arg
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+                elif opt in ("-t", "--trident-namespace"):
+                    tridentNamespace = arg
+                elif opt in ("-f", "--force"):
+                    force = True
+
+            # Check for required options
+            if not pvcName or not backendName:
+                handleInvalidCommand(helpText=helpTextDeleteFlexCacheVolume, invalidOptArg=True)
+
+            # Confirm delete operation
+            if not force:
+                print("Warning: All data associated with the FlexCache volume will be permanently deleted.")
+                while True:
+                    proceed = input("Are you sure that you want to proceed? (yes/no): ")
+                    if proceed in ("yes", "Yes", "YES"):
+                        break
+                    elif proceed in ("no", "No", "NO"):
+                        sys.exit(0)
+                    else:
+                        print("Invalid value. Must enter 'yes' or 'no'.")
+
+            # Delete FlexCache volume
+            try:
+                delete_flexcache_volume(pvc_name=pvcName, backend_name=backendName, namespace=namespace,
+                                        trident_namespace=tridentNamespace, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
