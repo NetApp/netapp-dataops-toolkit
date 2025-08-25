@@ -1724,7 +1724,7 @@ def delete_flexcache_volume(
 
         # Connect to ONTAP and delete the FlexCache volume
         try:
-            config = _get_trident_backend_config(backend_name=backend_name, namespace=trident_namespace, print_output=print_output)
+            config = _get_trident_backend_config(backend_config_name=backend_name, namespace=trident_namespace, print_output=print_output)
         except InvalidConfigError:
             raise
 
