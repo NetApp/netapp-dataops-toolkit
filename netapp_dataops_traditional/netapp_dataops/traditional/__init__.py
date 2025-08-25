@@ -1207,8 +1207,13 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
                 if print_output:
                     print("Deleting flexcache volume '" + svm+':'+volume_name + "'.")
                 
-                NetAppFlexCache(name=volume_name, svm={"name": svm}).delete(poll=True)
-
+                flexcache = NetAppFlexCache.find(name=volume_name, svm={"name": svm})
+                if flexcache:
+                    flexcache.delete(poll=True)
+                else:
+                    if print_output:
+                        print("Error: Could not find flexcache volume.")
+                    raise InvalidVolumeParameterError("name")
                 if print_output:
                     print("Flexcache volume deleted successfully.")
             except NetAppRestError as err:
