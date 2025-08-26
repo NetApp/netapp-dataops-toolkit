@@ -1,140 +1,33 @@
-"""NetApp DataOps Toolkit for Traditional Environments import module.
+"""
+SnapMirror operations for NetApp DataOps traditional environments.
 
-This module provides the public functions available to be imported directly
-by applications using the import method of utilizing the toolkit.
+This module contains all SnapMirror-related operations including create, sync,
+and list functionality for SnapMirror relationships.
 """
 
-import base64
-import functools
-import json
-import os
-import re
-import subprocess
-import sys
 import time
-import warnings
-import datetime
-from concurrent.futures import ThreadPoolExecutor
-from netapp_ontap import config as netappConfig
+
 from netapp_ontap.error import NetAppRestError
-from netapp_ontap.host_connection import HostConnection as NetAppHostConnection
 from netapp_ontap.resources import SnapmirrorRelationship as NetAppSnapmirrorRelationship
 from netapp_ontap.resources import SnapmirrorTransfer as NetAppSnapmirrorTransfer
-from netapp_ontap.resources import Snapshot as NetAppSnapshot
-from netapp_ontap.resources import Volume as NetAppVolume
-from netapp_ontap.resources import ExportPolicy as NetAppExportPolicy
-from netapp_ontap.resources import SnapshotPolicy as NetAppSnapshotPolicy
 from netapp_ontap.resources import CLI as NetAppCLI
 import pandas as pd
-import requests
 from tabulate import tabulate
-import yaml
 
-
-__version__ = "2.5.0"
-
-
-# Import modular operations
-# Import core utilities and exceptions
-from .core import (
-    _retrieve_config,
-    _instantiate_connection,
-    _print_invalid_config_error,
-    _convert_bytes_to_pretty_size
-)
 from .exceptions import (
-    InvalidConfigError,
-    ConnectionTypeError,
+    InvalidConfigError, 
+    ConnectionTypeError, 
     APIConnectionError,
-    InvalidVolumeParameterError,
-    InvalidSnapshotParameterError,
-    MountOperationError,
-    InvalidSnapMirrorParameterError,
-    SnapMirrorSyncOperationError,
-    CloudSyncSyncOperationError
+    SnapMirrorSyncOperationError
 )
-
-# Import volume operations
-from .volume_operations import (
-    clone_volume,
-    create_volume,
-    delete_volume,
-    mount_volume,
-    unmount_volume,
-    cloneVolume,
-    createVolume,
-    deleteVolume,
-    mountVolume,
-    unmountVolume
-)
-
-# Import snapshot operations  
-from .snapshot_operations import (
-    create_snapshot,
-    delete_snapshot,
-    restore_snapshot,
-    createSnapshot,
-    deleteSnapshot,
-    restoreSnapshot
-)
-
-# Import SnapMirror operations
-from .snapmirror_operations import (
-    list_snap_mirror_relationships,
-    create_snap_mirror_relationship,
-    sync_snap_mirror_relationship,
-    listSnapMirrorRelationships,
-    syncSnapMirrorRelationship
-)
-
-# Import Cloud Sync operations
-from .cloud_sync_operations import (
-    list_cloud_sync_relationships,
-    sync_cloud_sync_relationship,
-    listCloudSyncRelationships,
-    syncCloudSyncRelationship
-)
-
-# Import S3 operations
-from .s3_operations import (
-    pull_bucket_from_s3,
-    pull_object_from_s3,
-    push_directory_to_s3,
-    push_file_to_s3,
-    pullBucketFromS3,
-    pullObjectFromS3,
-    pushDirectoryToS3,
-    pushFileToS3
-)
-
-# Import FlexCache operations
-from .flexcache_operations import (
-    prepopulate_flex_cache,
-    prepopulateFlexCache
-)
-
-# Import list operations
-from .list_operations import (
-    list_snapshots,
-    list_volumes,
-    listSnapshots,
-    listVolumes
+from .core import (
+    _retrieve_config, 
+    _instantiate_connection, 
+    _print_invalid_config_error
 )
 
 
-# Using this decorator in lieu of using a dependency to manage deprecation
-def deprecated(func):
-    @functools.wraps(func)
-    def warned_func(*args, **kwargs):
-        warnings.warn("Function {} is deprecated.".format(func.__name__),
-                      category=DeprecationWarning,
-                      stacklevel=2)
-        return func(*args, **kwargs)
-    return warned_func
-
-
-@deprecated
-def restore_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = None, svm_name : str = None, print_output: bool = False):
+def list_snap_mirror_relationships(print_output: bool = False, cluster_name: str = None) -> list:
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -157,46 +50,78 @@ def restore_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = N
         except InvalidConfigError:
             raise
 
-        # Retrieve svm from config file
         try:
-            svm = config["svm"]
-            if svm_name:
-                svm = svm_name
-        except:
-            if print_output:
-                _print_invalid_config_error()
-            raise InvalidConfigError()
+            # Retrieve all relationships for which destination is on current cluster
+            destinationRelationships = NetAppSnapmirrorRelationship.get_collection()
 
-        if print_output:
-            print("Restoring snapshot '" + snapshot_name + "'.")
+            # Do not retrieve relationships for which source is on current cluster
+            # Note: Uncomment below line to retrieve all relationships for which source is on current cluster, then add sourceRelationships to for loop
+            # sourceRelationships = NetAppSnapmirrorRelationship.get_collection(list_destinations_only=True)
 
-        try:
-            # Retrieve volume
-            volume = NetAppVolume.find(name=volume_name, svm=svm)
-            if not volume:
-                if print_output:
-                    print("Error: Invalid volume name.")
-                raise InvalidVolumeParameterError("name")
+            # Construct list of relationships
+            relationshipsList = list()
+            for relationship in destinationRelationships:
+                # Retrieve relationship details
+                try:
+                    relationship.get()
+                except NetAppRestError as err:
+                    relationship.get(list_destinations_only=True)
 
-            # Retrieve snapshot
-            snapshot = NetAppSnapshot.find(volume.uuid, name=snapshot_name)
-            if not snapshot:
-                if print_output:
-                    print("Error: Invalid snapshot name.")
-                raise InvalidSnapshotParameterError("name")
+                # Set cluster value
+                if hasattr(relationship.source, "cluster"):
+                    sourceCluster = relationship.source.cluster.name
+                else:
+                    sourceCluster = "user's cluster"
+                if hasattr(relationship.destination, "cluster"):
+                    destinationCluster = relationship.destination.cluster.name
+                else:
+                    destinationCluster = "user's cluster"
 
-            # Restore snapshot
-            volume.patch(volume.uuid, **{"restore_to.snapshot.name": snapshot.name, "restore_to.snapshot.uuid": snapshot.uuid}, poll=True)
-            if print_output:
-                print("Snapshot restored successfully.")
+                # Set transfer state value
+                if hasattr(relationship, "transfer"):
+                    transferState = relationship.transfer.state
+                else:
+                    transferState = None
+
+                # Set healthy value
+                if hasattr(relationship, "healthy"):
+                    healthy = relationship.healthy
+                else:
+                    healthy = "unknown"
+
+                # Construct dict containing relationship details
+                relationshipDict = {
+                    "UUID": relationship.uuid,
+                    "Type": relationship.policy.type,
+                    "Healthy": healthy,
+                    "Current Transfer Status": transferState,
+                    "Source Cluster": sourceCluster,
+                    "Source SVM": relationship.source.svm.name,
+                    "Source Volume": relationship.source.path.split(":")[1],
+                    "Dest Cluster": destinationCluster,
+                    "Dest SVM": relationship.destination.svm.name,
+                    "Dest Volume": relationship.destination.path.split(":")[1]
+                }
+
+                # Append dict to list of relationships
+                relationshipsList.append(relationshipDict)
 
         except NetAppRestError as err:
             if print_output:
                 print("Error: ONTAP Rest API Error: ", err)
             raise APIConnectionError(err)
 
+        # Print list of relationships
+        if print_output:
+            # Convert relationships array to Pandas DataFrame
+            relationshipsDF = pd.DataFrame.from_dict(relationshipsList, dtype="string")
+            print(tabulate(relationshipsDF, showindex=False, headers=relationshipsDF.columns))
+
+        return relationshipsList
+
     else:
         raise ConnectionTypeError()
+
 
 def create_snap_mirror_relationship(source_svm: str, source_vol: str, target_vol: str, target_svm: str = None, cluster_name: str = None,
         schedule: str = '', policy: str = 'MirrorAllSnapshots', action: str = None, print_output: bool = False):
@@ -314,6 +239,10 @@ def create_snap_mirror_relationship(source_svm: str, source_vol: str, target_vol
                     print("Error: ONTAP Rest API Error: ", err)
                 raise APIConnectionError(err)
 
+    else:
+        raise ConnectionTypeError()
+
+
 def sync_snap_mirror_relationship(uuid: str = None, svm_name: str = None, volume_name: str = None, cluster_name: str = None, wait_until_complete: bool = False, print_output: bool = False):
     # Retrieve config details from config file
     try:
@@ -428,47 +357,11 @@ def sync_snap_mirror_relationship(uuid: str = None, svm_name: str = None, volume
     else:
         raise ConnectionTypeError()
 
-#
-# Deprecated function names
-#
+
+# Deprecated functions for backward compatibility
+def listSnapMirrorRelationships(printOutput: bool = False) -> list:
+    return list_snap_mirror_relationships(print_output=printOutput)
 
 
-@deprecated
-def cloneVolume(newVolumeName: str, sourceVolumeName: str, sourceSnapshotName: str = None, unixUID: str = None, unixGID: str = None, mountpoint: str = None, printOutput: bool = False) :
-    clone_volume(new_volume_name=newVolumeName, source_volume_name=sourceVolumeName, source_snapshot_name=sourceSnapshotName,
-                             mountpoint=mountpoint, unix_uid=unixUID, unix_gid=unixGID, print_output=printOutput)
-
-
-@deprecated
-def createSnapshot(volumeName: str, snapshotName: str = None, printOutput: bool = False) :
-    create_snapshot(volume_name=volumeName, snapshot_name=snapshotName, print_output=printOutput)
-
-
-@deprecated
-def createVolume(volumeName: str, volumeSize: str, guaranteeSpace: bool = False, volumeType: str = "flexvol", unixPermissions: str = "0777", unixUID: str = "0", unixGID: str = "0", exportPolicy: str = "default", snapshotPolicy: str = "none", aggregate: str = None, mountpoint: str = None, printOutput: bool = False) :
-    create_volume(volume_name=volumeName, volume_size=volumeSize, guarantee_space=guaranteeSpace, volume_type=volumeType, unix_permissions=unixPermissions, unix_uid=unixUID,
-                              unix_gid=unixGID, export_policy=exportPolicy, snapshot_policy=snapshotPolicy, aggregate=aggregate, mountpoint=mountpoint, print_output=printOutput)
-
-
-@deprecated
-def deleteSnapshot(volumeName: str, snapshotName: str, printOutput: bool = False) :
-    delete_snapshot(volume_name=volumeName, snapshot_name=snapshotName, print_output=printOutput)
-
-
-@deprecated
-def deleteVolume(volumeName: str, printOutput: bool = False) :
-    delete_volume(volume_name=volumeName, print_output=printOutput)
-
-
-@deprecated
-@deprecated
-def mountVolume(volumeName: str, mountpoint: str, printOutput: bool = False) :
-    mount_volume(volume_name=volumeName, mountpoint=mountpoint, print_output=printOutput)
-
-
-@deprecated
-@deprecated
-def restoreSnapshot(volumeName: str, snapshotName: str, printOutput: bool = False) :
-    restore_snapshot(volume_name=volumeName, snapshot_name=snapshotName, print_output=printOutput)
-
-
+def syncSnapMirrorRelationship(uuid: str, waitUntilComplete: bool = False, printOutput: bool = False):
+    sync_snap_mirror_relationship(uuid=uuid, wait_until_complete=waitUntilComplete, print_output=printOutput)
