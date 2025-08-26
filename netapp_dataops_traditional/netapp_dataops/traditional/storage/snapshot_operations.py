@@ -6,7 +6,6 @@ list, and restore functionality.
 """
 
 import datetime
-import functools
 import re
 import warnings
 
@@ -26,19 +25,9 @@ from ..exceptions import (
 from ..core import (
     _retrieve_config, 
     _instantiate_connection, 
-    _print_invalid_config_error
+    _print_invalid_config_error,
+    deprecated
 )
-
-
-# Using this decorator in lieu of using a dependency to manage deprecation
-def deprecated(func):
-    @functools.wraps(func)
-    def warned_func(*args, **kwargs):
-        warnings.warn("Function {} is deprecated.".format(func.__name__),
-                      category=DeprecationWarning,
-                      stacklevel=2)
-        return func(*args, **kwargs)
-    return warned_func
 
 
 def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = None, snapshot_name: str = None, retention_count: int = 0, retention_days: bool = False, snapmirror_label: str = None, print_output: bool = False):
@@ -380,13 +369,6 @@ def restore_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = N
 
 
 # Deprecated functions for backward compatibility
-def deprecated(func):
-    def wrapper(*args, **kwargs):
-        print(f"Warning: {func.__name__} is deprecated, use the new function instead.")
-        return func(*args, **kwargs)
-    return wrapper
-
-
 @deprecated
 def createSnapshot(volumeName: str, snapshotName: str = None, printOutput: bool = False):
     """Deprecated: Use create_snapshot() instead"""
@@ -403,3 +385,9 @@ def deleteSnapshot(volumeName: str, snapshotName: str, printOutput: bool = False
 def restoreSnapshot(volumeName: str, snapshotName: str, printOutput: bool = False):
     """Deprecated: Use restore_snapshot() instead"""
     restore_snapshot(volume_name=volumeName, snapshot_name=snapshotName, print_output=printOutput)
+
+
+@deprecated
+def listSnapshots(volumeName: str, printOutput: bool = False) -> list:
+    """Deprecated: Use list_snapshots() instead"""
+    return list_snapshots(volume_name=volumeName, print_output=printOutput)

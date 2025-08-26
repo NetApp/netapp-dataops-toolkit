@@ -2,7 +2,7 @@
 Storage operations for NetApp DataOps traditional environments.
 
 This package contains all traditional storage-related operations including
-volume management, snapshots, SnapMirror, FlexCache, and resource listing.
+volume management (with listing), snapshots (with listing), SnapMirror, and FlexCache.
 """
 
 from .volume_operations import (
@@ -11,20 +11,24 @@ from .volume_operations import (
     delete_volume,
     mount_volume,
     unmount_volume,
+    list_volumes,
     createVolume,
     cloneVolume,
     deleteVolume,
     mountVolume,
-    unmountVolume
+    unmountVolume,
+    listVolumes
 )
 
 from .snapshot_operations import (
     create_snapshot,
     delete_snapshot,
     restore_snapshot,
+    list_snapshots,
     createSnapshot,
     deleteSnapshot,
-    restoreSnapshot
+    restoreSnapshot,
+    listSnapshots
 )
 
 from .snapmirror_operations import (
@@ -38,11 +42,4 @@ from .snapmirror_operations import (
 from .flexcache_operations import (
     prepopulate_flex_cache,
     prepopulateFlexCache
-)
-
-from .list_operations import (
-    list_volumes,
-    list_snapshots,
-    listVolumes,
-    listSnapshots
 )

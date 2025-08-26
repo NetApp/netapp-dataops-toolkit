@@ -4,8 +4,6 @@ FlexCache operations for NetApp DataOps traditional environments.
 This module contains FlexCache-related operations including prepopulate functionality.
 """
 
-import functools
-
 from netapp_ontap.error import NetAppRestError
 from netapp_ontap.resources import Flexcache as NetAppFlexCache
 
@@ -18,21 +16,9 @@ from ..exceptions import (
 from ..core import (
     _retrieve_config, 
     _instantiate_connection, 
-    _print_invalid_config_error
+    _print_invalid_config_error,
+    deprecated
 )
-
-
-def deprecated(func):
-    """
-    Decorator to mark functions as deprecated.
-    """
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        import warnings
-        warnings.warn(f"Function {func.__name__} is deprecated and will be removed in a future version.",
-                     DeprecationWarning, stacklevel=2)
-        return func(*args, **kwargs)
-    return wrapper
 
 
 def prepopulate_flex_cache(volume_name: str, paths: list, print_output: bool = False):

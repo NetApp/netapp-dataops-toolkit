@@ -1,6 +1,13 @@
 """NetApp DataOps Toolkit for Traditional Environments import module.
 
-This module provides the public functions available to be imported directly
+This module provides the public functions a# Import FlexCache operations from storage package
+from .storage.flexcache_operations import (
+    prepopulate_flex_cache,
+    prepopulateFlexCache
+)
+
+
+def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: str = None, source_snapshot_name: str = None,rted directly
 by applications using the import method of utilizing the toolkit.
 """
 
@@ -40,7 +47,8 @@ from .core import (
     _retrieve_config,
     _instantiate_connection,
     _print_invalid_config_error,
-    _convert_bytes_to_pretty_size
+    _convert_bytes_to_pretty_size,
+    deprecated
 )
 from .exceptions import (
     InvalidConfigError,
@@ -61,11 +69,13 @@ from .storage.volume_operations import (
     delete_volume,
     mount_volume,
     unmount_volume,
+    list_volumes,
     cloneVolume,
     createVolume,
     deleteVolume,
     mountVolume,
-    unmountVolume
+    unmountVolume,
+    listVolumes
 )
 
 # Import snapshot operations from storage package  
@@ -73,9 +83,11 @@ from .storage.snapshot_operations import (
     create_snapshot,
     delete_snapshot,
     restore_snapshot,
+    list_snapshots,
     createSnapshot,
     deleteSnapshot,
-    restoreSnapshot
+    restoreSnapshot,
+    listSnapshots
 )
 
 # Import SnapMirror operations from storage package
@@ -112,25 +124,6 @@ from .storage.flexcache_operations import (
     prepopulate_flex_cache,
     prepopulateFlexCache
 )
-
-# Import list operations from storage package
-from .storage.list_operations import (
-    list_snapshots,
-    list_volumes,
-    listSnapshots,
-    listVolumes
-)
-
-
-# Using this decorator in lieu of using a dependency to manage deprecation
-def deprecated(func):
-    @functools.wraps(func)
-    def warned_func(*args, **kwargs):
-        warnings.warn("Function {} is deprecated.".format(func.__name__),
-                      category=DeprecationWarning,
-                      stacklevel=2)
-        return func(*args, **kwargs)
-    return warned_func
 
 
 @deprecated
