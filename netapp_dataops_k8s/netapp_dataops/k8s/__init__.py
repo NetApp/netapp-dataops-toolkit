@@ -10,9 +10,7 @@ import base64
 from datetime import datetime
 import functools
 from getpass import getpass
-import json
 import re
-import subprocess
 from time import sleep
 import warnings
 import os
@@ -73,6 +71,10 @@ class InvalidVolumeParameterError(Exception):
     """Error that will be raised when an invalid volume parameter is given"""
     pass
 
+
+class FlexCacheDeleteError(Exception):
+    """Raised when attempting to delete a FlexCache PVC using delete_volume."""
+    pass
 
 #
 # Private functions
@@ -1612,6 +1614,20 @@ def delete_volume(pvc_name: str, namespace: str = "default", preserve_snapshots:
             _print_invalid_config_error()
         raise InvalidConfigError()
 
+
+    # Check if the PVC is a FlexCache volume
+    try:
+        api = client.CoreV1Api()
+        pvc = api.read_namespaced_persistent_volume_claim(name=pvc_name, namespace=namespace)
+        if pvc.metadata and pvc.metadata.labels and pvc.metadata.labels.get("app") == "flexcache":
+            if print_output:
+                print("Error: PVC '{pvc_name}' in namespace '{namespace}' is a FlexCache volume and cannot be deleted using this function. Please use 'delete_flexcache_volume' instead.")
+            raise FlexCacheDeleteError()
+    except ApiException as err:
+        if print_output:
+            print("Error: Kubernetes API Error: ", err)
+        raise APIConnectionError(err)
+
     # Optionally delete snapshots
     if not preserve_snapshots:
         if print_output:
@@ -1688,7 +1704,7 @@ def delete_flexcache_volume(
         raise APIConnectionError(err)
 
     # Check if the PVC is a FlexCache volume
-    if pvc.metadata and pvc.metadata.labels.get("app") == 'flexcache':
+    if pvc.metadata and pvc.metadata.labels and pvc.metadata.labels.get("app") == 'flexcache':
 
         # Delete PVC
         if print_output:
