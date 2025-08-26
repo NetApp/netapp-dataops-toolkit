@@ -12,12 +12,12 @@ import time
 import requests
 import yaml
 
-from .exceptions import (
+from ..exceptions import (
     InvalidConfigError, 
     APIConnectionError,
     CloudSyncSyncOperationError
 )
-from .core import (
+from ..core import (
     _retrieve_config, 
     _print_invalid_config_error,
     _retrieve_cloud_central_refresh_token

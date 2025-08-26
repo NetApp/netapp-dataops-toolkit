@@ -16,14 +16,14 @@ from netapp_ontap.resources import Snapshot as NetAppSnapshot
 import pandas as pd
 from tabulate import tabulate
 
-from .exceptions import (
+from ..exceptions import (
     InvalidConfigError, 
     ConnectionTypeError, 
     APIConnectionError,
     InvalidVolumeParameterError,
     InvalidSnapshotParameterError
 )
-from .core import (
+from ..core import (
     _retrieve_config, 
     _instantiate_connection, 
     _print_invalid_config_error

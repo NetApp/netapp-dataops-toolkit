@@ -19,7 +19,7 @@ from netapp_ontap.resources import SnapshotPolicy as NetAppSnapshotPolicy
 from netapp_ontap.resources import CLI as NetAppCLI
 import pandas as pd
 
-from .exceptions import (
+from ..exceptions import (
     InvalidConfigError, 
     ConnectionTypeError, 
     APIConnectionError,
@@ -27,7 +27,7 @@ from .exceptions import (
     InvalidSnapshotParameterError,
     MountOperationError
 )
-from .core import (
+from ..core import (
     _retrieve_config, 
     _instantiate_connection, 
     _print_invalid_config_error,

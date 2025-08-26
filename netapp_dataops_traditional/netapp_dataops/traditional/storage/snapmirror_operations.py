@@ -14,19 +14,18 @@ from netapp_ontap.resources import CLI as NetAppCLI
 import pandas as pd
 from tabulate import tabulate
 
-from .exceptions import (
+from ..exceptions import (
     InvalidConfigError, 
     ConnectionTypeError, 
     APIConnectionError,
+    InvalidSnapMirrorParameterError,
     SnapMirrorSyncOperationError
 )
-from .core import (
+from ..core import (
     _retrieve_config, 
     _instantiate_connection, 
     _print_invalid_config_error
 )
-
-
 def list_snap_mirror_relationships(print_output: bool = False, cluster_name: str = None) -> list:
     # Retrieve config details from config file
     try:

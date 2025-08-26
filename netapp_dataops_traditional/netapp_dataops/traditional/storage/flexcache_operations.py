@@ -9,13 +9,13 @@ import functools
 from netapp_ontap.error import NetAppRestError
 from netapp_ontap.resources import Flexcache as NetAppFlexCache
 
-from .exceptions import (
+from ..exceptions import (
     InvalidConfigError, 
     ConnectionTypeError, 
     APIConnectionError,
     InvalidVolumeParameterError
 )
-from .core import (
+from ..core import (
     _retrieve_config, 
     _instantiate_connection, 
     _print_invalid_config_error

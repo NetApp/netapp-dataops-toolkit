@@ -13,11 +13,11 @@ from concurrent.futures import ThreadPoolExecutor
 import boto3
 from botocore.client import Config as BotoConfig
 
-from .exceptions import (
+from ..exceptions import (
     InvalidConfigError, 
     APIConnectionError
 )
-from .core import (
+from ..core import (
     _retrieve_config, 
     _print_invalid_config_error
 )

@@ -54,8 +54,8 @@ from .exceptions import (
     CloudSyncSyncOperationError
 )
 
-# Import volume operations
-from .volume_operations import (
+# Import volume operations from storage package
+from .storage.volume_operations import (
     clone_volume,
     create_volume,
     delete_volume,
@@ -68,8 +68,8 @@ from .volume_operations import (
     unmountVolume
 )
 
-# Import snapshot operations  
-from .snapshot_operations import (
+# Import snapshot operations from storage package  
+from .storage.snapshot_operations import (
     create_snapshot,
     delete_snapshot,
     restore_snapshot,
@@ -78,8 +78,8 @@ from .snapshot_operations import (
     restoreSnapshot
 )
 
-# Import SnapMirror operations
-from .snapmirror_operations import (
+# Import SnapMirror operations from storage package
+from .storage.snapmirror_operations import (
     list_snap_mirror_relationships,
     create_snap_mirror_relationship,
     sync_snap_mirror_relationship,
@@ -87,16 +87,16 @@ from .snapmirror_operations import (
     syncSnapMirrorRelationship
 )
 
-# Import Cloud Sync operations
-from .cloud_sync_operations import (
+# Import Cloud Sync operations from cloud package
+from .cloud.cloud_sync_operations import (
     list_cloud_sync_relationships,
     sync_cloud_sync_relationship,
     listCloudSyncRelationships,
     syncCloudSyncRelationship
 )
 
-# Import S3 operations
-from .s3_operations import (
+# Import S3 operations from cloud package
+from .cloud.s3_operations import (
     pull_bucket_from_s3,
     pull_object_from_s3,
     push_directory_to_s3,
@@ -107,14 +107,14 @@ from .s3_operations import (
     pushFileToS3
 )
 
-# Import FlexCache operations
-from .flexcache_operations import (
+# Import FlexCache operations from storage package
+from .storage.flexcache_operations import (
     prepopulate_flex_cache,
     prepopulateFlexCache
 )
 
-# Import list operations
-from .list_operations import (
+# Import list operations from storage package
+from .storage.list_operations import (
     list_snapshots,
     list_volumes,
     listSnapshots,
@@ -427,10 +427,6 @@ def sync_snap_mirror_relationship(uuid: str = None, svm_name: str = None, volume
 
     else:
         raise ConnectionTypeError()
-
-#
-# Deprecated function names
-#
 
 
 @deprecated
