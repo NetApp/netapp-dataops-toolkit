@@ -1698,10 +1698,6 @@ def delete_flexcache_volume(
     
     try:
         pvc = api.read_namespaced_persistent_volume_claim(name=pvc_name, namespace=namespace)
-        if not pvc.metadata or not pvc.metadata.labels or pvc.metadata.labels.get("app") != "flexcache":
-            if print_output:
-                print("Error: PVC '{pvc_name}' in namespace '{namespace}' is not a FlexCache volume and cannot be deleted using this function. Please use 'delete_volume' instead.")
-            raise FlexCacheDeleteError()
     except ApiException as err:
         if print_output:
             print("Error: Kubernetes API Error: ", err)
