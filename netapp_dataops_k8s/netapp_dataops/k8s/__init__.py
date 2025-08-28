@@ -1619,6 +1619,8 @@ def delete_volume(pvc_name: str, namespace: str = "default", preserve_snapshots:
     try:
         api = client.CoreV1Api()
         pvc = api.read_namespaced_persistent_volume_claim(name=pvc_name, namespace=namespace)
+        print('metadata details: ', pvc.metadata)
+        print('metadata labels: ', pvc.metadata.labels)
         if pvc.metadata and pvc.metadata.labels and pvc.metadata.labels.get("app") == "flexcache":
             if print_output:
                 print("Error: PVC '{pvc_name}' in namespace '{namespace}' is a FlexCache volume and cannot be deleted using this function. Please use 'delete_flexcache_volume' instead.")
