@@ -1614,17 +1614,15 @@ def delete_volume(pvc_name: str, namespace: str = "default", preserve_snapshots:
             _print_invalid_config_error()
         raise InvalidConfigError()
 
-
     # Check if the PVC is a FlexCache volume
     try:
         api = client.CoreV1Api()
         pvc = api.read_namespaced_persistent_volume_claim(name=pvc_name, namespace=namespace)
-        print('metadata details: ', pvc.metadata)
-        print('metadata labels: ', pvc.metadata.labels)
         if pvc.metadata and pvc.metadata.labels and pvc.metadata.labels.get("app") == "flexcache":
+            error_message = f"PVC '{pvc_name}' in namespace '{namespace}' is a FlexCache volume and cannot be deleted using this function. Please use 'delete_flexcache_volume' instead."
             if print_output:
-                print("Error: PVC '{pvc_name}' in namespace '{namespace}' is a FlexCache volume and cannot be deleted using this function. Please use 'delete_flexcache_volume' instead.")
-            raise FlexCacheDeleteError()
+                print(error_message)
+            raise Exception(error_message)
     except ApiException as err:
         if print_output:
             print("Error: Kubernetes API Error: ", err)
