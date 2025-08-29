@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import sys
 import asyncio
 from typing import Any, Dict
@@ -24,7 +25,7 @@ async def create_volume_tool(
     share_name: str,
     storage_pool: str,
     capacity_gib: int,
-    protocols: list,
+    protocols: list,    
     export_policy_rules: list = None,
     smb_settings: list = None,
     unix_permissions: str = None,
@@ -136,43 +137,46 @@ async def create_volume_tool(
             Defaults to 31.
 
     Returns:
-        Dict[str, Any]: Details of the created volume.
+        dict: Dictionary with keys
+            - 'status': 'success' or 'error'
+            - 'details': API response object (if successful)
+            - 'message': Error message (if failed)
 
-    Raises:
-        Exception: If there is an error during the volume creation process.
+    Error Handling:
+        If an error occurs while creating the volume, the tool logs the error using `mcp.log_error()` and returns a response
+        with "status": "error" and the error message.
     """
-    try:
-        response = create_volume(
-            project_id=project_id,
-            location=location,
-            volume_id=volume_id,
-            share_name=share_name,
-            storage_pool=storage_pool,
-            capacity_gib=capacity_gib,
-            protocols=protocols,
-            export_policy_rules=export_policy_rules,
-            smb_settings=smb_settings,
-            unix_permissions=unix_permissions,
-            labels=labels,
-            description=description,
-            snapshot_policy=snapshot_policy,
-            snap_reserve=snap_reserve,
-            snapshot_directory=snapshot_directory,
-            security_style=security_style,
-            kerberos_enabled=kerberos_enabled,
-            backup_policies=backup_policies,
-            backup_vault=backup_vault,
-            scheduled_backup_enabled=scheduled_backup_enabled,
-            block_deletion_when_clients_connected=block_deletion_when_clients_connected,
-            large_capacity=large_capacity,
-            multiple_endpoints=multiple_endpoints,
-            tiering_enabled=tiering_enabled,
-            cooling_threshold_days=cooling_threshold_days
-        )
-        return response
-    except Exception as e:
-        mcp.log_error(f"Error creating volume: {e}")
-        raise e
+    response = create_volume(
+        project_id=project_id,
+        location=location,
+        volume_id=volume_id,
+        share_name=share_name,
+        storage_pool=storage_pool,
+        capacity_gib=capacity_gib,
+        protocols=protocols,
+        export_policy_rules=export_policy_rules,
+        smb_settings=smb_settings,
+        unix_permissions=unix_permissions,
+        labels=labels,
+        description=description,
+        snapshot_policy=snapshot_policy,
+        snap_reserve=snap_reserve,
+        snapshot_directory=snapshot_directory,
+        security_style=security_style,
+        kerberos_enabled=kerberos_enabled,
+        backup_policies=backup_policies,
+        backup_vault=backup_vault,
+        scheduled_backup_enabled=scheduled_backup_enabled,
+        block_deletion_when_clients_connected=block_deletion_when_clients_connected,
+        large_capacity=large_capacity,
+        multiple_endpoints=multiple_endpoints,
+        tiering_enabled=tiering_enabled,
+        cooling_threshold_days=cooling_threshold_days
+    )
+    if response['status'] == 'error':
+        mcp.log_error(f"Error creating volume: {response['message']}")
+    return response
+    
     
 @mcp.tool(name = "Clone Volume")
 async def clone_volume_tool(
@@ -202,7 +206,7 @@ async def clone_volume_tool(
     multiple_endpoints: bool = None,
     tiering_enabled: bool = None,
     cooling_threshold_days: int = None
-) -> None:
+) -> Dict[str, Any]:
     """
     Use this tool to clone an existing volume.
 
@@ -297,49 +301,52 @@ async def clone_volume_tool(
             Defaults to 31.
 
     Returns:
-        None
+        dict: Dictionary with keys
+            - 'status': 'success' or 'error'
+            - 'details': API response object (if successful)
+            - 'message': Error message (if failed)
 
-    Raises:
-        Exception: If there is an error during the cloning process.
+    Error Handling:
+        If an error occurs while cloning the volume, the tool logs the error using `mcp.log_error()` and returns a response
+        with "status": "error" and the error message.
     """
-    try:
-        clone_volume(
-            project_id=project_id,
-            location=location,
-            volume_id=volume_id,
-            source_volume=source_volume,
-            source_snapshot=source_snapshot,
-            share_name=share_name,
-            storage_pool=storage_pool,
-            protocols=protocols,
-            export_policy_rules=export_policy_rules,
-            smb_settings=smb_settings,
-            unix_permissions=unix_permissions,
-            labels=labels,
-            description=description,
-            snapshot_policy=snapshot_policy,
-            snap_reserve=snap_reserve,
-            snapshot_directory=snapshot_directory,
-            security_style=security_style,
-            kerberos_enabled=kerberos_enabled,
-            backup_policies=backup_policies,
-            backup_vault=backup_vault,
-            scheduled_backup_enabled=scheduled_backup_enabled,
-            block_deletion_when_clients_connected=block_deletion_when_clients_connected,
-            large_capacity=large_capacity,
-            multiple_endpoints=multiple_endpoints,
-            tiering_enabled=tiering_enabled,
-            cooling_threshold_days=cooling_threshold_days
-        )
-    except Exception as e:
-        mcp.log_error(f"Error cloning volume: {e}")
-        raise e
+    response = clone_volume(
+        project_id=project_id,
+        location=location,
+        volume_id=volume_id,
+        source_volume=source_volume,
+        source_snapshot=source_snapshot,
+        share_name=share_name,
+        storage_pool=storage_pool,
+        protocols=protocols,
+        export_policy_rules=export_policy_rules,
+        smb_settings=smb_settings,
+        unix_permissions=unix_permissions,
+        labels=labels,
+        description=description,
+        snapshot_policy=snapshot_policy,
+        snap_reserve=snap_reserve,
+        snapshot_directory=snapshot_directory,
+        security_style=security_style,
+        kerberos_enabled=kerberos_enabled,
+        backup_policies=backup_policies,
+        backup_vault=backup_vault,
+        scheduled_backup_enabled=scheduled_backup_enabled,
+        block_deletion_when_clients_connected=block_deletion_when_clients_connected,
+        large_capacity=large_capacity,
+        multiple_endpoints=multiple_endpoints,
+        tiering_enabled=tiering_enabled,
+        cooling_threshold_days=cooling_threshold_days
+    )
+    if response['status'] == 'error':
+        mcp.log_error(f"Error cloning volume: {response.get('message', 'Unknown error')}")
+    return response
     
 @mcp.tool(name = "List Volumes")
 async def list_volumes_tool(
     project_id: str,
     location: str
-) -> None:
+) -> Dict[str, Any]:
     """
     Use this tool to list all volumes in a project and location.
 
@@ -350,20 +357,23 @@ async def list_volumes_tool(
             Required. The location to list volumes from.
 
     Returns:
-        None
+        dict: Dictionary with keys
+            - 'status': 'success' or 'error'
+            - 'details': List of volumes (if successful)
+            - 'message': Error message (if failed)
 
-    Raises:
-        Exception: If there is an error during the volume listing process.
-    """
-    try:
-        list_volumes(
-            project_id=project_id,
-            location=location
-        )
-    except Exception as e:
-        mcp.log_error(f"Error listing volumes: {e}")
-        raise e
-    
+    Error Handling:
+        If an error occurs while listing the volumes, the tool logs the error using `mcp.log_error()` and returns a response
+        with "status": "error" and the error message.
+    """    
+    response = list_volumes(
+        project_id=project_id,
+        location=location
+    )
+    if response['status'] == 'error':
+        mcp.log_error(f"Error listing volumes: {response['message']}")
+    return response
+
 @mcp.tool(name = "Create Snapshot")
 async def create_snapshot_tool(
     project_id: str,
@@ -372,7 +382,7 @@ async def create_snapshot_tool(
     snapshot_id: str,
     description: str = None,
     labels: dict = None
-) -> None:
+) -> Dict[str, Any]:
     """
     Use this tool to create a near-instantaneous, space-efficient, read-only copy of an existing data volume, called a snapshot. 
     Snapshots are particularly useful for versioning datasets and implementing dataset-to-model traceability.
@@ -392,23 +402,26 @@ async def create_snapshot_tool(
             Optional. The labels to assign to the snapshot. Defaults to None.
 
     Returns:
-        None
+        dict: Dictionary with keys
+            - 'status': 'success' or 'error'
+            - 'details': API response object (if successful)
+            - 'message': Error message (if failed)
 
-    Raises:
-        Exception: If there is an error during the snapshot creation process.
+    Error Handling:
+        If an error occurs while creating the snapshot, the tool logs the error using `mcp.log_error()` and returns a response
+        with "status": "error" and the error message.
     """
-    try:
-        create_snapshot(
-            project_id=project_id,
-            location=location,
-            volume_id=volume_id,
-            snapshot_id=snapshot_id,
-            description=description,
-            labels=labels
-        )
-    except Exception as e:
-        mcp.log_error(f"Error creating snapshot")
-        raise e
+    response = create_snapshot(
+        project_id=project_id,
+        location=location,
+        volume_id=volume_id,
+        snapshot_id=snapshot_id,
+        description=description,
+        labels=labels
+    )
+    if response['status'] == 'error':
+        mcp.log_error(f"Error creating snapshot: {response['message']}")
+    return response
     
 @mcp.tool(name = "List Snapshots")
 async def list_snapshots_tool(
@@ -428,21 +441,24 @@ async def list_snapshots_tool(
             Required. The ID of the volume to list snapshots for.
 
     Returns:
-        None
+        dict: Dictionary with keys
+            - 'status': 'success' or 'error'
+            - 'details': List of snapshots (if successful)
+            - 'message': Error message (if failed)
 
-    Raises:
-        Exception: If there is an error during the snapshot listing process.
+    Error Handling:
+        If an error occurs while listing the snapshots, the tool logs the error using `mcp.log_error()` and returns a response
+        with "status": "error" and the error message.
     """
-    try:
-        list_snapshots(
+    response = list_snapshots(
             project_id=project_id,
             location=location,
             volume_id=volume_id
-        )
-    except Exception as e:
-        mcp.log_error(f"Error listing snapshots")
-        raise e
-    
+    )
+    if response['status'] == 'error':
+        mcp.log_error(f"Error listing snapshots: {response['message']}")
+    return response
+
 @mcp.tool(name = "Create Replication")
 async def create_replication_tool(
     source_project_id: str,
@@ -458,7 +474,7 @@ async def create_replication_tool(
     cooling_threshold_days: int = None,
     description: str = None,
     labels: dict = None
-) -> None:
+) -> Dict[str, Any]:
     """
     Use this tool to create a replication for a volume.
 
@@ -498,35 +514,39 @@ async def create_replication_tool(
             metadata.
 
     Returns:
-        None
-
-    Raises:
-        Exception: If there is an error during the replication creation process.
-    """
-    try:
-        create_replication(
-            source_project_id=source_project_id,
-            source_location=source_location,
-            source_volume_id=source_volume_id,
-            replication_id=replication_id,
-            replication_schedule=replication_schedule,
-            destination_storage_pool=destination_storage_pool,
-            destination_volume_id=destination_volume_id,
-            destination_share_name=destination_share_name,
-            destination_volume_description=destination_volume_description,
-            tiering_enabled=tiering_enabled,
-            cooling_threshold_days=cooling_threshold_days,
-            description=description,
-            labels=labels
-        )
-    except Exception as e:
-        mcp.log_error(f"Error creating replication: {e}")
-        raise e
+        dict: Dictionary with keys
+            - 'status': 'success' or 'error'
+            - 'details': API response object (if successful)
+            - 'message': Error message (if failed)
     
+    Error Handling:
+        If an error occurs while creating the replication, the tool logs the error using `mcp.log_error()` and returns a response
+        with "status": "error" and the error message.
+    """
+    response = create_replication(
+        source_project_id=source_project_id,
+        source_location=source_location,
+        source_volume_id=source_volume_id,
+        replication_id=replication_id,
+        replication_schedule=replication_schedule,
+        destination_storage_pool=destination_storage_pool,
+        destination_volume_id=destination_volume_id,
+        destination_share_name=destination_share_name,
+        destination_volume_description=destination_volume_description,
+        tiering_enabled=tiering_enabled,
+        cooling_threshold_days=cooling_threshold_days,
+        description=description,
+        labels=labels
+    )
+    if response['status'] == 'error':
+        mcp.log_error(f"Error creating replication: {response['message']}")
+    return response
+
 # Register the MCP instance to run the tools
-if __name__ == "__main__":
+def main():
+    """Main entry point for the GCNV MCP server."""
     asyncio.run(mcp.run())
-else:
-    sys.exit("This module is intended to be run as a script, not imported as a module.")
-# The above line ensures that the module can be run directly or imported without executing the main logic
-# This is useful for testing or when integrating with other systems.
+
+if __name__ == "__main__":
+    main()
+# The module can be imported for testing and development purposes without executing the main logic

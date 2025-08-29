@@ -28,7 +28,7 @@ def create_volume(
     cooling_threshold_days: int = None
 ):
     """
-    Create a new volume in the specified project and location.
+    Creates a new NetApp volume in the specified Google Cloud project and location.
 
     Args:
         project_id (str):
@@ -119,7 +119,10 @@ def create_volume(
             Defaults to 31.
 
     Returns:
-        Dict[str, Any]: Details of the created volume.
+        Dict: Dictionary with keys
+            - 'status': 'success' or 'error'
+            - 'details': API response object (if successful)
+            - 'message': Error message (if failed)
 
     Raises:
         ValueError: If required parameters are missing.
@@ -210,14 +213,11 @@ def create_volume(
 
         response = operation.result()
 
-        # Handle the response
-        print(response)
-
-        return response
+        return {"status": "success", "details": str(response)}
     
     except Exception as e:
         print(f"An error occurred while creating the volume: {e}")
-        raise e
+        return {"status": "error", "message": str(e)}
 
  
 def clone_volume(
@@ -249,7 +249,7 @@ def clone_volume(
     cooling_threshold_days: int = None
 ):
     """
-    Clone an existing volume.
+    Clone an existing NetApp volume.
 
     Args:
         project_id (str):
@@ -342,7 +342,10 @@ def clone_volume(
             Defaults to 31.
 
     Returns:
-        None
+        Dict: Dictionary with keys
+            - 'status': 'success' or 'error'
+            - 'details': API response object (if successful)
+            - 'message': Error message (if failed)
 
     Raises:
         ValueError: If required parameters are missing.
@@ -438,12 +441,11 @@ def clone_volume(
 
         response = operation.result()
 
-        # Handle the response
-        print(response)
+        return {"status": "success", "details": str(response)}
 
     except Exception as e:
         print(f"An error occurred while cloning the volume: {e}")
-        raise e
+        return {"status": "error", "message": str(e)}
 
 
 def delete_volume(
@@ -452,7 +454,7 @@ def delete_volume(
         volume_id: str,
         force: bool = False):
     """
-    Delete a volume in the specified project and location.
+    Delete a NetApp volume in the specified Google Cloud project and location.
     Args:
         project_id (str):
             Required. The ID of the project.
@@ -465,7 +467,10 @@ def delete_volume(
             Defaults to False.
 
     Returns:
-        None
+        dict: Dictionary with keys
+            - 'status': 'success' or 'error'
+            - 'details': API response object (if successful)
+            - 'message': Error message (if failed)
 
     Raises:
         ValueError: If required parameters are missing.
@@ -497,19 +502,18 @@ def delete_volume(
 
         response = operation.result()
 
-        # Handle the response
-        print(response)
+        return {"status": "success", "details": str(response)}
 
     except Exception as e:
         print(f"An error occurred while deleting the volume: {e}")
-        raise e
+        return {"status": "error", "message": str(e)}
 
  
 def list_volumes(
         project_id: str,
         location: str):
     """
-    List all volumes in a project and location.
+    Lists all NetApp volumes in the specified Google Cloud project and location.
 
     Args:
         project_id (str):
@@ -518,7 +522,10 @@ def list_volumes(
             Required. The location to list volumes from.
 
     Returns:
-        None
+        dict: Dictionary with keys
+            - 'status': 'success' or 'error'
+            - 'details': List of volumes (if successful)
+            - 'message': Error message (if failed)
 
     Raises:
         ValueError: If required parameters are missing.
@@ -546,13 +553,13 @@ def list_volumes(
         # Make the request
         page_result = client.list_volumes(request=request)
 
-        # Handle the response
-        for response in page_result:
-            print(response)
+        volumes = [v for v in page_result]
+
+        return {"status": "success", "details": volumes}
 
     except Exception as e:
         print(f"An error occurred while listing volumes: {e}")
-        raise e
+        return {"status": "error", "message": str(e)}
 
 
 def create_snapshot(
@@ -564,8 +571,7 @@ def create_snapshot(
     labels: dict = None
 ):
     """
-    Create a near-instantaneous, space-efficient, read-only copy of an existing data volume, called a snapshot. 
-    Snapshots are particularly useful for versioning datasets and implementing dataset-to-model traceability.
+    Create a snapshot of a NetApp volume in Google Cloud.
 
     Args:
         project_id (str):
@@ -582,7 +588,10 @@ def create_snapshot(
             Optional. The labels to assign to the snapshot. Defaults to None.
 
     Returns:
-        None
+        dict: Dictionary with keys
+            - 'status': 'success' or 'error'
+            - 'details': API response object (if successful)
+            - 'message': Error message (if failed)
 
     Raises:
         ValueError: If required parameters are missing.
@@ -617,12 +626,11 @@ def create_snapshot(
 
         response = operation.result()
 
-        # Handle the response
-        print(response)
+        return {"status": "success", "details": str(response)}
 
     except Exception as e:
         print(f"An error occurred while creating the snapshot: {e}")
-        raise e
+        return {"status": "error", "message": str(e)}
 
 
 def delete_snapshot(
@@ -632,7 +640,7 @@ def delete_snapshot(
     snapshot_id: str
 ):
     """
-    Delete a snapshot.
+    Delete a snapshot from a NetApp volume in Google Cloud.
 
     Args:
         project_id (str):
@@ -645,7 +653,10 @@ def delete_snapshot(
             Required. The ID of the snapshot to delete.
 
     Returns:
-        None
+        dict: Dictionary with keys
+            - 'status': 'success' or 'error'
+            - 'details': API response object (if successful)
+            - 'message': Error message (if failed)
 
     Raises:
         ValueError: If required parameters are missing.
@@ -677,12 +688,11 @@ def delete_snapshot(
 
         response = operation.result()
 
-        # Handle the response
-        print(response)
+        return {"status": "success", "details": str(response)}
 
     except Exception as e:
         print(f"An error occurred while deleting the snapshot: {e}")
-        raise e
+        return {"status": "error", "message": str(e)}
 
 
 def list_snapshots(
@@ -691,7 +701,7 @@ def list_snapshots(
     volume_id: str
 ):
     """
-    List all snapshots for a given volume.
+    List all snapshots for a NetApp volume in the specified Google Cloud project and location.
 
     Args:
         project_id (str):
@@ -702,7 +712,10 @@ def list_snapshots(
             Required. The ID of the volume to list snapshots for.
 
     Returns:
-        None
+        dict: Dictionary with keys
+            - 'status': 'success' or 'error'
+            - 'details': List of snapshots (if successful)
+            - 'message': Error message (if failed)
 
     Raises:
         ValueError: If required parameters are missing.
@@ -732,13 +745,13 @@ def list_snapshots(
         # Make the request
         page_result = client.list_snapshots(request=request)
 
-        # Handle the response
-        for response in page_result:
-            print(response)
+        snapshots = [s for s in page_result]
+
+        return {"status": "success", "details": snapshots}
 
     except Exception as e:
         print(f"An error occurred while listing snapshots: {e}")
-        raise e
+        return {"status": "error", "message": str(e)}
 
  
 def create_replication(
@@ -791,11 +804,13 @@ def create_replication(
         description (str):
             Optional. A description about this replication relationship.
         labels (dict, MutableMapping[str, str]):
-            Optional. Resource labels to represent user provided
-            metadata.
+            Optional. Resource labels to represent user provided metadata.
 
     Returns:
-        None
+        dict: Dictionary with keys
+            - 'status': 'success' or 'error'
+            - 'details': API response object (if successful)
+            - 'message': Error message (if failed)
 
     Raises:
         ValueError: If required parameters are missing.
@@ -853,9 +868,8 @@ def create_replication(
 
         response = operation.result()
 
-        # Handle the response
-        print(response)
+        return {"status": "success", "details": str(response)}
 
     except Exception as e:
         print(f"An error occurred while creating the replication: {e}")
-        raise e
+        return {"status": "error", "message": str(e)}
