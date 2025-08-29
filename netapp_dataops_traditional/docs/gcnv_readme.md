@@ -25,16 +25,16 @@ Built on the [Google Cloud NetApp Python SDK](https://cloud.google.com/python/do
   - [Function Categories](#function-categories)
 - [API Reference](#api-reference)
 - [1. Volume Management](#1-volume-management)
-  - [🚀 Create a New Data Volume](#-create-a-new-data-volume)
-  - [🔄 Clone an Existing Data Volume](#-clone-an-existing-data-volume)
-  - [🗑️ Delete an Existing Data Volume](#️-delete-an-existing-data-volume)
-  - [📋 List All Data Volumes](#-list-all-data-volumes)
+  - [🚀 Create a New Data Volume](#create-a-new-data-volume)
+  - [🔄 Clone an Existing Data Volume](#clone-an-existing-data-volume)
+  - [🗑️ Delete an Existing Data Volume](#delete-an-existing-data-volume)
+  - [📋 List All Data Volumes](#list-all-data-volumes)
 - [2. Snapshot Management](#2-snapshot-management)
-  - [📸 Create a New Snapshot for a Data Volume](#-create-a-new-snapshot-for-a-data-volume)
-  - [🗑️ Delete an Existing Snapshot for a Data Volume](#️-delete-an-existing-snapshot-for-a-data-volume)
-  - [📋 List All Snapshots for a Data Volume](#-list-all-snapshots-for-a-data-volume)
+  - [📸 Create a New Snapshot for a Data Volume](#create-a-new-snapshot-for-a-data-volume)
+  - [🗑️ Delete an Existing Snapshot for a Data Volume](#delete-an-existing-snapshot-for-a-data-volume)
+  - [📋 List All Snapshots for a Data Volume](#list-all-snapshots-for-a-data-volume)
 - [3. Replication Management](#3-replication-management)
-  - [🔗 Create a Replication of a Data Volume](#-create-a-replication-of-a-data-volume)
+  - [🔗 Create a Replication of a Data Volume](#create-a-replication-of-a-data-volume)
 - [Reference Links](#reference-links)
 - [Support](#support)
 
@@ -123,22 +123,22 @@ from netapp_dataops.traditional.gcnv import (
 ### Function Categories
 
 1. [Volume Management](#1-volume-management)
-    - [Create a New Data Volume](#-create-a-new-data-volume)
-    - [Clone an Existing Data Volume](#-clone-an-existing-data-volume)
-    - [Delete an Existing Data Volume](#️-delete-an-existing-data-volume)
-    - [List All Data Volumes](#-list-all-data-volumes)
+    - [Create a New Data Volume](#create-a-new-data-volume)
+    - [Clone an Existing Data Volume](#clone-an-existing-data-volume)
+    - [Delete an Existing Data Volume](#delete-an-existing-data-volume)
+    - [List All Data Volumes](#list-all-data-volumes)
 2. [Snapshot Management](#2-snapshot-management)
-    - [Create a New Snapshot for a Data Volume](#-create-a-new-snapshot-for-a-data-volume)
-    - [Delete an Existing Snapshot for a Data Volume](#️-delete-an-existing-snapshot-for-a-data-volume)
-    - [List All Snapshots for a Data Volume](#-list-all-snapshots-for-a-data-volume)
+    - [Create a New Snapshot for a Data Volume](#create-a-new-snapshot-for-a-data-volume)
+    - [Delete an Existing Snapshot for a Data Volume](#delete-an-existing-snapshot-for-a-data-volume)
+    - [List All Snapshots for a Data Volume](#list-all-snapshots-for-a-data-volume)
 3. [Replication Management](#3-replication-management)
-    - [Create a Replication of a Data Volume](#-create-a-replication-of-a-data-volume)
+    - [Create a Replication of a Data Volume](#create-a-replication-of-a-data-volume)
 
 ## API Reference
 
 ## 1. Volume Management
 
-### 🚀 Create a New Data Volume
+### Create a New Data Volume
 
 Provision new NetApp volumes with customizable parameters including size, protocols (NFS/SMB), storage pools, and access policies.
 
@@ -225,7 +225,7 @@ response = gcnv.create_volume(
 }
 ```
 
-### 🔄 Clone an Existing Data Volume
+### Clone an Existing Data Volume
 
 The module supports creating a new volume as a clone of an existing volume, using a specific snapshot as the source. This is useful for rapid environment duplication or testing.
 
@@ -301,7 +301,7 @@ clone_result = gcnv.clone_volume(
 )
 ```
 
-### 🗑️ Delete an Existing Data Volume
+### Delete an Existing Data Volume
 
 Volumes can be deleted, with options for forced deletion if necessary.
 
@@ -346,7 +346,7 @@ delete_result = gcnv.delete_volume(
 ```
 
 
-### 📋 List All Data volumes
+### List All Data volumes
 
 Retrieve all volumes in a project/location.
 
@@ -388,7 +388,7 @@ volumes = gcnv.list_volumes(
 ```
 
 ## 2. Snapshot Management
-### 📸 Create a New Snapshot for a Data Volume
+### Create a New Snapshot for a Data Volume
 
 Snapshots capture the state of a volume at a point in time, enabling backup and recovery scenarios.
 
@@ -437,7 +437,7 @@ snapshot_result = gcnv.create_snapshot(
 )
 ```
 
-### 🗑️ Delete an Existing Snapshot for a Data Volume
+### Delete an Existing Snapshot for a Data Volume
 
 Snapshots can be removed when no longer needed.
 
@@ -484,7 +484,7 @@ delete_snap = gcnv.delete_snapshot(
 )
 ```
 
-### 📋 List All Snapshots for a Data Volume
+### List All Snapshots for a Data Volume
 
 Users can enumerate all snapshots associated with a particular volume.
 
@@ -530,7 +530,7 @@ snapshots = gcnv.list_snapshots(
 
 ## 3. Replication Management
 
-### 🔗 Create a Replication of a Data Volume
+### Create a Replication of a Data Volume
 
 Set up cross-region replication for disaster recovery and high availability.
 
@@ -570,7 +570,6 @@ Exception         # If there is an error while creating the NetApp client.
 Exception         # If there is an error during the replication creation process.
 ```
 
- 
 #### Example Usage
 Set up cross-region replication for disaster recovery:
 
@@ -590,8 +589,6 @@ replication_result = gcnv.create_replication(
     description="Disaster recovery replication",
     labels={"purpose": "disaster_recovery", "schedule": "hourly"}
 )
-
-print(f"✅ Replication created: {replication_result['status']}")
 ```
  
 ## Reference Links
@@ -600,8 +597,6 @@ print(f"✅ Replication created: {replication_result['status']}")
 |----------|-------------|
 | 📚 [GCNV REST API Documentation](https://cloud.google.com/netapp/volumes/docs/reference/rest) | Official Google Cloud NetApp Volumes API reference |
 | 🐍 [GCNV Python SDK](https://cloud.google.com/python/docs/reference/netapp/latest) | Google Cloud NetApp Python client library |
-| 🧰 [NetApp DataOps Toolkit](https://github.com/NetApp/netapp-dataops-toolkit) | Main project repository on GitHub |
-| ☁️ [Google Cloud Console](https://console.cloud.google.com/netapp) | Web interface for managing GCNV resources |
 | 🔧 [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) | Command-line tools for Google Cloud |
 
 ---
