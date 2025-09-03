@@ -1707,43 +1707,6 @@ def delete_flexcache_volume(
     # Check if the PVC is a FlexCache volume
     if pvc.metadata and pvc.metadata.labels and pvc.metadata.labels.get("app") == 'flexcache':
 
-        # Delete PVC
-        if print_output:
-            print("Deleting PVC '" + pvc_name + "' in namespace '" + namespace + "'.")
-        try:
-            api.delete_namespaced_persistent_volume_claim(name=pvc_name, namespace=namespace)
-        except ApiException as err:
-            if print_output:
-                print("Error: Kubernetes API Error: ", err)
-            raise APIConnectionError(err)
-        
-        # Wait for PVC to disappear
-        while True:
-            try:
-                api.read_namespaced_persistent_volume_claim(name=pvc_name,
-                                                            namespace=namespace)  # Confirm that source PVC still exists
-            except:
-                break  # Break loop when source PVC no longer exists
-            sleep(5)
-
-        if print_output:
-            print("PVC '" + pvc_name + "' successfully deleted.")
-
-        # Delete the associated PV
-        pv_name = f"pv-{pvc_name}"
-        if print_output:
-            print(f"Deleting PersistentVolume (PV) '{pv_name}' associated with FlexCache PVC '{pvc_name}'.")
-
-        try:
-            api.delete_persistent_volume(name=pv_name)
-        except ApiException as err:
-            if print_output:
-                print("Error: Kubernetes API Error: ", err)
-            raise APIConnectionError(err)
-
-        if print_output:
-            print(f"PersistentVolume (PV) '{pv_name}' successfully deleted.")
-
         # Connect to ONTAP and delete the FlexCache volume
         try:
             config = _get_trident_backend_config(backend_config_name=backend_name, namespace=trident_namespace, print_output=print_output)
@@ -1781,10 +1744,17 @@ def delete_flexcache_volume(
                     # Unmount FlexCache volume
                     flexcache.junction_path = ""
                     flexcache.patch()
-                    # Unmount parent Volume (if junction_path is set)
-                    if volume and getattr(volume, "junction_path", None):
-                        volume.junction_path = ""
-                        volume.patch()
+
+                    # Wait and confirm FlexCache is unmounted (junction_path cleared)
+                    max_retries = 6
+                    for attempt in range(max_retries):
+                        if flexcache and not getattr(flexcache, "junction_path", None):
+                            break
+                        if print_output:
+                            print(f"Waiting for FlexCache volume '{flexcache_vol_modified}' to unmount (attempt {attempt+1}/{max_retries})...")
+                        sleep(5)
+                    else:
+                        raise FlexCacheDeleteError(f"Failed to unmount FlexCache volume '{flexcache_vol_modified}' after {max_retries} attempts. Aborting delete.")
 
                     if print_output:
                         print(f"Taking FlexCache volume '{flexcache_vol_modified}' offline in SVM '{svm}'.")
@@ -1806,6 +1776,43 @@ def delete_flexcache_volume(
                 if print_output:
                     print("Error: ONTAP Rest API Error: ", err)
                 raise APIConnectionError(err)
+
+        # Delete PVC
+        if print_output:
+            print("Deleting PVC '" + pvc_name + "' in namespace '" + namespace + "'.")
+        try:
+            api.delete_namespaced_persistent_volume_claim(name=pvc_name, namespace=namespace)
+        except ApiException as err:
+            if print_output:
+                print("Error: Kubernetes API Error: ", err)
+            raise APIConnectionError(err)
+        
+        # Wait for PVC to disappear
+        while True:
+            try:
+                api.read_namespaced_persistent_volume_claim(name=pvc_name,
+                                                            namespace=namespace)  # Confirm that source PVC still exists
+            except:
+                break  # Break loop when source PVC no longer exists
+            sleep(5)
+
+        if print_output:
+            print("PVC '" + pvc_name + "' successfully deleted.")
+
+        # Delete the associated PV
+        pv_name = f"pv-{pvc_name}"
+        if print_output:
+            print(f"Deleting PersistentVolume (PV) '{pv_name}' associated with FlexCache PVC '{pvc_name}'.")
+
+        try:
+            api.delete_persistent_volume(name=pv_name)
+        except ApiException as err:
+            if print_output:
+                print("Error: Kubernetes API Error: ", err)
+            raise APIConnectionError(err)
+
+        if print_output:
+            print(f"PersistentVolume (PV) '{pv_name}' successfully deleted.")
 
     else:
         if print_output:
