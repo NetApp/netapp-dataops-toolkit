@@ -1771,18 +1771,24 @@ def delete_flexcache_volume(
             # Find and delete the FlexCache volume
             try:
                 flexcache = NetAppFlexCache.find(name=flexcache_vol_modified, svm={"name": svm})
+
                 if flexcache:
+
+                    volume = Volume.find(name=flexcache_vol_modified, svm={"name": svm})
 
                     if print_output:
                         print(f"Unmounting FlexCache volume '{flexcache_vol_modified}' in SVM '{svm}'.")
-                    # Unmount by clearing the junction path and patching
+                    # Unmount FlexCache volume
                     flexcache.junction_path = ""
                     flexcache.patch()
+                    # Unmount parent Volume (if junction_path is set)
+                    if volume and getattr(volume, "junction_path", None):
+                        volume.junction_path = ""
+                        volume.patch()
 
                     if print_output:
                         print(f"Taking FlexCache volume '{flexcache_vol_modified}' offline in SVM '{svm}'.")
                     # Take FlexCache volume offline using Volume resource
-                    volume = Volume.find(name=flexcache_vol_modified, svm={"name": svm})
                     if volume:
                         volume.state = "offline"
                         volume.patch()
@@ -1790,7 +1796,7 @@ def delete_flexcache_volume(
                     if print_output:
                         print(f"Deleting FlexCache volume '{flexcache_vol_modified}' in SVM '{svm}'.")
                     flexcache.delete()
-                    
+
                     if print_output:
                         print(f"FlexCache volume '{flexcache_vol_modified}' successfully deleted.")
                 else:
