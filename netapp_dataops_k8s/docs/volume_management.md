@@ -121,6 +121,9 @@ Volume successfully created and bound to PersistentVolumeClaim (PVC) 'test1' in 
 
 The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing persistent volume within a Kubernetes cluster. The command for deleting an existing persistent volume is `netapp_dataops_k8s_cli.py delete volume`.
 
+>[!NOTE]
+>When deleting a volume with associated FlexCache volumes using the NetApp DataOps Toolkit, the PVC will be deleted, but the volume will still exist on the ONTAP cluster. You must delete all associated FlexCache volumes first to avoid errors when deleting the origin volume directly from ONTAP.
+
 The following options/arguments are required:
 
 ```
