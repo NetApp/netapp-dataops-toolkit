@@ -1774,7 +1774,9 @@ def delete_flexcache_volume(
 
                     if print_output:
                         print(f"Unmounting FlexCache volume '{flexcache_vol_modified}' in SVM '{svm}'.")
-                    flexcache.unmount()
+                        # Unmount by clearing the junction path and patching
+                        flexcache.junction_path = ""
+                        flexcache.patch()
                     if print_output:
                         print(f"Taking FlexCache volume '{flexcache_vol_modified}' offline in SVM '{svm}'.")
                     flexcache.offline()
