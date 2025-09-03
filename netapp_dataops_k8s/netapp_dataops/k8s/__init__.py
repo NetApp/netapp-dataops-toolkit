@@ -30,6 +30,7 @@ from netapp_ontap.error import NetAppRestError
 from netapp_ontap.host_connection import HostConnection as NetAppHostConnection
 from netapp_ontap.resources import Flexcache as NetAppFlexCache
 from netapp_ontap import config as netappConfig
+from netapp_ontap.resources import Volume
 
 # Using this decorator in lieu of using a dependency to manage deprecation
 def deprecated(func):
@@ -1774,15 +1775,22 @@ def delete_flexcache_volume(
 
                     if print_output:
                         print(f"Unmounting FlexCache volume '{flexcache_vol_modified}' in SVM '{svm}'.")
-                        # Unmount by clearing the junction path and patching
-                        flexcache.junction_path = ""
-                        flexcache.patch()
+                    # Unmount by clearing the junction path and patching
+                    flexcache.junction_path = ""
+                    flexcache.patch()
+
                     if print_output:
                         print(f"Taking FlexCache volume '{flexcache_vol_modified}' offline in SVM '{svm}'.")
-                    flexcache.offline()
+                    # Take FlexCache volume offline using Volume resource
+                    volume = Volume.find(name=flexcache_vol_modified, svm={"name": svm})
+                    if volume:
+                        volume.state = "offline"
+                        volume.patch()
+
                     if print_output:
                         print(f"Deleting FlexCache volume '{flexcache_vol_modified}' in SVM '{svm}'.")
                     flexcache.delete()
+                    
                     if print_output:
                         print(f"FlexCache volume '{flexcache_vol_modified}' successfully deleted.")
                 else:
