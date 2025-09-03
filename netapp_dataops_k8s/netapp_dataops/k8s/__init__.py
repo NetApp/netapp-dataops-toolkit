@@ -1736,32 +1736,25 @@ def delete_flexcache_volume(
                 flexcache = NetAppFlexCache.find(name=flexcache_vol_modified, svm={"name": svm})
 
                 if flexcache:
-
-                    volume = Volume.find(name=flexcache_vol_modified, svm={"name": svm})
+                    # Find the volume
+                    try:
+                        volume = Volume.find(name=flexcache_vol_modified, svm={"name": svm})
+                    except NetAppRestError as err:
+                        if print_output:
+                            print(f"Error: Failed to find FlexCache volume '{flexcache_vol_modified}' in SVM '{svm}': {err}")
+                        raise APIConnectionError(err)
 
                     if print_output:
                         print(f"Unmounting FlexCache volume '{flexcache_vol_modified}' in SVM '{svm}'.")
                     # Unmount FlexCache volume
-                    flexcache.junction_path = ""
-                    flexcache.patch()
-
-                    # Wait and confirm FlexCache is unmounted (junction_path cleared)
-                    max_retries = 6
-                    for attempt in range(max_retries):
-                        if flexcache and not getattr(flexcache, "junction_path", None):
-                            break
-                        if print_output:
-                            print(f"Waiting for FlexCache volume '{flexcache_vol_modified}' to unmount (attempt {attempt+1}/{max_retries})...")
-                        sleep(5)
-                    else:
-                        raise FlexCacheDeleteError(f"Failed to unmount FlexCache volume '{flexcache_vol_modified}' after {max_retries} attempts. Aborting delete.")
+                    volume.nas.path = ""
+                    volume.patch()
 
                     if print_output:
                         print(f"Taking FlexCache volume '{flexcache_vol_modified}' offline in SVM '{svm}'.")
                     # Take FlexCache volume offline using Volume resource
-                    if volume:
-                        volume.state = "offline"
-                        volume.patch()
+                    volume.state = "offline"
+                    volume.patch()
 
                     if print_output:
                         print(f"Deleting FlexCache volume '{flexcache_vol_modified}' in SVM '{svm}'.")
