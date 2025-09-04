@@ -8,18 +8,18 @@ The NetApp DataOps Toolkit for Kubernetes can be used to manage persistent volum
 
 You can perform volume management operations using the toolkit's command line utility. The command line utility supports the following operations.
 
-| Kubernetes persistent volume management operations                                   | Supported by BeeGFS | Supported by Trident |
-| ------------------------------------------------------------------------------------ | ------------------- | -------------------- |
-| [Clone a persistent volume.](#cli-clone-volume)                                      | No                  | Yes                  |
-| [Create a new persistent volume.](#cli-create-volume)                                | Yes                 | Yes                  |
-| [Delete an existing persistent volume.](#cli-delete-volume)                          | Yes                 | Yes                  |
-| [List all persistent volumes.](#cli-list-volumes)                                    | Yes                 | Yes                  |
-| [Create a new snapshot for a persistent volume.](#cli-create-volume-snapshot)        | No                  | Yes                  |
-| [Delete an existing snapshot.](#cli-delete-volume-snapshot)                          | No                  | Yes                  |
-| [List all snapshots.](#cli-list-volume-snapshots)                                    | No                  | Yes                  |
-| [Restore a snapshot.](#cli-restore-volume-snapshot)                                  | No                  | Yes                  |
-| [Create a new FlexCache volume](#cli-create-flexcache)                               | No                  | No                   |
-| [Delete an existing FlexCache volume](#cli-delete-flexcache)                         | No                  | No                   |
+| Kubernetes persistent volume management operations                                   | Supported by BeeGFS | Supported with Trident |
+| ------------------------------------------------------------------------------------ | ------------------- | ---------------------- |
+| [Clone a persistent volume.](#cli-clone-volume)                                      | No                  | Yes                    |
+| [Create a new persistent volume.](#cli-create-volume)                                | Yes                 | Yes                    |
+| [Delete an existing persistent volume.](#cli-delete-volume)                          | Yes                 | Yes                    |
+| [List all persistent volumes.](#cli-list-volumes)                                    | Yes                 | Yes                    |
+| [Create a new snapshot for a persistent volume.](#cli-create-volume-snapshot)        | No                  | Yes                    |
+| [Delete an existing snapshot.](#cli-delete-volume-snapshot)                          | No                  | Yes                    |
+| [List all snapshots.](#cli-list-volume-snapshots)                                    | No                  | Yes                    |
+| [Restore a snapshot.](#cli-restore-volume-snapshot)                                  | No                  | Yes                    |
+| [Create a new FlexCache volume](#cli-create-flexcache)                               | No                  | Yes                    |
+| [Delete an existing FlexCache volume](#cli-delete-flexcache)                         | No                  | Yes                    |
 
 ### Kubernetes Persistent Volume Management Operations
 
@@ -123,7 +123,7 @@ Volume successfully created and bound to PersistentVolumeClaim (PVC) 'test1' in 
 The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing persistent volume within a Kubernetes cluster. The command for deleting an existing persistent volume is `netapp_dataops_k8s_cli.py delete volume`.
 
 >[!NOTE]
->When deleting a volume with associated FlexCache volumes using the NetApp DataOps Toolkit, the PVC will be deleted, but the volume will still exist on the ONTAP cluster. You must delete all associated FlexCache volumes first to avoid errors when deleting the origin volume directly from ONTAP.
+When deleting a volume that is the origin for a FlexCache volume using the NetApp DataOps Toolkit, the PVC will be deleted, but the volume will still exist on the ONTAP cluster. You must delete all associated FlexCache volumes first to avoid errors when deleting the origin volume directly from ONTAP.
 
 The following options/arguments are required:
 
@@ -396,7 +396,7 @@ Delete FlexCache volume 'test-cach-vol1', using 'ontap' tridentbackendconfig.
 
 ```sh
 netapp_dataops_k8s_cli.py delete flexcache-volume -p test-cache-vol1 -b ontap
-Warning: All data associated with the FlexCache volume will be permanently deleted.
+Warning: This FlexCache volume will be permanently deleted.
 Are you sure that you want to proceed? (yes/no): yes
 Unmounting FlexCache volume 'test-cache-vol1' in SVM 'svm0'.
 Taking FlexCache volume 'test-cache-vol1' offline in SVM 'svm0'.
@@ -420,18 +420,18 @@ from netapp_dataops.k8s import clone_volume, create_volume, delete_volume, list_
 
 The following volume management operations are available within the set of functions.
 
-| Kubernetes persistent volume management operations                                   | Supported by BeeGFS | Supported by Trident |
-| ------------------------------------------------------------------------------------ | ------------------- | -------------------- |
-| [Clone a persistent volume.](#lib-clone-volume)                                      | No                  | Yes                  |
-| [Create a new persistent volume.](#lib-create-volume)                                | Yes                 | Yes                  |
-| [Delete an existing persistent volume.](#lib-delete-volume)                          | Yes                 | Yes                  |
-| [List all persistent volumes.](#lib-list-volumes)                                    | Yes                 | Yes                  |
-| [Create a new snapshot for a persistent volume.](#lib-create-volume-snapshot)        | No                  | Yes                  |
-| [Delete an existing snapshot.](#lib-delete-volume-snapshot)                          | No                  | Yes                  |
-| [List all snapshots.](#lib-list-volume-snapshots)                                    | No                  | Yes                  |
-| [Restore a snapshot.](#lib-restore-volume-snapshot)                                  | No                  | Yes                  |
-| [Create a new FlexCache volume.](#lib-create-flexcache)                              | No                  | No                   |
-| [Delete an existing FlexCache volume](#lib-delete-flexcache)                         | No                  | No                   |
+| Kubernetes persistent volume management operations                                   | Supported by BeeGFS | Supported with Trident |
+| ------------------------------------------------------------------------------------ | ------------------- | ---------------------- |
+| [Clone a persistent volume.](#lib-clone-volume)                                      | No                  | Yes                    |
+| [Create a new persistent volume.](#lib-create-volume)                                | Yes                 | Yes                    |
+| [Delete an existing persistent volume.](#lib-delete-volume)                          | Yes                 | Yes                    |
+| [List all persistent volumes.](#lib-list-volumes)                                    | Yes                 | Yes                    |
+| [Create a new snapshot for a persistent volume.](#lib-create-volume-snapshot)        | No                  | Yes                    |
+| [Delete an existing snapshot.](#lib-delete-volume-snapshot)                          | No                  | Yes                    |
+| [List all snapshots.](#lib-list-volume-snapshots)                                    | No                  | Yes                    |
+| [Restore a snapshot.](#lib-restore-volume-snapshot)                                  | No                  | Yes                    |
+| [Create a new FlexCache volume.](#lib-create-flexcache)                              | No                  | Yes                    |
+| [Delete an existing FlexCache volume](#lib-delete-flexcache)                         | No                  | Yes                    |
 
 ### Kubernetes Persistent Volume Management Operations
 

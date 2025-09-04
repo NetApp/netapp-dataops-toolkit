@@ -72,6 +72,7 @@ Note: To view details regarding options/arguments for a specific command, run th
 \tlist volume-snapshots\t\tList all snapshots.
 \trestore volume-snapshot\t\tRestore a snapshot.
 \tcreate flexcache\t\tCreate a new FlexCache volume.
+\tdelete flexcache-volume\t\tDelete an existing FlexCache volume.
 
 Data Movement Commands:
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
@@ -410,7 +411,7 @@ Examples:
 \tnetapp_dataops_k8s_cli.py delete volume -p project2 -n team1
 '''
 helpTextDeleteFlexCacheVolume = '''
-Command: delete flexcache volume
+Command: delete flexcache-volume
 
 Delete an existing FlexCache volume.
 
@@ -425,8 +426,8 @@ Optional Options/Arguments:
 \t-t, --trident-namespace=\tKubernetes namespace where Trident is installed. If not specified, the namespace "trident" will be used.
 
 Examples:
-\tnetapp_dataops_k8s_cli.py delete volume --pvc-name=cache1
-\tnetapp_dataops_k8s_cli.py delete volume -p cache2 -n team1
+\tnetapp_dataops_k8s_cli.py delete flexcache-volume --pvc-name=cache1
+\tnetapp_dataops_k8s_cli.py delete flexcache-volume -p cache2 -n team1
 '''
 helpTextGetS3Bucket = '''
 Command: get-s3 bucket
@@ -1393,7 +1394,7 @@ if __name__ == '__main__':
 
             # Confirm delete operation
             if not force:
-                print("Warning: All data associated with the FlexCache volume will be permanently deleted.")
+                print("Warning: This FlexCache volume will be permanently deleted.")
                 while True:
                     proceed = input("Are you sure that you want to proceed? (yes/no): ")
                     if proceed in ("yes", "Yes", "YES"):
