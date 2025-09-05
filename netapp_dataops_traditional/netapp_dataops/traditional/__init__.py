@@ -1,14 +1,4 @@
 """NetApp DataOps Toolkit for Traditional Environments import module.
-
-This module provides the public functions a# Import FlexCache operations from storage package
-from .storage.flexcache_operations import (
-    prepopulate_flex_cache,
-    prepopulateFlexCache
-)
-
-
-def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: str = None, source_snapshot_name: str = None,rted directly
-by applications using the import method of utilizing the toolkit.
 """
 
 import base64
@@ -62,8 +52,8 @@ from .exceptions import (
     CloudSyncSyncOperationError
 )
 
-# Import volume operations from storage package
-from .storage.volume_operations import (
+# Import volume operations from ontap package
+from .ontap.volume_operations import (
     clone_volume,
     create_volume,
     delete_volume,
@@ -78,8 +68,8 @@ from .storage.volume_operations import (
     listVolumes
 )
 
-# Import snapshot operations from storage package  
-from .storage.snapshot_operations import (
+# Import snapshot operations from ontap package  
+from .ontap.snapshot_operations import (
     create_snapshot,
     delete_snapshot,
     restore_snapshot,
@@ -90,8 +80,8 @@ from .storage.snapshot_operations import (
     listSnapshots
 )
 
-# Import SnapMirror operations from storage package
-from .storage.snapmirror_operations import (
+# Import SnapMirror operations from ontap package
+from .ontap.snapmirror_operations import (
     list_snap_mirror_relationships,
     create_snap_mirror_relationship,
     sync_snap_mirror_relationship,
@@ -119,8 +109,8 @@ from .cloud.s3_operations import (
     pushFileToS3
 )
 
-# Import FlexCache operations from storage package
-from .storage.flexcache_operations import (
+# Import FlexCache operations from ontap package
+from .ontap.flexcache_operations import (
     prepopulate_flex_cache,
     prepopulateFlexCache
 )
