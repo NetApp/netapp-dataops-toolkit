@@ -115,6 +115,24 @@ from .ontap.flexcache_operations import (
     prepopulateFlexCache
 )
 
+# Import GCNV operations from gcnv package
+from .gcnv.volume_operations import (
+    create_volume as gcnv_create_volume,
+    clone_volume as gcnv_clone_volume,
+    delete_volume as gcnv_delete_volume,
+    list_volumes as gcnv_list_volumes
+)
+
+from .gcnv.snapshot_operations import (
+    create_snapshot as gcnv_create_snapshot,
+    delete_snapshot as gcnv_delete_snapshot,
+    list_snapshots as gcnv_list_snapshots
+)
+
+from .gcnv.replication_operations import (
+    create_replication as gcnv_create_replication
+)
+
 
 @deprecated
 def restore_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = None, svm_name : str = None, print_output: bool = False):
