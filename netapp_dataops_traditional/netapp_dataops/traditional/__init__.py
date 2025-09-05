@@ -89,16 +89,16 @@ from .ontap.snapmirror_operations import (
     syncSnapMirrorRelationship
 )
 
-# Import Cloud Sync operations from cloud package
-from .cloud.cloud_sync_operations import (
+# Import Cloud Sync operations from data_movement package
+from .data_movement.cloud_sync_operations import (
     list_cloud_sync_relationships,
     sync_cloud_sync_relationship,
     listCloudSyncRelationships,
     syncCloudSyncRelationship
 )
 
-# Import S3 operations from cloud package
-from .cloud.s3_operations import (
+# Import S3 operations from data_movement package
+from .data_movement.s3_operations import (
     pull_bucket_from_s3,
     pull_object_from_s3,
     push_directory_to_s3,

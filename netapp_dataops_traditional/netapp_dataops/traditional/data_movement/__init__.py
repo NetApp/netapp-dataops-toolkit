@@ -1,7 +1,7 @@
 """
-Cloud operations for NetApp DataOps traditional environments.
+Data movement operations for NetApp DataOps traditional environments.
 
-This package contains all cloud-related operations including S3 operations,
+This package contains all data movement-related operations including S3 operations,
 Cloud Sync relationships, and Google Cloud NetApp Volumes (GCNV).
 """
 
