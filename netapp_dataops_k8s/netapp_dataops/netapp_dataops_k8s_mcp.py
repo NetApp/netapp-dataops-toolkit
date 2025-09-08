@@ -483,7 +483,7 @@ def create_flexcache_tool(
     - print_output (bool, optional): Whether to print output messages. Default is False.
 
     Returns:
-    - dict: A dictionary containing the FlexCache volume and PVC information.
+    - str: A message indicating the successful creation of the FlexCache volume and the associated PVC.
 
     Raises:
     - InvalidConfigError: If the Kubernetes configuration is invalid.
@@ -505,10 +505,7 @@ def create_flexcache_tool(
             print_output=print_output
         )
 
-        return {
-            "ontap_flexcache": result['ontap_flexcache'],
-            "k8s_pvc": result['k8s_pvc']
-        }
+        return f"FlexCache volume '{result['ontap_flexcache']}' and PVC '{result['k8s_pvc']}' created successfully."
     except Exception as e:
         print(f"Error creating FlexCache volume: {e}")
         raise
