@@ -11,6 +11,7 @@ from netapp_dataops.k8s import (
     create_jupyter_lab_snapshot,
     delete_volume_snapshot,
     delete_volume,
+    delete_flexcache_volume,
     delete_jupyter_lab,
     delete_triton_server,
     list_jupyter_labs,
@@ -71,6 +72,7 @@ Note: To view details regarding options/arguments for a specific command, run th
 \tlist volume-snapshots\t\tList all snapshots.
 \trestore volume-snapshot\t\tRestore a snapshot.
 \tcreate flexcache\t\tCreate a new FlexCache volume.
+\tdelete flexcache-volume\t\tDelete an existing FlexCache volume.
 
 Data Movement Commands:
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
@@ -408,6 +410,25 @@ Examples:
 \tnetapp_dataops_k8s_cli.py delete volume --pvc-name=project1
 \tnetapp_dataops_k8s_cli.py delete volume -p project2 -n team1
 '''
+helpTextDeleteFlexCacheVolume = '''
+Command: delete flexcache-volume
+
+Delete an existing FlexCache volume.
+
+Required Options/Arguments:
+\t-p, --pvc-name=\t\t\tName of Kubernetes PersistentVolumeClaim (PVC) to be deleted.
+\t-b, --backend-name=\t\tName of tridentbackendconfig.
+
+Optional Options/Arguments:
+\t-f, --force\t\t\tDo not prompt user to confirm operation.
+\t-h, --help\t\t\tPrint help text.
+\t-n, --namespace=\t\tKubernetes namespace that PersistentVolumeClaim (PVC) is located in. If not specified, namespace "default" will be used.
+\t-t, --trident-namespace=\tKubernetes namespace where Trident is installed. If not specified, the namespace "trident" will be used.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py delete flexcache-volume --pvc-name=cache1
+\tnetapp_dataops_k8s_cli.py delete flexcache-volume -p cache2 -n team1
+'''
 helpTextGetS3Bucket = '''
 Command: get-s3 bucket
 
@@ -678,6 +699,7 @@ Optional Options/Arguments:
 \t-h, --help\t\tPrint help text.
 \t-c, --junction=\t\tThe junction path for the FlexCache volume.
 \t-n, --namespace=\tKubernetes namespace to create the new PersistentVolumeClaim (PVC) in. If not specified, the PVC will be created in the "default" namespace.
+\t-t, --trident-namespace=\tKubernetes namespace where Trident is installed. If not specified, the namespace "trident" will be used.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py create flexcache --flexcache-vol=cache1 --flexcache-size=50Gi --source-vol=origin1 --source-svm=svm1 --backend-name=backend1
@@ -1192,10 +1214,11 @@ if __name__ == '__main__':
             flexCacheVol = None
             flexCacheSize = None
             backendName = None
+            tridentNamespace = "trident"
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:f:z:v:s:b:n:c:", ["help", "flexcache-vol=", "flexcache-size=", "source-vol=", "source-svm=", "backend-name=", "namespace=", "junction="])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:f:z:v:s:b:n:c:t:", ["help", "flexcache-vol=", "flexcache-size=", "source-vol=", "source-svm=", "backend-name=", "namespace=", "junction=", "trident-namespace="])
             except getopt.GetoptError:
                 handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
 
@@ -1218,13 +1241,15 @@ if __name__ == '__main__':
                     namespace = arg
                 elif opt in ("-c", "--junction"):
                     junction = arg
+                elif opt in ("-t", "--trident-namespace"):
+                    tridentNamespace = arg
 
             # Check for required options
             if not flexCacheVol or not sourceVol or not sourceSvm or not flexCacheSize or not backendName:
                 handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
 
             # Create FlexCache volume
-            create_flexcache(flexcache_vol=flexCacheVol, flexcache_size=flexCacheSize, source_vol=sourceVol, source_svm=sourceSvm, backend_name=backendName, namespace=namespace, junction=junction, print_output=True)
+            create_flexcache(flexcache_vol=flexCacheVol, flexcache_size=flexCacheSize, source_vol=sourceVol, source_svm=sourceSvm, backend_name=backendName, namespace=namespace, junction=junction, trident_namespace=tridentNamespace, print_output=True)
 
         else:
             handleInvalidCommand()
@@ -1330,6 +1355,59 @@ if __name__ == '__main__':
             try:
                 delete_volume(pvc_name=pvcName, namespace=namespace, preserve_snapshots=preserveSnapshots,
                               print_output=True)
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
+        elif target in ("flexcache-volume", "flexcache"):
+            pvcName = None
+            backendName = None
+            namespace = "default"
+            tridentNamespace = "trident"
+            force = False
+
+            # Get command line options
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hp:b:fn:t:",
+                                        ["help", "pvc-name=", "backend-name=", "force", "namespace=", "trident-namespace="])
+            except:
+                handleInvalidCommand(helpText=helpTextDeleteFlexCacheVolume, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextDeleteFlexCacheVolume)
+                    sys.exit(0)
+                elif opt in ("-p", "--pvc-name"):
+                    pvcName = arg
+                elif opt in ("-b", "--backend-name"):
+                    backendName = arg
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+                elif opt in ("-t", "--trident-namespace"):
+                    tridentNamespace = arg
+                elif opt in ("-f", "--force"):
+                    force = True
+
+            # Check for required options
+            if not pvcName or not backendName:
+                handleInvalidCommand(helpText=helpTextDeleteFlexCacheVolume, invalidOptArg=True)
+
+            # Confirm delete operation
+            if not force:
+                print("Warning: This FlexCache volume will be permanently deleted.")
+                while True:
+                    proceed = input("Are you sure that you want to proceed? (yes/no): ")
+                    if proceed in ("yes", "Yes", "YES"):
+                        break
+                    elif proceed in ("no", "No", "NO"):
+                        sys.exit(0)
+                    else:
+                        print("Invalid value. Must enter 'yes' or 'no'.")
+
+            # Delete FlexCache volume
+            try:
+                delete_flexcache_volume(pvc_name=pvcName, backend_name=backendName, namespace=namespace,
+                                        trident_namespace=tridentNamespace, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 

@@ -10,9 +10,7 @@ import base64
 from datetime import datetime
 import functools
 from getpass import getpass
-import json
 import re
-import subprocess
 from time import sleep
 import warnings
 import os
@@ -32,6 +30,7 @@ from netapp_ontap.error import NetAppRestError
 from netapp_ontap.host_connection import HostConnection as NetAppHostConnection
 from netapp_ontap.resources import Flexcache as NetAppFlexCache
 from netapp_ontap import config as netappConfig
+from netapp_ontap.resources import Volume
 
 # Using this decorator in lieu of using a dependency to manage deprecation
 def deprecated(func):
@@ -73,6 +72,10 @@ class InvalidVolumeParameterError(Exception):
     """Error that will be raised when an invalid volume parameter is given"""
     pass
 
+
+class FlexCacheDeleteError(Exception):
+    """Raised when attempting to delete a FlexCache PVC using delete_volume."""
+    pass
 
 #
 # Private functions
@@ -515,11 +518,7 @@ def _wait_for_triton_dev_deployment(server_name: str, namespace: str = "default"
         if deploymentStatus.status.ready_replicas == 1:
             break
         sleep(5)
-
-
-def _print_invalid_config_error() :
-    print("Error: Missing or invalid config file. Run `netapp_dataops_cli.py config` to create config file.")
-
+        
 
 def _get_trident_backend_config(backend_config_name: str, namespace: str = "trident", print_output: bool = False):
     # Retrieve kubeconfig
@@ -1616,6 +1615,20 @@ def delete_volume(pvc_name: str, namespace: str = "default", preserve_snapshots:
             _print_invalid_config_error()
         raise InvalidConfigError()
 
+    # Check if the PVC is a FlexCache volume
+    try:
+        api = client.CoreV1Api()
+        pvc = api.read_namespaced_persistent_volume_claim(name=pvc_name, namespace=namespace)
+        if pvc.metadata and pvc.metadata.labels and pvc.metadata.labels.get("app") == "flexcache":
+            error_message = f"PVC '{pvc_name}' in namespace '{namespace}' is a FlexCache volume and cannot be deleted using this function. Please use 'delete_flexcache_volume' instead."
+            if print_output:
+                print(error_message)
+            raise Exception(error_message)
+    except ApiException as err:
+        if print_output:
+            print("Error: Kubernetes API Error: ", err)
+        raise APIConnectionError(err)
+
     # Optionally delete snapshots
     if not preserve_snapshots:
         if print_output:
@@ -1659,6 +1672,145 @@ def delete_volume(pvc_name: str, namespace: str = "default", preserve_snapshots:
 
     if print_output:
         print("PersistentVolumeClaim (PVC) successfully deleted.")
+
+
+def delete_flexcache_volume(
+        pvc_name: str,
+        backend_name: str,
+        namespace: str = "default",
+        trident_namespace: str = "trident",
+        print_output: bool = False
+):
+    # Retrieve kubeconfig
+    try:
+        _load_kube_config()
+    except:
+        if print_output:
+            _print_invalid_config_error()
+        raise InvalidConfigError()
+    
+    # Retrieve the PVC object
+    try:
+        api = client.CoreV1Api()
+    except ApiException as err:
+        if print_output:
+            print("Error: Kubernetes API Error: ", err)
+        raise APIConnectionError(err)
+    
+    try:
+        pvc = api.read_namespaced_persistent_volume_claim(name=pvc_name, namespace=namespace)
+    except ApiException as err:
+        if print_output:
+            print("Error: Kubernetes API Error: ", err)
+        raise APIConnectionError(err)
+
+    # Check if the PVC is a FlexCache volume
+    if pvc.metadata and pvc.metadata.labels and pvc.metadata.labels.get("app") == 'flexcache':
+
+        # Delete PVC
+        if print_output:
+            print("Deleting PVC '" + pvc_name + "' in namespace '" + namespace + "'.")
+        try:
+            api.delete_namespaced_persistent_volume_claim(name=pvc_name, namespace=namespace)
+        except ApiException as err:
+            if print_output:
+                print("Error: Kubernetes API Error: ", err)
+            raise APIConnectionError(err)
+        
+        # Wait for PVC to disappear
+        while True:
+            try:
+                api.read_namespaced_persistent_volume_claim(name=pvc_name,
+                                                            namespace=namespace)  # Confirm that source PVC still exists
+            except:
+                break  # Break loop when source PVC no longer exists
+            sleep(5)
+
+        if print_output:
+            print("PVC '" + pvc_name + "' successfully deleted.")
+
+        # Delete the associated PV
+        pv_name = f"pv-{pvc_name}"
+        if print_output:
+            print(f"Deleting PersistentVolume (PV) '{pv_name}' associated with FlexCache PVC '{pvc_name}'.")
+
+        try:
+            api.delete_persistent_volume(name=pv_name)
+        except ApiException as err:
+            if print_output:
+                print("Error: Kubernetes API Error: ", err)
+            raise APIConnectionError(err)
+
+        if print_output:
+            print(f"PersistentVolume (PV) '{pv_name}' successfully deleted.")
+
+        # Connect to ONTAP and delete the FlexCache volume
+        try:
+            config = _get_trident_backend_config(backend_config_name=backend_name, namespace=trident_namespace, print_output=print_output)
+        except InvalidConfigError:
+            raise
+
+        try:
+            storage_driver_name = config["storage_driver_name"]
+            svm = config["svm"]
+        except:
+            if print_output:
+                _print_invalid_config_error()
+            raise InvalidConfigError()
+        
+        if "ontap" in storage_driver_name.lower():
+
+            # Instantiate connection to ONTAP cluster
+            try:
+                _instantiate_connection(config=config, connectionType="ONTAP", print_output=print_output)
+            except InvalidConfigError:
+                raise
+
+            flexcache_vol_modified = _validate_volume_name(pvc_name)
+
+            # Find and delete the FlexCache volume
+            try:
+                flexcache = NetAppFlexCache.find(name=flexcache_vol_modified, svm={"name": svm})
+
+                if flexcache:
+                    # Find the volume
+                    try:
+                        volume = Volume.find(name=flexcache_vol_modified, svm={"name": svm})
+                    except NetAppRestError as err:
+                        if print_output:
+                            print(f"Error: Failed to find FlexCache volume '{flexcache_vol_modified}' in SVM '{svm}': {err}")
+                        raise APIConnectionError(err)
+
+                    if print_output:
+                        print(f"Unmounting FlexCache volume '{flexcache_vol_modified}' in SVM '{svm}'.")
+                    # Unmount FlexCache volume
+                    volume.nas.path = ""
+                    volume.patch()
+
+                    if print_output:
+                        print(f"Taking FlexCache volume '{flexcache_vol_modified}' offline in SVM '{svm}'.")
+                    # Take FlexCache volume offline using Volume resource
+                    volume.state = "offline"
+                    volume.patch()
+
+                    if print_output:
+                        print(f"Deleting FlexCache volume '{flexcache_vol_modified}' in SVM '{svm}'.")
+                    flexcache.delete()
+
+                    if print_output:
+                        print(f"FlexCache volume '{flexcache_vol_modified}' successfully deleted.")
+                else:
+                    if print_output:
+                        print(f"FlexCache volume '{flexcache_vol_modified}' not found in SVM '{svm}'.")
+            except NetAppRestError as err:
+                if print_output:
+                    print("Error: ONTAP Rest API Error: ", err)
+                raise APIConnectionError(err)
+
+    else:
+        if print_output:
+            print("The provided PVC is not a FlexCache volume. Aborting operation.")
+        return
 
 
 def delete_volume_snapshot(snapshot_name: str, namespace: str = "default", print_output: bool = False):
@@ -1938,6 +2090,20 @@ def list_volumes(namespace: str = "default", print_output: bool = False) -> list
             volumeDict["Clone"] = "No"
             volumeDict["Source PVC"] = ""
             volumeDict["Source VolumeSnapshot"] = ""
+        # Handle flexcache volumes
+        try:
+            if pvc.metadata.labels and pvc.metadata.labels.get("app") == "flexcache":
+                volumeDict["FlexCache"] = "Yes"
+                volumeDict["Source SVM"] = pvc.metadata.labels.get("source_svm", "")
+                volumeDict["Source Volume"] = pvc.metadata.labels.get("source_volume", "")
+            else:
+                volumeDict["FlexCache"] = "No"
+                volumeDict["Source SVM"] = ""
+                volumeDict["Source Volume"] = ""
+        except NetAppRestError as err:
+            volumeDict["FlexCache"] = "No"
+            volumeDict["Source SVM"] = ""
+            volumeDict["Source Volume"] = ""
 
         # Append dict to list of volumes
         volumesList.append(volumeDict)
@@ -2105,30 +2271,32 @@ def create_flexcache(
     backend_name: str,
     junction: str = None,
     namespace: str = "default",
+    trident_namespace: str = "trident",
     print_output: bool = False
 ):
     """
-    Created a FlexCache in ONTAP and create FlexCache
+    Create a FlexCache volume in ONTAP and a corresponding PersistentVolume (PV) and PersistentVolumeClaim (PVC) in Kubernetes.
 
-    Required parameters:
-    - source_vol: The name of the source volume
-    - source_svm: The name of the source SVM
-    - flexcache_vol: The name of the FlexCache volume
-    - flexcache_size: The size of the FlexCache volume
-    - backend_name: The name of the backend storage
+    This function creates a FlexCache volume in ONTAP and then creates a PV and PVC representing the FlexCache in a specified Kubernetes namespace.
 
-    Optional parameters:
-    - junction: The junction path for the FlexCache volume
-    - namespace: The Kubernetes namespace, default is "default"
-    - print_output: Flag to print output messages, default is False
+    Parameters:
+    - source_vol (str): The name of the source volume in the source SVM that will be cached by the FlexCache volume.
+    - source_svm (str): The name of the source Storage Virtual Machine (SVM) that contains the origin volume to be cached.
+    - flexcache_vol (str): The name of the FlexCache volume to be created.
+    - flexcache_size (str): The size of the FlexCache volume to be created. The size must be specified in a format such as '1024Mi', '100Gi', '10Ti', etc. Note: The size must be at least 50Gi.
+    - backend_name (str): The name of the tridentbackendconfig.
+    - junction (str, optional): The junction path for the FlexCache volume. Default is None.
+    - namespace (str, optional): Kubernetes namespace to create the new PersistentVolumeClaim (PVC) in. Default is "default".
+    - trident_namespace (str, optional): Kubernetes namespace where Trident is installed. Default is "trident".
+    - print_output (bool, optional): Whether to print output messages. Default is False.
 
     Returns:
     - dict: A dictionary containing the FlexCache volume and PVC information.
 
     Raises:
-    - APIConnectionError: If there is an error connecting to the API.
+    - InvalidConfigError: If the Kubernetes configuration is invalid.
+    - APIConnectionError: If there is an error connecting to the Kubernetes API.
     - InvalidVolumeParameterError: If the volume parameters are invalid.
-    - InvalidConfigError: If the configuration is invalid.
     - NetAppRestError: If there is an error with the NetApp REST API.
     - ConnectionTypeError: If the connection type is invalid.
     """
@@ -2138,7 +2306,7 @@ def create_flexcache(
     flexcache_vol_modified = _validate_volume_name(flexcache_vol)
     
     try:
-        config = _get_trident_backend_config(backend_config_name=backend_name, namespace=namespace, print_output=print_output)
+        config = _get_trident_backend_config(backend_config_name=backend_name, namespace=trident_namespace, print_output=print_output)
     except InvalidConfigError:
         raise
 
@@ -2166,7 +2334,7 @@ def create_flexcache(
                 flexcache_size_bytes = _convert_size_to_bytes(flexcache_size)
             except InvalidVolumeParameterError:
                 if print_output:
-                    print("Error: Invalid flexcache volume size specified. Acceptable values are '1024MB', '100GB', '10TB', etc.")
+                    print("Error: Invalid flexcache volume size specified. Acceptable values are '1024Mi', '100Gi', '10Ti', etc.")
                 raise
 
         # Create option to choose junction path.
@@ -2232,7 +2400,9 @@ def create_flexcache(
         pvc_name = flexcache_vol
         pv_name = f"pv-{flexcache_vol}"
         labels = {
-            "app": "flexcache"
+            "app": "flexcache",
+            "source_svm": source_svm,
+            "source_volume": source_vol
         }
 
         # Create PV in Kubernetes
