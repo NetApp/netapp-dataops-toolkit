@@ -463,6 +463,7 @@ def create_flexcache_tool(
     backend_name: str,
     junction: str = None,
     namespace: str = "default",
+    trident_namespace: str = "trident",
     print_output: bool = False
 ) -> str:
     """
@@ -478,10 +479,11 @@ def create_flexcache_tool(
     - backend_name (str): The name of the tridentbackendconfig.
     - junction (str, optional): The junction path for the FlexCache volume. Default is None.
     - namespace (str, optional): Kubernetes namespace to create the new PersistentVolumeClaim (PVC) in. Default is "default".
+    - trident_namespace (str, optional): Kubernetes namespace where Trident is installed. Default is "trident".
     - print_output (bool, optional): Whether to print output messages. Default is False.
 
     Returns:
-    - str: A message indicating the successful creation of the FlexCache volume and the associated PVC.
+    - dict: A dictionary containing the FlexCache volume and PVC information.
 
     Raises:
     - InvalidConfigError: If the Kubernetes configuration is invalid.
@@ -499,10 +501,14 @@ def create_flexcache_tool(
             backend_name=backend_name,
             junction=junction,
             namespace=namespace,
+            trident_namespace=trident_namespace,
             print_output=print_output
         )
 
-        return f"FlexCache volume '{result['ontap_flexcache']}' and PVC '{result['k8s_pvc']}' created successfully."
+        return {
+            "ontap_flexcache": result['ontap_flexcache'],
+            "k8s_pvc": result['k8s_pvc']
+        }
     except Exception as e:
         print(f"Error creating FlexCache volume: {e}")
         raise
