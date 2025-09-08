@@ -461,7 +461,7 @@ def create_flexcache_tool(
     flexcache_vol: str,
     flexcache_size: str,
     backend_name: str,
-    junction: str = None,
+    junction: Optional[str] = None,
     namespace: str = "default",
     trident_namespace: str = "trident",
     print_output: bool = False
