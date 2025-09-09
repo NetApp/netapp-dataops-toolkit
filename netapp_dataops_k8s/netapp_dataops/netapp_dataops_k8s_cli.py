@@ -699,7 +699,7 @@ Optional Options/Arguments:
 \t-h, --help\t\tPrint help text.
 \t-c, --junction=\t\tThe junction path for the FlexCache volume.
 \t-n, --namespace=\tKubernetes namespace to create the new PersistentVolumeClaim (PVC) in. If not specified, the PVC will be created in the "default" namespace.
-\t-t, --trident-namespace=\tKubernetes namespace where Trident is installed. If not specified, the namespace "trident" will be used.
+\t-t, --trident-namespace=Kubernetes namespace where Trident is installed. If not specified, the namespace "trident" will be used.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py create flexcache --flexcache-vol=cache1 --flexcache-size=50Gi --source-vol=origin1 --source-svm=svm1 --backend-name=backend1
