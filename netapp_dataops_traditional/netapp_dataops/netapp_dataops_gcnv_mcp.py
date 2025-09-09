@@ -428,7 +428,7 @@ async def list_snapshots_tool(
     project_id: str,
     location: str,
     volume_id: str
-) -> None:
+) -> Dict[str, Any]:
     """
     Use this tool to list all snapshots for a given volume.
 
