@@ -152,6 +152,9 @@ def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = 
                 raise APIConnectionError(err)
     else:
         raise ConnectionTypeError()
+    
+    # Return the created snapshot name
+    return snapshot_name
 
 
 def delete_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = None, svm_name: str = None, skip_owned: bool = False, print_output: bool = False):

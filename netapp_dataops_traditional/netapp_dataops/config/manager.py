@@ -11,7 +11,7 @@ import getpass
 from pathlib import Path
 from typing import Optional, Dict, Any
 
-from .models import NetAppDataOpsConfig, ONTAPConfig, S3Config, CloudSyncConfig
+from .models import NetAppDataOpsConfig, ONTAPConfig, S3Config, CloudSyncConfig, DatasetManagerConfig
 from .exceptions import (
     ConfigError, 
     ConfigValidationError, 
@@ -114,10 +114,16 @@ class ConfigManager:
             if self._prompt_yes_no("Do you want to configure Cloud Sync settings?"):
                 cloud_sync_config = self._create_cloud_sync_config()
             
+            # Optional Dataset Manager configuration
+            dataset_manager_config = None
+            if self._prompt_yes_no("Do you intend to use the toolkit's Dataset Manager functionality?"):
+                dataset_manager_config = self._create_dataset_manager_config()
+            
             return NetAppDataOpsConfig(
                 ontap=ontap_config,
                 s3=s3_config,
-                cloud_sync=cloud_sync_config
+                cloud_sync=cloud_sync_config,
+                dataset_manager=dataset_manager_config
             )
             
         except Exception as e:
@@ -193,6 +199,41 @@ class ConfigManager:
         
         return CloudSyncConfig(
             refresh_token=base64.b64encode(refresh_token.encode()).decode()
+        )
+    
+    def _create_dataset_manager_config(self) -> DatasetManagerConfig:
+        """Create Dataset Manager configuration through interactive prompts."""
+        print("\n--- Dataset Manager Settings ---")
+        
+        # Check if user has existing root volume
+        has_existing = self._prompt_yes_no("Do you have a pre-existing Dataset Manager 'root' volume?")
+        
+        if has_existing:
+            root_volume_name = self._prompt_required("Dataset Manager 'root' volume name")
+            root_mountpoint = self._prompt_required("Desired local mountpoint for Dataset Manager 'root' volume")
+        else:
+            create_new = self._prompt_yes_no("Would you like to create a new Dataset Manager 'root' volume now?")
+            if create_new:
+                root_volume_name = self._prompt_with_default("Desired Dataset Manager 'root' volume name", "dataset_mgr_root")
+                root_mountpoint = self._prompt_required("Desired local mountpoint for Dataset Manager 'root' volume")
+                
+                print(f"\nNote: You will need to create the volume '{root_volume_name}' and mount it to '{root_mountpoint}' manually.")
+                print("After configuration, you can create the volume using:")
+                print(f"  netapp_dataops_cli.py create volume -n {root_volume_name} -s <size>")
+                print(f"  netapp_dataops_cli.py mount volume -n {root_volume_name} -m {root_mountpoint}")
+            else:
+                print("Dataset Manager configuration skipped.")
+                return DatasetManagerConfig(enabled=False)
+        
+        # Ask about adding to fstab
+        if self._prompt_yes_no(f"Would you like to add your Dataset Manager 'root' volume to /etc/fstab now?"):
+            print("\nNote: Adding to /etc/fstab requires manual configuration.")
+            print("Please add an appropriate NFS mount entry to /etc/fstab for persistent mounting.")
+        
+        return DatasetManagerConfig(
+            enabled=True,
+            root_volume_name=root_volume_name,
+            root_mountpoint=root_mountpoint
         )
     
     def _prompt_required(self, prompt: str) -> str:
@@ -272,5 +313,10 @@ class ConfigManager:
         
         if config.cloud_sync:
             summary.append("  Cloud Sync: Configured")
+        
+        if config.dataset_manager and config.dataset_manager.enabled:
+            summary.append("  Dataset Manager: Enabled")
+            summary.append(f"    Root Volume: {config.dataset_manager.root_volume_name}")
+            summary.append(f"    Root Mountpoint: {config.dataset_manager.root_mountpoint}")
         
         return "\n".join(summary)

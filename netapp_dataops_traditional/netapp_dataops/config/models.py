@@ -205,12 +205,58 @@ class CloudSyncConfig:
 
 
 @dataclass
+class DatasetManagerConfig:
+    """Configuration for Dataset Manager functionality."""
+    
+    enabled: bool = False
+    root_volume_name: str = ""
+    root_mountpoint: str = ""
+    
+    def __post_init__(self):
+        """Validate configuration after initialization."""
+        if self.enabled:
+            self._validate_required_fields()
+    
+    def _validate_required_fields(self):
+        """Validate that required fields are not empty when enabled."""
+        if not self.root_volume_name or not self.root_volume_name.strip():
+            raise ConfigValidationError(
+                "Dataset Manager root volume name cannot be empty when enabled",
+                field="root_volume_name"
+            )
+        
+        if not self.root_mountpoint or not self.root_mountpoint.strip():
+            raise ConfigValidationError(
+                "Dataset Manager root mountpoint cannot be empty when enabled",
+                field="root_mountpoint"
+            )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "datasetManagerEnabled": self.enabled,
+            "datasetManagerRootVolume": self.root_volume_name,
+            "datasetManagerRootMountpoint": self.root_mountpoint
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'DatasetManagerConfig':
+        """Create DatasetManagerConfig from dictionary."""
+        return cls(
+            enabled=data.get("datasetManagerEnabled", False),
+            root_volume_name=data.get("datasetManagerRootVolume", ""),
+            root_mountpoint=data.get("datasetManagerRootMountpoint", "")
+        )
+
+
+@dataclass
 class NetAppDataOpsConfig:
     """Complete NetApp DataOps Toolkit configuration."""
     
     ontap: ONTAPConfig
     s3: Optional[S3Config] = None
     cloud_sync: Optional[CloudSyncConfig] = None
+    dataset_manager: Optional[DatasetManagerConfig] = None
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert complete configuration to dictionary for JSON serialization."""
@@ -221,6 +267,9 @@ class NetAppDataOpsConfig:
         
         if self.cloud_sync:
             config_dict.update(self.cloud_sync.to_dict())
+        
+        if self.dataset_manager:
+            config_dict.update(self.dataset_manager.to_dict())
         
         return config_dict
 
@@ -239,10 +288,16 @@ class NetAppDataOpsConfig:
         if data.get("cloudCentralRefreshToken"):
             cloud_sync_config = CloudSyncConfig.from_dict(data)
         
+        # Check if Dataset Manager configuration exists
+        dataset_manager_config = None
+        if data.get("datasetManagerEnabled") is not None:
+            dataset_manager_config = DatasetManagerConfig.from_dict(data)
+        
         return cls(
             ontap=ontap_config,
             s3=s3_config,
-            cloud_sync=cloud_sync_config
+            cloud_sync=cloud_sync_config,
+            dataset_manager=dataset_manager_config
         )
 
     def has_s3_config(self) -> bool:
@@ -252,3 +307,7 @@ class NetAppDataOpsConfig:
     def has_cloud_sync_config(self) -> bool:
         """Check if Cloud Sync configuration is available."""
         return self.cloud_sync is not None
+
+    def has_dataset_manager_config(self) -> bool:
+        """Check if Dataset Manager configuration is available."""
+        return self.dataset_manager is not None and self.dataset_manager.enabled

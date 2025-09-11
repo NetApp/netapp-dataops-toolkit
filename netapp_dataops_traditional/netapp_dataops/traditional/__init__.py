@@ -52,6 +52,15 @@ from .exceptions import (
     CloudSyncSyncOperationError
 )
 
+# Import dataset exceptions
+from .datasets.exceptions import (
+    DatasetError,
+    DatasetNotFoundError,
+    DatasetExistsError,
+    DatasetConfigError,
+    DatasetVolumeError
+)
+
 # Import volume operations from ontap package
 from .ontap.volume_operations import (
     clone_volume,
@@ -131,6 +140,12 @@ from .gcnv.snapshot_operations import (
 
 from .gcnv.replication_operations import (
     create_replication as gcnv_create_replication
+)
+
+# Import Dataset operations from datasets package
+from .datasets import (
+    Dataset,
+    get_datasets
 )
 
 
