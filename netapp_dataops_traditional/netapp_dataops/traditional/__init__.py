@@ -129,10 +129,6 @@ from .gcnv.snapshot_operations import (
     list_snapshots as gcnv_list_snapshots
 )
 
-from .gcnv.replication_operations import (
-    create_replication as gcnv_create_replication
-)
-
 
 @deprecated
 def restore_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = None, svm_name : str = None, print_output: bool = False):
