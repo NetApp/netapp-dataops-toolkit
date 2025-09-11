@@ -138,10 +138,6 @@ from .gcnv.snapshot_operations import (
     list_snapshots as gcnv_list_snapshots
 )
 
-from .gcnv.replication_operations import (
-    create_replication as gcnv_create_replication
-)
-
 # Import Dataset operations from datasets package
 from .datasets import (
     Dataset,
