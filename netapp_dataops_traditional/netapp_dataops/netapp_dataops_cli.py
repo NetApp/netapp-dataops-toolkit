@@ -887,7 +887,7 @@ if __name__ == '__main__':
 
             if retentionCount:
                 if not retentionCount.isnumeric():
-                    matchObj = re.match("^(\d+)d$",retentionCount)
+                    matchObj = re.match(r"^(\d+)d$",retentionCount)
                     if not matchObj:
                         handleInvalidCommand(helpText=helpTextCreateSnapshot, invalidOptArg=True)
                     else:
