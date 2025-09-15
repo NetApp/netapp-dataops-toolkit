@@ -519,7 +519,7 @@ class ConfigManager:
             return "unknown"
     
     def _mount_volume(self, volume_name: str, mountpoint: str) -> bool:
-        """Mount the volume to the specified mountpoint."""
+        """Mount the volume to the specified mountpoint with automatic NFS client installation."""
         try:
             # Create mountpoint directory if it doesn't exist
             os.makedirs(mountpoint, exist_ok=True)
@@ -545,6 +545,30 @@ class ConfigManager:
             
             if result.returncode == 0:
                 return True
+            
+            # Check if failure is due to missing NFS utilities
+            if ("bad option" in result.stderr.lower() or 
+                "mount.<type> helper" in result.stderr.lower() or
+                "mount.nfs" in result.stderr.lower()):
+                
+                print(f"NFS client utilities not found. Attempting automatic installation...")
+                if self._install_nfs_client():
+                    print("✓ NFS client installed successfully. Retrying mount...")
+                    
+                    # Retry NFS mount after installation
+                    result = subprocess.run([
+                        'sudo', 'mount', '-t', 'nfs', nfs_target, mountpoint
+                    ], capture_output=True, text=True)
+                    
+                    if result.returncode == 0:
+                        return True
+                    else:
+                        print(f"Mount still failed after NFS client installation: {result.stderr}")
+                        return False
+                else:
+                    print(f"Failed to install NFS client automatically.")
+                    print(f"Please install manually: sudo apt install -y nfs-common")
+                    return False
             else:
                 print(f"Mount command failed: {result.stderr}")
                 return False
@@ -727,6 +751,112 @@ class ConfigManager:
                 return value
             else:
                 print(f"Please choose from: {', '.join(choices)}")
+    
+    def _detect_os(self) -> str:
+        """Detect the operating system type."""
+        try:
+            with open('/etc/os-release', 'r') as f:
+                content = f.read().lower()
+                if 'ubuntu' in content or 'debian' in content:
+                    return 'debian'
+                elif 'red hat' in content or 'rhel' in content or 'centos' in content or 'fedora' in content:
+                    return 'redhat'
+                elif 'suse' in content:
+                    return 'suse'
+        except:
+            pass
+        
+        # Fallback detection
+        import platform
+        system = platform.system().lower()
+        if system == 'linux':
+            # Try to detect package manager
+            try:
+                subprocess.run(['apt', '--version'], capture_output=True, check=True)
+                return 'debian'
+            except:
+                pass
+            try:
+                subprocess.run(['yum', '--version'], capture_output=True, check=True)
+                return 'redhat'
+            except:
+                pass
+            try:
+                subprocess.run(['zypper', '--version'], capture_output=True, check=True)
+                return 'suse'
+            except:
+                pass
+        
+        return 'unknown'
+    
+    def _install_nfs_client(self) -> bool:
+        """Automatically install NFS client utilities based on the detected OS."""
+        os_type = self._detect_os()
+        
+        print(f"Detected OS type: {os_type}")
+        
+        install_commands = {
+            'debian': ['sudo', 'apt', 'update', '&&', 'sudo', 'apt', 'install', '-y', 'nfs-common'],
+            'redhat': ['sudo', 'yum', 'install', '-y', 'nfs-utils'],
+            'suse': ['sudo', 'zypper', 'install', '-y', 'nfs-client']
+        }
+        
+        if os_type not in install_commands:
+            print(f"Unsupported OS type: {os_type}")
+            print("Please install NFS client utilities manually:")
+            print("  Ubuntu/Debian: sudo apt install -y nfs-common")
+            print("  RHEL/CentOS:   sudo yum install -y nfs-utils")
+            print("  SUSE:          sudo zypper install -y nfs-client")
+            return False
+        
+        try:
+            print(f"Installing NFS client utilities for {os_type}...")
+            
+            if os_type == 'debian':
+                # For Debian/Ubuntu, run update and install separately
+                print("Updating package list...")
+                result1 = subprocess.run(['sudo', 'apt', 'update'], 
+                                       capture_output=True, text=True)
+                if result1.returncode != 0:
+                    print(f"Package update failed: {result1.stderr}")
+                    return False
+                
+                print("Installing nfs-common...")
+                result2 = subprocess.run(['sudo', 'apt', 'install', '-y', 'nfs-common'], 
+                                       capture_output=True, text=True)
+                success = result2.returncode == 0
+                if not success:
+                    print(f"NFS client installation failed: {result2.stderr}")
+            else:
+                # For other distros, run single command
+                result = subprocess.run(install_commands[os_type], 
+                                      capture_output=True, text=True)
+                success = result.returncode == 0
+                if not success:
+                    print(f"NFS client installation failed: {result.stderr}")
+            
+            if success:
+                print("✓ NFS client utilities installed successfully")
+                
+                # Verify installation
+                try:
+                    result = subprocess.run(['which', 'mount.nfs'], 
+                                          capture_output=True, text=True)
+                    if result.returncode == 0:
+                        print(f"✓ NFS mount helper found at: {result.stdout.strip()}")
+                        return True
+                    else:
+                        print("⚠️  mount.nfs not found after installation")
+                        return False
+                except:
+                    print("⚠️  Could not verify NFS installation")
+                    return False
+            
+            return success
+            
+        except Exception as e:
+            print(f"Error during NFS client installation: {e}")
+            return False
     
     def get_config_summary(self, config: NetAppDataOpsConfig) -> str:
         """
