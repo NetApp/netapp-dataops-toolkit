@@ -32,6 +32,7 @@ from ..core import (
     _instantiate_connection, 
     _print_invalid_config_error,
     _convert_bytes_to_pretty_size,
+    _convert_size_string_to_bytes,
     deprecated
 )
 
@@ -448,17 +449,10 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
                 print("Error: Invalid unix gid specified. Value must be an integer. Example: '0' for root group.")
             raise InvalidVolumeParameterError("unixGID")
 
-        # Convert volume size to Bytes
-        if re.search("^[0-9]+MB$", volume_size):
-            # Convert from MB to Bytes
-            volumeSizeBytes = int(volume_size[:len(volume_size)-2]) * 1024**2
-        elif re.search("^[0-9]+GB$", volume_size):
-            # Convert from GB to Bytes
-            volumeSizeBytes = int(volume_size[:len(volume_size)-2]) * 1024**3
-        elif re.search("^[0-9]+TB$", volume_size):
-            # Convert from TB to Bytes
-            volumeSizeBytes = int(volume_size[:len(volume_size)-2]) * 1024**4
-        else :
+        # Convert volume size to Bytes using centralized utility function
+        try:
+            volumeSizeBytes = _convert_size_string_to_bytes(volume_size)
+        except ValueError:
             if print_output:
                 print("Error: Invalid volume size specified. Acceptable values are '1024MB', '100GB', '10TB', etc.")
             raise InvalidVolumeParameterError("size")

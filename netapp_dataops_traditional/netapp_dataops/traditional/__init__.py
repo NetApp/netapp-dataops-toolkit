@@ -38,6 +38,8 @@ from .core import (
     _instantiate_connection,
     _print_invalid_config_error,
     _convert_bytes_to_pretty_size,
+    _convert_size_string_to_bytes,
+    _sizes_are_equivalent,
     deprecated
 )
 from .exceptions import (
