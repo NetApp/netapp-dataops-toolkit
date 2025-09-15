@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
 import sys
 import asyncio
-from typing import Any, Dict
+import json
+import logging
+from typing import Any, Dict, Optional
 from fastmcp import FastMCP
+from google.protobuf.json_format import MessageToDict
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Importing the necessary functions from the traditional GCNV module
 from netapp_dataops.traditional.gcnv import (
@@ -26,27 +33,29 @@ async def create_volume_tool(
     storage_pool: str,
     capacity_gib: int,
     protocols: list,    
-    export_policy_rules: list = None,
-    smb_settings: list = None,
-    unix_permissions: str = None,
-    labels: dict = None,
-    description: str = None,
-    snapshot_policy: dict = None,
-    snap_reserve: float = None,
-    snapshot_directory: bool = None,
-    security_style: str = None,
-    kerberos_enabled: bool = None,
-    backup_policies: list = None,
-    backup_vault: str = None,
-    scheduled_backup_enabled: bool = None,
-    block_deletion_when_clients_connected: bool = None,
-    large_capacity: bool = None,
-    multiple_endpoints: bool = None,
-    tiering_enabled: bool = None,
-    cooling_threshold_days: int = None
+    export_policy_rules: Optional[list] = None,
+    smb_settings: Optional[list] = None,
+    unix_permissions: Optional[str] = None,
+    labels: Optional[dict] = None,
+    description: Optional[str] = None,
+    snapshot_policy: Optional[dict] = None,
+    snap_reserve: Optional[float] = None,
+    snapshot_directory: Optional[bool] = None,
+    security_style: Optional[str] = None,
+    kerberos_enabled: Optional[bool] = None,
+    backup_policies: Optional[list] = None,
+    backup_vault: Optional[str] = None,
+    scheduled_backup_enabled: Optional[bool] = None,
+    block_deletion_when_clients_connected: Optional[bool] = None,
+    large_capacity: Optional[bool] = None,
+    multiple_endpoints: Optional[bool] = None,
+    tiering_enabled: Optional[bool] = None,
+    cooling_threshold_days: Optional[int] = None
 ) -> Dict[str, Any]:
     """
     Use this tool to create a new volume in the specified project and location.
+    A volume provides NFS or SMB file services for your application with integrated data protection services.
+    A volume is allocated from a storage pool and gets an individual or shared throughput limit based on its allocated capacity and storage pool service level.
 
     Args:
         project_id (str):
@@ -174,7 +183,7 @@ async def create_volume_tool(
         cooling_threshold_days=cooling_threshold_days
     )
     if response['status'] == 'error':
-        mcp.log_error(f"Error creating volume: {response['message']}")
+        logger.error(f"Error creating volume: {response['message']}")
     return response
     
     
@@ -188,24 +197,24 @@ async def clone_volume_tool(
     share_name: str,
     storage_pool: str,
     protocols: list,
-    export_policy_rules: list = None,
-    smb_settings: list = None,
-    unix_permissions: str = None,
-    labels: dict = None,
-    description: str = None,
-    snapshot_policy: dict = None,
-    snap_reserve: float = None,
-    snapshot_directory: bool = None,
-    security_style: str = None,
-    kerberos_enabled: bool = None,
-    backup_policies: list = None,
-    backup_vault: str = None,
-    scheduled_backup_enabled: bool = None,
-    block_deletion_when_clients_connected: bool = None,
-    large_capacity: bool = None,
-    multiple_endpoints: bool = None,
-    tiering_enabled: bool = None,
-    cooling_threshold_days: int = None
+    export_policy_rules: Optional[list] = None,
+    smb_settings: Optional[list] = None,
+    unix_permissions: Optional[str] = None,
+    labels: Optional[dict] = None,
+    description: Optional[str] = None,
+    snapshot_policy: Optional[dict] = None,
+    snap_reserve: Optional[float] = None,
+    snapshot_directory: Optional[bool] = None,
+    security_style: Optional[str] = None,
+    kerberos_enabled: Optional[bool] = None,
+    backup_policies: Optional[list] = None,
+    backup_vault: Optional[str] = None,
+    scheduled_backup_enabled: Optional[bool] = None,
+    block_deletion_when_clients_connected: Optional[bool] = None,
+    large_capacity: Optional[bool] = None,
+    multiple_endpoints: Optional[bool] = None,
+    tiering_enabled: Optional[bool] = None,
+    cooling_threshold_days: Optional[int] = None
 ) -> Dict[str, Any]:
     """
     Use this tool to clone an existing volume.
@@ -339,7 +348,7 @@ async def clone_volume_tool(
         cooling_threshold_days=cooling_threshold_days
     )
     if response['status'] == 'error':
-        mcp.log_error(f"Error cloning volume: {response.get('message', 'Unknown error')}")
+        logger.error(f"Error cloning volume: {response.get('message', 'Unknown error')}")
     return response
     
 @mcp.tool(name = "List Volumes")
@@ -371,7 +380,7 @@ async def list_volumes_tool(
         location=location
     )
     if response['status'] == 'error':
-        mcp.log_error(f"Error listing volumes: {response['message']}")
+        logger.error(f"Error listing volumes: {response['message']}")
     return response
 
 @mcp.tool(name = "Create Snapshot")
@@ -380,12 +389,13 @@ async def create_snapshot_tool(
     location: str,
     volume_id: str,
     snapshot_id: str,
-    description: str = None,
-    labels: dict = None
+    description: Optional[str] = None,
+    labels: Optional[dict] = None
 ) -> Dict[str, Any]:
     """
     Use this tool to create a near-instantaneous, space-efficient, read-only copy of an existing data volume, called a snapshot. 
-    Snapshots are particularly useful for versioning datasets and implementing dataset-to-model traceability.
+    Snapshots are local space efficient image copies of your volume.
+    Use snapshots to revert a volume to a prior point in time or to restore to a new volume as a copy of your original volume. 
 
     Args:
         project_id (str):
@@ -420,7 +430,7 @@ async def create_snapshot_tool(
         labels=labels
     )
     if response['status'] == 'error':
-        mcp.log_error(f"Error creating snapshot: {response['message']}")
+        logger.error(f"Error creating snapshot: {response['message']}")
     return response
     
 @mcp.tool(name = "List Snapshots")
@@ -456,7 +466,7 @@ async def list_snapshots_tool(
             volume_id=volume_id
     )
     if response['status'] == 'error':
-        mcp.log_error(f"Error listing snapshots: {response['message']}")
+        logger.error(f"Error listing snapshots: {response['message']}")
     return response
 
 @mcp.tool(name = "Create Replication")
@@ -467,16 +477,18 @@ async def create_replication_tool(
     replication_id: str,
     replication_schedule: str,
     destination_storage_pool: str,
-    destination_volume_id: str = None,
-    destination_share_name: str = None,
-    destination_volume_description: str = None,
-    tiering_enabled: bool = None,
-    cooling_threshold_days: int = None,
-    description: str = None,
-    labels: dict = None
+    destination_volume_id: Optional[str] = None,
+    destination_share_name: Optional[str] = None,
+    destination_volume_description: Optional[str] = None,
+    tiering_enabled: Optional[bool] = None,
+    cooling_threshold_days: Optional[int] = None,
+    description: Optional[str] = None,
+    labels: Optional[dict] = None
 ) -> Dict[str, Any]:
     """
     Use this tool to create a replication for a volume.
+    Volume replication enables asynchronous replication of a volume to a different location.
+    A new volume in the destination location will be created in a storage pool with available capacity within a supported region pair.
 
     Args:
         source_project_id (str):
@@ -539,7 +551,7 @@ async def create_replication_tool(
         labels=labels
     )
     if response['status'] == 'error':
-        mcp.log_error(f"Error creating replication: {response['message']}")
+        logger.error(f"Error creating replication: {response['message']}")
     return response
 
 # Register the MCP instance to run the tools

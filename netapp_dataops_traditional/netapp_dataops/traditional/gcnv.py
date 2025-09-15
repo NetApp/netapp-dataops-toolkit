@@ -2,45 +2,16 @@ from google.cloud import netapp_v1
 from google.protobuf.json_format import MessageToDict
 from typing import Dict, List, Any, Union
 
-def _serialize_response(response) -> Union[Dict[str, Any], str]:
-    """
-    Serialize a protobuf response to a JSON-serializable dictionary.
-    
-    Args:
-        response: The protobuf response object to serialize.
-        
-    Returns:
-        dict: JSON-serializable dictionary representation of the response.
-    """
-    if hasattr(response, '__class__') and hasattr(response.__class__, '_pb'):
-        # This is a protobuf message, serialize it properly
-        return MessageToDict(response._pb)
-    elif hasattr(response, '_pb'):
-        # Direct protobuf message
-        return MessageToDict(response._pb)
-    else:
-        # Fallback to string representation for other types
-        return str(response)
-
-def _serialize_list_response(items) -> List[Union[Dict[str, Any], str]]:
-    """
-    Serialize a list of protobuf objects to JSON-serializable format.
-    
-    Args:
-        items: List of protobuf objects to serialize.
-        
-    Returns:
-        list: List of JSON-serializable dictionaries.
-    """
-    serialized_items = []
-    for item in items:
-        if hasattr(item, '__class__') and hasattr(item.__class__, '_pb'):
-            serialized_items.append(MessageToDict(item._pb))
-        elif hasattr(item, '_pb'):
-            serialized_items.append(MessageToDict(item._pb))
-        else:
-            serialized_items.append(str(item))
-    return serialized_items
+def _serialize(details) -> Union[Dict[str, Any], List[Any], str, int, float, bool, None]:
+    """Internal helper to convert protobuf objects (and lists) to JSON-serializable structures."""
+    if hasattr(details, '_pb'):
+        return MessageToDict(details._pb)
+    if isinstance(details, list):
+        return [_serialize(item) for item in details]
+    if isinstance(details, (dict, str, int, float, bool)) or details is None:
+        return details
+    # Fallback to string representation
+    return str(details)
 
 def create_volume(
     project_id: str,
@@ -71,6 +42,8 @@ def create_volume(
 ) -> Dict[str, Any]:
     """
     Creates a new NetApp volume in the specified Google Cloud project and location.
+    A volume provides NFS or SMB file services for your application with integrated data protection services.
+    A volume is allocated from a storage pool and gets an individual or shared throughput limit based on its allocated capacity and storage pool service level.
 
     Args:
         project_id (str):
@@ -255,7 +228,7 @@ def create_volume(
 
         response = operation.result()
 
-        return {"status": "success", "details": _serialize_response(response)}
+        return {"status": "success", "details": _serialize(response)}
     
     except Exception as e:
         print(f"An error occurred while creating the volume: {e}")
@@ -424,8 +397,7 @@ def clone_volume(
         capacity_gib=source_vol.capacity_gib,
         protocols=protocols,
         restore_parameters=netapp_v1.RestoreParameters(
-            source_volume=source_name,
-            source_snapshot=source_snapshot
+            source_snapshot=f"{source_name}/snapshots/{source_snapshot}"
         ),
         description=description,
         labels=labels or {},
@@ -433,8 +405,8 @@ def clone_volume(
         snapshot_directory=snapshot_directory,
         security_style=security_style,
         kerberos_enabled=kerberos_enabled,
-        large_volume=large_capacity,
-        multi_protocol_access=multiple_endpoints,
+        large_capacity=large_capacity,
+        multiple_endpoints=multiple_endpoints,
     )
  
     if smb_settings:
@@ -483,7 +455,7 @@ def clone_volume(
 
         response = operation.result()
 
-        return {"status": "success", "details": _serialize_response(response)}
+        return {"status": "success", "details": _serialize(response)}
 
     except Exception as e:
         print(f"An error occurred while cloning the volume: {e}")
@@ -544,7 +516,7 @@ def delete_volume(
 
         response = operation.result()
 
-        return {"status": "success", "details": _serialize_response(response)}
+        return {"status": "success", "details": _serialize(response)}
 
     except Exception as e:
         print(f"An error occurred while deleting the volume: {e}")
@@ -597,7 +569,7 @@ def list_volumes(
 
         volumes = [v for v in page_result]
 
-        return {"status": "success", "details": _serialize_list_response(volumes)}
+        return {"status": "success", "details": _serialize(volumes)}
 
     except Exception as e:
         print(f"An error occurred while listing volumes: {e}")
@@ -614,6 +586,8 @@ def create_snapshot(
 ) -> Dict[str, Any]:
     """
     Create a snapshot of a NetApp volume in Google Cloud.
+    Snapshots are local space efficient image copies of your volume.
+    Use snapshots to revert a volume to a prior point in time or to restore to a new volume as a copy of your original volume. 
 
     Args:
         project_id (str):
@@ -655,7 +629,7 @@ def create_snapshot(
     parent = f"projects/{project_id}/locations/{location}/volumes/{volume_id}"
 
     # Define a snapshot
-    snapshot = netapp_v1.Snapshot(snapshot_id=snapshot_id, description=description, labels=labels or {})
+    snapshot = netapp_v1.Snapshot(description=description, labels=labels or {})
 
     # Initialize request argument(s)
     request = netapp_v1.CreateSnapshotRequest(parent=parent, snapshot_id=snapshot_id, snapshot=snapshot)
@@ -668,7 +642,7 @@ def create_snapshot(
 
         response = operation.result()
 
-        return {"status": "success", "details": _serialize_response(response)}
+        return {"status": "success", "details": _serialize(response)}
 
     except Exception as e:
         print(f"An error occurred while creating the snapshot: {e}")
@@ -730,7 +704,7 @@ def delete_snapshot(
 
         response = operation.result()
 
-        return {"status": "success", "details": _serialize_response(response)}
+        return {"status": "success", "details": _serialize(response)}
 
     except Exception as e:
         print(f"An error occurred while deleting the snapshot: {e}")
@@ -789,7 +763,7 @@ def list_snapshots(
 
         snapshots = [s for s in page_result]
 
-        return {"status": "success", "details": _serialize_list_response(snapshots)}
+        return {"status": "success", "details": _serialize(snapshots)}
 
     except Exception as e:
         print(f"An error occurred while listing snapshots: {e}")
@@ -813,6 +787,8 @@ def create_replication(
 ) -> Dict[str, Any]:
     """
     Create a replication for a volume.
+    Volume replication enables asynchronous replication of a volume to a different location.
+    A new volume in the destination location will be created in a storage pool with available capacity within a supported region pair.
 
     Args:
         source_project_id (str):
@@ -910,7 +886,7 @@ def create_replication(
 
         response = operation.result()
 
-        return {"status": "success", "details": _serialize_response(response)}
+        return {"status": "success", "details": _serialize(response)}
 
     except Exception as e:
         print(f"An error occurred while creating the replication: {e}")
