@@ -140,13 +140,31 @@ class Dataset:
                     "Please create it or update your configuration."
                 )
             
-            # Check junction path exists
+            # Check junction path exists and fix automatically if needed
             junction_path = root_volume.get("Junction Path")
-            if not junction_path:
-                raise DatasetConfigError(
-                    f"Root volume '{self._root_volume_name}' is not junctioned. "
-                    "Please junction it to make datasets accessible locally."
-                )
+            expected_junction = f"/{self._root_volume_name}"
+            
+            if not junction_path or junction_path != expected_junction:
+                if self.print_output:
+                    print(f"Root volume '{self._root_volume_name}' junction path issue detected.")
+                    if not junction_path:
+                        print("Junction path is not set.")
+                    else:
+                        print(f"Current junction: '{junction_path}', expected: '{expected_junction}'")
+                    print("Attempting to fix automatically...")
+                
+                # Attempt to fix the junction path automatically
+                if self._fix_junction_path(self._root_volume_name, expected_junction):
+                    if self.print_output:
+                        print(f"✓ Junction path fixed to '{expected_junction}'")
+                else:
+                    raise DatasetConfigError(
+                        f"Root volume '{self._root_volume_name}' is not properly junctioned. "
+                        f"Expected junction path: '{expected_junction}'. "
+                        "Automatic fix failed. Please set manually using ONTAP CLI: "
+                        f"volume mount -vserver {self._config.get('svm', 'svm0')} "
+                        f"-volume {self._root_volume_name} -junction-path {expected_junction}"
+                    )
             
             # Verify local mountpoint exists and is accessible
             if not os.path.exists(self._root_mountpoint):
@@ -437,6 +455,37 @@ class Dataset:
                     return True
             return False
         except:
+            return False
+    
+    def _fix_junction_path(self, volume_name: str, new_junction_path: str) -> bool:
+        """Fix the junction path of an existing volume."""
+        try:
+            # Get config and establish connection
+            config = _retrieve_config(print_output=False)
+            _instantiate_connection(config=config, connectionType="ONTAP", print_output=False)
+            
+            # Find the volume by name
+            volume_collection = NetAppVolume.get_collection(svm=config["svm"], name=volume_name)
+            volumes = list(volume_collection)
+            
+            if not volumes:
+                if self.print_output:
+                    print(f"Volume '{volume_name}' not found")
+                return False
+            
+            volume = volumes[0]
+            
+            # Update the junction path
+            volume.nas = {"path": new_junction_path}
+            volume.patch()
+            
+            if self.print_output:
+                print(f"Junction path updated to '{new_junction_path}'")
+            return True
+            
+        except Exception as e:
+            if self.print_output:
+                print(f"Error fixing junction path: {e}")
             return False
     
     def __str__(self) -> str:

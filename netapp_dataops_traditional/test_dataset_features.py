@@ -78,7 +78,7 @@ def test_dataset_manager():
     
     # Define MockDataset class for testing without ONTAP
     class MockDataset:
-        def __init__(self, name, max_size="100GB"):
+        def __init__(self, name, max_size="40MB"):
             self.name = name
             self.max_size = max_size
             self.is_clone = False
@@ -174,7 +174,7 @@ def test_dataset_manager():
             print(f"📊 Creating dataset: {dataset_name}")
             primary_dataset = Dataset(
                 name=dataset_name,
-                max_size="100GB",
+                max_size="40MB",
                 print_output=True
             )
             
@@ -363,7 +363,7 @@ def test_dataset_manager():
             # Test duplicate dataset name
             try:
                 print("   Testing duplicate dataset creation...")
-                duplicate_dataset = Dataset(name=dataset_name, max_size="50GB")  # Same name as original
+                duplicate_dataset = Dataset(name=dataset_name, max_size="20MB")  # Same name as original
                 print("   ⚠️  Expected error not raised for duplicate")
             except DatasetExistsError as e:
                 print(f"   ✅ Correctly caught DatasetExistsError: {e}")
