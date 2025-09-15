@@ -1,4 +1,46 @@
 from google.cloud import netapp_v1
+from google.protobuf.json_format import MessageToDict
+from typing import Dict, List, Any, Union
+
+def _serialize_response(response) -> Union[Dict[str, Any], str]:
+    """
+    Serialize a protobuf response to a JSON-serializable dictionary.
+    
+    Args:
+        response: The protobuf response object to serialize.
+        
+    Returns:
+        dict: JSON-serializable dictionary representation of the response.
+    """
+    if hasattr(response, '__class__') and hasattr(response.__class__, '_pb'):
+        # This is a protobuf message, serialize it properly
+        return MessageToDict(response._pb)
+    elif hasattr(response, '_pb'):
+        # Direct protobuf message
+        return MessageToDict(response._pb)
+    else:
+        # Fallback to string representation for other types
+        return str(response)
+
+def _serialize_list_response(items) -> List[Union[Dict[str, Any], str]]:
+    """
+    Serialize a list of protobuf objects to JSON-serializable format.
+    
+    Args:
+        items: List of protobuf objects to serialize.
+        
+    Returns:
+        list: List of JSON-serializable dictionaries.
+    """
+    serialized_items = []
+    for item in items:
+        if hasattr(item, '__class__') and hasattr(item.__class__, '_pb'):
+            serialized_items.append(MessageToDict(item._pb))
+        elif hasattr(item, '_pb'):
+            serialized_items.append(MessageToDict(item._pb))
+        else:
+            serialized_items.append(str(item))
+    return serialized_items
 
 def create_volume(
     project_id: str,
@@ -26,7 +68,7 @@ def create_volume(
     multiple_endpoints: bool = None,
     tiering_enabled: bool = None,
     cooling_threshold_days: int = None
-):
+) -> Dict[str, Any]:
     """
     Creates a new NetApp volume in the specified Google Cloud project and location.
 
@@ -213,7 +255,7 @@ def create_volume(
 
         response = operation.result()
 
-        return {"status": "success", "details": str(response)}
+        return {"status": "success", "details": _serialize_response(response)}
     
     except Exception as e:
         print(f"An error occurred while creating the volume: {e}")
@@ -247,7 +289,7 @@ def clone_volume(
     multiple_endpoints: bool = None,
     tiering_enabled: bool = None,
     cooling_threshold_days: int = None
-):
+) -> Dict[str, Any]:
     """
     Clone an existing NetApp volume.
 
@@ -441,7 +483,7 @@ def clone_volume(
 
         response = operation.result()
 
-        return {"status": "success", "details": str(response)}
+        return {"status": "success", "details": _serialize_response(response)}
 
     except Exception as e:
         print(f"An error occurred while cloning the volume: {e}")
@@ -452,7 +494,7 @@ def delete_volume(
         project_id: str,
         location: str,
         volume_id: str,
-        force: bool = False):
+        force: bool = False) -> Dict[str, Any]:
     """
     Delete a NetApp volume in the specified Google Cloud project and location.
     Args:
@@ -502,7 +544,7 @@ def delete_volume(
 
         response = operation.result()
 
-        return {"status": "success", "details": str(response)}
+        return {"status": "success", "details": _serialize_response(response)}
 
     except Exception as e:
         print(f"An error occurred while deleting the volume: {e}")
@@ -511,7 +553,7 @@ def delete_volume(
  
 def list_volumes(
         project_id: str,
-        location: str):
+        location: str) -> Dict[str, Any]:
     """
     Lists all NetApp volumes in the specified Google Cloud project and location.
 
@@ -555,7 +597,7 @@ def list_volumes(
 
         volumes = [v for v in page_result]
 
-        return {"status": "success", "details": volumes}
+        return {"status": "success", "details": _serialize_list_response(volumes)}
 
     except Exception as e:
         print(f"An error occurred while listing volumes: {e}")
@@ -569,7 +611,7 @@ def create_snapshot(
     snapshot_id: str,
     description: str = None,
     labels: dict = None
-):
+) -> Dict[str, Any]:
     """
     Create a snapshot of a NetApp volume in Google Cloud.
 
@@ -626,7 +668,7 @@ def create_snapshot(
 
         response = operation.result()
 
-        return {"status": "success", "details": str(response)}
+        return {"status": "success", "details": _serialize_response(response)}
 
     except Exception as e:
         print(f"An error occurred while creating the snapshot: {e}")
@@ -638,7 +680,7 @@ def delete_snapshot(
     location: str,
     volume_id: str,
     snapshot_id: str
-):
+) -> Dict[str, Any]:
     """
     Delete a snapshot from a NetApp volume in Google Cloud.
 
@@ -688,7 +730,7 @@ def delete_snapshot(
 
         response = operation.result()
 
-        return {"status": "success", "details": str(response)}
+        return {"status": "success", "details": _serialize_response(response)}
 
     except Exception as e:
         print(f"An error occurred while deleting the snapshot: {e}")
@@ -699,7 +741,7 @@ def list_snapshots(
     project_id: str,
     location: str,
     volume_id: str
-):
+) -> Dict[str, Any]:
     """
     List all snapshots for a NetApp volume in the specified Google Cloud project and location.
 
@@ -747,7 +789,7 @@ def list_snapshots(
 
         snapshots = [s for s in page_result]
 
-        return {"status": "success", "details": snapshots}
+        return {"status": "success", "details": _serialize_list_response(snapshots)}
 
     except Exception as e:
         print(f"An error occurred while listing snapshots: {e}")
@@ -768,7 +810,7 @@ def create_replication(
     cooling_threshold_days: int = None,
     description: str = None,
     labels: dict = None
-):
+) -> Dict[str, Any]:
     """
     Create a replication for a volume.
 
@@ -868,7 +910,7 @@ def create_replication(
 
         response = operation.result()
 
-        return {"status": "success", "details": str(response)}
+        return {"status": "success", "details": _serialize_response(response)}
 
     except Exception as e:
         print(f"An error occurred while creating the replication: {e}")
