@@ -208,6 +208,26 @@ class ConfigManager:
         """Create Dataset Manager configuration through interactive prompts."""
         print("\n--- Dataset Manager Settings ---")
         
+        # Pre-check for NFS client utilities availability
+        print("Checking system requirements...")
+        nfs_check = subprocess.run(['which', 'mount.nfs'], capture_output=True, text=True)
+        if nfs_check.returncode != 0:
+            print("⚠️  NFS client utilities not found on this system.")
+            if self._prompt_yes_no("Would you like to install NFS client utilities now?", default=True):
+                if self._install_nfs_client():
+                    print("✓ NFS client utilities installed successfully.")
+                else:
+                    print("❌ Failed to install NFS client utilities.")
+                    print("Dataset Manager requires NFS client utilities for mounting volumes.")
+                    if not self._prompt_yes_no("Continue with Dataset Manager configuration anyway?"):
+                        return DatasetManagerConfig(enabled=False)
+            else:
+                print("⚠️  Note: You'll need to install NFS client utilities manually later.")
+                print("    Ubuntu/Debian: sudo apt install -y nfs-common")
+                print("    RHEL/CentOS:   sudo yum install -y nfs-utils")
+        else:
+            print("✓ NFS client utilities found.")
+        
         # Check if user has existing root volume
         has_existing = self._prompt_yes_no("Do you have a pre-existing Dataset Manager 'root' volume?")
         
@@ -524,6 +544,17 @@ class ConfigManager:
             # Create mountpoint directory if it doesn't exist
             os.makedirs(mountpoint, exist_ok=True)
             
+            # Check if NFS client utilities are available before attempting mount
+            nfs_check = subprocess.run(['which', 'mount.nfs'], capture_output=True, text=True)
+            if nfs_check.returncode != 0:
+                print(f"NFS client utilities not found. Attempting automatic installation...")
+                if self._install_nfs_client():
+                    print("✓ NFS client installed successfully.")
+                else:
+                    print(f"Failed to install NFS client automatically.")
+                    print(f"Please install manually: sudo apt install -y nfs-common")
+                    return False
+            
             # First try using the CLI to mount (handles the data LIF and NFS properly)
             result = subprocess.run([
                 'python', '-m', 'netapp_dataops.netapp_dataops_cli',
@@ -546,12 +577,12 @@ class ConfigManager:
             if result.returncode == 0:
                 return True
             
-            # Check if failure is due to missing NFS utilities
+            # Check if failure is due to missing NFS utilities (fallback detection)
             if ("bad option" in result.stderr.lower() or 
                 "mount.<type> helper" in result.stderr.lower() or
                 "mount.nfs" in result.stderr.lower()):
                 
-                print(f"NFS client utilities not found. Attempting automatic installation...")
+                print(f"NFS client utilities still missing. Attempting installation again...")
                 if self._install_nfs_client():
                     print("✓ NFS client installed successfully. Retrying mount...")
                     
