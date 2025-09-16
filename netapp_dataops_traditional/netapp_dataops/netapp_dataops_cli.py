@@ -29,6 +29,7 @@ from netapp_dataops.traditional import (
     list_cloud_sync_relationships,
     list_snap_mirror_relationships,
     create_snap_mirror_relationship,
+    create_flexcache,
     list_snapshots,
     prepopulate_flex_cache,
     pull_bucket_from_s3,
@@ -62,6 +63,7 @@ Note: To view details regarding options/arguments for a specific command, run th
 \tlist volumes\t\t\tList all data volumes.
 \tmount volume\t\t\tMount an existing data volume locally. Note: on Linux hosts - must be run as root.
 \tunmount volume\t\t\tUnmount an existing data volume. Note: on Linux hosts - must be run as root.
+\tcreate flexcache\t\tCreate a new flexcache volume.
 
 Snapshot Management Commands:
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
@@ -515,6 +517,30 @@ Examples:
 \tnetapp_dataops_cli.py create snapmirror-relationship -u cluster1 -s svm1 -t svm2 -v vol1 -n vol1 -p MirrorAllSnapshots -c hourly -a resync
 '''
 
+helpTextCreateFlexCacheVolume = '''
+Command: create flexcache
+
+create flexcache volume
+
+Required Options/Arguments:
+\t-n, --flexcache-vol=\tName of flexcache volume
+\t-s, --source-svm=\tSource SVM name
+\t-v, --source-vol=\tSource volume name
+
+Optional Options/Arguments:
+\t-t, --flexcache-svm=\tnon default flexcache SVM
+\t-u, --cluster-name=\tnon default hosting cluster
+\t-z, --flexcache-size=\tSize of flexcache volume (default is 10% of source volume size)
+\t-j, --junction\t\tSpecify a custom junction path for the flexcache volume to be exported at.
+\t-e, --export-policy=\tNFS export policy to use when exporting new flexcache volume.
+\t-m, --mountpoint=\tLocal mountpoint to mount new flexcache volume at after creating. If not specified, new flexcache volume will not be mounted locally. On Linux hosts - if specified, must be run as root.
+\t-x, --readonly\t\tRead-only option for mounting flexcache volumes locally.
+\t-h, --help\t\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py create flexcache -u cluster1 -s svm1 -t svm2 -v vol1 -n vol2
+'''
+
 ## Function for creating config file
 def createConfig(configDirPath: str = "~/.netapp_dataops", configFilename: str = "config.json", connectionType: str = "ONTAP"):
     # Check to see if user has an existing config file
@@ -887,7 +913,7 @@ if __name__ == '__main__':
 
             if retentionCount:
                 if not retentionCount.isnumeric():
-                    matchObj = re.match("^(\d+)d$",retentionCount)
+                    matchObj = re.match(r"^(\d+)d$",retentionCount)
                     if not matchObj:
                         handleInvalidCommand(helpText=helpTextCreateSnapshot, invalidOptArg=True)
                     else:
@@ -1037,6 +1063,62 @@ if __name__ == '__main__':
             try:
                 create_snap_mirror_relationship(source_svm=sourceSvm, target_svm=targetSvm, source_vol=sourceVol, target_vol=targetVol, schedule=schedule, policy=policy,
                         cluster_name=clusterName, action=action, print_output=True)
+            except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
+                sys.exit(1)
+
+        elif target in ("flexcache"):
+            clusterName = None
+            sourceSvm = None
+            flexCacheSvm = None
+            sourceVol = None
+            flexCacheVol = None
+            flexCacheSize = None
+            junction = None
+            exportPolicy = None
+            mountpoint = None
+            readonly = False
+
+            # Get command line options
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hn:t:s:v:u:z:j:e:m:x", ["cluster-name=", "help", "flexcache-vol=", "flexcache-svm=", "source-svm=", "source-vol=", "flexcache-size=", "junction=", "export-policy=", "mountpoint=", "readonly"])
+            except Exception as err:
+                print(err)
+                handleInvalidCommand(helpText=helpTextCreateFlexCacheVolume, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextCreateFlexCacheVolume)
+                    sys.exit(0)
+                elif opt in ("-t", "--flexcache-svm"):
+                    flexCacheSvm = arg
+                elif opt in ("-n", "--flexcache-vol"):
+                    flexCacheVol = arg
+                elif opt in ("-s", "--source-svm"):
+                    sourceSvm = arg
+                elif opt in ("-v", "--source-vol"):
+                    sourceVol = arg
+                elif opt in ("-u", "--cluster-name"):
+                    clusterName = arg
+                elif opt in ("-z", "--flexcache-size"):
+                    flexCacheSize = arg
+                elif opt in ("-j", "--junction"):
+                    junction = arg
+                elif opt in ("-e", "--export-policy"):
+                    exportPolicy = arg
+                elif opt in ("-m", "--mountpoint"):
+                    mountpoint = arg
+                elif opt in ("-x", "--readonly"):
+                    readonly = True
+
+            # Check for required options
+            if not flexCacheVol or not sourceSvm or not sourceVol:
+                handleInvalidCommand(helpText=helpTextCreateFlexCacheVolume, invalidOptArg=True)
+
+            # Create flexcache
+            try:
+                create_flexcache(source_svm=sourceSvm, flexcache_svm=flexCacheSvm, source_vol=sourceVol, flexcache_vol=flexCacheVol, cluster_name=clusterName, 
+                                 flexcache_size=flexCacheSize, junction=junction, export_policy=exportPolicy, mountpoint=mountpoint, readonly=readonly, print_output=True)
             except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
                 sys.exit(1)
 

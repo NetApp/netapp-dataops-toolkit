@@ -1,7 +1,7 @@
 NetApp DataOps Toolkit for Traditional Environments
 =========
 
-The NetApp DataOps Toolkit for Traditional Environments is a Python library that makes it simple for developers, data scientists, DevOps engineers, and data engineers to perform various data management tasks, such as provisioning a new data volume, near-instantaneously cloning a data volume, and near-instantaneously snapshotting a data volume for traceability/baselining. This Python library can function as either a [command line utility](#command-line-functionality) or a [library of functions](#library-of-functions) that can be imported into any Python program or Jupyter Notebook.
+The NetApp DataOps Toolkit for Traditional Environments is a Python library that makes it simple for developers, data scientists, DevOps engineers, and data engineers to perform various data management tasks, such as provisioning a new data volume, near-instantaneously cloning a data volume, and near-instantaneously snapshotting a data volume for traceability/baselining. This Python library can function as either a [command line utility](#command-line-functionality) or a [library of functions](#library-of-functions) that can be imported into any Python program or Jupyter Notebook. The toolkit also includes an [MCP Server](docs/mcp_server.md) that exposes many of the capabilities as "tools" that can be utilized by AI agents.
 
 ## Compatibility
 
@@ -74,11 +74,9 @@ Created config file: '/Users/moglesby/.netapp_dataops/config.json'.
 
 If you experience an error and do not know how to resolve it, visit the [Troubleshooting](troubleshooting.md) page.
 
-## Tips and Tricks
+## MCP Server
 
-- [Accelerating the AI training workflow with the NetApp DataOps Toolkit.](https://netapp.io/2020/12/14/accelerating-the-ai-training-workflow-with-the-netapp-data-science-toolkit/)
-- [Easy AI dataset-to-model traceability with the NetApp DataOps Toolkit.](https://netapp.io/2021/01/13/easy-ai-dataset-to-model-traceability-with-the-netapp-data-science-toolkit/)
-- [Automatically mount newly cloned workspaces without needing sudo/root access.](https://netapp.io/2021/11/17/automatically-mount-newly-cloned-workspaces-using-the-netapp-dataops-toolkit/)
+The NetApp DataOps Toolkit for Traditional Environments includes an [MCP Server](docs/mcp_server.md) that exposes many of the toolkit's [functions](#library-of-functions) as "tools" that can be utilized by AI agents.
 
 <a name="command-line-functionality"></a>
 
@@ -93,6 +91,7 @@ Data volume management operations:
 - [List all data volumes.](#cli-list-volumes)
 - [Mount an existing data volume locally as "read-only" or "read-write".](#cli-mount-volume)
 - [Unmount an existing data volume.](#cli-unmount-volume)
+- [Create a new flexcache volume.](#cli-create-flexcache)
 
 Snapshot management operations:
 - [Create a new snapshot for a data volume.](#cli-create-snapshot)
@@ -400,6 +399,51 @@ sudo -E netapp_dataops_cli.py unmount volume --mointpoint=/test1
 [sudo] password for ai:
 Unmounting volume at '/test1'.
 Volume unmounted successfully.
+```
+
+<a name="cli-create-flexcache"></a>
+
+#### Create a New FlexCache Volume
+
+The NetApp DataOps Toolkit can be used to create a new FlexCache volume. A FlexCache volume acts as a local cache for a remote volume, enabling faster access to frequently used data. The command for creating a new FlexCache volume is `netapp_dataops_cli.py create flexcache`.
+
+The following options/arguments are required:
+
+```
+    -n, --flexcache-vol=    Name of the FlexCache volume to be created.
+    -v, --source-volume=    Name of the source volume.
+    -s, --source-svm=       Name of the source SVM.
+```
+
+The following options/arguments are optional:
+
+```
+    -t, --flexcache-svm=    Name of the SVM where the FlexCache volume will reside.
+    -u, --cluster-name=     Non-default hosting cluster.
+    -j, --junction=         Custom junction path for the FlexCache volume to be exported at. If not specified, junction path will be: ("/"+FlexCache Volume Name).
+    -z, --flexcache-size=   Size of the FlexCache volume. Format: '1024MB', '100GB', '10TB', etc. (default is 10% of the origin volume size or 1GB per constituent, whichever is greater).
+    -e, --export-policy=    NFS export policy to use for the FlexCache volume (default: 'default').
+    -m, --mountpoint=       Local mountpoint to mount the FlexCache volume after creation. If not specified, the volume will not be mounted locally. On Linux hosts, must be run as root if specified.
+    -x, --readonly=         Mount the FlexCache volume as read-only if True. (default is False).
+    -h, --help              Print help text.
+```
+
+##### Example Usage
+
+Create a FlexCache volume named 'cache1' in SVM 'svm0' for the source volume 'source1' in the source SVM 'svm1'.
+
+```sh
+netapp_dataops_cli.py create flexcache --flexcache-vol=cache1 --flexcache-svm=svm0 --source-volume=source1 --source-svm=svm1
+Creating FlexCache: svm1:source1 -> svm0:cache1
+FlexCache created successfully.
+```
+
+Create a FlexCache volume named 'cache2' in SVM 'svm0' for the source volume 'source2' in the source SVM 'svm1', with a size of 500GB.
+
+```sh
+netapp_dataops_cli.py create flexcache --flexcache-vol=cache2 --flexcache-svm=svm0 --source-volume=source2 --source-svm=svm1 --flexcache-size=500GB
+Creating FlexCache: svm1:source2 -> svm0:cache2
+FlexCache created successfully.
 ```
 
 ### Snapshot Management Operations
@@ -945,7 +989,7 @@ Setting state to snapmirrored, action:resync
 The NetApp DataOps Toolkit can also be utilized as a library of functions that can be imported into any Python program or Jupyter Notebook. In this manner, data scientists and data engineers can easily incorporate data management tasks into their existing projects, programs, and workflows. This functionality is only recommended for advanced users who are proficient in Python.
 
 ```py
-from netapp_dataops.traditional import clone_volume, create_volume, delete_volume, list_volumes, mount_volume, create_snapshot, delete_snapshot, list_snapshots, restore_snapshot, list_cloud_sync_relationships, sync_cloud_sync_relationship, list_snap_mirror_relationships, sync_snap_mirror_relationship, prepopulate_flex_cache, push_directory_to_s3, push_file_to_s3, pull_bucket_from_s3, pull_object_from_s3
+from netapp_dataops.traditional import clone_volume, create_volume, delete_volume, list_volumes, mount_volume, create_snapshot, delete_snapshot, list_snapshots, restore_snapshot, list_cloud_sync_relationships, sync_cloud_sync_relationship, list_snap_mirror_relationships, sync_snap_mirror_relationship, create_flexcache, prepopulate_flex_cache, push_directory_to_s3, push_file_to_s3, pull_bucket_from_s3, pull_object_from_s3
 ```
 
 Note: The prerequisite steps outlined in the [Getting Started](#getting-started) section still appy when the toolkit is being utilized as an importable library of functions.
@@ -959,6 +1003,7 @@ Data volume management operations:
 - [List all data volumes.](#lib-list-volumes)
 - [Mount an existing data volume locally as read-only or read-write.](#lib-mount-volume)
 - [Unmount an existing data volume.](#lib-unmount-volume)
+- [Create a new flexcache volume.](#lib-create-flexcache)
 
 Snapshot management operations:
 - [Create a new snapshot for a data volume.](#lib-create-snapshot)
@@ -1224,6 +1269,44 @@ InvalidConfigError              # Config file is missing or contains an invalid 
 APIConnectionError              # The storage system/service API returned an error.
 InvalidVolumeParameterError     # An invalid parameter was specified.
 ```
+
+<a name="lib-create-flexcache"></a>
+
+#### Create a New FlexCache Volume
+
+The NetApp DataOps Toolkit can be used to create a new FlexCache volume as part of any Python program or workflow. A FlexCache volume acts as a local cache for a remote volume, enabling faster access to frequently used data. This functionality is useful for distributed environments where data needs to be accessed quickly and efficiently.
+
+##### Function Definition
+
+```py
+def create_flexcache(
+    source_vol: str,                # Name of the source volume (required).
+    source_svm: str,                # Name of the source SVM (required).
+    flexcache_vol: str,             # Name of the FlexCache volume to be created (required).
+    flexcache_svm: str = None,      # Name of the SVM where the FlexCache volume will reside (optional, defaults to config SVM).
+    cluster_name: str = None,       # Non-default cluster name, same credentials as the default credentials should be used (optional).
+    flexcache_size: str = None,     # Size of the FlexCache volume. Format: '1024MB', '100GB', '10TB', etc. (optional). Default is 10% of the source volume size or 1GB per constituent, whichever is greater.
+    junction: str = None,           # Custom junction path for the FlexCache volume to be exported at. If not specified, junction path will be: ("/"+FlexCache Volume Name).
+    export_policy: str = "default", # NFS export policy to use for the FlexCache volume (default: 'default').
+    mountpoint: str = None,         # Local mountpoint to mount the FlexCache volume after creation. If not specified, the volume will not be mounted locally. On Linux hosts, must be run as root if specified.
+    readonly: bool = False,         # Mount the FlexCache volume as read-only if True.
+    print_output: bool = False      # Denotes whether or not to print messages to the console during execution.
+):
+```
+
+##### Return Value
+
+None
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError              # Config file is missing or contains an invalid value.
+APIConnectionError              # The storage system/service API returned an error.
+InvalidVolumeParameterError     # An invalid parameter was specified.
+``` 
 
 ### Snapshot Management Operations
 
