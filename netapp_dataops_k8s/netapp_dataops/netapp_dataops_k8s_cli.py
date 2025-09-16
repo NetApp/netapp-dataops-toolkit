@@ -689,16 +689,16 @@ Command: create flexcache
 Create a new FlexCache volume.
 
 Required Options/Arguments:
-\t-f, --flexcache-vol=\tName of flexcache volume
-\t-s, --source-svm=\tSource SVM name
-\t-v, --source-vol=\tSource volume name
-\t-z, --flexcache-size=\tSize of flexcache volume (Format: '1024Mi', '100Gi', '10Ti', etc.).
-\t-b, --backend-name=\tName of tridentbackendconfig.
+\t-f, --flexcache-vol=\t\tName of flexcache volume
+\t-s, --source-svm=\t\tSource SVM name
+\t-v, --source-vol=\t\tSource volume name
+\t-z, --flexcache-size=\t\tSize of flexcache volume (Format: '1024Mi', '100Gi', '10Ti', etc.).
+\t-b, --backend-name=\t\tName of tridentbackendconfig.
 
 Optional Options/Arguments:
-\t-h, --help\t\tPrint help text.
-\t-c, --junction=\t\tThe junction path for the FlexCache volume.
-\t-n, --namespace=\tKubernetes namespace to create the new PersistentVolumeClaim (PVC) in. If not specified, the PVC will be created in the "default" namespace.
+\t-h, --help\t\t\tPrint help text.
+\t-c, --junction=\t\t\tThe junction path for the FlexCache volume.
+\t-n, --namespace=\t\tKubernetes namespace to create the new PersistentVolumeClaim (PVC) in. If not specified, the PVC will be created in the "default" namespace.
 \t-t, --trident-namespace=\tKubernetes namespace where Trident is installed. If not specified, the namespace "trident" will be used.
 
 Examples:
