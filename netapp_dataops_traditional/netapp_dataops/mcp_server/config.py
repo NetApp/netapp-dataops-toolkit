@@ -19,7 +19,7 @@ def load_credentials():
     
     # If path not found, raise an error that config.json file doesn't exist
     if not os.path.exists(credentials_path):
-        raise FileNotFoundError("Credentials file 'config.json' not found in the netapp_dataops directory.")
+        raise FileNotFoundError("Credentials file 'config.json' not found in the ~/.netapp_dataops directory.")
     
     # Opens the file specified, reads its contents, parses the contents as JSON, and stores the resulting data
     with open(credentials_path, 'r') as f:
