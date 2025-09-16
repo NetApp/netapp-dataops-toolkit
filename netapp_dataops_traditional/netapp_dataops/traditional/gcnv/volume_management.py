@@ -1,17 +1,7 @@
 from google.cloud import netapp_v1
-from google.protobuf.json_format import MessageToDict
-from typing import Dict, List, Any, Union
+from typing import Dict, List, Any
+from .base import _serialize, create_client, validate_required_params
 
-def _serialize(details) -> Union[Dict[str, Any], List[Any], str, int, float, bool, None]:
-    """Internal helper to convert protobuf objects (and lists) to JSON-serializable structures."""
-    if hasattr(details, '_pb'):
-        return MessageToDict(details._pb)
-    if isinstance(details, list):
-        return [_serialize(item) for item in details]
-    if isinstance(details, (dict, str, int, float, bool)) or details is None:
-        return details
-    # Fallback to string representation
-    return str(details)
 
 def create_volume(
     project_id: str,
@@ -145,15 +135,17 @@ def create_volume(
         Exception: If there is an error during the volume creation process.
     """
     # Validate input parameters
-    if not project_id or not location or not volume_id or not share_name or not storage_pool or not capacity_gib or not protocols:
-        raise ValueError("Project ID, location, volume ID, share name, storage pool, capacity GiB, and protocols are required parameters.")
+    validate_required_params(
+        project_id=project_id,
+        location=location,
+        volume_id=volume_id,
+        share_name=share_name,
+        storage_pool=storage_pool,
+        capacity_gib=capacity_gib,
+        protocols=protocols
+    )
     
-    try:
-        # Create a NetApp client
-        client = netapp_v1.NetAppClient()
-    except Exception as e:
-        print(f"An error occurred while creating the NetApp client: {e}")
-        raise e
+    client = create_client()
 
     # Create a parent string
     parent = f"projects/{project_id}/locations/{location}"
@@ -369,15 +361,18 @@ def clone_volume(
         Exception: If there is an error during the cloning process.
     """
     # Validate input parameters
-    if not project_id or not location or not volume_id or not source_volume or not source_snapshot or not share_name or not storage_pool or not protocols:
-        raise ValueError("Project ID, location, volume ID, source volume, source snapshot, share name, storage pool, and protocols are required parameters.")
+    validate_required_params(
+        project_id=project_id,
+        location=location,
+        volume_id=volume_id,
+        source_volume=source_volume,
+        source_snapshot=source_snapshot,
+        share_name=share_name,
+        storage_pool=storage_pool,
+        protocols=protocols
+    )
     
-    try:
-        # Create a NetApp client
-        client = netapp_v1.NetAppClient()
-    except Exception as e:
-        print(f"An error occurred while creating the NetApp client: {e}")
-        raise e
+    client = create_client()
 
     # Create a parent string
     parent = f"projects/{project_id}/locations/{location}"
@@ -492,15 +487,13 @@ def delete_volume(
         Exception: If there is an error during the volume deletion process.
     """
     # Validate input parameters
-    if not project_id or not location or not volume_id:
-        raise ValueError("Project ID, location, and volume ID are required parameters.")
+    validate_required_params(
+        project_id=project_id,
+        location=location,
+        volume_id=volume_id
+    )
 
-    try:
-        # Create a client
-        client = netapp_v1.NetAppClient()
-    except Exception as e:
-        print(f"An error occurred while creating the NetApp client: {e}")
-        raise e
+    client = create_client()
 
     # Construct a name string
     name = f"projects/{project_id}/locations/{location}/volumes/{volume_id}"
@@ -547,15 +540,12 @@ def list_volumes(
         Exception: If there is an error during the volume listing process.
     """
     # Validate input parameters
-    if not project_id or not location:
-        raise ValueError("Project ID and location are required parameters.")
+    validate_required_params(
+        project_id=project_id,
+        location=location
+    )
 
-    try:
-        # Create a client
-        client = netapp_v1.NetAppClient()
-    except Exception as e:
-        print(f"An error occurred while creating the NetApp client: {e}")
-        raise e
+    client = create_client()
 
     # Construct a parent string
     parent = f"projects/{project_id}/locations/{location}"
@@ -573,321 +563,4 @@ def list_volumes(
 
     except Exception as e:
         print(f"An error occurred while listing volumes: {e}")
-        return {"status": "error", "message": str(e)}
-
-
-def create_snapshot(
-    project_id: str,
-    location: str,
-    volume_id: str,
-    snapshot_id: str,
-    description: str = None,
-    labels: dict = None
-) -> Dict[str, Any]:
-    """
-    Create a snapshot of a NetApp volume in Google Cloud.
-    Snapshots are local space efficient image copies of your volume.
-    Use snapshots to revert a volume to a prior point in time or to restore to a new volume as a copy of your original volume. 
-
-    Args:
-        project_id (str):
-            Required. The ID of the project.
-        location (str):
-            Required. The location to list volumes from.
-        volume_id (str):
-            Required. The ID of the volume to delete.
-        snapshot_id (str):
-            Required. The ID of the snapshot to create.
-        description (str):
-            Optional. The description of the snapshot. Defaults to None.
-        labels (dict, optional):
-            Optional. The labels to assign to the snapshot. Defaults to None.
-
-    Returns:
-        dict: Dictionary with keys
-            - 'status': 'success' or 'error'
-            - 'details': API response object (if successful)
-            - 'message': Error message (if failed)
-
-    Raises:
-        ValueError: If required parameters are missing.
-        Exception: If there is an error while creating the NetApp client.
-        Exception: If there is an error during the snapshot creation process.
-    """
-    # Validate input parameters
-    if not project_id or not location or not volume_id or not snapshot_id:
-        raise ValueError("Project ID, location, volume ID, and snapshot ID are required parameters.")
-    
-    try:
-        # Create a client
-        client = netapp_v1.NetAppClient()
-    except Exception as e:
-        print(f"An error occurred while creating the NetApp client: {e}")
-        raise e
-
-    # Construct a parent string
-    parent = f"projects/{project_id}/locations/{location}/volumes/{volume_id}"
-
-    # Define a snapshot
-    snapshot = netapp_v1.Snapshot(description=description, labels=labels or {})
-
-    # Initialize request argument(s)
-    request = netapp_v1.CreateSnapshotRequest(parent=parent, snapshot_id=snapshot_id, snapshot=snapshot)
-
-    try:
-        # Make the request
-        operation = client.create_snapshot(request=request)
-
-        print("Waiting for creation of a snapshot to complete...")
-
-        response = operation.result()
-
-        return {"status": "success", "details": _serialize(response)}
-
-    except Exception as e:
-        print(f"An error occurred while creating the snapshot: {e}")
-        return {"status": "error", "message": str(e)}
-
-
-def delete_snapshot(
-    project_id: str,
-    location: str,
-    volume_id: str,
-    snapshot_id: str
-) -> Dict[str, Any]:
-    """
-    Delete a snapshot from a NetApp volume in Google Cloud.
-
-    Args:
-        project_id (str):
-            Required. The ID of the project.
-        location (str):
-            Required. The location of the volume.
-        volume_id (str):
-            Required. The ID of the volume.
-        snapshot_id (str):
-            Required. The ID of the snapshot to delete.
-
-    Returns:
-        dict: Dictionary with keys
-            - 'status': 'success' or 'error'
-            - 'details': API response object (if successful)
-            - 'message': Error message (if failed)
-
-    Raises:
-        ValueError: If required parameters are missing.
-        Exception: If there is an error while creating the NetApp client.
-        Exception: If there is an error during the snapshot deletion process.
-    """
-    # Validate input parameters
-    if not project_id or not location or not volume_id or not snapshot_id:
-        raise ValueError("Project ID, location, volume ID, and snapshot ID are required parameters.")
-
-    try:
-        # Create a client
-        client = netapp_v1.NetAppClient()
-    except Exception as e:
-        print(f"An error occurred while creating the NetApp client: {e}")
-        raise e
-
-    # Construct a name string
-    name = f"projects/{project_id}/locations/{location}/volumes/{volume_id}/snapshots/{snapshot_id}"
-
-    # Initialize request argument(s)
-    request = netapp_v1.DeleteSnapshotRequest(name=name)
-
-    try:
-        # Make the request
-        operation = client.delete_snapshot(request=request)
-
-        print("Waiting for deletion of snapshot to complete...")
-
-        response = operation.result()
-
-        return {"status": "success", "details": _serialize(response)}
-
-    except Exception as e:
-        print(f"An error occurred while deleting the snapshot: {e}")
-        return {"status": "error", "message": str(e)}
-
-
-def list_snapshots(
-    project_id: str,
-    location: str,
-    volume_id: str
-) -> Dict[str, Any]:
-    """
-    List all snapshots for a NetApp volume in the specified Google Cloud project and location.
-
-    Args:
-        project_id (str):
-            Required. The ID of the project.
-        location (str):
-            Required. The location to list volumes from.
-        volume_id (str):
-            Required. The ID of the volume to list snapshots for.
-
-    Returns:
-        dict: Dictionary with keys
-            - 'status': 'success' or 'error'
-            - 'details': List of snapshots (if successful)
-            - 'message': Error message (if failed)
-
-    Raises:
-        ValueError: If required parameters are missing.
-        Exception: If there is an error while creating the NetApp client.
-        Exception: If there is an error during the snapshot listing process.
-    """
-    # Validate input parameters
-    if not project_id or not location or not volume_id:
-        raise ValueError("Project ID, location, and volume ID are required parameters.")
-
-    try:
-        # Create a client
-        client = netapp_v1.NetAppClient()
-    except Exception as e:
-        print(f"An error occurred while creating the NetApp client: {e}")
-        raise e
-
-    # Construct a parent string
-    parent = f"projects/{project_id}/locations/{location}/volumes/{volume_id}"
-
-    # Initialize request argument(s)
-    request = netapp_v1.ListSnapshotsRequest(
-        parent=parent,
-    )
-
-    try:
-        # Make the request
-        page_result = client.list_snapshots(request=request)
-
-        snapshots = [s for s in page_result]
-
-        return {"status": "success", "details": _serialize(snapshots)}
-
-    except Exception as e:
-        print(f"An error occurred while listing snapshots: {e}")
-        return {"status": "error", "message": str(e)}
-
- 
-def create_replication(
-    source_project_id: str,
-    source_location: str,
-    source_volume_id: str,
-    replication_id: str,
-    replication_schedule: str,
-    destination_storage_pool: str,
-    destination_volume_id: str = None,
-    destination_share_name: str = None,
-    destination_volume_description: str = None,
-    tiering_enabled: bool = None,
-    cooling_threshold_days: int = None,
-    description: str = None,
-    labels: dict = None
-) -> Dict[str, Any]:
-    """
-    Create a replication for a volume.
-    Volume replication enables asynchronous replication of a volume to a different location.
-    A new volume in the destination location will be created in a storage pool with available capacity within a supported region pair.
-
-    Args:
-        source_project_id (str):
-            Required. The ID of the source project.
-        source_location (str):
-            Required. The location of the source volume.
-        source_volume_id (str):
-            Required. The ID of the source volume to replicate.
-            Full name of source volume resource. Example :
-            "projects/{source_project_id}/locations/{source_location}/volumes/{source_volume_id}"
-        replication_id (str):
-            Required. The ID for the new replication.
-        replication_schedule (str, google.cloud.netapp_v1.types.Replication.ReplicationSchedule):
-            Required. Indicates the schedule for replication.
-        destination_storage_pool (str):
-            Required. The storage pool for the destination volume.
-        destination_volume_id (str):
-            Optional. Desired destination volume resource id.
-            If not specified, source volume's resource id will be used. 
-            This value must start with a lowercase letter followed by up to 62 lowercase letters, numbers, or hyphens, and cannot end with a hyphen.
-        destination_share_name (str):
-            Optional. Destination volume's share name.
-            If not specified, source volume's share name will be used.
-        destination_volume_description (str):
-            Optional. Description for the destination volume.
-        tiering_enabled (bool):
-            Optional. Whether tiering is enabled on the destination volume.
-        cooling_threshold_days (int):
-            Optional. Time in days to mark the volume's data block as cold and make it eligible for tiering.
-            It can be range from 2-183. Default is 31.
-        description (str):
-            Optional. A description about this replication relationship.
-        labels (dict, MutableMapping[str, str]):
-            Optional. Resource labels to represent user provided metadata.
-
-    Returns:
-        dict: Dictionary with keys
-            - 'status': 'success' or 'error'
-            - 'details': API response object (if successful)
-            - 'message': Error message (if failed)
-
-    Raises:
-        ValueError: If required parameters are missing.
-        Exception: If there is an error while creating the NetApp client.
-        Exception: If there is an error during the replication creation process.
-    """
-    # Validate input parameters
-    if not source_project_id or not source_location or not source_volume_id or not replication_id or not replication_schedule or not destination_storage_pool:
-        raise ValueError("Source project ID, location, source volume ID, replication ID, replication schedule, and destination storage pool are required parameters.")
-    
-    try:
-        # Create a client
-        client = netapp_v1.NetAppClient()
-    except Exception as e:
-        print(f"An error occurred while creating the NetApp client: {e}")
-        raise e
-
-    # Construct a parent string
-    parent = f"projects/{source_project_id}/locations/{source_location}/volumes/{source_volume_id}"
- 
-    # Initialize request argument(s)
-    destination_params = netapp_v1.DestinationVolumeParameters(
-        storage_pool=destination_storage_pool,
-        volume_id=destination_volume_id,
-        share_name=destination_share_name,
-        description=destination_volume_description
-    )
- 
-    # Build TieringPolicy if provided
-    if tiering_enabled:
-        destination_params.tiering_policy = netapp_v1.TieringPolicy(
-            cooling_period_days=cooling_threshold_days or 0
-        )
- 
-    # Construct the replication object
-    replication = netapp_v1.Replication(
-        replication_schedule=replication_schedule,
-        destination_volume_parameters=destination_params,
-        description=description,
-        labels=labels or {}
-    )
- 
-    # Construct the request
-    request = netapp_v1.CreateReplicationRequest(
-        parent=parent,
-        replication=replication,
-        replication_id=replication_id
-    )
- 
-    try:
-        # Make the request
-        operation = client.create_replication(request=request)
-
-        print("Waiting for operation to complete...")
-
-        response = operation.result()
-
-        return {"status": "success", "details": _serialize(response)}
-
-    except Exception as e:
-        print(f"An error occurred while creating the replication: {e}")
         return {"status": "error", "message": str(e)}

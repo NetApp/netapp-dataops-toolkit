@@ -489,6 +489,45 @@ async def create_replication_tool(
     Use this tool to create a replication for a volume.
     Volume replication enables asynchronous replication of a volume to a different location.
     A new volume in the destination location will be created in a storage pool with available capacity within a supported region pair.
+    
+    Supported region pairs for volume replication:
+
+    For STANDARD, PREMIUM, and EXTREME service levels:
+    - asia-southeast1 ↔ australia-southeast1
+    - europe-west2 ↔ europe-west3
+    - europe-west2 ↔ europe-west4
+    - europe-west3 ↔ europe-west4
+    - europe-west3 ↔ europe-west6
+    - europe-southwest1 ↔ europe-west3
+    - northamerica-northeast1 ↔ northamerica-northeast2
+    - northamerica-northeast1 ↔ us-central1
+    - australia-southeast1 ↔ asia-southeast1
+    - us-central1 ↔ us-east4
+    - us-central1 ↔ us-west2
+    - us-central1 ↔ us-west3
+    - us-central1 ↔ us-west4
+    - us-east4 ↔ us-west2
+    - us-east4 ↔ us-west4
+    - us-west2 ↔ us-west4
+    - us-west3 ↔ us-west4
+    
+    For FLEX service level, replication is supported between regions within the same region group:
+    
+    Americas: southamerica-east1, southamerica-west1, northamerica-northeast1,
+              northamerica-northeast2, us-central1, us-east1, us-east4, us-east5,
+              us-south1, us-west1, us-west2, us-west3, us-west4
+              
+    Asia-Pacific: asia-east1, asia-east2, asia-northeast1, asia-northeast2,
+                  asia-northeast3, asia-south1, asia-south2, asia-southeast1,
+                  asia-southeast2, australia-southeast1, australia-southeast2
+                  
+    Europe/Middle East/Africa: africa-south1, europe-central2, europe-north1,
+                               europe-southwest1, europe-west1, europe-west2,
+                               europe-west3, europe-west4, europe-west6, europe-west8,
+                               europe-west9, europe-west10, europe-west12, me-central1,
+                               me-central2, me-west1
+    
+    For the most up-to-date list: https://cloud.google.com/netapp/volumes/docs/protect-data/about-volume-replication
 
     Args:
         source_project_id (str):
