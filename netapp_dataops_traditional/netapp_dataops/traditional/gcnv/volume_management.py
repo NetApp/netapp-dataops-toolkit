@@ -190,7 +190,7 @@ def create_volume(
     # Build TieringPolicy if provided
     if tiering_enabled:
         volume.tiering_policy = netapp_v1.TieringPolicy(
-            cooling_period_days=cooling_threshold_days or 0
+            cooling_threshold_days=cooling_threshold_days or 0
         )
 
     # Build BackupConfig if provided
@@ -420,7 +420,7 @@ def clone_volume(
     # Build TieringPolicy if provided
     if tiering_enabled:
         volume.tiering_policy = netapp_v1.TieringPolicy(
-            cooling_period_days=cooling_threshold_days or 0
+            cooling_threshold_days=cooling_threshold_days or 0
         )
  
     # Build BackupConfig if provided

@@ -135,7 +135,7 @@ def create_replication(
     # Build TieringPolicy if provided
     if tiering_enabled:
         destination_params.tiering_policy = netapp_v1.TieringPolicy(
-            cooling_period_days=cooling_threshold_days or 0
+            cooling_threshold_days=cooling_threshold_days or 0
         )
  
     # Construct the replication object
