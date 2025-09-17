@@ -544,6 +544,8 @@ async def create_replication_tool(
             Required. Indicates the schedule for replication.
         destination_storage_pool (str):
             Required. The storage pool for the destination volume.
+            Full name of destination storage pool resource should be provided. Example:
+            "projects/{destination_project_id}/locations/{destination_location}/storagePools/{destination_storage_pool_id}"
         destination_volume_id (str):
             Optional. Desired destination volume resource id.
             If not specified, source volume's resource id will be used. 
