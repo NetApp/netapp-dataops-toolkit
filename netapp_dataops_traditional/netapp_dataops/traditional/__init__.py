@@ -199,7 +199,7 @@ def _instantiate_connection(config: dict, connectionType: str = "ONTAP", print_o
         try:
             ontapClusterMgmtHostname = config["hostname"]
             ontapClusterAdminUsername = config["username"]
-            ontapClusterAdminPasswordBase64 = config["password"]
+            ontapClusterAdminPassword = config["password"]
             verifySSLCert = config["verifySSLCert"]
         except:
             if print_output:
@@ -207,9 +207,9 @@ def _instantiate_connection(config: dict, connectionType: str = "ONTAP", print_o
             raise InvalidConfigError()
 
         # Decode base64-encoded password
-        ontapClusterAdminPasswordBase64Bytes = ontapClusterAdminPasswordBase64.encode("ascii")
-        ontapClusterAdminPasswordBytes = base64.b64decode(ontapClusterAdminPasswordBase64Bytes)
-        ontapClusterAdminPassword = ontapClusterAdminPasswordBytes.decode("ascii")
+        # ontapClusterAdminPasswordBase64Bytes = ontapClusterAdminPasswordBase64.encode("ascii")
+        # ontapClusterAdminPasswordBytes = base64.b64decode(ontapClusterAdminPasswordBase64Bytes)
+        # ontapClusterAdminPassword = ontapClusterAdminPasswordBytes.decode("ascii")
 
         # Instantiate connection to ONTAP cluster
         netappConfig.CONNECTION = NetAppHostConnection(
