@@ -48,19 +48,23 @@ def create_snapshot(
         volume_id=volume_id,
         snapshot_id=snapshot_id
     )
+
+    if labels is not None and not isinstance(labels, dict):
+        raise ValueError("labels must be a dictionary")
     
-    client = create_client()
-
-    # Construct a parent string
-    parent = f"projects/{project_id}/locations/{location}/volumes/{volume_id}"
-
-    # Define a snapshot
-    snapshot = netapp_v1.Snapshot(description=description, labels=labels or {})
-
-    # Initialize request argument(s)
-    request = netapp_v1.CreateSnapshotRequest(parent=parent, snapshot_id=snapshot_id, snapshot=snapshot)
-
     try:
+    
+        client = create_client()
+
+        # Construct a parent string
+        parent = f"projects/{project_id}/locations/{location}/volumes/{volume_id}"
+
+        # Define a snapshot
+        snapshot = netapp_v1.Snapshot(description=description, labels=labels or {})
+
+        # Initialize request argument(s)
+        request = netapp_v1.CreateSnapshotRequest(parent=parent, snapshot_id=snapshot_id, snapshot=snapshot)
+
         # Make the request
         operation = client.create_snapshot(request=request)
 
@@ -113,15 +117,16 @@ def delete_snapshot(
         snapshot_id=snapshot_id
     )
 
-    client = create_client()
-
-    # Construct a name string
-    name = f"projects/{project_id}/locations/{location}/volumes/{volume_id}/snapshots/{snapshot_id}"
-
-    # Initialize request argument(s)
-    request = netapp_v1.DeleteSnapshotRequest(name=name)
-
     try:
+
+        client = create_client()
+
+        # Construct a name string
+        name = f"projects/{project_id}/locations/{location}/volumes/{volume_id}/snapshots/{snapshot_id}"
+
+        # Initialize request argument(s)
+        request = netapp_v1.DeleteSnapshotRequest(name=name)
+
         # Make the request
         operation = client.delete_snapshot(request=request)
 
@@ -170,17 +175,18 @@ def list_snapshots(
         volume_id=volume_id
     )
 
-    client = create_client()
-
-    # Construct a parent string
-    parent = f"projects/{project_id}/locations/{location}/volumes/{volume_id}"
-
-    # Initialize request argument(s)
-    request = netapp_v1.ListSnapshotsRequest(
-        parent=parent,
-    )
-
     try:
+
+        client = create_client()
+
+        # Construct a parent string
+        parent = f"projects/{project_id}/locations/{location}/volumes/{volume_id}"
+
+        # Initialize request argument(s)
+        request = netapp_v1.ListSnapshotsRequest(
+            parent=parent,
+        )
+
         # Make the request
         page_result = client.list_snapshots(request=request)
 

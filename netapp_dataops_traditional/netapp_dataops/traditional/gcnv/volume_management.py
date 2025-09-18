@@ -144,75 +144,80 @@ def create_volume(
         capacity_gib=capacity_gib,
         protocols=protocols
     )
-    
-    client = create_client()
 
-    # Create a parent string
-    parent = f"projects/{project_id}/locations/{location}"
-
-    # Initialize request argument(s)
-    volume = netapp_v1.Volume(
-        share_name=share_name,
-        storage_pool=storage_pool,
-        capacity_gib=capacity_gib,
-        protocols=protocols,
-        description=description,
-        labels=labels or {},
-        unix_permissions=unix_permissions,
-        snapshot_directory=snapshot_directory,
-        security_style=security_style,
-        kerberos_enabled=kerberos_enabled,
-        large_capacity=large_capacity,
-        multiple_endpoints=multiple_endpoints,
-    )
-
-    if smb_settings:
-        volume.smb_settings = smb_settings
-
-    # Build ExportPolicy if provided
-    if export_policy_rules:
-        volume.export_policy = netapp_v1.ExportPolicy(
-            rules=[
-                netapp_v1.ExportPolicyRule(
-                    allowed_clients=rule.get("allowed_clients", ""),
-                    access_type=rule.get("access_type", "READ_WRITE"),
-                    has_root_access=rule.get("has_root_access", False),
-                    nfsv3=rule.get("nfsv3", False),
-                    nfsv4=rule.get("nfsv4", False),
-                ) for rule in export_policy_rules
-            ]
-        )
-
-    # Build SnapshotPolicy if provided
-    if snapshot_policy:
-        volume.snapshot_policy = netapp_v1.SnapshotPolicy(**snapshot_policy)
-
-    # Build TieringPolicy if provided
-    if tiering_enabled:
-        volume.tiering_policy = netapp_v1.TieringPolicy(
-            cooling_threshold_days=cooling_threshold_days or 0
-        )
-
-    # Build BackupConfig if provided
-    if backup_policies or backup_vault:
-        volume.backup_config = netapp_v1.BackupConfig(
-            backup_policies=backup_policies or [],
-            backup_vault=backup_vault or "",
-            scheduled_backup_enabled=scheduled_backup_enabled or False
-        )
-
-    # Build RestrictedAction if provided
-    if block_deletion_when_clients_connected:
-        volume.restricted_actions = [netapp_v1.RestrictedAction.BLOCK_VOLUME_DELETION]
-
-    # Construct the request
-    request = netapp_v1.CreateVolumeRequest(
-        parent=parent,
-        volume_id=volume_id,
-        volume=volume
-    )
+    if not isinstance(protocols, list):
+        raise ValueError("protocols must be a list")
+    if not isinstance(capacity_gib, int) or capacity_gib < 0:
+        raise ValueError("capacity_gib must be a non-negative integer")
 
     try:
+        client = create_client()
+
+        # Create a parent string
+        parent = f"projects/{project_id}/locations/{location}"
+
+        # Initialize request argument(s)
+        volume = netapp_v1.Volume(
+            share_name=share_name,
+            storage_pool=storage_pool,
+            capacity_gib=capacity_gib,
+            protocols=protocols,
+            description=description,
+            labels=labels or {},
+            unix_permissions=unix_permissions,
+            snapshot_directory=snapshot_directory,
+            security_style=security_style,
+            kerberos_enabled=kerberos_enabled,
+            large_capacity=large_capacity,
+            multiple_endpoints=multiple_endpoints,
+        )
+
+        if smb_settings:
+            volume.smb_settings = smb_settings
+
+        # Build ExportPolicy if provided
+        if export_policy_rules:
+            volume.export_policy = netapp_v1.ExportPolicy(
+                rules=[
+                    netapp_v1.ExportPolicyRule(
+                        allowed_clients=rule.get("allowed_clients", ""),
+                        access_type=rule.get("access_type", "READ_WRITE"),
+                        has_root_access=rule.get("has_root_access", False),
+                        nfsv3=rule.get("nfsv3", False),
+                        nfsv4=rule.get("nfsv4", False),
+                    ) for rule in export_policy_rules
+                ]
+            )
+
+        # Build SnapshotPolicy if provided
+        if snapshot_policy:
+            volume.snapshot_policy = netapp_v1.SnapshotPolicy(**snapshot_policy)
+
+        # Build TieringPolicy if provided
+        if tiering_enabled:
+            volume.tiering_policy = netapp_v1.TieringPolicy(
+                cooling_threshold_days=cooling_threshold_days or 0
+            )
+
+        # Build BackupConfig if provided
+        if backup_policies or backup_vault:
+            volume.backup_config = netapp_v1.BackupConfig(
+                backup_policies=backup_policies or [],
+                backup_vault=backup_vault or "",
+                scheduled_backup_enabled=scheduled_backup_enabled or False
+            )
+
+        # Build RestrictedAction if provided
+        if block_deletion_when_clients_connected:
+            volume.restricted_actions = [netapp_v1.RestrictedAction.BLOCK_VOLUME_DELETION]
+
+        # Construct the request
+        request = netapp_v1.CreateVolumeRequest(
+            parent=parent,
+            volume_id=volume_id,
+            volume=volume
+        )
+
         # Make the request
         operation = client.create_volume(request=request)
 
@@ -371,78 +376,84 @@ def clone_volume(
         storage_pool=storage_pool,
         protocols=protocols
     )
+
+    if not isinstance(protocols, list):
+        raise ValueError("protocols must be a list")
     
-    client = create_client()
-
-    # Create a parent string
-    parent = f"projects/{project_id}/locations/{location}"
- 
-    # Fetch source volume to get capacity
-    source_name = f"{parent}/volumes/{source_volume}"
     try:
-        source_vol = client.get_volume(name=source_name)
-    except Exception as e:
-        print(f"An error occurred while fetching the source volume: {e}")
-        raise e
+        client = create_client()
 
-    # Initialize request argument(s)
-    volume = netapp_v1.Volume(
-        share_name=share_name,
-        storage_pool=storage_pool,
-        capacity_gib=source_vol.capacity_gib,
-        protocols=protocols,
-        restore_parameters=netapp_v1.RestoreParameters(
-            source_snapshot=f"{source_name}/snapshots/{source_snapshot}"
-        ),
-        description=description,
-        labels=labels or {},
-        unix_permissions=unix_permissions,
-        snapshot_directory=snapshot_directory,
-        security_style=security_style,
-        kerberos_enabled=kerberos_enabled,
-        large_capacity=large_capacity,
-        multiple_endpoints=multiple_endpoints,
-    )
- 
-    if smb_settings:
-        volume.smb_settings = smb_settings
+        # Create a parent string
+        parent = f"projects/{project_id}/locations/{location}"
+    
+        # Fetch source volume to get capacity
+        source_name = f"{parent}/volumes/{source_volume}"
+        try:
+            source_vol = client.get_volume(name=source_name)
+        except Exception as e:
+            print(f"An error occurred while fetching the source volume: {e}")
+            return {"status": "error", "message": f"Error fetching source volume: {e}"}
+        
+        if not isinstance(source_vol.capacity_gib, int) or source_vol.capacity_gib < 0:
+            raise ValueError("capacity_gib in source volume must be a non-negative integer")
+    
+        # Initialize request argument(s)
+        volume = netapp_v1.Volume(
+            share_name=share_name,
+            storage_pool=storage_pool,
+            capacity_gib=source_vol.capacity_gib,
+            protocols=protocols,
+            restore_parameters=netapp_v1.RestoreParameters(
+                source_snapshot=f"{source_name}/snapshots/{source_snapshot}"
+            ),
+            description=description,
+            labels=labels or {},
+            unix_permissions=unix_permissions,
+            snapshot_directory=snapshot_directory,
+            security_style=security_style,
+            kerberos_enabled=kerberos_enabled,
+            large_capacity=large_capacity,
+            multiple_endpoints=multiple_endpoints,
+        )
+    
+        if smb_settings:
+            volume.smb_settings = smb_settings
 
-    # Build ExportPolicy if provided
-    if export_policy_rules:
-        volume.export_policy = netapp_v1.ExportPolicy(
-            rules=[netapp_v1.ExportPolicyRule(**rule) for rule in export_policy_rules]
+        # Build ExportPolicy if provided
+        if export_policy_rules:
+            volume.export_policy = netapp_v1.ExportPolicy(
+                rules=[netapp_v1.ExportPolicyRule(**rule) for rule in export_policy_rules]
+            )
+    
+        # Build SnapshotPolicy if provided
+        if snapshot_policy:
+            volume.snapshot_policy = netapp_v1.SnapshotPolicy(**snapshot_policy)
+    
+        # Build TieringPolicy if provided
+        if tiering_enabled:
+            volume.tiering_policy = netapp_v1.TieringPolicy(
+                cooling_threshold_days=cooling_threshold_days or 0
+            )
+    
+        # Build BackupConfig if provided
+        if backup_policies or backup_vault:
+            volume.backup_config = netapp_v1.BackupConfig(
+                backup_policies=backup_policies or [],
+                backup_vault=backup_vault or "",
+                scheduled_backup_enabled=scheduled_backup_enabled or False
+            )
+    
+        # Build RestrictedAction if provided
+        if block_deletion_when_clients_connected:
+            volume.restricted_actions = [netapp_v1.RestrictedAction.BLOCK_VOLUME_DELETION]
+    
+        # Construct the request
+        request = netapp_v1.CreateVolumeRequest(
+            parent=parent,
+            volume_id=volume_id,
+            volume=volume
         )
- 
-    # Build SnapshotPolicy if provided
-    if snapshot_policy:
-        volume.snapshot_policy = netapp_v1.SnapshotPolicy(**snapshot_policy)
- 
-    # Build TieringPolicy if provided
-    if tiering_enabled:
-        volume.tiering_policy = netapp_v1.TieringPolicy(
-            cooling_threshold_days=cooling_threshold_days or 0
-        )
- 
-    # Build BackupConfig if provided
-    if backup_policies or backup_vault:
-        volume.backup_config = netapp_v1.BackupConfig(
-            backup_policies=backup_policies or [],
-            backup_vault=backup_vault or "",
-            scheduled_backup_enabled=scheduled_backup_enabled or False
-        )
- 
-    # Build RestrictedAction if provided
-    if block_deletion_when_clients_connected:
-        volume.restricted_actions = [netapp_v1.RestrictedAction.BLOCK_VOLUME_DELETION]
- 
-    # Construct the request
-    request = netapp_v1.CreateVolumeRequest(
-        parent=parent,
-        volume_id=volume_id,
-        volume=volume
-    )
 
-    try:
         # Make the request
         operation = client.create_volume(request=request)
 
@@ -493,15 +504,16 @@ def delete_volume(
         volume_id=volume_id
     )
 
-    client = create_client()
-
-    # Construct a name string
-    name = f"projects/{project_id}/locations/{location}/volumes/{volume_id}"
-
-    # Initialize request argument(s)
-    request = netapp_v1.DeleteVolumeRequest(name=name, force=force)
-
     try:
+
+        client = create_client()
+
+        # Construct a name string
+        name = f"projects/{project_id}/locations/{location}/volumes/{volume_id}"
+
+        # Initialize request argument(s)
+        request = netapp_v1.DeleteVolumeRequest(name=name, force=force)
+
         # Make the request
         operation = client.delete_volume(request=request)
 
@@ -545,15 +557,16 @@ def list_volumes(
         location=location
     )
 
-    client = create_client()
-
-    # Construct a parent string
-    parent = f"projects/{project_id}/locations/{location}"
-
-    # Initialize request argument(s)
-    request = netapp_v1.ListVolumesRequest(parent=parent)
-
     try:
+
+        client = create_client()
+
+        # Construct a parent string
+        parent = f"projects/{project_id}/locations/{location}"
+
+        # Initialize request argument(s)
+        request = netapp_v1.ListVolumesRequest(parent=parent)
+
         # Make the request
         page_result = client.list_volumes(request=request)
 

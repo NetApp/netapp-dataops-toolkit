@@ -118,42 +118,45 @@ def create_replication(
         replication_schedule=replication_schedule,
         destination_storage_pool=destination_storage_pool
     )
-    
-    client = create_client()
 
-    # Construct a parent string
-    parent = f"projects/{source_project_id}/locations/{source_location}/volumes/{source_volume_id}"
- 
-    # Initialize request argument(s)
-    destination_params = netapp_v1.DestinationVolumeParameters(
-        storage_pool=destination_storage_pool,
-        volume_id=destination_volume_id,
-        share_name=destination_share_name,
-        description=destination_volume_description
-    )
- 
-    # Build TieringPolicy if provided
-    if tiering_enabled:
-        destination_params.tiering_policy = netapp_v1.TieringPolicy(
-            cooling_threshold_days=cooling_threshold_days or 0
+    if labels is not None and not isinstance(labels, dict):
+        raise ValueError("labels must be a dictionary")
+    
+    try:
+        client = create_client()
+
+        # Construct a parent string
+        parent = f"projects/{source_project_id}/locations/{source_location}/volumes/{source_volume_id}"
+    
+        # Initialize request argument(s)
+        destination_params = netapp_v1.DestinationVolumeParameters(
+            storage_pool=destination_storage_pool,
+            volume_id=destination_volume_id,
+            share_name=destination_share_name,
+            description=destination_volume_description
+        )
+    
+        # Build TieringPolicy if provided
+        if tiering_enabled:
+            destination_params.tiering_policy = netapp_v1.TieringPolicy(
+                cooling_threshold_days=cooling_threshold_days or 0
+            )
+    
+        # Construct the replication object
+        replication = netapp_v1.Replication(
+            replication_schedule=replication_schedule,
+            destination_volume_parameters=destination_params,
+            description=description,
+            labels=labels or {}
+        )
+    
+        # Construct the request
+        request = netapp_v1.CreateReplicationRequest(
+            parent=parent,
+            replication=replication,
+            replication_id=replication_id
         )
  
-    # Construct the replication object
-    replication = netapp_v1.Replication(
-        replication_schedule=replication_schedule,
-        destination_volume_parameters=destination_params,
-        description=description,
-        labels=labels or {}
-    )
- 
-    # Construct the request
-    request = netapp_v1.CreateReplicationRequest(
-        parent=parent,
-        replication=replication,
-        replication_id=replication_id
-    )
- 
-    try:
         # Make the request
         operation = client.create_replication(request=request)
 
