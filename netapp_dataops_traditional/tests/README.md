@@ -187,16 +187,15 @@ This approach allows comprehensive testing of:
 
 ```
 tests/
-├── README.md                    # This file - comprehensive test documentation
-├── requirements.txt             # Test dependencies
-├── gcnv/                       # GCNV traditional module tests (136 tests)
-│   ├── __init__.py
-│   ├── test_base.py            # Base utility function tests (10 tests)
-│   ├── test_volume_management.py   # Volume operation tests (32 tests)
-│   ├── test_snapshot_management.py # Snapshot operation tests (47 tests)
-│   └── test_replication_management.py # Replication tests (47 tests)
-└── mcp/                        # MCP server integration tests (22 tests)
-    └── test_gcnv_mcp.py        # MCP server tests (22 tests)
+├── README.md                           # This file - comprehensive test documentation
+├── requirements.txt                    # Test dependencies
+├── gcnv/                               # GCNV traditional module tests (136 tests)
+│   ├── test_base.py                    # Base utility function tests (10 tests)
+│   ├── test_volume_management.py       # Volume operation tests (32 tests)
+│   ├── test_snapshot_management.py     # Snapshot operation tests (47 tests)
+│   └── test_replication_management.py  # Replication tests (47 tests)
+└── mcp/                                # MCP server integration tests (22 tests)
+    └── test_gcnv_mcp.py                # MCP server tests (22 tests)
 ```
 
 ## Extending the Test Suite
