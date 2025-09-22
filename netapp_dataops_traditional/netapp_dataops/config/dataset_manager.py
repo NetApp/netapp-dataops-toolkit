@@ -429,16 +429,11 @@ class DatasetManagerConfigurator:
                     print("Failed to unmount. Please unmount manually and re-run configuration.")
                     return
         
-        # Ask user if they want to mount the volume
-        if not PromptUtils.prompt_yes_no(f"Would you like to mount volume '{volume_name}' to '{mountpoint}' now?"):
-            print("Skipping mount operation.")
-            print(f"To mount manually later: sudo mount -t nfs {expected_nfs_target} {mountpoint}")
-            return
-        
         # Check NFS utilities BEFORE attempting any mount operations
         print("\n🔧 Preparing for volume mounting...")
         if not self._ensure_nfs_client_available():
-            print("\n Cannot proceed with mounting without NFS client utilities.")
+            print("\nCannot proceed with mounting without NFS client utilities.")
+            print(f"To mount manually later: sudo mount -t nfs {expected_nfs_target} {mountpoint}")
             return
         
         # Now attempt to mount the volume
@@ -450,6 +445,7 @@ class DatasetManagerConfigurator:
             self._handle_fstab_setup(volume_name, mountpoint, expected_nfs_target)
         else:
             print(f"❌ Failed to mount volume automatically.")
+            print(f"To mount manually: sudo mount -t nfs {expected_nfs_target} {mountpoint}")
     
     def _get_expected_nfs_target(self, volume_name: str) -> str:
         """Get the expected NFS target for a volume."""
