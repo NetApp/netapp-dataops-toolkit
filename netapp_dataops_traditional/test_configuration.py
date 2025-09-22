@@ -46,6 +46,11 @@ def test_configuration():
             print("      - Configure ONTAP connection settings")
             print("      - Set up or create the root volume")
             print("      - Configure local mounting")
+            print("\n   💡 Note: If you encounter NFS mount errors:")
+            print("      - Ensure NFS client utilities are installed:")
+            print("        Ubuntu/Debian: sudo apt install -y nfs-common")
+            print("        RHEL/CentOS:   sudo yum install -y nfs-utils")
+            print("      - Verify with: which mount.nfs")
             print("\n   4. After configuration, run this test again")
             
     except ImportError as e:

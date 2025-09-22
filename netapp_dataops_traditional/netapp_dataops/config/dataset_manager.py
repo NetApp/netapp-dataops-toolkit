@@ -54,29 +54,48 @@ class DatasetManagerConfigurator:
         Returns:
             bool: True if NFS client utilities are available, False otherwise
         """
-        print("Checking system requirements for NFS mounting...")
+        print("\n🔧 Checking system requirements for NFS mounting...")
+        
+        # Check for mount.nfs binary
         nfs_check = subprocess.run(['which', 'mount.nfs'], capture_output=True, text=True)
-        if nfs_check.returncode != 0:
-            print("⚠️  NFS client utilities not found on this system.")
-            if PromptUtils.prompt_yes_no("Would you like to install NFS client utilities now?", default=True):
-                if self._install_nfs_client():
-                    print("✓ NFS client utilities installed successfully.")
-                    return True
-                else:
-                    print("❌ Failed to install NFS client utilities.")
-                    print("Dataset Manager requires NFS client utilities for mounting volumes.")
-                    print("⚠️  Note: You'll need to install NFS client utilities manually:")
-                    print("    Ubuntu/Debian: sudo apt install -y nfs-common")
-                    print("    RHEL/CentOS:   sudo yum install -y nfs-utils")
-                    return False
-            else:
-                print("⚠️  Note: You'll need to install NFS client utilities manually later.")
-                print("    Ubuntu/Debian: sudo apt install -y nfs-common")
-                print("    RHEL/CentOS:   sudo yum install -y nfs-utils")
-                return False
-        else:
+        if nfs_check.returncode == 0:
             print("✓ NFS client utilities found.")
             return True
+        
+        # Also check alternative locations
+        nfs_paths = ['/sbin/mount.nfs', '/usr/sbin/mount.nfs', '/bin/mount.nfs']
+        for path in nfs_paths:
+            if os.path.exists(path):
+                print(f"✓ NFS client utilities found at {path}")
+                return True
+        
+        print("⚠️  NFS client utilities not found on this system.")
+        print("   NFS client utilities are required for mounting Dataset Manager volumes.")
+        
+        print("\n📦 Installing NFS client utilities automatically...")
+        if self._install_nfs_client():
+            # Verify installation worked
+            final_check = subprocess.run(['which', 'mount.nfs'], capture_output=True, text=True)
+            if final_check.returncode == 0:
+                print("✅ NFS client utilities installed and verified successfully.")
+                return True
+            else:
+                print("⚠️  Installation completed but mount.nfs not found in PATH.")
+                print("   Please verify installation manually.")
+                return False
+        else:
+            print("❌ Failed to install NFS client utilities automatically.")
+            self._show_manual_nfs_installation()
+            return False
+    
+    def _show_manual_nfs_installation(self) -> None:
+        """Show manual NFS client installation instructions."""
+        print("\n📋 Manual NFS client installation:")
+        print("   Ubuntu/Debian: sudo apt update && sudo apt install -y nfs-common")
+        print("   RHEL/CentOS:   sudo yum install -y nfs-utils")
+        print("   Fedora:        sudo dnf install -y nfs-utils") 
+        print("   SUSE:          sudo zypper install -y nfs-client")
+        print("\n   After installation, re-run: python -m netapp_dataops.netapp_dataops_cli config")
     
     def _bind_existing_root_volume(self) -> DatasetManagerConfig:
         """Bind to an existing root volume with validation."""
@@ -345,8 +364,10 @@ class DatasetManagerConfigurator:
         try:
             # Create mountpoint directory if it doesn't exist
             os.makedirs(mountpoint, exist_ok=True)
+            print(f"✓ Mountpoint directory '{mountpoint}' ready")
             
             # First try using the CLI to mount (handles the data LIF and NFS properly)
+            print("   Attempting CLI mount...")
             result = subprocess.run([
                 'python', '-m', 'netapp_dataops.netapp_dataops_cli',
                 'mount', 'volume',
@@ -355,10 +376,13 @@ class DatasetManagerConfigurator:
             ], capture_output=True, text=True)
             
             if result.returncode == 0:
+                print("✓ CLI mount successful")
                 return True
             
+            print(f"   CLI mount failed: {result.stderr.strip()}")
+            
             # If CLI mount fails, try direct NFS mount
-            print(f"CLI mount failed, trying direct NFS mount...")
+            print("   Attempting direct NFS mount...")
             nfs_target = self._get_expected_nfs_target(volume_name)
             
             result = subprocess.run([
@@ -366,13 +390,14 @@ class DatasetManagerConfigurator:
             ], capture_output=True, text=True)
             
             if result.returncode == 0:
+                print("✓ Direct NFS mount successful")
                 return True
             else:
-                print(f"Mount command failed: {result.stderr}")
+                print(f"Mount command failed: {result.stderr.strip()}")
                 return False
                 
         except Exception as e:
-            print(f"Error mounting volume: {e}")
+            print(f"❌ Error during mount operation: {e}")
             return False
     
     def _handle_root_volume_mounting(self, volume_name: str, mountpoint: str) -> None:
@@ -404,25 +429,27 @@ class DatasetManagerConfigurator:
                     print("Failed to unmount. Please unmount manually and re-run configuration.")
                     return
         
-        # Mount the volume
-        if PromptUtils.prompt_yes_no(f"Would you like to mount volume '{volume_name}' to '{mountpoint}' now?"):
-            # Check NFS utilities only when user agrees to mount
-            if not self._ensure_nfs_client_available():
-                print("Cannot proceed with mounting without NFS client utilities.")
-                print(f"To mount manually later: sudo mount -t nfs {expected_nfs_target} {mountpoint}")
-                return
-            
-            if self._mount_volume(volume_name, mountpoint):
-                print(f"✓ Volume '{volume_name}' mounted to '{mountpoint}'")
-                
-                # Handle fstab setup
-                self._handle_fstab_setup(volume_name, mountpoint, expected_nfs_target)
-            else:
-                print(f"Warning: Failed to mount volume. You'll need to mount it manually:")
-                print(f"  sudo mount -t nfs {expected_nfs_target} {mountpoint}")
-        else:
+        # Ask user if they want to mount the volume
+        if not PromptUtils.prompt_yes_no(f"Would you like to mount volume '{volume_name}' to '{mountpoint}' now?"):
             print("Skipping mount operation.")
             print(f"To mount manually later: sudo mount -t nfs {expected_nfs_target} {mountpoint}")
+            return
+        
+        # Check NFS utilities BEFORE attempting any mount operations
+        print("\n🔧 Preparing for volume mounting...")
+        if not self._ensure_nfs_client_available():
+            print("\n Cannot proceed with mounting without NFS client utilities.")
+            return
+        
+        # Now attempt to mount the volume
+        print(f"\n🔧 Mounting volume '{volume_name}' to '{mountpoint}'...")
+        if self._mount_volume(volume_name, mountpoint):
+            print(f"✅ Volume '{volume_name}' mounted successfully to '{mountpoint}'")
+            
+            # Handle fstab setup
+            self._handle_fstab_setup(volume_name, mountpoint, expected_nfs_target)
+        else:
+            print(f"❌ Failed to mount volume automatically.")
     
     def _get_expected_nfs_target(self, volume_name: str) -> str:
         """Get the expected NFS target for a volume."""
@@ -450,11 +477,13 @@ class DatasetManagerConfigurator:
             self._show_manual_fstab_instructions(nfs_target, mountpoint)
             return
         
-        # User agreed - check NFS utilities are available for fstab operations
-        if not self._ensure_nfs_client_available():
-            print("Cannot proceed with fstab setup without NFS client utilities.")
-            self._show_manual_fstab_instructions(nfs_target, mountpoint)
-            return
+        # User agreed - verify NFS utilities are available for fstab operations
+        # Note: We don't need to re-install here since we already checked before mounting,
+        # but we should verify mount.nfs is still available
+        nfs_check = subprocess.run(['which', 'mount.nfs'], capture_output=True, text=True)
+        if nfs_check.returncode != 0:
+            print("⚠️  NFS client utilities not found - fstab entry may not work properly.")
+            print("   Adding fstab entry anyway, but mounting may fail until NFS client is installed.")
         
         # User agreed - programmatically update /etc/fstab
         print(f"\n📝 Adding Dataset Manager volume to /etc/fstab...")
@@ -480,19 +509,25 @@ class DatasetManagerConfigurator:
         if self._add_fstab_entry_safely(fstab_entry, nfs_target, mountpoint):
             print(f"✓ Entry added to /etc/fstab successfully")
             
-            # Mount immediately using fstab entry
-            print(f"🔧 Mounting volume using fstab entry...")
-            if self._mount_from_fstab(mountpoint):
-                print(f"✅ Volume '{volume_name}' mounted successfully and will persist across reboots")
-                
-                # Validate the mount
-                if self._validate_mount(mountpoint, nfs_target):
-                    print(f"✓ Mount validation successful")
+            # Only attempt to mount from fstab if the volume isn't already mounted
+            if not self._is_mounted(mountpoint):
+                # Mount immediately using fstab entry
+                print(f"🔧 Mounting volume using fstab entry...")
+                if self._mount_from_fstab(mountpoint):
+                    print(f"✅ Volume '{volume_name}' mounted successfully and will persist across reboots")
+                    
+                    # Validate the mount
+                    if self._validate_mount(mountpoint, nfs_target):
+                        print(f"✓ Mount validation successful")
+                    else:
+                        print(f"⚠️  Mount validation failed - please check manually")
                 else:
-                    print(f"⚠️  Mount validation failed - please check manually")
+                    print(f"❌ Failed to mount using fstab entry")
+                    print(f"   The fstab entry was added, but the mount failed.")
+                    print(f"   This may be due to missing NFS client utilities or network issues.")
+                    self._show_manual_fstab_instructions(nfs_target, mountpoint)
             else:
-                print(f"❌ Failed to mount using fstab entry")
-                self._show_manual_fstab_instructions(nfs_target, mountpoint)
+                print(f"✓ Volume is already mounted - fstab entry will ensure persistence across reboots")
         else:
             print("❌ Failed to add entry to /etc/fstab automatically")
             self._show_manual_fstab_instructions(nfs_target, mountpoint)
