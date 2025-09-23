@@ -1,6 +1,9 @@
 from google.cloud import netapp_v1
 from google.protobuf.json_format import MessageToDict
 from typing import Dict, List, Any, Union
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _serialize(details) -> Union[Dict[str, Any], List[Any], str, int, float, bool, None]:
@@ -27,7 +30,7 @@ def create_client() -> netapp_v1.NetAppClient:
     try:
         return netapp_v1.NetAppClient()
     except Exception as e:
-        print(f"An error occurred while creating the NetApp client: {e}")
+        logger.error(f"An error occurred while creating the NetApp client: {e}")
         raise e
 
 

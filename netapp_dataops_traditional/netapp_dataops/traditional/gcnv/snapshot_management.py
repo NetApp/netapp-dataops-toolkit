@@ -1,6 +1,9 @@
 from google.cloud import netapp_v1
 from typing import Dict, Any
+import logging
 from .base import _serialize, create_client, validate_required_params
+
+logger = logging.getLogger(__name__)
 
 
 def create_snapshot(
@@ -68,14 +71,14 @@ def create_snapshot(
         # Make the request
         operation = client.create_snapshot(request=request)
 
-        print("Waiting for creation of a snapshot to complete...")
+        logger.info("Waiting for creation of a snapshot to complete...")
 
         response = operation.result()
 
         return {"status": "success", "details": _serialize(response)}
 
     except Exception as e:
-        print(f"An error occurred while creating the snapshot: {e}")
+        logger.error(f"An error occurred while creating the snapshot: {e}")
         return {"status": "error", "message": str(e)}
 
 
@@ -130,14 +133,14 @@ def delete_snapshot(
         # Make the request
         operation = client.delete_snapshot(request=request)
 
-        print("Waiting for deletion of snapshot to complete...")
+        logger.info("Waiting for deletion of snapshot to complete...")
 
         response = operation.result()
 
         return {"status": "success", "details": _serialize(response)}
 
     except Exception as e:
-        print(f"An error occurred while deleting the snapshot: {e}")
+        logger.error(f"An error occurred while deleting the snapshot: {e}")
         return {"status": "error", "message": str(e)}
 
 
@@ -195,5 +198,5 @@ def list_snapshots(
         return {"status": "success", "details": _serialize(snapshots)}
 
     except Exception as e:
-        print(f"An error occurred while listing snapshots: {e}")
+        logger.error(f"An error occurred while listing snapshots: {e}")
         return {"status": "error", "message": str(e)}

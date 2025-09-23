@@ -1,6 +1,9 @@
 from google.cloud import netapp_v1
 from typing import Dict, Any
+import logging
 from .base import _serialize, create_client, validate_required_params
+
+logger = logging.getLogger(__name__)
 
 
 def create_replication(
@@ -160,12 +163,12 @@ def create_replication(
         # Make the request
         operation = client.create_replication(request=request)
 
-        print("Waiting for operation to complete...")
+        logger.info("Waiting for operation to complete...")
 
         response = operation.result()
 
         return {"status": "success", "details": _serialize(response)}
 
     except Exception as e:
-        print(f"An error occurred while creating the replication: {e}")
+        logger.error(f"An error occurred while creating the replication: {e}")
         return {"status": "error", "message": str(e)}

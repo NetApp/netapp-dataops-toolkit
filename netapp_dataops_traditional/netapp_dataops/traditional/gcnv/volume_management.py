@@ -1,6 +1,9 @@
 from google.cloud import netapp_v1
 from typing import Dict, List, Any
+import logging
 from .base import _serialize, create_client, validate_required_params
+
+logger = logging.getLogger(__name__)
 
 
 def create_volume(
@@ -221,14 +224,14 @@ def create_volume(
         # Make the request
         operation = client.create_volume(request=request)
 
-        print("Waiting for operation to complete...")
+        logger.info("Waiting for operation to complete...")
 
         response = operation.result()
 
         return {"status": "success", "details": _serialize(response)}
     
     except Exception as e:
-        print(f"An error occurred while creating the volume: {e}")
+        logger.error(f"An error occurred while creating the volume: {e}")
         return {"status": "error", "message": str(e)}
 
  
@@ -391,7 +394,7 @@ def clone_volume(
         try:
             source_vol = client.get_volume(name=source_name)
         except Exception as e:
-            print(f"An error occurred while fetching the source volume: {e}")
+            logger.error(f"An error occurred while fetching the source volume: {e}")
             return {"status": "error", "message": f"Error fetching source volume: {e}"}
         
         if not isinstance(source_vol.capacity_gib, int) or source_vol.capacity_gib < 0:
@@ -457,14 +460,14 @@ def clone_volume(
         # Make the request
         operation = client.create_volume(request=request)
 
-        print("Waiting for cloning operation to complete...")
+        logger.info("Waiting for cloning operation to complete...")
 
         response = operation.result()
 
         return {"status": "success", "details": _serialize(response)}
 
     except Exception as e:
-        print(f"An error occurred while cloning the volume: {e}")
+        logger.error(f"An error occurred while cloning the volume: {e}")
         return {"status": "error", "message": str(e)}
 
 
@@ -517,14 +520,14 @@ def delete_volume(
         # Make the request
         operation = client.delete_volume(request=request)
 
-        print("Waiting for deletion of a volume to complete...")
+        logger.info("Waiting for deletion of a volume to complete...")
 
         response = operation.result()
 
         return {"status": "success", "details": _serialize(response)}
 
     except Exception as e:
-        print(f"An error occurred while deleting the volume: {e}")
+        logger.error(f"An error occurred while deleting the volume: {e}")
         return {"status": "error", "message": str(e)}
 
  
@@ -575,5 +578,5 @@ def list_volumes(
         return {"status": "success", "details": _serialize(volumes)}
 
     except Exception as e:
-        print(f"An error occurred while listing volumes: {e}")
+        logger.error(f"An error occurred while listing volumes: {e}")
         return {"status": "error", "message": str(e)}
