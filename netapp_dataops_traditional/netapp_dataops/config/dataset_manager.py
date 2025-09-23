@@ -177,30 +177,6 @@ class DatasetManagerConfigurator:
                     else:
                         print(f"Volume '{root_volume_name}' exists but has junction path '{junction_path}'")
                         print(f"Expected: '{expected_junction}'")
-                        
-                        # Check if expected junction is taken by another volume
-                        if self._junction_path_exists(expected_junction, exclude_volume=root_volume_name):
-                            print(f"Error: Junction path '{expected_junction}' is already in use by another volume.")
-                            if not PromptUtils.prompt_yes_no("Would you like to choose a different root volume name?"):
-                                print("Dataset Manager configuration cancelled.")
-                                return DatasetManagerConfig(enabled=False)
-                            continue  # Retry with different name
-                        
-                        if PromptUtils.prompt_yes_no("Reuse this volume by fixing its junction path?"):
-                            if self._fix_junction_path(root_volume_name, expected_junction):
-                                print(f"Junction path fixed to '{expected_junction}'")
-                                break  # Volume is ready, proceed to mounting
-                            else:
-                                print("Failed to fix junction path.")
-                                if not PromptUtils.prompt_yes_no("Would you like to choose a different root volume name?"):
-                                    print("Dataset Manager configuration cancelled.")
-                                    return DatasetManagerConfig(enabled=False)
-                                continue  # Retry with different name
-                        else:
-                            if not PromptUtils.prompt_yes_no("Would you like to choose a different root volume name?"):
-                                print("Dataset Manager configuration cancelled.")
-                                return DatasetManagerConfig(enabled=False)
-                            continue  # Retry with different name
                 else:
                     # Check junction path collision
                     expected_junction = f"/{root_volume_name}"
@@ -241,11 +217,7 @@ class DatasetManagerConfigurator:
                 
                 if expected_target not in mounted_target:
                     print(f"Warning: Mountpoint '{root_mountpoint}' is already in use by '{mounted_target}'")
-                    if PromptUtils.prompt_yes_no("Choose a different mountpoint?"):
-                        continue
-                    elif not PromptUtils.prompt_yes_no("Continue with this mountpoint anyway?"):
-                        print("Dataset Manager configuration cancelled.")
-                        return DatasetManagerConfig(enabled=False)
+                    continue
             break
         
         # 5. Handle mounting with proper validation
@@ -276,50 +248,22 @@ class DatasetManagerConfigurator:
             volumes = volume_operations.list_volumes(print_output=False)
             for volume in volumes:
                 # Skip the excluded volume (useful when checking for conflicts)
-                if exclude_volume and volume.get("Volume Name") == exclude_volume:
+                volume_name = volume.get("Volume Name")
+                if exclude_volume and volume_name == exclude_volume:
                     continue
                     
-                nfs_target = volume.get('NFS Mount Target', '')
-                if ':' in nfs_target:
-                    vol_junction_path = nfs_target.split(':', 1)[1]
-                    if vol_junction_path == junction_path:
-                        return True
+                nfs_target = volume.get('NFS Mount Target')
+                # Quick checks: skip if no NFS target or doesn't contain ':'
+                if not nfs_target or ':' not in nfs_target:
+                    continue
+                
+                # Extract junction path and compare
+                vol_junction_path = nfs_target.split(':', 1)[1]
+                if vol_junction_path == junction_path:
+                    return True
             return False
         except Exception as e:
             print(f"Error checking junction path existence: {e}")
-            return False
-    
-    def _fix_junction_path(self, volume_name: str, new_junction_path: str) -> bool:
-        """Fix the junction path of an existing volume."""
-        try:
-            from ..traditional.core import _retrieve_config, _instantiate_connection
-            
-            # Get config and establish connection
-            config = _retrieve_config(print_output=False)
-            _instantiate_connection(config=config, connectionType="ONTAP", print_output=False)
-            
-            # Import here to avoid dependency issues at module load time
-            from netapp_ontap.resources import Volume as NetAppVolume
-            
-            # Find the volume by name
-            volume_collection = NetAppVolume.get_collection(svm=config["svm"], name=volume_name)
-            volumes = list(volume_collection)
-            
-            if not volumes:
-                print(f"Volume '{volume_name}' not found")
-                return False
-            
-            volume = volumes[0]
-            
-            # Update the junction path
-            volume.nas = {"path": new_junction_path}
-            volume.patch()
-            
-            print(f"Junction path updated to '{new_junction_path}'")
-            return True
-            
-        except Exception as e:
-            print(f"Error fixing junction path: {e}")
             return False
     
     def _create_root_volume_on_ontap(self, volume_name: str) -> bool:
