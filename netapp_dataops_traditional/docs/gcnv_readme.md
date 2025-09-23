@@ -79,11 +79,34 @@ Before getting started, ensure you have:
 
 ### Installation Instructions
 
-Install the toolkit with pip:
+#### Base Package (Default)
+Installs only the core toolkit, without cloud provider dependencies:
 
 ```bash
 python3 -m pip install netapp-dataops-traditional
 ```
+
+#### With Google Cloud Support
+Installs the toolkit **with Google Cloud NetApp integration** (installs `google-cloud-netapp`):
+
+```bash
+python3 -m pip install 'netapp-dataops-traditional[gcp]'
+```
+
+> **Note:** The `[gcp]` extra is required for GCNV functionality and will install `google-cloud-netapp`.
+
+#### Future Support
+This architecture enables future cloud integrations:
+
+```bash
+python3 -m pip install 'netapp-dataops-traditional[azure]'  # Future Azure support
+```
+
+**Benefits:**
+- Faster installations – Download only what you need
+- Smaller base package – Core functionality remains lightweight
+- Flexible deployment – Choose cloud integrations per environment
+- Compatible with pip and uv
 
 <a name="authentication"></a>
 
@@ -97,7 +120,7 @@ Choose one of the following authentication methods:
 
 ```bash
 # Authenticate with your Google account
-gcloud auth application-default login
+gcloud auth login
 
 # Set your default project
 gcloud config set project YOUR_PROJECT_ID
