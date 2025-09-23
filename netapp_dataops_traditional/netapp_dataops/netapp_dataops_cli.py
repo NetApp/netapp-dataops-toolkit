@@ -9,6 +9,7 @@ from getpass import getpass
 import sys
 sys.path.insert(0, "/root/netapp-dataops-toolkit/netapp_dataops_traditional/netapp_dataops")
 
+from dotenv import load_dotenv
 import keyring
 from netapp_dataops import traditional
 from netapp_dataops.traditional import (
@@ -635,7 +636,8 @@ def createConfig(configDirPath: str = "~/.netapp_dataops", configFilename: str =
         passwordString = getpass("Enter ONTAP API password (Recommendation: Use SVM account): ")
 
          # Store the password securely using keyring
-        service_name = "netapp_dataops"
+        load_dotenv()
+        service_name = os.getenv("KEYRING_SERVICE_NAME")
         if username is not None:
             keyring.set_password(service_name, "username", username)
         if passwordString is not None:
