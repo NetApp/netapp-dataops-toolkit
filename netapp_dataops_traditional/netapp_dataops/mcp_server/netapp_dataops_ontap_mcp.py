@@ -20,7 +20,7 @@ from netapp_dataops.traditional import (
 
 mcp = FastMCP("NetApp DataOps Traditional Toolkit MCP")
 
-@mcp.tool(name="Create Volume")
+@mcp.tool(name="CreateVolume")
 async def create_volume_tool(
     volume_name: str,
     volume_size: str,
@@ -96,7 +96,7 @@ async def create_volume_tool(
         raise
 
 
-@mcp.tool(name="Clone Volume")
+@mcp.tool(name="CloneVolume")
 async def clone_volume_tool(
     new_volume_name: str,
     source_volume_name: str,
@@ -171,7 +171,7 @@ async def clone_volume_tool(
         raise
 
 
-@mcp.tool(name="List Volumes")
+@mcp.tool(name="ListVolumes")
 async def list_volumes_tool(
     check_local_mounts: bool = False,
     include_space_usage_details: bool = False,
@@ -216,7 +216,7 @@ async def list_volumes_tool(
         raise
 
 
-@mcp.tool(name="Mount Volume")
+@mcp.tool(name="MountVolume")
 async def mount_volume_tool(
     volume_name: str,          
     mountpoint: str,            
@@ -262,7 +262,7 @@ async def mount_volume_tool(
         raise
 
 
-@mcp.tool(name="Create Snapshot")
+@mcp.tool(name="CreateSnapshot")
 async def create_snapshot_tool(
     volume_name: str,                    
     snapshot_name: Optional[str] = None,           
@@ -307,7 +307,7 @@ async def create_snapshot_tool(
         raise
 
 
-@mcp.tool(name="List Snapshots")
+@mcp.tool(name="ListSnapshots")
 async def list_snapshots_tool(
     volume_name: str,            
     cluster_name: Optional[str] = None,    
@@ -340,7 +340,7 @@ async def list_snapshots_tool(
         raise
 
 
-@mcp.tool(name="Create SnapMirror Relationship")
+@mcp.tool(name="CreateSnapMirrorRelationship")
 async def create_snap_mirror_relationship_tool(
     source_svm: str,                    
     source_vol: str,                    
@@ -390,7 +390,7 @@ async def create_snap_mirror_relationship_tool(
         raise
 
 
-@mcp.tool(name="List SnapMirror Relationships")
+@mcp.tool(name="ListSnapMirrorRelationships")
 async def list_snap_mirror_relationships_tool(
     cluster_name: Optional[str] = None,          
     print_output: bool = False  
@@ -420,7 +420,7 @@ async def list_snap_mirror_relationships_tool(
         print(f"Error listing snapmirror relationships: {e}")
         raise
 
-@mcp.tool(name="Create FlexCache")
+@mcp.tool(name="CreateFlexCache")
 async def create_flexcache_tool(
     source_vol: str,
     source_svm: str,
