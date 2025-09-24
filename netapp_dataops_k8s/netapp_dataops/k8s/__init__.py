@@ -32,6 +32,10 @@ from netapp_ontap.resources import Flexcache as NetAppFlexCache
 from netapp_ontap import config as netappConfig
 from netapp_ontap.resources import Volume
 
+from logging_utils import setup_logger
+
+logger = setup_logger(__name__)
+
 # Using this decorator in lieu of using a dependency to manage deprecation
 def deprecated(func):
     @functools.wraps(func)
@@ -151,12 +155,12 @@ def _load_kube_config2(print_output: bool = False):
 def _astra_not_supported_message(print_output: bool = False) :
     error_text = "Error: Astra Control functionality within the DataOps Toolkit is no longer supported. Please use the Astra SDK and/or toolkit. For details, visit https://github.com/NetApp/netapp-astra-toolkits."
     if print_output :
-        print(error_text)
+        logger.error(error_text)
     raise APIConnectionError(error_text)
 
 
 def _print_invalid_config_error():
-    print(
+    logger.error(
         "Error: Missing or invalid kubeconfig file. The NetApp DataOps Toolkit for Kubernetes requires that a valid kubeconfig file be present on the host, located at $HOME/.kube or at another path specified by the KUBECONFIG environment variable.")
 
 
@@ -177,7 +181,7 @@ def _retrieve_image_for_jupyter_lab_deployment(workspaceName: str, namespace: st
                                                     name=_get_jupyter_lab_deployment(workspaceName=workspaceName))
     except ApiException as err:
         if printOutput:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise APIConnectionError(err)
 
     return deployment.spec.template.spec.containers[0].image
@@ -204,7 +208,7 @@ def _retrieve_jupyter_lab_url(workspaceName: str, namespace: str = "default", pr
                 loadBalancerIP = serviceStatus.status.load_balancer.ingress[0].ip
             except :
                 if printOutput :
-                    print("Error: Kubernetes Service for workspace is not available.")
+                    logger.error("Error: Kubernetes Service for workspace is not available.")
                 raise ServiceUnavailableError()
             return "http://" + loadBalancerIP
         else:
@@ -223,7 +227,7 @@ def _retrieve_jupyter_lab_url(workspaceName: str, namespace: str = "default", pr
             return "http://" + ip + ":" + str(port)
     except ApiException as err:
         if printOutput:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise APIConnectionError(err)
 
 
@@ -294,7 +298,7 @@ def _retrieve_triton_endpoints(server_name: str, namespace: str = "default", pri
                         metrics_port = port.port
             except :
                 if printOutput :
-                    print("Error: Kubernetes Service for workspace is not available.")
+                    logger.error("Error: Kubernetes Service for workspace is not available.")
                 raise ServiceUnavailableError()
 
             # Construct and return urls
@@ -331,7 +335,7 @@ def _retrieve_triton_endpoints(server_name: str, namespace: str = "default", pri
 
     except ApiException as err:
         if printOutput:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise APIConnectionError(err)
 
 
@@ -351,7 +355,7 @@ def _retrieve_jupyter_lab_workspace_for_pvc(pvcName: str, namespace: str = "defa
         workspaceName = pvc.metadata.labels["jupyterlab-workspace-name"]
     except ApiException as err:
         if printOutput:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise APIConnectionError(err)
 
     return workspaceName
@@ -372,7 +376,7 @@ def _retrieve_size_for_pvc(pvcName: str, namespace: str = "default", printOutput
         pvc = api.read_namespaced_persistent_volume_claim(name=pvcName, namespace=namespace)
     except ApiException as err:
         if printOutput:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise APIConnectionError(err)
     pvcSize = pvc.status.capacity["storage"]
 
@@ -397,7 +401,7 @@ def _retrieve_source_volume_details_for_volume_snapshot(snapshotName: str, names
                                                           plural="volumesnapshots")
     except ApiException as err:
         if printOutput:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise APIConnectionError(err)
     sourcePvcName = volumeSnapshot["spec"]["source"]["persistentVolumeClaimName"]
     restoreSize = volumeSnapshot["status"]["restoreSize"]
@@ -420,7 +424,7 @@ def _retrieve_storage_class_for_pvc(pvcName: str, namespace: str = "default", pr
         pvc = api.read_namespaced_persistent_volume_claim(name=pvcName, namespace=namespace)
     except ApiException as err:
         if printOutput:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise APIConnectionError(err)
     storageClass = pvc.spec.storage_class_name
 
@@ -447,14 +451,14 @@ def _scale_jupyter_lab_deployment(workspaceName: str, numPods: int, namespace: s
         }
     }
     if printOutput:
-        print("Scaling Deployment '" + _get_jupyter_lab_deployment(
+        logger.info("Scaling Deployment '" + _get_jupyter_lab_deployment(
             workspaceName=workspaceName) + "' in namespace '" + namespace + "' to " + str(numPods) + " pod(s).")
     try:
         api = client.AppsV1Api()
         api.patch_namespaced_deployment(name=deploymentName, namespace=namespace, body=deployment)
     except ApiException as err:
         if printOutput:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise APIConnectionError(err)
 
 
@@ -477,7 +481,7 @@ def _wait_for_jupyter_lab_deployment_ready(workspaceName: str, namespace: str = 
 
     # Wait for deployment to be ready
     if printOutput:
-        print(
+        logger.info(
             "Waiting for Deployment '" + _get_jupyter_lab_deployment(workspaceName=workspaceName) + "' to reach Ready state.")
     while True:
         try:
@@ -486,7 +490,7 @@ def _wait_for_jupyter_lab_deployment_ready(workspaceName: str, namespace: str = 
                 workspaceName=workspaceName))
         except ApiException as err:
             if printOutput:
-                print("Error: Kubernetes API Error: ", err)
+                logger.error("Error: Kubernetes API Error: %s", err)
             raise APIConnectionError(err)
         if deploymentStatus.status.ready_replicas == 1:
             break
@@ -504,7 +508,7 @@ def _wait_for_triton_dev_deployment(server_name: str, namespace: str = "default"
 
     # Wait for deployment to be ready
     if printOutput:
-        print(
+        logger.info(
             "Waiting for Deployment '" + _get_triton_deployment(server_name=server_name) + "' to reach Ready state.")
     while True:
         try:
@@ -513,7 +517,7 @@ def _wait_for_triton_dev_deployment(server_name: str, namespace: str = "default"
                 server_name=server_name))
         except ApiException as err:
             if printOutput:
-                print("Error: Kubernetes API Error: ", err)
+                logger.error("Error: Kubernetes API Error: %s", err)
             raise APIConnectionError(err)
         if deploymentStatus.status.ready_replicas == 1:
             break
@@ -544,7 +548,7 @@ def _get_trident_backend_config(backend_config_name: str, namespace: str = "trid
     )
     except ApiException as e:
         if print_output:
-            print(f"Error retrieving TridentBackendConfig '{backend_config_name}': {e}")  
+            logger.error("Error retrieving TridentBackendConfig '%s': %s", backend_config_name, e)
         raise APIConnectionError()  
 
     # Extract relevant information
@@ -698,14 +702,16 @@ def clone_jupyter_lab(new_workspace_name: str, source_workspace_name: str, sourc
                                                                                     namespace=namespace,
                                                                                     printOutput=print_output)
         if print_output:
-            print(
-                "Creating new JupyterLab workspace '" + new_workspace_name + "' from VolumeSnapshot '" + source_snapshot_name + "' in namespace '" + namespace + "'...\n")
+            logger.info(
+                "Creating new JupyterLab workspace '%s' from VolumeSnapshot '%s' in namespace '%s'...",
+                new_workspace_name, source_snapshot_name, namespace)
     else:
         sourcePvcName = _get_jupyter_lab_workspace_pvc_name(workspaceName=source_workspace_name)
         workspaceSize = _retrieve_size_for_pvc(pvcName=sourcePvcName, namespace=namespace, printOutput=print_output)
         if print_output:
-            print(
-                "Creating new JupyterLab workspace '" + new_workspace_name + "' from source workspace '" + source_workspace_name + "' in namespace '" + namespace + "'...\n")
+            logger.info(
+                "Creating new JupyterLab workspace '%s' from source workspace '%s' in namespace '%s'...",
+                new_workspace_name, source_workspace_name, namespace)
 
     # Determine source workspace details
     if not source_workspace_name:
@@ -729,14 +735,15 @@ def clone_jupyter_lab(new_workspace_name: str, source_workspace_name: str, sourc
     del labels["source-pvc"]
 
     # Create new workspace
-    print()
+    if print_output:
+        logger.info("Creating new JupyterLab workspace '%s'...", new_workspace_name)
     url = create_jupyter_lab(workspace_name=new_workspace_name, workspace_size=workspaceSize, namespace=namespace,
                        workspace_password=new_workspace_password, workspace_image=sourceWorkspaceImage, request_cpu=request_cpu,
                        load_balancer_service=load_balancer_service, request_memory=request_memory, request_nvidia_gpu=request_nvidia_gpu, allocate_resource=allocate_resource, print_output=print_output,
                        pvc_already_exists=True, labels=labels)
 
     if print_output:
-        print("JupyterLab workspace successfully cloned.")
+        logger.info("JupyterLab workspace successfully cloned.")
 
     return url
 
@@ -750,8 +757,9 @@ def clone_volume(new_pvc_name: str, source_pvc_name: str, source_snapshot_name: 
         timestamp = datetime.today().strftime("%Y%m%d%H%M%S")
         source_snapshot_name = "ntap-dsutil.for-clone." + timestamp
         if print_output:
-            print(
-                "Creating new VolumeSnapshot '" + source_snapshot_name + "' for source PVC '" + source_pvc_name + "' in namespace '" + namespace + "' to use as source for clone...")
+            logger.info(
+                "Creating new VolumeSnapshot '%s' for source PVC '%s' in namespace '%s' to use as source for clone...",
+                source_snapshot_name, source_pvc_name, namespace)
         create_volume_snapshot(pvc_name=source_pvc_name, snapshot_name=source_snapshot_name,
                                volume_snapshot_class=volume_snapshot_class, namespace=namespace, print_output=print_output)
 
@@ -767,13 +775,14 @@ def clone_volume(new_pvc_name: str, source_pvc_name: str, source_snapshot_name: 
 
     # Create new PVC from snapshot
     if print_output:
-        print(
-            "Creating new PersistentVolumeClaim (PVC) '" + new_pvc_name + "' from VolumeSnapshot '" + source_snapshot_name + "' in namespace '" + namespace + "'...")
+        logger.info(
+            "Creating new PersistentVolumeClaim (PVC) '%s' from VolumeSnapshot '%s' in namespace '%s'...",
+            new_pvc_name, source_snapshot_name, namespace)
     create_volume(pvc_name=new_pvc_name, volume_size=restoreSize, storage_class=storageClass, namespace=namespace,
                   print_output=print_output, pvc_labels=pvc_labels, source_snapshot=source_snapshot_name)
 
     if print_output:
-        print("Volume successfully cloned.")
+        logger.info("Volume successfully cloned.")
 
 
 def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str = None, storage_class: str = None,
@@ -795,7 +804,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
 
     # Step 0 - Set password
     if not workspace_password:
-        print("Setting workspace password (this password will be required in order to access the workspace)...")
+        logger.info("Setting workspace password (this password will be required in order to access the workspace)...")
         hashedPassword = jupyter_auth.passwd()
     else :
         hashedPassword = jupyter_auth.passwd(workspace_password)
@@ -803,13 +812,13 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
     # Step 1 - Create PVC for workspace
     if not pvc_already_exists:
         if print_output:
-            print("\nCreating persistent volume for workspace...")
+            logger.info("Creating persistent volume for workspace...")
         try:
             create_volume(pvc_name=_get_jupyter_lab_workspace_pvc_name(workspaceName=workspace_name), volume_size=workspace_size,
                           storage_class=storage_class, namespace=namespace, pvc_labels=labels, print_output=print_output)
         except:
             if print_output:
-                print("Aborting workspace creation...")
+                logger.info("Aborting workspace creation...")
             raise
 
     # Step 2 - Create service for workspace
@@ -861,19 +870,18 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
 
     # Create service
     if print_output:
-        print("\nCreating Service '" + _get_jupyter_lab_service(
-            workspaceName=workspace_name) + "' in namespace '" + namespace + "'.")
+        logger.info("Creating Service '%s' in namespace '%s'.", workspaceName=workspace_name, namespace=namespace)
     try:
         api = client.CoreV1Api()
         api.create_namespaced_service(namespace=namespace, body=service)
     except ApiException as err:
         if print_output:
-            print("Error: Kubernetes API Error: ", err)
-            print("Aborting workspace creation...")
+            logger.error("Error: Kubernetes API Error: %s", err)
+            logger.info("Aborting workspace creation...")
         raise APIConnectionError(err)
 
     if print_output:
-        print("Service successfully created.")
+        logger.info("Service successfully created.")
 
     # Step 3 - Create deployment
 
@@ -965,7 +973,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
         user_pvc_mountpoint = mount_pvc[divider_index+1:]
 
         if print_output:
-            print("\nAttaching Additional PVC: '" + user_pvc_name + "' at mount_path: '" + user_pvc_mountpoint + "'.")
+            logger.info("Attaching Additional PVC: '%s' at mount_path: '%s'.", user_pvc_name, user_pvc_mountpoint)
 
         # Add user-specified PVC
         deployment.spec.template.spec.volumes.append(
@@ -1003,31 +1011,30 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
 
     # Create deployment
     if print_output:
-        print("\nCreating Deployment '" + _get_jupyter_lab_deployment(
-            workspaceName=workspace_name) + "' in namespace '" + namespace + "'.")
+        logger.info("Creating Deployment '%s' in namespace '%s'.", _get_jupyter_lab_deployment(workspaceName=workspace_name), namespace)
     try:
         api = client.AppsV1Api()
         api.create_namespaced_deployment(namespace=namespace, body=deployment)
     except ApiException as err:
         if print_output:
-            print("Error: Kubernetes API Error: ", err)
-            print("Aborting workspace creation...")
+            logger.error("Error: Kubernetes API Error: %s", err)
+            logger.info("Aborting workspace creation...")
         raise APIConnectionError(err)
 
     # Wait for deployment to be ready
     if print_output:
-        print("Deployment '" + _get_jupyter_lab_deployment(workspaceName=workspace_name) + "' created.")
+        logger.info("Deployment '%s' created.", _get_jupyter_lab_deployment(workspaceName=workspace_name))
     _wait_for_jupyter_lab_deployment_ready(workspaceName=workspace_name, namespace=namespace, printOutput=print_output)
 
     if print_output:
-        print("Deployment successfully created.")
+        logger.info("Deployment successfully created.")
 
     # Step 4 - Retrieve access URL
     try:
         url = _retrieve_jupyter_lab_url(workspaceName=workspace_name, namespace=namespace, printOutput=print_output)
     except (APIConnectionError, ServiceUnavailableError) as err:
         if print_output:
-            print("Aborting workspace creation...")
+            logger.info("Aborting workspace creation...")
         raise
 
     # (Optional) Step 5 - Register workspace with Astra Control
@@ -1035,8 +1042,8 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
         _astra_not_supported_message(print_output=print_output)
 
     if print_output:
-        print("\nWorkspace successfully created.")
-        print("To access workspace, navigate to " + url)
+        logger.info("Workspace successfully created.")
+        logger.info("To access workspace, navigate to %s", url)
 
     return url
 
@@ -1123,19 +1130,18 @@ def create_triton_server(server_name: str, model_pvc_name: str, load_balancer_se
 
     # Create service
     if print_output:
-        print("\nCreating Service '" + _get_triton_dev_service(
-            server_name=server_name) + "' in namespace '" + namespace + "'.")
+        logger.info("Creating Service '%s' in namespace '%s'.", _get_triton_dev_service(server_name=server_name), namespace)
     try:
         api = client.CoreV1Api()
         api.create_namespaced_service(namespace=namespace, body=service)
     except ApiException as err:
         if print_output:
-            print("Error: Kubernetes API Error: ", err)
-            print("Aborting server creation...")
+            logger.error("Error: Kubernetes API Error: %s", err)
+            logger.info("Aborting server creation...")
         raise APIConnectionError(err)
 
     if print_output:
-        print("Service successfully created.")
+        logger.info("Service successfully created.")
 
     # Step 2 - Create Deployment for Triton Server
 
@@ -1238,47 +1244,46 @@ def create_triton_server(server_name: str, model_pvc_name: str, load_balancer_se
 
     # Create deployment
     if print_output:
-        print("\nCreating Deployment '" + _get_triton_deployment(
+        logger.info("Creating Deployment '%s' in namespace '%s'.", _get_triton_deployment(
             server_name=server_name) + "' in namespace '" + namespace + "'.")
     try:
         api = client.AppsV1Api()
         api.create_namespaced_deployment(namespace=namespace, body=deployment)
     except ApiException as err:
         if print_output:
-            print("Error: Kubernetes API Error: ", err)
-            print("Aborting server creation...")
+            logger.error("Error: Kubernetes API Error: %s", err)
+            logger.info("Aborting server creation...")
         raise APIConnectionError(err)
 
     # Wait for deployment to be ready
     if print_output:
-        print("Deployment '" + _get_triton_deployment(server_name=server_name) + "' created.")
+        logger.info("Deployment '%s' created.", _get_triton_deployment(server_name=server_name))
     _wait_for_triton_dev_deployment(server_name=server_name, namespace=namespace, printOutput=print_output)
 
     if print_output:
-        print("Deployment successfully created.")
+        logger.info("Deployment successfully created.")
 
     # Step 3 - Retrieve endpoints
     try:
         uri = _retrieve_triton_endpoints(server_name=server_name, namespace=namespace, printOutput=print_output)
     except (APIConnectionError, ServiceUnavailableError) as err:
         if print_output:
-            print("Aborting server creation...")
+            logger.info("Aborting server creation...")
         raise
 
     if print_output:
-        print("\nServer successfully created.")
-        print("Server endpoints:")
-        print("http: " + uri[0])
-        print("grpc: " + uri[1])
-        print("metrics: " + uri[2] + "/metrics")
+        logger.info("\nServer successfully created.")
+        logger.info("Server endpoints:")
+        logger.info("http: %s", uri[0])
+        logger.info("grpc: " + uri[1])
+        logger.info("metrics: " + uri[2] + "/metrics")
     return uri
 
 def create_jupyter_lab_snapshot(workspace_name: str, snapshot_name: str = None, volume_snapshot_class: str = "csi-snapclass",
                                 namespace: str = "default", print_output: bool = False):
     # Create snapshot
     if print_output:
-        print(
-            "Creating VolumeSnapshot for JupyterLab workspace '" + workspace_name + "' in namespace '" + namespace + "'...")
+        logger.info("Creating VolumeSnapshot for JupyterLab workspace '%s' in namespace '%s'...", workspace_name, namespace)
     snapshot_name = create_volume_snapshot(pvc_name=_get_jupyter_lab_workspace_pvc_name(workspaceName=workspace_name), snapshot_name=snapshot_name,
                            volume_snapshot_class=volume_snapshot_class, namespace=namespace, print_output=print_output)
     
@@ -1399,33 +1404,32 @@ def create_volume(pvc_name: str, volume_size: str, storage_class: str = None, na
 
     # Create PVC
     if print_output:
-        print("Creating PersistentVolumeClaim (PVC) '" + pvc_name + "' in namespace '" + namespace + "'.")
+        logger.info("Creating PersistentVolumeClaim (PVC) '%s' in namespace '%s'.", pvc_name, namespace)
     try:
         api = client.CoreV1Api()
         api.create_namespaced_persistent_volume_claim(body=pvc, namespace=namespace)
     except ApiException as err:
         if print_output:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise APIConnectionError(err)
 
     # Wait for PVC to bind to volume
     if print_output:
-        print("PersistentVolumeClaim (PVC) '" + pvc_name + "' created. Waiting for Kubernetes to bind volume to PVC.")
+        logger.info("PersistentVolumeClaim (PVC) '%s' created. Waiting for Kubernetes to bind volume to PVC.", pvc_name)
     while True:
         try:
             api = client.CoreV1Api()
             pvcStatus = api.read_namespaced_persistent_volume_claim_status(name=pvc_name, namespace=namespace)
         except ApiException as err:
             if print_output:
-                print("Error: Kubernetes API Error: ", err)
+                logger.error("Error: Kubernetes API Error: %s", err)
             raise APIConnectionError(err)
         if pvcStatus.status.phase == "Bound":
             break
         sleep(5)
 
     if print_output:
-        print(
-            "Volume successfully created and bound to PersistentVolumeClaim (PVC) '" + pvc_name + "' in namespace '" + namespace + "'.")
+        logger.info("Volume successfully created and bound to PersistentVolumeClaim (PVC) '%s' in namespace '%s'.", pvc_name, namespace)
 
 
 def create_volume_snapshot(pvc_name: str, snapshot_name: str = None, volume_snapshot_class: str = "csi-snapclass",
@@ -1460,21 +1464,19 @@ def create_volume_snapshot(pvc_name: str, snapshot_name: str = None, volume_snap
 
     # Create snapshot
     if print_output:
-        print(
-            "Creating VolumeSnapshot '" + snapshot_name + "' for PersistentVolumeClaim (PVC) '" + pvc_name + "' in namespace '" + namespace + "'.")
+        logger.info("Creating VolumeSnapshot '%s' for PersistentVolumeClaim (PVC) '%s' in namespace '%s'.", snapshot_name, pvc_name, namespace)
     try:
         api = client.CustomObjectsApi()
         api.create_namespaced_custom_object(group=_get_snapshot_api_group(), version=_get_snapshot_api_version(), namespace=namespace,
                                             body=snapshot, plural="volumesnapshots")
     except ApiException as err:
         if print_output:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise APIConnectionError(err)
 
     # Wait for snapshot creation to complete
     if print_output:
-        print(
-            "VolumeSnapshot '" + snapshot_name + "' created. Waiting for Trident to create snapshot on backing storage.")
+        logger.info("VolumeSnapshot '%s' created. Waiting for Trident to create snapshot on backing storage.", snapshot_name)
     while True:
         try:
             api = client.CustomObjectsApi()
@@ -1483,7 +1485,7 @@ def create_volume_snapshot(pvc_name: str, snapshot_name: str = None, volume_snap
                                                               plural="volumesnapshots")
         except ApiException as err:
             if print_output:
-                print("Error: Kubernetes API Error: ", err)
+                logger.error("Error: Kubernetes API Error: %s", err)
             raise APIConnectionError(err)
         try:
             if snapshotStatus["status"]["readyToUse"] == True:
@@ -1493,7 +1495,7 @@ def create_volume_snapshot(pvc_name: str, snapshot_name: str = None, volume_snap
         sleep(5)
 
     if print_output:
-        print("Snapshot successfully created.")
+        logger.info("Snapshot successfully created.")
 
     return snapshot_name
 
@@ -1510,33 +1512,33 @@ def delete_jupyter_lab(workspace_name: str, namespace: str = "default", preserve
 
     # Delete workspace
     if print_output:
-        print("Deleting workspace '" + workspace_name + "' in namespace '" + namespace + "'.")
+        logger.info("Deleting workspace '%s' in namespace '%s'.", workspace_name, namespace)
     try:
         # Delete deployment
         if print_output:
-            print("Deleting Deployment...")
+            logger.info("Deleting Deployment...")
         api = client.AppsV1Api()
         api.delete_namespaced_deployment(namespace=namespace, name=_get_jupyter_lab_deployment(workspaceName=workspace_name))
 
         # Delete service
         if print_output:
-            print("Deleting Service...")
+            logger.info("Deleting Service...")
         api = client.CoreV1Api()
         api.delete_namespaced_service(namespace=namespace, name=_get_jupyter_lab_service(workspaceName=workspace_name))
 
     except ApiException as err:
         if print_output:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise APIConnectionError(err)
 
     # Delete PVC
     if print_output:
-        print("Deleting PVC...")
+        logger.info("Deleting PVC...")
     delete_volume(pvc_name=_get_jupyter_lab_workspace_pvc_name(workspaceName=workspace_name), namespace=namespace,
                   preserve_snapshots=preserve_snapshots, print_output=print_output)
 
     if print_output:
-        print("Workspace successfully deleted.")
+        logger.info("Workspace successfully deleted.")
 
 
 def delete_triton_server(server_name: str, namespace: str = "default",
@@ -1551,27 +1553,27 @@ def delete_triton_server(server_name: str, namespace: str = "default",
 
     # Delete workspace
     if print_output:
-        print("Deleting server '" + server_name + "' in namespace '" + namespace + "'.")
-        print("Note: this operation does NOT delete the model repository PVC.")
+        logger.info("Deleting server '%s' in namespace '%s'.", server_name, namespace)
+        logger.info("Note: this operation does NOT delete the model repository PVC.")
     try:
         # Delete deployment
         if print_output:
-            print("Deleting Deployment...")
+            logger.info("Deleting Deployment...")
         api = client.AppsV1Api()
         api.delete_namespaced_deployment(namespace=namespace, name=_get_triton_deployment(server_name=server_name))
 
         # Delete service
         if print_output:
-            print("Deleting Service...")
+            logger.info("Deleting Service...")
         api = client.CoreV1Api()
         api.delete_namespaced_service(namespace=namespace, name=_get_triton_dev_service(server_name=server_name))
 
     except ApiException as err:
         if print_output:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise APIConnectionError(err)
     if print_output:
-        print("Triton Server instance successfully deleted.")
+        logger.info("Triton Server instance successfully deleted.")
 
 
 def delete_k8s_config_map(name: str, namespace: str, print_output: bool = False):
@@ -1622,25 +1624,25 @@ def delete_volume(pvc_name: str, namespace: str = "default", preserve_snapshots:
         if pvc.metadata and pvc.metadata.labels and pvc.metadata.labels.get("app") == "flexcache":
             error_message = f"PVC '{pvc_name}' in namespace '{namespace}' is a FlexCache volume and cannot be deleted using this function. Please use 'delete_flexcache_volume' instead."
             if print_output:
-                print(error_message)
+                logger.error(error_message)
             raise Exception(error_message)
     except ApiException as err:
         if print_output:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise APIConnectionError(err)
 
     # Optionally delete snapshots
     if not preserve_snapshots:
         if print_output:
-            print(
-                "Deleting all VolumeSnapshots associated with PersistentVolumeClaim (PVC) '" + pvc_name + "' in namespace '" + namespace + "'...")
+            logger.info(
+                "Deleting all VolumeSnapshots associated with PersistentVolumeClaim (PVC) '%s' in namespace '%s'...", pvc_name, namespace)
 
         # Retrieve list of snapshots for PVC
         try:
             snapshotList = list_volume_snapshots(pvc_name=pvc_name, namespace=namespace, print_output=False)
         except APIConnectionError as err:
             if print_output:
-                print("Error: Kubernetes API Error: ", err)
+                logger.error("Error: Kubernetes API Error: %s", err)
             raise
 
         # Delete each snapshot
@@ -1650,14 +1652,14 @@ def delete_volume(pvc_name: str, namespace: str = "default", preserve_snapshots:
 
     # Delete PVC
     if print_output:
-        print(
-            "Deleting PersistentVolumeClaim (PVC) '" + pvc_name + "' in namespace '" + namespace + "' and associated volume.")
+        logger.info(
+            "Deleting PersistentVolumeClaim (PVC) '%s' in namespace '%s' and associated volume.", pvc_name, namespace)
     try:
         api = client.CoreV1Api()
         api.delete_namespaced_persistent_volume_claim(name=pvc_name, namespace=namespace)
     except ApiException as err:
         if print_output:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise APIConnectionError(err)
 
     # Wait for PVC to disappear
@@ -1671,7 +1673,7 @@ def delete_volume(pvc_name: str, namespace: str = "default", preserve_snapshots:
         sleep(5)
 
     if print_output:
-        print("PersistentVolumeClaim (PVC) successfully deleted.")
+        logger.info("PersistentVolumeClaim (PVC) successfully deleted.")
 
 
 def delete_flexcache_volume(
@@ -1694,14 +1696,14 @@ def delete_flexcache_volume(
         api = client.CoreV1Api()
     except ApiException as err:
         if print_output:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise APIConnectionError(err)
     
     try:
         pvc = api.read_namespaced_persistent_volume_claim(name=pvc_name, namespace=namespace)
     except ApiException as err:
         if print_output:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise APIConnectionError(err)
 
     # Check if the PVC is a FlexCache volume
@@ -1709,12 +1711,12 @@ def delete_flexcache_volume(
 
         # Delete PVC
         if print_output:
-            print("Deleting PVC '" + pvc_name + "' in namespace '" + namespace + "'.")
+            logger.info("Deleting PVC '%s' in namespace '%s'.", pvc_name, namespace)
         try:
             api.delete_namespaced_persistent_volume_claim(name=pvc_name, namespace=namespace)
         except ApiException as err:
             if print_output:
-                print("Error: Kubernetes API Error: ", err)
+                logger.error("Error: Kubernetes API Error: %s", err)
             raise APIConnectionError(err)
         
         # Wait for PVC to disappear
@@ -1727,22 +1729,22 @@ def delete_flexcache_volume(
             sleep(5)
 
         if print_output:
-            print("PVC '" + pvc_name + "' successfully deleted.")
+            logger.info("PVC '%s' successfully deleted.", pvc_name)
 
         # Delete the associated PV
         pv_name = f"pv-{pvc_name}"
         if print_output:
-            print(f"Deleting PersistentVolume (PV) '{pv_name}' associated with FlexCache PVC '{pvc_name}'.")
+            logger.info("Deleting PersistentVolume (PV) '%s' associated with FlexCache PVC '%s'.", pv_name, pvc_name)
 
         try:
             api.delete_persistent_volume(name=pv_name)
         except ApiException as err:
             if print_output:
-                print("Error: Kubernetes API Error: ", err)
+                logger.error("Error: Kubernetes API Error: %s", err)
             raise APIConnectionError(err)
 
         if print_output:
-            print(f"PersistentVolume (PV) '{pv_name}' successfully deleted.")
+            logger.info("PersistentVolume (PV) '%s' successfully deleted.", pv_name)
 
         # Connect to ONTAP and delete the FlexCache volume
         try:
@@ -1778,38 +1780,38 @@ def delete_flexcache_volume(
                         volume = Volume.find(name=flexcache_vol_modified, svm={"name": svm})
                     except NetAppRestError as err:
                         if print_output:
-                            print(f"Error: Failed to find FlexCache volume '{flexcache_vol_modified}' in SVM '{svm}': {err}")
+                            logger.error("Error: Failed to find FlexCache volume '%s' in SVM '%s': %s", flexcache_vol_modified, svm, err)
                         raise APIConnectionError(err)
 
                     if print_output:
-                        print(f"Unmounting FlexCache volume '{flexcache_vol_modified}' in SVM '{svm}'.")
+                        logger.info("Unmounting FlexCache volume '%s' in SVM '%s'.", flexcache_vol_modified, svm)
                     # Unmount FlexCache volume
                     volume.nas.path = ""
                     volume.patch()
 
                     if print_output:
-                        print(f"Taking FlexCache volume '{flexcache_vol_modified}' offline in SVM '{svm}'.")
+                        logger.info("Taking FlexCache volume '%s' offline in SVM '%s'.", flexcache_vol_modified, svm)
                     # Take FlexCache volume offline using Volume resource
                     volume.state = "offline"
                     volume.patch()
 
                     if print_output:
-                        print(f"Deleting FlexCache volume '{flexcache_vol_modified}' in SVM '{svm}'.")
+                        logger.info("Deleting FlexCache volume '%s' in SVM '%s'.", flexcache_vol_modified, svm)
                     flexcache.delete()
 
                     if print_output:
-                        print(f"FlexCache volume '{flexcache_vol_modified}' successfully deleted.")
+                        logger.info("FlexCache volume '%s' successfully deleted.", flexcache_vol_modified)
                 else:
                     if print_output:
-                        print(f"FlexCache volume '{flexcache_vol_modified}' not found in SVM '{svm}'.")
+                        logger.info("FlexCache volume '%s' not found in SVM '%s'.", flexcache_vol_modified, svm)
             except NetAppRestError as err:
                 if print_output:
-                    print("Error: ONTAP Rest API Error: ", err)
+                    logger.error("Error: ONTAP Rest API Error: %s", err)
                 raise APIConnectionError(err)
 
     else:
         if print_output:
-            print("The provided PVC is not a FlexCache volume. Aborting operation.")
+            logger.info("The provided PVC is not a FlexCache volume. Aborting operation.")
         return
 
 
@@ -1824,14 +1826,14 @@ def delete_volume_snapshot(snapshot_name: str, namespace: str = "default", print
 
     # Delete VolumeSnapshot
     if print_output:
-        print("Deleting VolumeSnapshot '" + snapshot_name + "' in namespace '" + namespace + "'.")
+        logger.info("Deleting VolumeSnapshot '%s' in namespace '%s'.", snapshot_name, namespace)
     try:
         api = client.CustomObjectsApi()
         api.delete_namespaced_custom_object(group=_get_snapshot_api_group(), version=_get_snapshot_api_version(), namespace=namespace,
                                             plural="volumesnapshots", name=snapshot_name)
     except ApiException as err:
         if print_output:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise APIConnectionError(err)
 
     # Wait for VolumeSnapshot to disappear
@@ -1846,7 +1848,7 @@ def delete_volume_snapshot(snapshot_name: str, namespace: str = "default", print
         sleep(5)
 
     if print_output:
-        print("VolumeSnapshot successfully deleted.")
+        logger.info("VolumeSnapshot successfully deleted.")
 
 
 def list_jupyter_labs(namespace: str = "default", include_astra_app_id: bool = False, print_output: bool = False) -> list:
@@ -1864,7 +1866,7 @@ def list_jupyter_labs(namespace: str = "default", include_astra_app_id: bool = F
         deployments = api.list_namespaced_deployment(namespace=namespace, label_selector=_get_jupyter_lab_label_selector())
     except ApiException as err:
         if print_output:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise APIConnectionError(err)
 
     # Retrieve list of Astra apps
@@ -1905,7 +1907,7 @@ def list_jupyter_labs(namespace: str = "default", include_astra_app_id: bool = F
             workspaceDict["Access URL"] = "unavailable"
         except APIConnectionError as err:
             if print_output:
-                print("Error: Kubernetes API Error: ", err)
+                logger.error("Error: Kubernetes API Error: %s", err)
             raise APIConnectionError(err)
 
         # Retrieve clone details
@@ -1947,7 +1949,7 @@ def list_jupyter_labs(namespace: str = "default", include_astra_app_id: bool = F
     if print_output:
         # Convert workspaces array to Pandas DataFrame
         workspacesDF = pd.DataFrame.from_dict(workspacesList, dtype="string")
-        print(tabulate(workspacesDF, showindex=False, headers=workspacesDF.columns))
+        logger.info("List of JupyterLab workspaces:\n%s", tabulate(workspacesDF, showindex=False, headers=workspacesDF.columns))
 
     return workspacesList
 
@@ -1966,7 +1968,7 @@ def list_triton_servers(namespace: str = "default", print_output: bool = False) 
         deployments = api.list_namespaced_deployment(namespace=namespace, label_selector=_get_triton_dev_label_selector())
     except ApiException as err:
         if print_output:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise APIConnectionError(err)
 
     # Construct list of instances
@@ -2000,7 +2002,7 @@ def list_triton_servers(namespace: str = "default", print_output: bool = False) 
 
         except APIConnectionError as err:
             if print_output:
-                print("Error: Kubernetes API Error: ", err)
+                logger.error("Error: Kubernetes API Error: %s", err)
             raise APIConnectionError(err)
 
         # Append dict to list of instances
@@ -2010,7 +2012,7 @@ def list_triton_servers(namespace: str = "default", print_output: bool = False) 
     if print_output:
         # Convert workspaces array to Pandas DataFrame
         workspacesDF = pd.DataFrame.from_dict(workspacesList, dtype="string")
-        print(tabulate(workspacesDF, showindex=False, headers=workspacesDF.columns))
+        logger.info("List of JupyterLab workspaces:\n%s", tabulate(workspacesDF, showindex=False, headers=workspacesDF.columns))
 
     return workspacesList
 
@@ -2042,7 +2044,7 @@ def list_volumes(namespace: str = "default", print_output: bool = False) -> list
         pvcList = api.list_namespaced_persistent_volume_claim(namespace=namespace)
     except ApiException as err:
         if print_output:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise APIConnectionError(err)
 
     # Construct list of volumes
@@ -2112,7 +2114,7 @@ def list_volumes(namespace: str = "default", print_output: bool = False) -> list
     if print_output:
         # Convert volumes array to Pandas DataFrame
         volumesDF = pd.DataFrame.from_dict(volumesList, dtype="string")
-        print(tabulate(volumesDF, showindex=False, headers=volumesDF.columns))
+        logger.info("List of Persistent Volumes:\n%s", tabulate(volumesDF, showindex=False, headers=volumesDF.columns))
 
     return volumesList
 
@@ -2134,7 +2136,7 @@ def list_volume_snapshots(pvc_name: str = None, namespace: str = "default", prin
                                                                namespace=namespace, plural="volumesnapshots")
     except ApiException as err:
         if print_output:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: ", err)
         raise APIConnectionError(err)
 
     # Construct list of snapshots
@@ -2190,7 +2192,7 @@ def list_volume_snapshots(pvc_name: str = None, namespace: str = "default", prin
     if print_output:
         # Convert snapshots array to Pandas DataFrame
         snapshotsDF = pd.DataFrame.from_dict(snapshotsList, dtype="string")
-        print(tabulate(snapshotsDF, showindex=False, headers=snapshotsDF.columns))
+        logger.info("List of Volume Snapshots:\n%s", tabulate(snapshotsDF, showindex=False, headers=snapshotsDF.columns))
 
     return snapshotsList
 
@@ -2209,8 +2211,8 @@ def restore_jupyter_lab_snapshot(snapshot_name: str = None, namespace: str = "de
     labels["created-by-operation"] = "restore-jupyterlab-snapshot"
 
     if print_output:
-        print(
-            "Restoring VolumeSnapshot '" + snapshot_name + "' for JupyterLab workspace '" + workspaceName + "' in namespace '" + namespace + "'...")
+        logger.info("Restoring VolumeSnapshot '%s' for JupyterLab workspace '%s' in namespace '%s'...",
+                    snapshot_name, workspaceName, namespace)
 
     # Scale deployment to 0 pods
     _scale_jupyter_lab_deployment(workspaceName=workspaceName, numPods=0, namespace=namespace, printOutput=print_output)
@@ -2226,7 +2228,7 @@ def restore_jupyter_lab_snapshot(snapshot_name: str = None, namespace: str = "de
     _wait_for_jupyter_lab_deployment_ready(workspaceName=workspaceName, namespace=namespace, printOutput=print_output)
 
     if print_output:
-        print("JupyterLab workspace snapshot successfully restored.")
+        logger.info("JupyterLab workspace snapshot successfully restored.")
 
 
 def restore_volume_snapshot(snapshot_name: str, namespace: str = "default", print_output: bool = False,
@@ -2239,15 +2241,15 @@ def restore_volume_snapshot(snapshot_name: str, namespace: str = "default", prin
     storageClass = _retrieve_storage_class_for_pvc(pvcName=sourcePvcName, namespace=namespace, printOutput=print_output)
 
     if print_output:
-        print(
-            "Restoring VolumeSnapshot '" + snapshot_name + "' for PersistentVolumeClaim '" + sourcePvcName + "' in namespace '" + namespace + "'.")
+        logger.info("Restoring VolumeSnapshot '%s' for PersistentVolumeClaim '%s' in namespace '%s'.",
+                    snapshot_name, sourcePvcName, namespace)
 
     # Delete source PVC
     try:
         delete_volume(pvc_name=sourcePvcName, namespace=namespace, preserve_snapshots=True, print_output=False)
     except APIConnectionError as err:
         if print_output:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise
 
     # Create new PVC from snapshot
@@ -2256,11 +2258,11 @@ def restore_volume_snapshot(snapshot_name: str, namespace: str = "default", prin
                       print_output=False, pvc_labels=pvc_labels, source_snapshot=snapshot_name)
     except APIConnectionError as err:
         if print_output:
-            print("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise
 
     if print_output:
-        print("VolumeSnapshot successfully restored.")
+        logger.info("VolumeSnapshot successfully restored.")
 
 
 def create_flexcache(
@@ -2334,7 +2336,7 @@ def create_flexcache(
                 flexcache_size_bytes = _convert_size_to_bytes(flexcache_size)
             except InvalidVolumeParameterError:
                 if print_output:
-                    print("Error: Invalid flexcache volume size specified. Acceptable values are '1024Mi', '100Gi', '10Ti', etc.")
+                    logger.error("Error: Invalid flexcache volume size specified. Acceptable values are '1024Mi', '100Gi', '10Ti', etc.")
                 raise
 
         # Create option to choose junction path.
@@ -2354,12 +2356,13 @@ def create_flexcache(
             if flexcache_size_bytes:
                 newFlexCacheDict["size"] = flexcache_size_bytes
             if print_output:
-                print("Creating FlexCache: " + source_svm + ":" + source_vol_modified + " -> " + svm + ":" + flexcache_vol_modified)
+                logger.info("Creating FlexCache: %s:%s -> %s:%s",
+                            source_svm, source_vol_modified, svm, flexcache_vol_modified)
             newFlexCache = NetAppFlexCache.from_dict(newFlexCacheDict)
             newFlexCache.post(poll=True, poll_timeout=120)
         except NetAppRestError as err:
             if print_output:
-                print("Error: ONTAP Rest API Error: ", err)
+                logger.error("Error: ONTAP Rest API Error: %s", err)
             raise APIConnectionError(err)
         
         # Check if FlexCache was created successfully
@@ -2374,19 +2377,19 @@ def create_flexcache(
                     uuid = relation.uuid
                 except NetAppRestError as err:
                     if print_output:
-                        print("Error: ONTAP Rest API Error: ", err)
+                        logger.error("Error: ONTAP Rest API Error: %s", err)
                     raise APIConnectionError(err)
             if not uuid:
                 if print_output:
-                    print("Error: FlexCache was not created: " + svm + ":" + flexcache_vol_modified)
+                    logger.error("Error: FlexCache was not created: %s:%s", svm, flexcache_vol_modified)
                 raise InvalidConfigError()
         except NetAppRestError as err:
             if print_output:
-                print("Error: ONTAP Rest API Error: ", err)
+                logger.error("Error: ONTAP Rest API Error: %s", err)
             raise APIConnectionError(err)
 
         if print_output:
-            print("FlexCache created successfully.")
+            logger.info("FlexCache created successfully.")
         
         # Retrieve kubeconfig
         try:
@@ -2407,7 +2410,7 @@ def create_flexcache(
 
         # Create PV in Kubernetes
         if print_output:
-            print(f"[K8s] Creating PV '{pv_name}' in namespace '{namespace}'...")
+            logger.info("Creating PV '%s' in namespace '%s'...", pv_name, namespace)
 
         pv_manifest = client.V1PersistentVolume(
             metadata=client.V1ObjectMeta(
@@ -2434,15 +2437,15 @@ def create_flexcache(
         try:
             core_v1.create_persistent_volume(body=pv_manifest)
             if print_output:
-                print(f"[K8s] PV '{pv_name}' created successfully.")
+                logger.info("PV '%s' created successfully.", pv_name)
         except ApiException as err:
             if print_output:
-                print(f"[K8s] Error creating PV '{pv_name}': {err}")
+                logger.error("Error creating PV '%s': %s", pv_name, err)
             raise APIConnectionError(err)
 
         # Create PVC in Kubernetes
         if print_output:
-            print(f"[K8s] Creating PVC '{pvc_name}' in namespace '{namespace}'...")
+            logger.info("Creating PVC '%s' in namespace '%s'...", pvc_name, namespace)
 
         pvc_manifest = client.V1PersistentVolumeClaim(
             metadata=client.V1ObjectMeta(
@@ -2463,31 +2466,31 @@ def create_flexcache(
         try:
             core_v1.create_namespaced_persistent_volume_claim(namespace=namespace, body=pvc_manifest)
             if print_output:
-                print(f"[K8s] PVC '{pvc_name}' created successfully.")
+                logger.info("PVC '%s' created successfully.", pvc_name)
         except ApiException as err:
             if print_output:
-                print(f"[K8s] Error creating PVC '{pvc_name}': {err}")
+                logger.error("Error creating PVC '%s': %s", pvc_name, err)
             raise APIConnectionError(err)
         
         # Wait for PVC to bind to volume
         if print_output:
-            print(f"Waiting for Kubernetes to bind volume to PVC.")
+            logger.info("Waiting for Kubernetes to bind volume to PVC.")
 
         while True:
             try:
                 pvc_status = core_v1.read_namespaced_persistent_volume_claim(name=pvc_name, namespace=namespace)
                 if pvc_status.status.phase == "Bound":
                     if print_output:
-                        print(f"[K8s] PVC '{pvc_name}' is bound to PV '{pv_name}'.")
+                        logger.info("PVC '%s' is bound to PV '%s'.", pvc_name, pv_name)
                     break
             except ApiException as err:
                 if print_output:
-                    print(f"[K8s] Error checking PVC status: {err}")
+                    logger.error("Error checking PVC status: %s", err)
                 raise APIConnectionError(err)
             sleep(5)
 
         if print_output:
-            print(f"Volume successfully created and bound to PersistentVolumeClaim (PVC) '{pvc_name}' in namespace '{namespace}'.")
+            logger.info("Volume successfully created and bound to PersistentVolumeClaim (PVC) '%s' in namespace '%s'.", pvc_name, namespace)
 
         return {
             "ontap_flexcache": f"{svm}: {flexcache_vol}",
