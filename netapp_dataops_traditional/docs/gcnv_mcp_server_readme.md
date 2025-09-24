@@ -59,9 +59,14 @@ Before the MCP server can be used to perform GCNV operations, you must authentic
    gcloud config set project YOUR_PROJECT_ID
    ```
 
+4. **Authenticate application default credentials**:
+   ```bash
+   gcloud auth application-default login
+   ```
+
 4. **Enable the NetApp API**:
    ```bash
-   gcloud services enable netapp.googleapis.com --project=YOUR_PROJECT_ID
+   gcloud services enable netapp.googleapis.com
    ```
 
 5. **Verify API is enabled**:

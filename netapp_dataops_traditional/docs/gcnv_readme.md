@@ -111,6 +111,9 @@ gcloud auth login
 # Set your default project
 gcloud config set project YOUR_PROJECT_ID
 
+# Authenticate application default credentials
+gcloud auth application-default login
+
 # Enable the NetApp API
 gcloud services enable netapp.googleapis.com
 
