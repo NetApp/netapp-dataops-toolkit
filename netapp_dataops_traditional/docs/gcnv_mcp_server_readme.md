@@ -28,7 +28,7 @@ The NetApp DataOps Toolkit MCP Server for Google Cloud NetApp Volumes (GCNV) is 
 To run the MCP server using `uv`, run the following command. You do not need to install the NetApp DataOps Toolkit package before running this command.
 
 ```bash
-uvx --from netapp-dataops-traditional netapp_dataops_gcnv_mcp.py
+uvx --from netapp-dataops-traditional[gcp] netapp_dataops_gcnv_mcp.py
 ```
 
 ### Install with `pip` and run from PATH
@@ -36,7 +36,7 @@ uvx --from netapp-dataops-traditional netapp_dataops_gcnv_mcp.py
 To install the NetApp DataOps Toolkit for Traditional Environments, run the following command.
 
 ```bash
-python3 -m pip install netapp-dataops-traditional
+python3 -m pip install netapp-dataops-traditional[gcp]
 ```
 
 After installation, the `netapp_dataops_gcnv_mcp.py` command will be available in your PATH for direct usage.
@@ -51,7 +51,7 @@ Before the MCP server can be used to perform GCNV operations, you must authentic
 
 2. **Authenticate with Google Cloud**:
    ```bash
-   gcloud auth application-default login
+   gcloud auth login
    ```
 
 3. **Set your default project**:
@@ -69,12 +69,6 @@ Before the MCP server can be used to perform GCNV operations, you must authentic
    gcloud services list --enabled --filter="name:netapp.googleapis.com"
    ```
 
-### Required IAM Permissions
-
-Ensure your account or service account has the following roles:
-- `roles/netappcloudvolumes.admin` (full access)
-- Or custom role with `netapp.*` permissions
-
 ### Example JSON Config
 
 To use the MCP server with an MCP client, you need to configure the client to use the server. For many clients (such as [VS Code](https://code.visualstudio.com/docs/copilot/chat/mcp-servers), [Claude Desktop](https://modelcontextprotocol.io/quickstart/user), and [AnythingLLM](https://docs.anythingllm.com/mcp-compatibility/overview)), this requires editing a config file that is in JSON format. Below is an example. Refer to the documentation for your MCP client for specific formatting details.
@@ -87,7 +81,7 @@ To use the MCP server with an MCP client, you need to configure the client to us
       "command": "uvx",
       "args": [
         "--from",
-        "netapp-dataops-traditional",
+        "netapp-dataops-traditional[gcp]",
         "netapp_dataops_gcnv_mcp.py"
       ]
     }
@@ -141,7 +135,7 @@ You can optionally set these environment variables:
 
 1. **Authentication Failed**:
    ```bash
-   gcloud auth application-default login
+   gcloud auth login
    ```
 
 2. **API Not Enabled**:
@@ -149,9 +143,7 @@ You can optionally set these environment variables:
    gcloud services enable netapp.googleapis.com --project=YOUR_PROJECT_ID
    ```
 
-3. **Permission Denied**: Verify IAM roles and permissions
-
-4. **Module Not Found**: Ensure the package is properly installed or use the full path
+3. **Module Not Found**: Ensure the package is properly installed or use the full path
 
 ## Support
 
