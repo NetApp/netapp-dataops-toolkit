@@ -71,9 +71,11 @@ def create_snapshot(
         # Make the request
         operation = client.create_snapshot(request=request)
 
-        logger.info("Waiting for creation of a snapshot to complete...")
+        logger.info("Creating snapshot...")
 
         response = operation.result()
+
+        logger.info(f"Snapshot created:\n{response}")
 
         return {"status": "success", "details": _serialize(response)}
 
@@ -133,9 +135,11 @@ def delete_snapshot(
         # Make the request
         operation = client.delete_snapshot(request=request)
 
-        logger.info("Waiting for deletion of snapshot to complete...")
+        logger.info(f"Deleting snapshot: {name}...")
 
         response = operation.result()
+
+        logger.info(f"Snapshot deleted: {name}")
 
         return {"status": "success", "details": _serialize(response)}
 
@@ -193,7 +197,11 @@ def list_snapshots(
         # Make the request
         page_result = client.list_snapshots(request=request)
 
+        logger.info("Fetching list of snapshots...")
+
         snapshots = [s for s in page_result]
+
+        logger.info(f"Snapshots fetched:\n{snapshots}")
 
         return {"status": "success", "details": _serialize(snapshots)}
 

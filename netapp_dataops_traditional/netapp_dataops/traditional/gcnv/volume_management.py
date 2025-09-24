@@ -3,6 +3,7 @@ from typing import Dict, List, Any
 import logging
 from .base import _serialize, create_client, validate_required_params
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -224,12 +225,14 @@ def create_volume(
         # Make the request
         operation = client.create_volume(request=request)
 
-        logger.info("Waiting for operation to complete...")
+        logger.info("Creating volume...")
 
         response = operation.result()
 
+        logger.info(f"Volume created:\n{response}")
+
         return {"status": "success", "details": _serialize(response)}
-    
+
     except Exception as e:
         logger.error(f"An error occurred while creating the volume: {e}")
         return {"status": "error", "message": str(e)}
@@ -460,9 +463,11 @@ def clone_volume(
         # Make the request
         operation = client.create_volume(request=request)
 
-        logger.info("Waiting for cloning operation to complete...")
+        logger.info("Cloning volume...")
 
         response = operation.result()
+
+        logger.info(f"Volume cloned:\n{response}")
 
         return {"status": "success", "details": _serialize(response)}
 
@@ -520,9 +525,11 @@ def delete_volume(
         # Make the request
         operation = client.delete_volume(request=request)
 
-        logger.info("Waiting for deletion of a volume to complete...")
+        logger.info(f"Deleting volume: {name}...")
 
         response = operation.result()
+
+        logger.info(f"Volume deleted: {name}")
 
         return {"status": "success", "details": _serialize(response)}
 
@@ -573,7 +580,11 @@ def list_volumes(
         # Make the request
         page_result = client.list_volumes(request=request)
 
+        logger.info("Fetching list of volumes...")
+
         volumes = [v for v in page_result]
+
+        logger.info(f"Volumes fetched:\n{volumes}")
 
         return {"status": "success", "details": _serialize(volumes)}
 

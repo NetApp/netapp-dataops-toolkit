@@ -163,9 +163,11 @@ def create_replication(
         # Make the request
         operation = client.create_replication(request=request)
 
-        logger.info("Waiting for operation to complete...")
+        logger.info("Creating replication...")
 
         response = operation.result()
+
+        logger.info(f"Replication created:\n{response}")
 
         return {"status": "success", "details": _serialize(response)}
 
