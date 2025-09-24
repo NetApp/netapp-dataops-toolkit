@@ -6,6 +6,7 @@ including root volume creation, mounting, and validation.
 """
 
 import os
+import platform
 import subprocess
 from typing import Optional, Dict, Any
 
@@ -363,15 +364,7 @@ class DatasetManagerConfigurator:
             else:
                 print(f"Warning: Mountpoint '{mountpoint}' is in use by '{current_target}'")
                 print(f"Expected: {expected_nfs_target}")
-                
-                if not PromptUtils.prompt_yes_no("Unmount current and mount correct volume?"):
-                    print("Skipping mount operation.")
-                    return
-                
-                # Unmount current
-                if not self._unmount_volume(mountpoint):
-                    print("Failed to unmount. Please unmount manually and re-run configuration.")
-                    return
+                return
         
         # Check NFS utilities BEFORE attempting any mount operations
         print("\n🔧 Preparing for volume mounting...")
@@ -383,12 +376,12 @@ class DatasetManagerConfigurator:
         # Now attempt to mount the volume
         print(f"\n🔧 Mounting volume '{volume_name}' to '{mountpoint}'...")
         if self._mount_volume(volume_name, mountpoint):
-            print(f"✅ Volume '{volume_name}' mounted successfully to '{mountpoint}'")
+            print(f"Volume '{volume_name}' mounted successfully to '{mountpoint}'")
             
             # Handle fstab setup
             self._handle_fstab_setup(volume_name, mountpoint, expected_nfs_target)
         else:
-            print(f"❌ Failed to mount volume automatically.")
+            print(f"Failed to mount volume automatically.")
             print(f"To mount manually: sudo mount -t nfs {expected_nfs_target} {mountpoint}")
     
     def _get_expected_nfs_target(self, volume_name: str) -> str:
@@ -401,14 +394,19 @@ class DatasetManagerConfigurator:
         except Exception:
             return f"<data_lif>:/{volume_name}"
     
-    def _unmount_volume(self, mountpoint: str) -> bool:
-        """Unmount a volume from the specified mountpoint."""
-        try:
-            result = subprocess.run(['sudo', 'umount', mountpoint], 
-                                  capture_output=True, text=True)
-            return result.returncode == 0
-        except Exception:
-            return False
+    def _create_fstab_entry(self, nfs_target: str, mountpoint: str) -> str:
+        """Create a standardized fstab entry for Dataset Manager volumes.
+        
+        Args:
+            nfs_target: The NFS target (e.g., "data_lif:/volume_name")
+            mountpoint: The local mountpoint path
+            
+        Returns:
+            str: Complete fstab entry line
+        """
+        # Production-ready fstab entry with essential NFS options
+        # For Dataset Manager root volume: permanent mount, no auto-unmount
+        return f"{nfs_target} {mountpoint} nfs rw,_netdev,nfsvers=4.1,hard 0 0"
     
     def _handle_fstab_setup(self, volume_name: str, mountpoint: str, nfs_target: str) -> None:
         """Handle fstab setup with intelligent checking and optional auto-editing."""
@@ -422,61 +420,61 @@ class DatasetManagerConfigurator:
         # but we should verify mount.nfs is still available
         nfs_check = subprocess.run(['which', 'mount.nfs'], capture_output=True, text=True)
         if nfs_check.returncode != 0:
-            print("⚠️  NFS client utilities not found - fstab entry may not work properly.")
-            print("   Adding fstab entry anyway, but mounting may fail until NFS client is installed.")
+            print("NFS client utilities not found - fstab entry may not work properly.")
+            print("Adding fstab entry anyway, but mounting may fail until NFS client is installed.")
         
         # User agreed - programmatically update /etc/fstab
-        print(f"\n📝 Adding Dataset Manager volume to /etc/fstab...")
+        print(f"\nAdding Dataset Manager volume to /etc/fstab...")
         
         # Check if fstab entry already exists
         if self._fstab_entry_exists(mountpoint, volume_name):
-            print(f"✓ /etc/fstab already contains an entry for this mount")
+            print(f"/etc/fstab already contains an entry for this mount")
             return
         
-        # Create production-ready fstab entry with proper NFS options
-        fstab_entry = f"{nfs_target} {mountpoint} nfs rw,_netdev,nfsvers=4.1,hard,timeo=600,retrans=2,x-systemd.automount,x-systemd.idle-timeout=600 0 0"
+        # Create standardized fstab entry
+        fstab_entry = self._create_fstab_entry(nfs_target, mountpoint)
         
         # Ensure mountpoint directory exists
         try:
             os.makedirs(mountpoint, exist_ok=True)
-            print(f"✓ Mountpoint directory '{mountpoint}' ready")
+            print(f"Mountpoint directory '{mountpoint}' ready")
         except Exception as e:
-            print(f"❌ Failed to create mountpoint directory: {e}")
+            print(f"Failed to create mountpoint directory: {e}")
             self._show_manual_fstab_instructions(nfs_target, mountpoint)
             return
         
         # Add entry to fstab (idempotently, without duplicates)
         if self._add_fstab_entry_safely(fstab_entry, nfs_target, mountpoint):
-            print(f"✓ Entry added to /etc/fstab successfully")
+            print(f"Entry added to /etc/fstab successfully")
             
             # Only attempt to mount from fstab if the volume isn't already mounted
             if not self._is_mounted(mountpoint):
                 # Mount immediately using fstab entry
-                print(f"🔧 Mounting volume using fstab entry...")
+                print(f"Mounting volume using fstab entry...")
                 if self._mount_from_fstab(mountpoint):
-                    print(f"✅ Volume '{volume_name}' mounted successfully and will persist across reboots")
+                    print(f"Volume '{volume_name}' mounted successfully and will persist across reboots")
                     
                     # Validate the mount
                     if self._validate_mount(mountpoint, nfs_target):
-                        print(f"✓ Mount validation successful")
+                        print(f"Mount validation successful")
                     else:
-                        print(f"⚠️  Mount validation failed - please check manually")
+                        print(f"Mount validation failed - please check manually")
                 else:
-                    print(f"❌ Failed to mount using fstab entry")
-                    print(f"   The fstab entry was added, but the mount failed.")
-                    print(f"   This may be due to missing NFS client utilities or network issues.")
+                    print(f"Failed to mount using fstab entry")
+                    print(f"The fstab entry was added, but the mount failed.")
+                    print(f"This may be due to missing NFS client utilities or network issues.")
                     self._show_manual_fstab_instructions(nfs_target, mountpoint)
             else:
-                print(f"✓ Volume is already mounted - fstab entry will ensure persistence across reboots")
+                print(f"Volume is already mounted - fstab entry will ensure persistence across reboots")
         else:
-            print("❌ Failed to add entry to /etc/fstab automatically")
+            print("Failed to add entry to /etc/fstab automatically")
             self._show_manual_fstab_instructions(nfs_target, mountpoint)
     
     def _show_manual_fstab_instructions(self, nfs_target: str, mountpoint: str) -> None:
         """Show manual instructions for fstab setup."""
-        fstab_entry = f"{nfs_target} {mountpoint} nfs rw,_netdev,nfsvers=4.1,hard,timeo=600,retrans=2,x-systemd.automount,x-systemd.idle-timeout=600 0 0"
+        fstab_entry = self._create_fstab_entry(nfs_target, mountpoint)
         
-        print(f"\n📋 Manual setup instructions:")
+        print(f"\nManual setup instructions:")
         print(f"1. Add this line to /etc/fstab:")
         print(f"   # Dataset Manager root volume")
         print(f"   {fstab_entry}")
@@ -510,13 +508,13 @@ class DatasetManagerConfigurator:
         try:
             # Check if mountpoint is mounted
             if not self._is_mounted(mountpoint):
-                print(f"❌ Mountpoint '{mountpoint}' is not mounted")
+                print(f"Mountpoint '{mountpoint}' is not mounted")
                 return False
             
             # Check if the correct target is mounted
             current_target = self._get_mount_target(mountpoint)
             if expected_target not in current_target and mountpoint.split('/')[-1] not in current_target:
-                print(f"❌ Wrong target mounted. Expected: {expected_target}, Got: {current_target}")
+                print(f"Wrong target mounted. Expected: {expected_target}, Got: {current_target}")
                 return False
             
             # Test write access
@@ -527,11 +525,11 @@ class DatasetManagerConfigurator:
                 os.remove(test_file)
                 return True
             except Exception as e:
-                print(f"❌ Write test failed: {e}")
+                print(f"Write test failed: {e}")
                 return False
                 
         except Exception as e:
-            print(f"❌ Mount validation error: {e}")
+            print(f"Mount validation error: {e}")
             return False
     
     def _add_fstab_entry_safely(self, fstab_entry: str, nfs_target: str, mountpoint: str) -> bool:
@@ -555,7 +553,7 @@ class DatasetManagerConfigurator:
                     parts = line.split()
                     if len(parts) >= 2 and parts[1] == mountpoint:
                         # Found existing entry for this mountpoint - replace it
-                        print(f"⚠️  Replacing existing fstab entry for {mountpoint}")
+                        print(f"Replacing existing fstab entry for {mountpoint}")
                         new_lines.append(f"# Dataset Manager root volume")
                         new_lines.append(fstab_entry)
                         found_existing = True
@@ -601,39 +599,38 @@ class DatasetManagerConfigurator:
             return False
     
     def _detect_os(self) -> str:
-        """Detect the operating system type."""
+        """Detect the operating system type"""
+        # Primary detection via /etc/os-release (most reliable)
         try:
             with open('/etc/os-release', 'r') as f:
                 content = f.read().lower()
-                if 'ubuntu' in content or 'debian' in content:
-                    return 'debian'
-                elif 'red hat' in content or 'rhel' in content or 'centos' in content or 'fedora' in content:
-                    return 'redhat'
-                elif 'suse' in content:
-                    return 'suse'
-        except:
+                
+                # Use more specific patterns for better accuracy
+                os_patterns = {
+                    'debian': ['ubuntu', 'debian', 'mint'],
+                    'redhat': ['red hat', 'rhel', 'centos', 'fedora', 'rocky', 'almalinux'],
+                    'suse': ['suse', 'opensuse', 'sles']
+                }
+                
+                for os_type, patterns in os_patterns.items():
+                    if any(pattern in content for pattern in patterns):
+                        return os_type
+                        
+        except (IOError, OSError):
             pass
         
-        # Fallback detection
-        import platform
-        system = platform.system().lower()
-        if system == 'linux':
-            # Try to detect package manager
-            try:
-                subprocess.run(['apt', '--version'], capture_output=True, check=True)
-                return 'debian'
-            except:
-                pass
-            try:
-                subprocess.run(['yum', '--version'], capture_output=True, check=True)
-                return 'redhat'
-            except:
-                pass
-            try:
-                subprocess.run(['zypper', '--version'], capture_output=True, check=True)
-                return 'suse'
-            except:
-                pass
+        # Fallback detection via package managers (faster than subprocess version checks)
+        if platform.system().lower() == 'linux':
+            # Check for package manager binaries (faster than running --version)
+            package_managers = [
+                ('debian', ['/usr/bin/apt', '/usr/bin/dpkg']),
+                ('redhat', ['/usr/bin/yum', '/usr/bin/dnf', '/usr/bin/rpm']),
+                ('suse', ['/usr/bin/zypper', '/usr/bin/rpm'])
+            ]
+            
+            for os_type, binaries in package_managers:
+                if any(os.path.exists(binary) for binary in binaries):
+                    return os_type
         
         return 'unknown'
     
@@ -641,15 +638,27 @@ class DatasetManagerConfigurator:
         """Automatically install NFS client utilities based on the detected OS."""
         os_type = self._detect_os()
         
-        print(f"Detected OS type: {os_type}")
-        
-        install_commands = {
-            'debian': ['sudo', 'apt', 'update', '&&', 'sudo', 'apt', 'install', '-y', 'nfs-common'],
-            'redhat': ['sudo', 'yum', 'install', '-y', 'nfs-utils'],
-            'suse': ['sudo', 'zypper', 'install', '-y', 'nfs-client']
+        # Define installation strategies for each OS type
+        install_strategies = {
+            'debian': {
+                'commands': [
+                    (['sudo', 'apt', 'update'], "Updating package list..."),
+                    (['sudo', 'apt', 'install', '-y', 'nfs-common'], "Installing nfs-common...")
+                ]
+            },
+            'redhat': {
+                'commands': [
+                    (['sudo', 'yum', 'install', '-y', 'nfs-utils'], "Installing nfs-utils...")
+                ]
+            },
+            'suse': {
+                'commands': [
+                    (['sudo', 'zypper', 'install', '-y', 'nfs-client'], "Installing nfs-client...")
+                ]
+            }
         }
         
-        if os_type not in install_commands:
+        if os_type not in install_strategies:
             print(f"Unsupported OS type: {os_type}")
             print("Please install NFS client utilities manually:")
             print("  Ubuntu/Debian: sudo apt install -y nfs-common")
@@ -657,50 +666,36 @@ class DatasetManagerConfigurator:
             print("  SUSE:          sudo zypper install -y nfs-client")
             return False
         
+        strategy = install_strategies[os_type]
+        print(f"Detected OS type: {os_type}")
+        
         try:
             print(f"Installing NFS client utilities for {os_type}...")
             
-            if os_type == 'debian':
-                # For Debian/Ubuntu, run update and install separately
-                print("Updating package list...")
-                result1 = subprocess.run(['sudo', 'apt', 'update'], 
-                                       capture_output=True, text=True)
-                if result1.returncode != 0:
-                    print(f"Package update failed: {result1.stderr}")
+            # Execute installation commands
+            for cmd, description in strategy['commands']:
+                print(description)
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                if result.returncode != 0:
+                    print(f"Command failed: {' '.join(cmd)}")
+                    print(f"Error: {result.stderr.strip()}")
                     return False
-                
-                print("Installing nfs-common...")
-                result2 = subprocess.run(['sudo', 'apt', 'install', '-y', 'nfs-common'], 
-                                       capture_output=True, text=True)
-                success = result2.returncode == 0
-                if not success:
-                    print(f"NFS client installation failed: {result2.stderr}")
-            else:
-                # For other distros, run single command
-                result = subprocess.run(install_commands[os_type], 
+            
+            print("✓ NFS client utilities installed successfully")
+            
+            # Verify installation
+            try:
+                result = subprocess.run(['which', 'mount.nfs'], 
                                       capture_output=True, text=True)
-                success = result.returncode == 0
-                if not success:
-                    print(f"NFS client installation failed: {result.stderr}")
-            
-            if success:
-                print("✓ NFS client utilities installed successfully")
-                
-                # Verify installation
-                try:
-                    result = subprocess.run(['which', 'mount.nfs'], 
-                                          capture_output=True, text=True)
-                    if result.returncode == 0:
-                        print(f"✓ NFS mount helper found at: {result.stdout.strip()}")
-                        return True
-                    else:
-                        print("⚠️  mount.nfs not found after installation")
-                        return False
-                except:
-                    print("⚠️  Could not verify NFS installation")
+                if result.returncode == 0:
+                    print(f"✓ NFS mount helper found at: {result.stdout.strip()}")
+                    return True
+                else:
+                    print("mount.nfs not found after installation")
                     return False
-            
-            return success
+            except:
+                print("Could not verify NFS installation")
+                return False
             
         except Exception as e:
             print(f"Error during NFS client installation: {e}")
