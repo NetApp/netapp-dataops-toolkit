@@ -9,8 +9,3 @@ This directory contains different examples including Jupyter Notebooks, YAML fil
 
 In this example we demonstrate an AI workflow in a Jupyter Notebook using Keras and MLflow. This notebook's goal is to give you an understanding of how to use the DataOps Toolkit with MLFlow for dataset-to-model traceability.
 
-## SageMaker Notebook Instances with FSx for NetApp ONTAP
-
-[notebookInstance-FSXVolume-stack.yaml](notebookInstance-FSXVolume-stack.yaml)
-
-An AWS CloudFormation template for deploying Amazon SageMaker Notebook instances with access to an Amazon FSx for NetApp ONTAP filesystem.

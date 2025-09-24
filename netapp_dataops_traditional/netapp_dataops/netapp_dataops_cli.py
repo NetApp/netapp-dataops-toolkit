@@ -63,7 +63,7 @@ Note: To view details regarding options/arguments for a specific command, run th
 \tlist volumes\t\t\tList all data volumes.
 \tmount volume\t\t\tMount an existing data volume locally. Note: on Linux hosts - must be run as root.
 \tunmount volume\t\t\tUnmount an existing data volume. Note: on Linux hosts - must be run as root.
-\tcreate flexcache\t\t\tCreate a new flexcache volume.
+\tcreate flexcache\t\tCreate a new flexcache volume.
 
 Snapshot Management Commands:
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
