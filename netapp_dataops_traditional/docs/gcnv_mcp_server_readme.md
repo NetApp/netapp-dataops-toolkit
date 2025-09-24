@@ -28,7 +28,7 @@ The NetApp DataOps Toolkit MCP Server for Google Cloud NetApp Volumes (GCNV) is 
 To run the MCP server using `uv`, run the following command. You do not need to install the NetApp DataOps Toolkit package before running this command.
 
 ```bash
-uvx --from netapp-dataops-traditional[gcp] netapp_dataops_gcnv_mcp.py
+uvx --from 'netapp-dataops-traditional[gcp]' netapp_dataops_gcnv_mcp.py
 ```
 
 ### Install with `pip` and run from PATH
@@ -36,7 +36,7 @@ uvx --from netapp-dataops-traditional[gcp] netapp_dataops_gcnv_mcp.py
 To install the NetApp DataOps Toolkit for Traditional Environments, run the following command.
 
 ```bash
-python3 -m pip install netapp-dataops-traditional[gcp]
+python3 -m pip install 'netapp-dataops-traditional[gcp]'
 ```
 
 After installation, the `netapp_dataops_gcnv_mcp.py` command will be available in your PATH for direct usage.
@@ -86,7 +86,7 @@ To use the MCP server with an MCP client, you need to configure the client to us
       "command": "uvx",
       "args": [
         "--from",
-        "netapp-dataops-traditional[gcp]",
+        "'netapp-dataops-traditional[gcp]'",
         "netapp_dataops_gcnv_mcp.py"
       ]
     }
