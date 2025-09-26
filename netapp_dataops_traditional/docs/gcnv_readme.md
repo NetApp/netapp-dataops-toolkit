@@ -210,8 +210,9 @@ def create_volume(
     large_capacity: bool = None,            # Flag indicating if the volume will be a large capacity volume or a regular volume. If set to True, the volume will be a large capacity volume.
     multiple_endpoints: bool = None,        # Flag indicating if the volume will have an IP address per node for volumes supporting multiple IP endpoints. Only the volume with large_capacity will be allowed to have multiple endpoints.
     tiering_enabled: bool = None,           # Flag indicating if the volume has tiering policy enable/pause.
-    cooling_threshold_days: int = None      # Time in days to mark the volume's data block as cold and make it eligible for tiering. It can be range from 2-183.
-):
+    cooling_threshold_days: int = None,     # Time in days to mark the volume's data block as cold and make it eligible for tiering. It can be range from 2-183.
+    print_output: bool = False              # print log to the console
+) -> Dict[str, Any]:
 ```
 
 #### Return Values
@@ -301,8 +302,9 @@ def clone_volume(
     large_capacity: bool = None,            # Flag indicating if the volume will be a large capacity volume or a regular volume. If set to True, the volume will be a large capacity volume.
     multiple_endpoints: bool = None,        # Flag indicating if the volume will have an IP address per node for volumes supporting multiple IP endpoints. Only the volume with large_capacity will be allowed to have multiple endpoints.
     tiering_enabled: bool = None,           # Flag indicating if the volume has tiering policy enable/pause.
-    cooling_threshold_days: int = None      # Time in days to mark the volume's data block as cold and make it eligible for tiering. It can be range from 2-183.
-):
+    cooling_threshold_days: int = None,     # Time in days to mark the volume's data block as cold and make it eligible for tiering. It can be range from 2-183.
+    print_output: bool = False              # print log to the console
+) -> Dict[str, Any]:
 ```
 
 #### Return Values
@@ -353,10 +355,12 @@ Volumes can be deleted, with options for forced deletion if necessary.
 #### Function Definition
 ```python
 def delete_volume(
-        project_id: str,          # Required. The ID of the project.
-        location: str,            # Required. The location of the volume.
-        volume_id: str,           # Required. The ID of the volume to delete.
-        force: bool = False):     # If set to True, the volume will be deleted even if it is not empty.
+        project_id: str,            # Required. The ID of the project.
+        location: str,              # Required. The location of the volume.
+        volume_id: str,             # Required. The ID of the volume to delete.
+        force: bool = False,        # If set to True, the volume will be deleted even if it is not empty.
+        print_output: bool = False  # print log to the console
+) -> Dict[str, Any]:
 ```
 #### Return Values
 ```
@@ -399,8 +403,12 @@ Retrieve all volumes in a project/location.
 #### Function Definition
 ```python
 from netapp_dataops.traditional import gcnv
-        project_id: str,          # Required. The ID of the project.
-        location: str):           # Required. The location to list volumes from.
+
+def list_volumes(
+        project_id: str,            # Required. The ID of the project.
+        location: str,              # Required. The location to list volumes from.
+        print_output: bool = False  # print log to the console
+) -> Dict[str, Any]:   
 ```
 #### Return Values
 ```
@@ -451,8 +459,9 @@ def create_snapshot(
     volume_id: str,             # Required. The ID of the volume to delete.
     snapshot_id: str,           # Required. The ID of the snapshot to create.
     description: str = None,    # The description of the snapshot.
-    labels: dict = None         # The labels to assign to the snapshot.
-):
+    labels: dict = None,        # The labels to assign to the snapshot.
+    print_output: bool = False  # print log to the console
+) -> Dict[str, Any]:
 ```
 #### Return Values
 ```
@@ -500,8 +509,9 @@ def delete_snapshot(
     project_id: str,          # Required. The ID of the project.
     location: str,            # Required. The location of the volume.
     volume_id: str,           # Required. The ID of the volume.
-    snapshot_id: str          # Required. The ID of the snapshot to delete.
-):
+    snapshot_id: str,         # Required. The ID of the snapshot to delete.
+    print_output: bool = False  # print log to the console
+) -> Dict[str, Any]:
 ```
 
 #### Return Values
@@ -546,10 +556,11 @@ Users can enumerate all snapshots associated with a particular volume.
 #### Function Definition
 ```python
 def list_snapshots(
-    project_id: str,        # Required. The ID of the project.
-    location: str,          # Required. The location to list volumes from.
-    volume_id: str          # Required. The ID of the volume to list snapshots for.
-):
+    project_id: str,            # Required. The ID of the project.
+    location: str,              # Required. The location to list volumes from.
+    volume_id: str,             # Required. The ID of the volume to list snapshots for.
+    print_output: bool = False  # print log to the console
+) -> Dict[str, Any]:
 ```
 
 #### Return Values
@@ -608,8 +619,9 @@ def create_replication(
     tiering_enabled: bool = None,                     # Whether tiering is enabled on the destination volume.
     cooling_threshold_days: int = None,               # Time in days to mark the volume's data block as cold and make it eligible for tiering. It can be range from 2-183.
     description: str = None,                          # A description about this replication relationship.
-    labels: dict = None                               # Resource labels to represent user provided metadata
-):
+    labels: dict = None,                              # Resource labels to represent user provided metadata
+    print_output: bool = False  # print log to the console
+) -> Dict[str, Any]:
 ```
 
 #### Return Values

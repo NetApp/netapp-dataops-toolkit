@@ -1,11 +1,10 @@
 from google.cloud import netapp_v1
-from typing import Dict, List, Any
-import logging
+from typing import Dict, Any
 from .base import _serialize, create_client, validate_required_params
 
+from netapp_dataops.logging_utils import setup_logger
 
-logger = logging.getLogger(__name__)
-
+logger = setup_logger(__name__)
 
 def create_volume(
     project_id: str,
@@ -32,7 +31,8 @@ def create_volume(
     large_capacity: bool = None,
     multiple_endpoints: bool = None,
     tiering_enabled: bool = None,
-    cooling_threshold_days: int = None
+    cooling_threshold_days: int = None,
+    print_output: bool = False
 ) -> Dict[str, Any]:
     """
     Creates a new NetApp volume in the specified Google Cloud project and location.
@@ -126,6 +126,9 @@ def create_volume(
             Optional. Time in days to mark the volume's data block as cold and make it eligible for tiering.
             It can be range from 2-183.
             Defaults to 31.
+        print_output (bool):
+            Optional. If set to True, prints log messages to the console.
+            Defaults to False.
 
     Returns:
         Dict: Dictionary with keys
@@ -155,7 +158,7 @@ def create_volume(
         raise ValueError("capacity_gib must be a non-negative integer")
 
     try:
-        client = create_client()
+        client = create_client(print_output=print_output)
 
         # Create a parent string
         parent = f"projects/{project_id}/locations/{location}"
@@ -225,11 +228,13 @@ def create_volume(
         # Make the request
         operation = client.create_volume(request=request)
 
-        logger.info("Creating volume...")
+        if print_output:
+            logger.info("Creating volume...")
 
         response = operation.result()
 
-        logger.info(f"Volume created:\n{response}")
+        if print_output:
+            logger.info(f"Volume created:\n{response}")
 
         return {"status": "success", "details": _serialize(response)}
 
@@ -264,7 +269,8 @@ def clone_volume(
     large_capacity: bool = None,
     multiple_endpoints: bool = None,
     tiering_enabled: bool = None,
-    cooling_threshold_days: int = None
+    cooling_threshold_days: int = None,
+    print_output: bool = False
 ) -> Dict[str, Any]:
     """
     Clone an existing NetApp volume.
@@ -358,6 +364,9 @@ def clone_volume(
             Optional. Time in days to mark the volume's data block as cold and make it eligible for tiering.
             It can be range from 2-183.
             Defaults to 31.
+        print_output (bool):
+            Optional. If set to True, prints log messages to the console.
+            Defaults to False.
 
     Returns:
         Dict: Dictionary with keys
@@ -387,7 +396,7 @@ def clone_volume(
         raise ValueError("protocols must be a list")
     
     try:
-        client = create_client()
+        client = create_client(print_output=print_output)
 
         # Create a parent string
         parent = f"projects/{project_id}/locations/{location}"
@@ -397,7 +406,8 @@ def clone_volume(
         try:
             source_vol = client.get_volume(name=source_name)
         except Exception as e:
-            logger.error(f"An error occurred while fetching the source volume: {e}")
+            if print_output:
+                logger.error(f"An error occurred while fetching the source volume: {e}")
             return {"status": "error", "message": f"Error fetching source volume: {e}"}
         
         if not isinstance(source_vol.capacity_gib, int) or source_vol.capacity_gib < 0:
@@ -463,16 +473,19 @@ def clone_volume(
         # Make the request
         operation = client.create_volume(request=request)
 
-        logger.info("Cloning volume...")
+        if print_output:
+            logger.info("Cloning volume...")
 
         response = operation.result()
 
-        logger.info(f"Volume cloned:\n{response}")
+        if print_output:
+            logger.info(f"Volume cloned:\n{response}")
 
         return {"status": "success", "details": _serialize(response)}
 
     except Exception as e:
-        logger.error(f"An error occurred while cloning the volume: {e}")
+        if print_output:
+            logger.error(f"An error occurred while cloning the volume: {e}")
         return {"status": "error", "message": str(e)}
 
 
@@ -480,7 +493,8 @@ def delete_volume(
         project_id: str,
         location: str,
         volume_id: str,
-        force: bool = False) -> Dict[str, Any]:
+        force: bool = False,
+        print_output: bool = False) -> Dict[str, Any]:
     """
     Delete a NetApp volume in the specified Google Cloud project and location.
     Args:
@@ -492,6 +506,9 @@ def delete_volume(
             Required. The ID of the volume to delete.
         force (bool):
             Optional. If set to True, the volume will be deleted even if it is not empty.
+            Defaults to False.
+        print_output (bool):
+            Optional. If set to True, prints log messages to the console.
             Defaults to False.
 
     Returns:
@@ -514,7 +531,7 @@ def delete_volume(
 
     try:
 
-        client = create_client()
+        client = create_client(print_output=print_output)
 
         # Construct a name string
         name = f"projects/{project_id}/locations/{location}/volumes/{volume_id}"
@@ -525,22 +542,26 @@ def delete_volume(
         # Make the request
         operation = client.delete_volume(request=request)
 
-        logger.info(f"Deleting volume: {name}...")
+        if print_output:
+            logger.info(f"Deleting volume: {name}...")
 
         response = operation.result()
 
-        logger.info(f"Volume deleted: {name}")
+        if print_output:
+            logger.info(f"Volume deleted: {name}")
 
         return {"status": "success", "details": _serialize(response)}
 
     except Exception as e:
-        logger.error(f"An error occurred while deleting the volume: {e}")
+        if print_output:
+            logger.error(f"An error occurred while deleting the volume: {e}")
         return {"status": "error", "message": str(e)}
 
  
 def list_volumes(
         project_id: str,
-        location: str) -> Dict[str, Any]:
+        location: str,
+        print_output: bool = False) -> Dict[str, Any]:
     """
     Lists all NetApp volumes in the specified Google Cloud project and location.
 
@@ -549,6 +570,9 @@ def list_volumes(
             Required. The ID of the project.
         location (str):
             Required. The location to list volumes from.
+        print_output (bool):
+            Optional. If set to True, prints log messages to the console.
+            Defaults to False.
 
     Returns:
         dict: Dictionary with keys
@@ -569,7 +593,7 @@ def list_volumes(
 
     try:
 
-        client = create_client()
+        client = create_client(print_output=print_output)
 
         # Construct a parent string
         parent = f"projects/{project_id}/locations/{location}"
@@ -580,14 +604,17 @@ def list_volumes(
         # Make the request
         page_result = client.list_volumes(request=request)
 
-        logger.info("Fetching list of volumes...")
+        if print_output:
+            logger.info("Fetching list of volumes...")
 
         volumes = [v for v in page_result]
 
-        logger.info(f"Volumes fetched:\n{volumes}")
+        if print_output:
+            logger.info(f"Volumes fetched:\n{volumes}")
 
         return {"status": "success", "details": _serialize(volumes)}
 
     except Exception as e:
-        logger.error(f"An error occurred while listing volumes: {e}")
+        if print_output:
+            logger.error(f"An error occurred while listing volumes: {e}")
         return {"status": "error", "message": str(e)}

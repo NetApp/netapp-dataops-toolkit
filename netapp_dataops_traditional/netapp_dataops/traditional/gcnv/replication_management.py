@@ -1,10 +1,10 @@
 from google.cloud import netapp_v1
 from typing import Dict, Any
-import logging
 from .base import _serialize, create_client, validate_required_params
 
-logger = logging.getLogger(__name__)
+from netapp_dataops.logging_utils import setup_logger
 
+logger = setup_logger(__name__)
 
 def create_replication(
     source_project_id: str,
@@ -19,7 +19,8 @@ def create_replication(
     tiering_enabled: bool = None,
     cooling_threshold_days: int = None,
     description: str = None,
-    labels: dict = None
+    labels: dict = None,
+    print_output: bool = False
 ) -> Dict[str, Any]:
     """
     Create a replication for a volume.
@@ -100,6 +101,9 @@ def create_replication(
             Optional. A description about this replication relationship.
         labels (dict, MutableMapping[str, str]):
             Optional. Resource labels to represent user provided metadata.
+        print_output (bool):
+            Optional. If set to True, prints log messages to the console.
+            Defaults to False.
 
     Returns:
         dict: Dictionary with keys
@@ -126,7 +130,7 @@ def create_replication(
         raise ValueError("labels must be a dictionary")
     
     try:
-        client = create_client()
+        client = create_client(print_output=print_output)
 
         # Construct a parent string
         parent = f"projects/{source_project_id}/locations/{source_location}/volumes/{source_volume_id}"
@@ -163,14 +167,17 @@ def create_replication(
         # Make the request
         operation = client.create_replication(request=request)
 
-        logger.info("Creating replication...")
+        if print_output:
+            logger.info("Creating replication...")
 
         response = operation.result()
 
-        logger.info(f"Replication created:\n{response}")
+        if print_output:
+            logger.info(f"Replication created:\n{response}")
 
         return {"status": "success", "details": _serialize(response)}
 
     except Exception as e:
-        logger.error(f"An error occurred while creating the replication: {e}")
+        if print_output:
+            logger.error(f"An error occurred while creating the replication: {e}")
         return {"status": "error", "message": str(e)}
