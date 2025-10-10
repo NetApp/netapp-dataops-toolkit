@@ -157,8 +157,8 @@ class DatasetManagerConfigurator:
         )
         
         print("✅ Dataset Manager configuration created successfully!")
-        print(f"   Root volume: {root_volume_name}")
-        print(f"   Mountpoint: {root_mountpoint}")
+        print(f"Root volume: {root_volume_name}")
+        print(f"Mountpoint: {root_mountpoint}")
         
         # Now perform operations after config is saved
         self._setup_new_root_volume(config)
@@ -335,8 +335,100 @@ class DatasetManagerConfigurator:
         except Exception:
             return "unknown"
     
-    def _mount_volume(self, volume_name: str, mountpoint: str) -> bool:
-        """Mount the volume to the specified mountpoint."""
+    def _handle_root_volume_mounting(self, volume_name: str, mountpoint: str) -> None:
+        """Handle one-time mounting of root volume with proper validation."""
+        expected_nfs_target = self._get_expected_nfs_target(volume_name)
+        
+        # Check current mount status
+        is_mounted = self._is_mounted(mountpoint)
+        
+        if is_mounted:
+            current_target = self._get_mount_target(mountpoint)
+            
+            if expected_nfs_target in current_target or f"/{volume_name}" in current_target:
+                print(f"✓ Volume '{volume_name}' is already correctly mounted at '{mountpoint}'")
+                
+                # Still ask about fstab for persistence across reboots
+                self._handle_fstab_setup(volume_name, mountpoint, expected_nfs_target)
+                return
+            else:
+                print(f"Warning: Mountpoint '{mountpoint}' is in use by '{current_target}'")
+                print(f"Expected: {expected_nfs_target}")
+                return
+        
+        # Check NFS utilities BEFORE attempting any mount operations
+        print("\n🔧 Preparing for volume mounting...")
+        if not self._ensure_nfs_client_available():
+            print("\nCannot proceed with mounting without NFS client utilities.")
+            print(f"To mount manually later: sudo mount -t nfs {expected_nfs_target} {mountpoint}")
+            return
+        
+        # Ask about fstab BEFORE mounting (following requirements)
+        print(f"\n🔧 Configuring mount options for volume '{volume_name}'...")
+        add_to_fstab = PromptUtils.prompt_yes_no(f"Would you like to add your Dataset Manager '{volume_name}' volume to /etc/fstab now?")
+        
+        if add_to_fstab:
+            # Add to fstab FIRST, then mount using fstab entry
+            if self._add_to_fstab_and_mount(volume_name, mountpoint, expected_nfs_target):
+                print(f"✅ Volume '{volume_name}' added to fstab and mounted successfully")
+            else:
+                print(f"⚠️  Failed to add to fstab. Attempting direct mount...")
+                self._mount_volume_directly(volume_name, mountpoint, expected_nfs_target)
+        else:
+            # User declined fstab - do direct mount and show manual instructions
+            print(f"\n🔧 Mounting volume '{volume_name}' directly to '{mountpoint}'...")
+            if self._mount_volume_directly(volume_name, mountpoint, expected_nfs_target):
+                print(f"✅ Volume '{volume_name}' mounted successfully")
+                self._show_manual_fstab_instructions(expected_nfs_target, mountpoint)
+            else:
+                print(f"❌ Failed to mount volume automatically.")
+                print(f"To mount manually: sudo mount -t nfs {expected_nfs_target} {mountpoint}")
+    
+    def _add_to_fstab_and_mount(self, volume_name: str, mountpoint: str, nfs_target: str) -> bool:
+        """Add volume to fstab first, then mount using fstab entry (following requirements)."""
+        try:
+            print(f"\n📝 Adding Dataset Manager volume to /etc/fstab...")
+            
+            # Check if fstab entry already exists
+            if self._fstab_entry_exists(mountpoint, volume_name):
+                print(f"✓ /etc/fstab already contains an entry for this mount")
+            else:
+                # Create standardized fstab entry
+                fstab_entry = self._create_fstab_entry(nfs_target, mountpoint)
+                
+                # Ensure mountpoint directory exists
+                os.makedirs(mountpoint, exist_ok=True)
+                print(f"✓ Mountpoint directory '{mountpoint}' ready")
+                
+                # Add entry to fstab safely
+                if not self._add_fstab_entry_safely(fstab_entry, nfs_target, mountpoint):
+                    print("❌ Failed to add entry to /etc/fstab")
+                    return False
+                
+                print(f"✓ Entry added to /etc/fstab successfully")
+            
+            # Now mount using fstab entry (this is the key requirement)
+            print(f"🔧 Mounting volume using fstab entry...")
+            if self._mount_from_fstab(mountpoint):
+                print(f"✓ Volume '{volume_name}' mounted successfully and will persist across reboots")
+                
+                # Validate the mount
+                if self._validate_mount(mountpoint, nfs_target):
+                    print(f"✓ Mount validation successful")
+                    return True
+                else:
+                    print(f"⚠️  Mount validation failed - please check manually")
+                    return False
+            else:
+                print(f"❌ Failed to mount using fstab entry")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Error in fstab setup and mount: {e}")
+            return False
+
+    def _mount_volume_directly(self, volume_name: str, mountpoint: str, nfs_target: str) -> bool:
+        """Mount volume directly without using fstab."""
         try:
             # Create mountpoint directory if it doesn't exist
             os.makedirs(mountpoint, exist_ok=True)
@@ -359,7 +451,6 @@ class DatasetManagerConfigurator:
             
             # If CLI mount fails, try direct NFS mount
             print("   Attempting direct NFS mount...")
-            nfs_target = self._get_expected_nfs_target(volume_name)
             
             result = subprocess.run([
                 'sudo', 'mount', '-t', 'nfs', nfs_target, mountpoint
@@ -369,52 +460,38 @@ class DatasetManagerConfigurator:
                 print("✓ Direct NFS mount successful")
                 return True
             else:
-                print(f"Mount command failed: {result.stderr.strip()}")
+                print(f"❌ Mount command failed: {result.stderr.strip()}")
                 return False
                 
         except Exception as e:
-            print(f"❌ Error during mount operation: {e}")
+            print(f"❌ Error during direct mount operation: {e}")
             return False
-    
-    def _handle_root_volume_mounting(self, volume_name: str, mountpoint: str) -> None:
-        """Handle one-time mounting of root volume with proper validation."""
-        expected_nfs_target = self._get_expected_nfs_target(volume_name)
+
+    def _handle_fstab_setup(self, volume_name: str, mountpoint: str, nfs_target: str) -> None:
+        """Handle fstab setup for volumes that are already mounted."""
+        add_to_fstab = PromptUtils.prompt_yes_no(f"Would you like to add your Dataset Manager '{volume_name}' volume to /etc/fstab for persistence across reboots?")
         
-        # Check current mount status
-        is_mounted = self._is_mounted(mountpoint)
-        
-        if is_mounted:
-            current_target = self._get_mount_target(mountpoint)
+        if add_to_fstab:
+            print(f"\n📝 Adding Dataset Manager volume to /etc/fstab...")
             
-            if expected_nfs_target in current_target or f"/{volume_name}" in current_target:
-                print(f"✓ Volume '{volume_name}' is already correctly mounted at '{mountpoint}'")
-                
-                # Check and handle fstab
-                self._handle_fstab_setup(volume_name, mountpoint, expected_nfs_target)
+            # Check if fstab entry already exists
+            if self._fstab_entry_exists(mountpoint, volume_name):
+                print(f"✓ /etc/fstab already contains an entry for this mount")
                 return
+            
+            # Create standardized fstab entry
+            fstab_entry = self._create_fstab_entry(nfs_target, mountpoint)
+            
+            # Add entry to fstab safely
+            if self._add_fstab_entry_safely(fstab_entry, nfs_target, mountpoint):
+                print(f"✅ Entry added to /etc/fstab successfully - volume will persist across reboots")
             else:
-                print(f"Warning: Mountpoint '{mountpoint}' is in use by '{current_target}'")
-                print(f"Expected: {expected_nfs_target}")
-                return
-        
-        # Check NFS utilities BEFORE attempting any mount operations
-        print("\n🔧 Preparing for volume mounting...")
-        if not self._ensure_nfs_client_available():
-            print("\nCannot proceed with mounting without NFS client utilities.")
-            print(f"To mount manually later: sudo mount -t nfs {expected_nfs_target} {mountpoint}")
-            return
-        
-        # Now attempt to mount the volume
-        print(f"\n🔧 Mounting volume '{volume_name}' to '{mountpoint}'...")
-        if self._mount_volume(volume_name, mountpoint):
-            print(f"Volume '{volume_name}' mounted successfully to '{mountpoint}'")
-            
-            # Handle fstab setup
-            self._handle_fstab_setup(volume_name, mountpoint, expected_nfs_target)
+                print("❌ Failed to add entry to /etc/fstab automatically")
+                self._show_manual_fstab_instructions(nfs_target, mountpoint)
         else:
-            print(f"Failed to mount volume automatically.")
-            print(f"To mount manually: sudo mount -t nfs {expected_nfs_target} {mountpoint}")
-    
+            # User declined - show manual instructions
+            self._show_manual_fstab_instructions(nfs_target, mountpoint)
+
     def _get_expected_nfs_target(self, volume_name: str) -> str:
         """Get the expected NFS target for a volume."""
         try:
@@ -438,68 +515,6 @@ class DatasetManagerConfigurator:
         # Production-ready fstab entry with essential NFS options
         # For Dataset Manager root volume: permanent mount, no auto-unmount
         return f"{nfs_target} {mountpoint} nfs rw,_netdev,nfsvers=4.1,hard 0 0"
-    
-    def _handle_fstab_setup(self, volume_name: str, mountpoint: str, nfs_target: str) -> None:
-        """Handle fstab setup with intelligent checking and optional auto-editing."""
-        if not PromptUtils.prompt_yes_no(f"Would you like to add your Dataset Manager '{volume_name}' volume to /etc/fstab now?"):
-            # User declined - show manual instructions
-            self._show_manual_fstab_instructions(nfs_target, mountpoint)
-            return
-        
-        # User agreed - verify NFS utilities are available for fstab operations
-        # Note: We don't need to re-install here since we already checked before mounting,
-        # but we should verify mount.nfs is still available
-        nfs_check = subprocess.run(['which', 'mount.nfs'], capture_output=True, text=True)
-        if nfs_check.returncode != 0:
-            print("NFS client utilities not found - fstab entry may not work properly.")
-            print("Adding fstab entry anyway, but mounting may fail until NFS client is installed.")
-        
-        # User agreed - programmatically update /etc/fstab
-        print(f"\nAdding Dataset Manager volume to /etc/fstab...")
-        
-        # Check if fstab entry already exists
-        if self._fstab_entry_exists(mountpoint, volume_name):
-            print(f"/etc/fstab already contains an entry for this mount")
-            return
-        
-        # Create standardized fstab entry
-        fstab_entry = self._create_fstab_entry(nfs_target, mountpoint)
-        
-        # Ensure mountpoint directory exists
-        try:
-            os.makedirs(mountpoint, exist_ok=True)
-            print(f"Mountpoint directory '{mountpoint}' ready")
-        except Exception as e:
-            print(f"Failed to create mountpoint directory: {e}")
-            self._show_manual_fstab_instructions(nfs_target, mountpoint)
-            return
-        
-        # Add entry to fstab (idempotently, without duplicates)
-        if self._add_fstab_entry_safely(fstab_entry, nfs_target, mountpoint):
-            print(f"Entry added to /etc/fstab successfully")
-            
-            # Only attempt to mount from fstab if the volume isn't already mounted
-            if not self._is_mounted(mountpoint):
-                # Mount immediately using fstab entry
-                print(f"Mounting volume using fstab entry...")
-                if self._mount_from_fstab(mountpoint):
-                    print(f"Volume '{volume_name}' mounted successfully and will persist across reboots")
-                    
-                    # Validate the mount
-                    if self._validate_mount(mountpoint, nfs_target):
-                        print(f"Mount validation successful")
-                    else:
-                        print(f"Mount validation failed - please check manually")
-                else:
-                    print(f"Failed to mount using fstab entry")
-                    print(f"The fstab entry was added, but the mount failed.")
-                    print(f"This may be due to missing NFS client utilities or network issues.")
-                    self._show_manual_fstab_instructions(nfs_target, mountpoint)
-            else:
-                print(f"Volume is already mounted - fstab entry will ensure persistence across reboots")
-        else:
-            print("Failed to add entry to /etc/fstab automatically")
-            self._show_manual_fstab_instructions(nfs_target, mountpoint)
     
     def _show_manual_fstab_instructions(self, nfs_target: str, mountpoint: str) -> None:
         """Show manual instructions for fstab setup."""
