@@ -36,13 +36,13 @@ class DatasetManagerConfigurator:
         has_existing = PromptUtils.prompt_yes_no("Do you have a pre-existing Dataset Manager 'root' volume?")
         
         if has_existing:
-            # User claims they have existing root - validate and bind
-            return self._bind_existing_root_volume()
+            # User claims they have existing root - collect config first
+            return self._collect_existing_root_config()
         else:
             # No existing root - offer to create now
             create_new = PromptUtils.prompt_yes_no("Would you like to create a new Dataset Manager 'root' volume now?")
             if create_new:
-                return self._create_new_root_volume()
+                return self._collect_new_root_config()
             else:
                 print("Dataset Manager configuration skipped.")
                 print("Note: Dataset Manager requires a root volume to function.")
@@ -98,12 +98,12 @@ class DatasetManagerConfigurator:
         print("   SUSE:          sudo zypper install -y nfs-client")
         print("\n   After installation, re-run: python -m netapp_dataops.netapp_dataops_cli config")
     
-    def _bind_existing_root_volume(self) -> DatasetManagerConfig:
-        """Bind to an existing root volume with validation."""
+    def _collect_existing_root_config(self) -> DatasetManagerConfig:
+        """Collect configuration for existing root volume without performing operations."""
         while True:
             root_volume_name = PromptUtils.prompt_required("Dataset Manager 'root' volume name")
             
-            # Verify the volume exists and get its details
+            # Basic validation - just check if volume exists
             try:
                 volume_info = self._get_volume_info(root_volume_name)
                 
@@ -114,26 +114,8 @@ class DatasetManagerConfigurator:
                         return DatasetManagerConfig(enabled=False)
                     continue
                 
-                # Check junction path
-                junction_path = volume_info.get('NFS Mount Target', '')
-                if ':' in junction_path:
-                    junction_path = junction_path.split(':', 1)[1]  # Extract path after data_lif:
-                
-                expected_junction = f"/{root_volume_name}"
-                
-                if junction_path != expected_junction:
-                    print(f"Warning: Volume '{root_volume_name}' exists but has junction path '{junction_path}'")
-                    print(f"Expected junction path: '{expected_junction}'")
-                    
-                    # Check if expected junction path is already taken by another volume
-                    if self._junction_path_exists(expected_junction, exclude_volume=root_volume_name):
-                        print(f"Error: Junction path '{expected_junction}' is already in use by another volume.")
-        
-                        print("Dataset Manager configuration cancelled.")
-                        return DatasetManagerConfig(enabled=False)
-                else:
-                    print(f"✓ Volume '{root_volume_name}' found with correct junction path '{junction_path}'")
-                    break
+                print(f"✓ Volume '{root_volume_name}' found on ONTAP")
+                break
                     
             except Exception as e:
                 print(f"Error checking volume: {e}")
@@ -145,22 +127,95 @@ class DatasetManagerConfigurator:
         # Get local mountpoint
         root_mountpoint = PromptUtils.prompt_required("Local mountpoint path for Dataset Manager 'root' volume")
         
-        # Handle mounting with proper validation
-        self._handle_root_volume_mounting(root_volume_name, root_mountpoint)
-        
-        return DatasetManagerConfig(
+        # Create configuration object
+        config = DatasetManagerConfig(
             enabled=True,
             root_volume_name=root_volume_name,
             root_mountpoint=root_mountpoint
         )
-    
-    def _create_new_root_volume(self) -> DatasetManagerConfig:
-        """Create a new root volume with full setup."""
-        while True:  # Loop for retrying with different names
-            # 1. Collect inputs
-            root_volume_name = PromptUtils.prompt_with_default("Desired Dataset Manager 'root' volume name", "dataset_mgr_root")
+        
+        print("✅ Dataset Manager configuration created successfully!")
+        print(f"   Root volume: {root_volume_name}")
+        print(f"   Mountpoint: {root_mountpoint}")
+        
+        # Now perform operations after config is saved
+        self._setup_existing_root_volume(config)
+        
+        return config
+
+    def _collect_new_root_config(self) -> DatasetManagerConfig:
+        """Collect configuration for new root volume without performing operations."""
+        # 1. Collect inputs
+        root_volume_name = PromptUtils.prompt_with_default("Desired Dataset Manager 'root' volume name", "dataset_mgr_root")
+        root_mountpoint = PromptUtils.prompt_required("Local mountpoint path for Dataset Manager 'root' volume")
+        
+        # Create configuration object
+        config = DatasetManagerConfig(
+            enabled=True,
+            root_volume_name=root_volume_name,
+            root_mountpoint=root_mountpoint
+        )
+        
+        print("✅ Dataset Manager configuration created successfully!")
+        print(f"   Root volume: {root_volume_name}")
+        print(f"   Mountpoint: {root_mountpoint}")
+        
+        # Now perform operations after config is saved
+        self._setup_new_root_volume(config)
+        
+        return config
+
+    def _setup_existing_root_volume(self, config: DatasetManagerConfig) -> None:
+        """Perform operations for existing root volume after config is saved."""
+        root_volume_name = config.root_volume_name
+        root_mountpoint = config.root_mountpoint
+        
+        print(f"\n🔧 Setting up existing Dataset Manager root volume '{root_volume_name}'...")
+        
+        # Verify the volume exists and validate junction path
+        try:
+            volume_info = self._get_volume_info(root_volume_name)
             
-            # 2. Preflight checks
+            if volume_info is None:
+                print(f"Warning: Volume '{root_volume_name}' not found on ONTAP.")
+                print("Configuration has been saved. Please verify the volume name and try setup again.")
+                return
+            
+            # Check junction path
+            junction_path = volume_info.get('NFS Mount Target', '')
+            if ':' in junction_path:
+                junction_path = junction_path.split(':', 1)[1]  # Extract path after data_lif:
+            
+            expected_junction = f"/{root_volume_name}"
+            
+            if junction_path != expected_junction:
+                print(f"Warning: Volume '{root_volume_name}' exists but has junction path '{junction_path}'")
+                print(f"Expected junction path: '{expected_junction}'")
+                
+                # Check if expected junction path is already taken by another volume
+                if self._junction_path_exists(expected_junction, exclude_volume=root_volume_name):
+                    print(f"Error: Junction path '{expected_junction}' is already in use by another volume.")
+                    print("Configuration has been saved. Please resolve junction path conflicts manually.")
+                    return
+            else:
+                print(f"✓ Volume '{root_volume_name}' found with correct junction path '{junction_path}'")
+                
+        except Exception as e:
+            print(f"Error validating volume: {e}")
+            print("Configuration has been saved. Please verify volume setup manually.")
+            return
+        
+        # Handle mounting with proper validation
+        self._handle_root_volume_mounting(root_volume_name, root_mountpoint)
+
+    def _setup_new_root_volume(self, config: DatasetManagerConfig) -> None:
+        """Perform operations for new root volume after config is saved."""
+        root_volume_name = config.root_volume_name
+        root_mountpoint = config.root_mountpoint
+        
+        print(f"\n🔧 Setting up new Dataset Manager root volume '{root_volume_name}'...")
+        
+        while True:  # Loop for retrying with different names if needed
             try:
                 # Check if volume already exists
                 existing_volume = self._get_volume_info(root_volume_name)
@@ -178,57 +233,33 @@ class DatasetManagerConfigurator:
                     else:
                         print(f"Volume '{root_volume_name}' exists but has junction path '{junction_path}'")
                         print(f"Expected: '{expected_junction}'")
+                        print("Configuration has been saved. Please resolve junction path conflicts manually.")
+                        return
                 else:
                     # Check junction path collision
                     expected_junction = f"/{root_volume_name}"
                     if self._junction_path_exists(expected_junction):
                         print(f"Error: Junction path '{expected_junction}' is already in use by another volume.")
-                        if not PromptUtils.prompt_yes_no("Would you like to choose a different root volume name?"):
-                            print("Dataset Manager configuration cancelled.")
-                            return DatasetManagerConfig(enabled=False)
-                        continue  # Retry with different name
+                        print("Configuration has been saved. Please choose a different volume name and reconfigure.")
+                        return
                     
-                    # 3. Create the root volume
-                    print(f"\nCreating Dataset Manager root volume '{root_volume_name}'...")
+                    # Create the root volume
+                    print(f"Creating Dataset Manager root volume '{root_volume_name}'...")
                     if not self._create_root_volume_on_ontap(root_volume_name):
                         print("Failed to create root volume.")
-                        if not PromptUtils.prompt_yes_no("Would you like to try with a different name?"):
-                            print("Dataset Manager configuration cancelled.")
-                            return DatasetManagerConfig(enabled=False)
-                        continue  # Retry with different name
+                        print("Configuration has been saved. Please create the volume manually or reconfigure with a different name.")
+                        return
                     
                     print(f"✓ Root volume '{root_volume_name}' created successfully")
                     break  # Volume created successfully
             
             except Exception as e:
                 print(f"Error during volume operations: {e}")
-                if not PromptUtils.prompt_yes_no("Would you like to try with a different name?"):
-                    print("Dataset Manager configuration cancelled.")
-                    return DatasetManagerConfig(enabled=False)
-                continue  # Retry with different name
+                print("Configuration has been saved. Please create the volume manually or reconfigure.")
+                return
         
-        # 4. Get local mountpoint and handle mounting
-        while True:
-            root_mountpoint = PromptUtils.prompt_required("Local mountpoint path for Dataset Manager 'root' volume")
-            
-            # Check if mountpoint is already used by wrong volume
-            if self._is_mounted(root_mountpoint):
-                mounted_target = self._get_mount_target(root_mountpoint)
-                expected_target = f"/{root_volume_name}"
-                
-                if expected_target not in mounted_target:
-                    print(f"Warning: Mountpoint '{root_mountpoint}' is already in use by '{mounted_target}'")
-                    continue
-            break
-        
-        # 5. Handle mounting with proper validation
+        # Handle mounting with proper validation
         self._handle_root_volume_mounting(root_volume_name, root_mountpoint)
-        
-        return DatasetManagerConfig(
-            enabled=True,
-            root_volume_name=root_volume_name,
-            root_mountpoint=root_mountpoint
-        )
     
     def _get_volume_info(self, volume_name: str) -> Optional[Dict[str, Any]]:
         """Get volume information from ONTAP."""
