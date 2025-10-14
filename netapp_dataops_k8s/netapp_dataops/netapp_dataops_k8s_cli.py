@@ -776,7 +776,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    logger.info(helpTextCloneVolume)
+                    print(helpTextCloneVolume)
                     sys.exit(0)
                 elif opt in ("-p", "--new-pvc-name"):
                     newPvcName = arg
