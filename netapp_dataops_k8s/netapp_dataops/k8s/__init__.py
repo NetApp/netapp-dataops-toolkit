@@ -32,7 +32,7 @@ from netapp_ontap.resources import Flexcache as NetAppFlexCache
 from netapp_ontap import config as netappConfig
 from netapp_ontap.resources import Volume
 
-from netapp_dataops_k8s.netapp_dataops.logging_utils import setup_logger
+from netapp_dataops.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
 
