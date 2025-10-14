@@ -32,6 +32,11 @@ from netapp_dataops.k8s.data_movers.s3 import (
     S3DataMover,
 )
 
+from netapp_dataops.logging_utils import setup_logger
+
+logger = setup_logger(__name__)
+
+
 # Define contents of help text
 astra_error_text = "Error: Astra Control functionality within the DataOps Toolkit is no longer supported. Please use the Astra SDK and/or toolkit. For details, visit https://github.com/NetApp/netapp-astra-toolkits."
 helpTextStandard = '''
@@ -710,10 +715,10 @@ Examples:
 ## Function for handling situation in which user enters invalid command
 def handleInvalidCommand(helpText: str = helpTextStandard, invalidOptArg: bool = False):
     if invalidOptArg:
-        print("Error: Invalid option/argument.")
+        logger.error("Error: Invalid option/argument.")
     else:
-        print("Error: Invalid command.")
-    print(helpText)
+        logger.error("Error: Invalid command.")
+    logger.info(helpText)
     sys.exit(1)
 
 
@@ -771,7 +776,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextCloneVolume)
+                    logger.info(helpTextCloneVolume)
                     sys.exit(0)
                 elif opt in ("-p", "--new-pvc-name"):
                     newPvcName = arg
@@ -788,7 +793,7 @@ if __name__ == '__main__':
             if not newPvcName or (not sourceSnapshotName and not sourcePvcName):
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
             if sourceSnapshotName and sourcePvcName:
-                print(
+                logger.error(
                     "Error: Both -s/--source-snapshot-name and -v/--source-pvc-name cannot be specified for the same operation.")
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
 
@@ -850,8 +855,7 @@ if __name__ == '__main__':
             if not newWorkspaceName or (not sourceSnapshotName and not sourceWorkspaceName):
                 handleInvalidCommand(helpText=helpTextCloneJupyterLab, invalidOptArg=True)
             if sourceSnapshotName and sourceWorkspaceName:
-                print(
-                    "Error: Both -s/--source-snapshot-name and -j/--source-workspace-name cannot be specified for the same operation.")
+                logger.error("Error: Both -s/--source-snapshot-name and -j/--source-workspace-name cannot be specified for the same operation.")
                 handleInvalidCommand(helpText=helpTextCloneJupyterLab, invalidOptArg=True)
 
             # Clone volume
@@ -1160,7 +1164,7 @@ if __name__ == '__main__':
                     print_output=True
                 )
                 s3_secret.create()
-                print("Kubernetes secret successfully created.")
+                logger.info("Kubernetes secret successfully created.")
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1202,7 +1206,7 @@ if __name__ == '__main__':
                         print_output=True
                     )
                 config_map.create()
-                print("Kubernetes CA config-map successfully created.")
+                logger.info("Kubernetes CA config-map successfully created.")
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1292,7 +1296,7 @@ if __name__ == '__main__':
 
             # Confirm delete operation
             if not force:
-                print("Warning: This snapshot will be permanently deleted.")
+                logger.warning("Warning: This snapshot will be permanently deleted.")
                 while True:
                     proceed = input("Are you sure that you want to proceed? (yes/no): ")
                     if proceed in ("yes", "Yes", "YES"):
@@ -1300,7 +1304,7 @@ if __name__ == '__main__':
                     elif proceed in ("no", "No", "NO"):
                         sys.exit(0)
                     else:
-                        print("Invalid value. Must enter 'yes' or 'no'.")
+                        logger.error("Invalid value. Must enter 'yes' or 'no'.")
 
             # Delete snapshot
             try:
@@ -1341,7 +1345,7 @@ if __name__ == '__main__':
 
             # Confirm delete operation
             if not force:
-                print("Warning: All data associated with the volume will be permanently deleted.")
+                logger.warning("Warning: All data associated with the volume will be permanently deleted.")
                 while True:
                     proceed = input("Are you sure that you want to proceed? (yes/no): ")
                     if proceed in ("yes", "Yes", "YES"):
@@ -1349,7 +1353,7 @@ if __name__ == '__main__':
                     elif proceed in ("no", "No", "NO"):
                         sys.exit(0)
                     else:
-                        print("Invalid value. Must enter 'yes' or 'no'.")
+                        logger.error("Invalid value. Must enter 'yes' or 'no'.")
 
             # Delete volume
             try:
@@ -1394,7 +1398,7 @@ if __name__ == '__main__':
 
             # Confirm delete operation
             if not force:
-                print("Warning: This FlexCache volume will be permanently deleted.")
+                logger.warning("Warning: This FlexCache volume will be permanently deleted.")
                 while True:
                     proceed = input("Are you sure that you want to proceed? (yes/no): ")
                     if proceed in ("yes", "Yes", "YES"):
@@ -1402,7 +1406,7 @@ if __name__ == '__main__':
                     elif proceed in ("no", "No", "NO"):
                         sys.exit(0)
                     else:
-                        print("Invalid value. Must enter 'yes' or 'no'.")
+                        logger.error("Invalid value. Must enter 'yes' or 'no'.")
 
             # Delete FlexCache volume
             try:
@@ -1444,7 +1448,7 @@ if __name__ == '__main__':
 
             # Confirm delete operation
             if not force:
-                print("Warning: All data associated with the workspace will be permanently deleted.")
+                logger.warning("Warning: All data associated with the workspace will be permanently deleted.")
                 while True:
                     proceed = input("Are you sure that you want to proceed? (yes/no): ")
                     if proceed in ("yes", "Yes", "YES"):
@@ -1452,7 +1456,7 @@ if __name__ == '__main__':
                     elif proceed in ("no", "No", "NO"):
                         sys.exit(0)
                     else:
-                        print("Invalid value. Must enter 'yes' or 'no'.")
+                        logger.error("Invalid value. Must enter 'yes' or 'no'.")
 
             # Delete JupyterLab workspace
             try:
@@ -1500,7 +1504,7 @@ if __name__ == '__main__':
                     print_output=True
                 )
                 s3_secret.delete()
-                print("Kubernetes secret successfully deleted.")
+                logger.info("Kubernetes secret successfully deleted.")
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1537,7 +1541,7 @@ if __name__ == '__main__':
             try:
                 mover_job = DataMoverJob(namespace=namespace, print_output=True)
                 mover_job.delete_job(job=job_name)
-                print("Job {} deleted.".format(job_name))
+                logger.info("Job {} deleted.".format(job_name))
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1579,7 +1583,7 @@ if __name__ == '__main__':
                     print_output=True
                 )
                 config_map.delete()
-                print("Kubernetes CA config-map successfully deleted.")
+                logger.info("Kubernetes CA config-map successfully deleted.")
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1613,7 +1617,7 @@ if __name__ == '__main__':
 
             # Confirm delete operation
             if not force:
-                print("Warning: This server will be permanently deleted.")
+                logger.warning("Warning: This server will be permanently deleted.")
                 while True:
                     proceed = input("Are you sure that you want to proceed? (yes/no): ")
                     if proceed in ("yes", "Yes", "YES"):
@@ -1621,7 +1625,7 @@ if __name__ == '__main__':
                     elif proceed in ("no", "No", "NO"):
                         sys.exit(0)
                     else:
-                        print("Invalid value. Must enter 'yes' or 'no'.")
+                        logger.error("Invalid value. Must enter 'yes' or 'no'.")
 
             # Delete Triton instance
             try:
@@ -1737,7 +1741,7 @@ if __name__ == '__main__':
                     print_output=True
                 )
                 job = data_mover.get_bucket(bucket=bucket_name, pvc=pvc_name, pvc_dir=pvc_dir)
-                print("Created Kubernetes job {}".format(job))
+                logger.info("Created Kubernetes job {}".format(job))
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1845,7 +1849,7 @@ if __name__ == '__main__':
                     print_output=True
                 )
                 job = data_mover.get_object(bucket=bucket_name, pvc=pvc_name, object_key=object_key, file_location=file_location)
-                print("Created Kubernetes job {}".format(job))
+                logger.info("Created Kubernetes job {}".format(job))
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -2093,7 +2097,7 @@ if __name__ == '__main__':
                     print_output=True
                 )
                 job = data_mover.put_bucket(bucket=bucket_name, pvc=pvc_name, pvc_dir=pvc_dir)
-                print("Created Kubernetes job {}".format(job))
+                logger.info("Created Kubernetes job {}".format(job))
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -2201,7 +2205,7 @@ if __name__ == '__main__':
                     print_output=True
                 )
                 job = data_mover.put_object(bucket=bucket_name, pvc=pvc_name, file_location=file_location, object_key=object_key)
-                print("Created Kubernetes job {}".format(job))
+                logger.info("Created Kubernetes job {}".format(job))
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -2253,7 +2257,7 @@ if __name__ == '__main__':
 
             # Confirm restore operation
             if not force:
-                print(
+                logger.warning(
                     "Warning: In order to restore a snapshot, the PersistentVolumeClaim (PVC) associated the snapshot must NOT be mounted to any pods.")
                 while True:
                     proceed = input("Are you sure that you want to proceed? (yes/no): ")
@@ -2262,7 +2266,7 @@ if __name__ == '__main__':
                     elif proceed in ("no", "No", "NO"):
                         sys.exit(0)
                     else:
-                        print("Invalid value. Must enter 'yes' or 'no'.")
+                        logger.error("Invalid value. Must enter 'yes' or 'no'.")
 
             # Restore snapshot
             try:
@@ -2340,13 +2344,13 @@ if __name__ == '__main__':
             try:
                 mover_job = DataMoverJob(namespace=namespace, print_output=True)
                 job_status = mover_job.get_job_status(job=job_name)
-                print("Job {} status:\n{}".format(job_name, job_status))
+                logger.info("Job {} status:\n{}".format(job_name, job_status))
             except (InvalidConfigError, APIConnectionError):
-                print(f"Unable to get status of job {job_name}")
+                logger.error(f"Unable to get status of job {job_name}")
                 sys.exit(1)
 
     elif action in ("version", "v", "-v", "--version"):
-        print("NetApp DataOps Toolkit for Kubernetes - version " + k8s.__version__)
+        logger.info("NetApp DataOps Toolkit for Kubernetes - version %s", k8s.__version__)
 
     else:
         handleInvalidCommand()
