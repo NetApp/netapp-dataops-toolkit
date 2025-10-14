@@ -33,7 +33,7 @@ import requests
 from tabulate import tabulate
 import yaml
 
-from logging_utils import setup_logger
+from netapp_dataops_traditional.netapp_dataops.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
 
