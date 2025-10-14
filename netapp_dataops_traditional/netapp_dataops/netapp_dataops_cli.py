@@ -43,7 +43,7 @@ from netapp_dataops.traditional import (
     SnapMirrorSyncOperationError
 )
 
-from netapp_dataops_traditional.netapp_dataops.logging_utils import setup_logger
+from netapp_dataops.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
 
