@@ -16,6 +16,7 @@ The [NetApp DataOps Toolkit MCP Server for ONTAP](netapp_dataops_traditional/doc
 - **List Snapshots**: Retrieve a list of all snapshots for a specific volume.
 - **Create SnapMirror Relationship**: Set up SnapMirror relationships for efficient data replication.
 - **List SnapMirror Relationships**: Retrieve a list of all SnapMirror relationships on the storage system.
+- **Create FlexCache**: Create a FlexCache volume for intelligent caching and data distribution.
 
 ## NetApp DataOps Toolkit for Kubernetes MCP Server
 
@@ -40,3 +41,4 @@ This MCP Server provides the following tools for managing JupyterLab workspaces 
 - **ListVolumes**: List all volumes.
 - **CreateVolumeSnapshot**: Create a snapshot of a volume.
 - **ListVolumeSnapshots**: List all snapshots of volumes.
+- **CreateFlexCache**: Create a FlexCache volume.
