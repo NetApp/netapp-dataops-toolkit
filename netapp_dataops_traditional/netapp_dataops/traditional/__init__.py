@@ -266,14 +266,14 @@ def _retrieve_config(configDirPath: str = "~/.netapp_dataops", configFilename: s
             config["username"] = username
         else:
             if print_output:
-                print("Error: Missing username in credential manager.")
+                logger.error("Error: Missing username in credential manager.")
             raise InvalidConfigError()
         
         if password:
             config["password"] = password
         else:
             if print_output:
-                print("Error: Missing password in credential manager.")
+                logger.error("Error: Missing password in credential manager.")
             raise InvalidConfigError()
 
     except:
