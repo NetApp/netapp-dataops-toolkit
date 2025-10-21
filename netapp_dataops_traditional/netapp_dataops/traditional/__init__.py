@@ -258,7 +258,8 @@ def _retrieve_config(configDirPath: str = "~/.netapp_dataops", configFilename: s
 
         # Retrieve username and password from os-default credential manager
         load_dotenv()
-        service_name = os.getenv("KEYRING_SERVICE_NAME")
+        # Use the value from .env file, or fall back to the default if not set
+        service_name = os.getenv("KEYRING_SERVICE_NAME", "netapp:dataops:ontap")
         username = keyring.get_password(service_name, "username")
         password = keyring.get_password(service_name, "password")
 
