@@ -80,10 +80,6 @@ class ANFClientManager:
         if print_output:
             logger.debug("Using DefaultAzureCredential (service principal env vars not found)")
         return DefaultAzureCredential(exclude_cli_credential=True)  # Exclude Azure CLI to avoid conflicts
-    
-    def reset_client(self):
-        """Reset the client instance to force re-authentication on next use."""
-        self._client = None
 
 
 def get_anf_client(subscription_id: Optional[str] = None, print_output: Optional[bool] = False) -> Tuple[NetAppManagementClient, str]:
