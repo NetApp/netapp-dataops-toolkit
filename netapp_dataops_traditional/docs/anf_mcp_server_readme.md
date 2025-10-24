@@ -1,0 +1,293 @@
+# NetApp DataOps Toolkit MCP Server for Azure NetApp Files (ANF)
+
+The NetApp DataOps Toolkit MCP Server for Azure NetApp Files (ANF) is an open-source server component written in Python that provides access to Traditional DataOps Toolkit capabilities through the Model Context Protocol (MCP). The server provides a comprehensive set of tools for managing NetApp volumes in Microsoft Azure, including volume creation, cloning, snapshot management, and cross-region replication relationships.
+
+> [!NOTE]  
+> This MCP server uses the stdio transport, as shown in the [MCP Server Quickstart](https://modelcontextprotocol.io/quickstart/server), making it a "local MCP server".
+
+## Tools
+
+- **Create ANF Volume**: Rapidly provision new Azure NetApp Files volumes with comprehensive configuration options including protocols (NFS/SMB), performance tiers, export policies, and advanced features like encryption and tiering.
+- **Clone ANF Volume**: Create near-instantaneous, space-efficient clones of existing volumes from snapshots using NetApp's FlexClone technology.
+- **List ANF Volumes**: Retrieve a list of all existing data volumes in a specified capacity pool within your Azure NetApp Files account.
+- **Create ANF Snapshot**: Create space-efficient, read-only point-in-time copies of data volumes for versioning, backup, and recovery scenarios.
+- **List ANF Snapshots**: Retrieve a list of all snapshots for a specific Azure NetApp Files volume.
+- **Create ANF Replication**: Set up cross-region replication relationships for disaster recovery and high availability between Azure regions.
+- **Create ANF Data Protection Volume**: Create destination volumes specifically configured for cross-region replication scenarios.
+
+## Prerequisites
+
+- Python >= 3.9
+- [`uv`](https://docs.astral.sh/uv/) or [`pip`](https://pypi.org/project/pip/)
+- [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) installed and authenticated
+- Azure NetApp Files resources (NetApp Account, Capacity Pool, delegated subnet)
+- Appropriate IAM permissions (NetApp Contributor role or equivalent)
+
+## Usage Instructions
+
+### Run with `uv` (recommended)
+
+To run the MCP server using `uv`, run the following command. You do not need to install the NetApp DataOps Toolkit package before running this command.
+
+```bash
+uvx --from 'netapp-dataops-traditional[azure]' netapp_dataops_anf_mcp.py
+```
+
+### Install with `pip` and run from PATH
+
+To install the NetApp DataOps Toolkit for Traditional Environments with Azure support, run the following command.
+
+```bash
+python3 -m pip install 'netapp-dataops-traditional[azure]'
+```
+
+After installation, the `netapp_dataops_anf_mcp.py` command will be available in your PATH for direct usage.
+
+## Usage
+
+### Azure Authentication
+
+Before the MCP server can be used to perform ANF operations, you must authenticate with Azure and ensure proper setup:
+
+#### Option 1: Azure CLI Authentication (Recommended)
+
+1. **Install Azure CLI**: Follow the [installation guide](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli)
+
+2. **Login to Azure**:
+   ```bash
+   az login
+   ```
+
+3. **Set your default subscription**:
+   ```bash
+   az account set --subscription "YOUR_SUBSCRIPTION_ID"
+   ```
+
+4. **Register NetApp resource provider** (if not already registered):
+   ```bash
+   az provider register --namespace Microsoft.NetApp
+   ```
+
+5. **Verify NetApp provider is registered**:
+   ```bash
+   az provider show --namespace Microsoft.NetApp --query "registrationState"
+   ```
+
+#### Option 2: Service Principal Authentication
+
+1. **Create a service principal**:
+   ```bash
+   az ad sp create-for-rbac --name "netapp-dataops-sp" --role "NetApp Contributor" --scopes /subscriptions/YOUR_SUBSCRIPTION_ID
+   ```
+
+2. **Set environment variables**:
+   ```bash
+   export AZURE_CLIENT_ID="service-principal-app-id"
+   export AZURE_CLIENT_SECRET="service-principal-password"
+   export AZURE_TENANT_ID="your-tenant-id"
+   export AZURE_SUBSCRIPTION_ID="your-subscription-id"
+   ```
+
+### Example JSON Config
+
+To use the MCP server with an MCP client, you need to configure the client to use the server. For many clients (such as [VS Code](https://code.visualstudio.com/docs/copilot/chat/mcp-servers), [Claude Desktop](https://modelcontextprotocol.io/quickstart/user), and [AnythingLLM](https://docs.anythingllm.com/mcp-compatibility/overview)), this requires editing a config file that is in JSON format. Below is an example. Refer to the documentation for your MCP client for specific formatting details.
+
+```json
+{
+  "mcpServers": {
+    "netapp_dataops_anf_mcp": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "'netapp-dataops-traditional[azure]'",
+        "netapp_dataops_anf_mcp.py"
+      ]
+    }
+  }
+}
+```
+
+### Alternative: Using `pip` installation
+
+If you've installed the package with `pip`, you can use:
+
+```json
+{
+  "mcpServers": {
+    "netapp_dataops_anf_mcp": {
+      "type": "stdio",
+      "command": "netapp_dataops_anf_mcp.py"
+    }
+  }
+}
+```
+
+### Alternative: Direct Python execution
+
+For development or testing purposes:
+
+```json
+{
+  "mcpServers": {
+    "netapp_dataops_anf_mcp": {
+      "type": "stdio",
+      "command": "python",
+      "args": [
+        "/path/to/netapp_dataops_anf_mcp.py"
+      ]
+    }
+  }
+}
+```
+
+## Environment Variables
+
+You can optionally set these environment variables for authentication:
+
+### Azure CLI Authentication
+- `AZURE_SUBSCRIPTION_ID`: Your Azure subscription ID
+
+### Service Principal Authentication
+- `AZURE_CLIENT_ID`: Service principal application (client) ID
+- `AZURE_CLIENT_SECRET`: Service principal password/secret
+- `AZURE_TENANT_ID`: Azure Active Directory tenant ID
+- `AZURE_SUBSCRIPTION_ID`: Azure subscription ID
+
+### Alternative Authentication Methods
+- `AZURE_USERNAME`: Azure username (for username/password auth)
+- `AZURE_PASSWORD`: Azure password (for username/password auth)
+
+## Tool Examples
+
+### Creating a Volume
+
+The MCP server exposes Azure NetApp Files operations through tools. Here are some example use cases:
+
+```
+Create a 500 GiB Premium NFS volume:
+- Resource Group: "my-resource-group"
+- Account: "my-netapp-account"
+- Pool: "premium-pool"
+- Volume Name: "data-volume-001"
+- Location: "eastus"
+- Creation Token: "data-vol-001"
+- Virtual Network: "my-vnet"
+- Subnet: "netapp-subnet"
+- Size: 536870912000 bytes (500 GiB)
+- Protocol: "NFSv3"
+```
+
+### Cloning a Volume
+
+```
+Clone from an existing snapshot:
+- Source Volume: "production-data"
+- Clone Name: "dev-environment"
+- Snapshot: "daily-backup-001"
+- Size can be larger than source volume
+```
+
+### Creating Cross-Region Replication
+
+```
+Set up disaster recovery:
+- Source: eastus region
+- Destination: westus region
+- Automatic destination volume creation
+- Continuous data synchronization
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Authentication Failed**:
+   ```bash
+   az login
+   # or check service principal credentials
+   az account show
+   ```
+
+2. **NetApp Provider Not Registered**:
+   ```bash
+   az provider register --namespace Microsoft.NetApp
+   az provider show --namespace Microsoft.NetApp --query "registrationState"
+   ```
+
+3. **Insufficient Permissions**:
+   - Ensure your account has "NetApp Contributor" role
+   - Verify permissions on the resource group and subscription
+   ```bash
+   az role assignment list --assignee YOUR_USER_ID --output table
+   ```
+
+4. **Resource Not Found**:
+   - Verify NetApp Account exists and is accessible
+   - Check that Capacity Pool has available space
+   - Ensure delegated subnet is properly configured
+
+5. **Module Not Found**: 
+   - Ensure the package is properly installed with Azure extras
+   ```bash
+   pip install 'netapp-dataops-traditional[azure]'
+   ```
+
+6. **Network Configuration Issues**:
+   - Verify virtual network and subnet exist in the target region
+   - Check that subnet is properly delegated to Microsoft.NetApp/volumes
+   - Ensure network security groups allow required traffic
+
+### Debug Mode
+
+For troubleshooting, you can enable debug logging by setting:
+
+```bash
+export PYTHONPATH=/path/to/netapp-dataops-toolkit
+python -c "
+import logging
+logging.basicConfig(level=logging.DEBUG)
+import netapp_dataops_anf_mcp
+"
+```
+
+### Validation Commands
+
+Before using the MCP server, validate your setup:
+
+```bash
+# Check Azure authentication
+az account show
+
+# Verify NetApp resources
+az netappfiles account list --resource-group YOUR_RG
+
+# Check capacity pools
+az netappfiles pool list --resource-group YOUR_RG --account-name YOUR_ACCOUNT
+
+# Verify subnet delegation
+az network vnet subnet show --resource-group YOUR_RG --vnet-name YOUR_VNET --name YOUR_SUBNET
+```
+
+## Limitations and Considerations
+
+### Azure NetApp Files Limits
+- Volumes per capacity pool: Varies by service level and region
+- Minimum volume size: 100 GiB for regular volumes
+- Maximum volume size: 100 TiB for regular volumes, 500 TiB for large volumes
+- Snapshot retention: Up to 255 snapshots per volume
+
+### Performance Considerations
+- Service levels affect throughput: Standard (16 MiB/s per TiB), Premium (64 MiB/s per TiB), Ultra (128 MiB/s per TiB)
+- Cross-region replication introduces latency based on distance between regions
+- Volume cloning is near-instantaneous but requires snapshots
+
+### Security Best Practices
+- Use service principals for production environments
+- Implement proper network security groups and access controls
+- Enable encryption at rest and in transit where required
+- Regularly rotate authentication credentials
+
+## Support
+
+Report any issues via GitHub: https://github.com/NetApp/netapp-dataops-toolkit/issues.
