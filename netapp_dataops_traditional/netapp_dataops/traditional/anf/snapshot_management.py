@@ -264,7 +264,7 @@ def list_snapshots(
 
         if print_output:
             logger.info(f"Number of snapshots fetched: {len(serialized_snapshots)}")
-            # logger.info(f"Snapshots fetched:\n{serialized_snapshots}")
+            logger.info(f"Snapshots fetched:\n{serialized_snapshots}")
 
         return {"status": "success", "details": serialized_snapshots}
 
