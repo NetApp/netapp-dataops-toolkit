@@ -154,7 +154,7 @@ def delete_snapshot(
         if print_output:
             logger.info(f"Snapshot deleted: {name}")
 
-        return {"status": "success", "details": _serialize(response)}
+        return {"status": "success", "details": f"Snapshot deleted: {name}"}
 
     except Exception as e:
         if print_output:

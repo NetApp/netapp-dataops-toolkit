@@ -550,7 +550,7 @@ def delete_volume(
         if print_output:
             logger.info(f"Volume deleted: {name}")
 
-        return {"status": "success", "details": _serialize(response)}
+        return {"status": "success", "details": f"Volume deleted: {name}"}
 
     except Exception as e:
         if print_output:
