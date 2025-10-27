@@ -641,7 +641,7 @@ def createConfig(configDirPath: str = "~/.netapp_dataops", configFilename: str =
 
          # Store the password securely using keyring
         load_dotenv()
-        service_name = os.getenv("KEYRING_SERVICE_NAME")
+        service_name = os.getenv("KEYRING_SERVICE_NAME", "netapp:dataops:ontap")
         if username is not None:
             keyring.set_password(service_name, "username", username)
         if passwordString is not None:
