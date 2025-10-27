@@ -1,5 +1,14 @@
 import logging
 
+class UserFriendlyFormatter(logging.Formatter):
+    """Custom formatter that suppresses stack traces for user-facing messages."""
+    
+    def format(self, record):
+        if record.levelno >= logging.ERROR and record.exc_info:
+            # Prevents stack trace from being displayed
+            record.exc_info = None
+        return super().format(record)
+
 def setup_logger(name: str, level: int = logging.DEBUG) -> logging.Logger:
     """
     Sets up a logger with a console handler.
@@ -16,7 +25,7 @@ def setup_logger(name: str, level: int = logging.DEBUG) -> logging.Logger:
     if not logger.hasHandlers():
         console_handler = logging.StreamHandler()
         console_handler.setLevel(level)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = UserFriendlyFormatter('%(message)s')
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
     return logger
