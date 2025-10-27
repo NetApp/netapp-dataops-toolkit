@@ -640,6 +640,7 @@ async def create_replication_tool(
     destination_subnet_name: Optional[str] = "default",
     destination_zones: Optional[list] = None,
     destination_usage_threshold: Optional[int] = 107374182400,
+    destination_protocol_types: Optional[list] = None,
     destination_service_level: Optional[str] = "Premium",
     # For existing destination volume
     remote_volume_resource_id: Optional[str] = None,
@@ -730,6 +731,7 @@ async def create_replication_tool(
             destination_subnet_name=destination_subnet_name,
             destination_zones=destination_zones,
             destination_usage_threshold=destination_usage_threshold,
+            destination_protocol_types=destination_protocol_types,
             destination_service_level=destination_service_level,
             remote_volume_resource_id=remote_volume_resource_id,
             subscription_id=subscription_id,

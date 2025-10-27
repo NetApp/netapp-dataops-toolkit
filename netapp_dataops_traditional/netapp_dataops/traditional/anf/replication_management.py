@@ -28,6 +28,7 @@ def create_replication(
     destination_location: str = None,
     destination_creation_token: str = None,
     destination_usage_threshold: int = None,
+    destination_protocol_types: list = None,
     destination_virtual_network_name: str = None,
     destination_subnet_name: str = "default",
     destination_zones: list = None,
@@ -181,6 +182,7 @@ def create_replication(
                 virtual_network_name=destination_virtual_network_name,
                 subnet_name=destination_subnet_name,
                 usage_threshold=destination_usage_threshold,
+                protocol_types=destination_protocol_types,
                 service_level=destination_service_level,
                 volume_type="DataProtection",
                 zones=destination_zones,
@@ -277,6 +279,7 @@ def create_data_protection_volume(
     location: str,
     creation_token: str,
     usage_threshold: int,
+    protocol_types: list,
     virtual_network_name: str,
     subnet_name: str,
     source_volume_resource_id: str,
@@ -382,6 +385,7 @@ def create_data_protection_volume(
             virtual_network_name=virtual_network_name,
             subnet_name=subnet_name,
             usage_threshold=usage_threshold,
+            protocol_types=protocol_types,
             service_level=service_level,
             volume_type="DataProtection",
             zones=zones,  # Include zones for cross-zone replication
@@ -408,95 +412,4 @@ def create_data_protection_volume(
         if print_output:
             logger.error(f"Failed to create data protection volume: {str(e)}")
         return {"status": "error", "details": f"Failed to create data protection volume: {str(e)}"}
-
-
-def delete_replication(
-    resource_group_name: str,
-    account_name: str,
-    pool_name: str,
-    volume_name: str,
-    subscription_id: Optional[str] = None,
-    print_output: Optional[bool] = False
-) -> Dict[str, Any]:
-    """
-    Delete (break) a replication for an Azure NetApp Files volume.
     
-    This function breaks the replication relationship for a volume.
-    
-    Args:
-        resource_group_name (str):
-            Required. The name of the resource group.
-        account_name (str):
-            Required. The name of the NetApp account.
-        pool_name (str):
-            Required. The name of the capacity pool.
-        volume_name (str):
-            Required. The name of the volume.
-        subscription_id (Optional[str]):
-            Azure subscription ID.
-        print_output (bool):
-            Optional. If set to True, prints log messages to the console.
-            Defaults to False.
-
-    Returns:
-        Dictionary with status and replication deletion details
-        
-    Note:
-        - This operation breaks the replication relationship
-        - The destination volume will become read-write after breaking replication
-        - This should be run on the source volume
-    """
-
-    # Validate input parameters
-    validate_required_params(
-        resource_group_name=resource_group_name,
-        account_name=account_name,
-        pool_name=pool_name,
-        volume_name=volume_name
-    )
-
-    try:
-        # Get ANF client and subscription ID (if not provided, will use environment variable)
-        client, subscription_id = get_anf_client(subscription_id, print_output=print_output)
-
-        # Break replication
-        poller = client.volumes.begin_break_replication(
-            resource_group_name=resource_group_name,
-            account_name=account_name,
-            pool_name=pool_name,
-            volume_name=volume_name
-        )
-        
-        if print_output:
-            logger.info(f"Deleting (breaking) replication for volume '{volume_name}'...")
-
-        # Wait for completion
-        poller.result()
-        
-        if print_output:
-            logger.info(f"Replication deleted (broken) successfully for volume '{volume_name}'")
-
-        return {"status": "success", "details": _serialize({
-            "message": f"Replication deleted (broken) successfully for volume '{volume_name}'"
-        })}
-        
-    except ResourceNotFoundError as e:
-        if print_output:
-            logger.error(f"Volume '{volume_name}' not found: {str(e)}")
-        return {"status": "error", "details": f"Volume '{volume_name}' not found: {str(e)}"}
-    except Exception as e:
-        error_message = str(e)
-        
-        # Provide specific guidance for common replication deletion errors
-        if "no replication" in error_message.lower():
-            if print_output:
-                logger.error(f"Replication deletion failed: Volume '{volume_name}' does not have an active replication. Original error: {error_message}")
-            return {"status": "error", "details": f"Replication deletion failed: Volume '{volume_name}' does not have an active replication. Original error: {error_message}"}
-        elif "not authorized" in error_message.lower():
-            if print_output:
-                logger.error(f"Replication deletion failed: Replication was not properly authorized or does not exist. Original error: {error_message}")
-            return {"status": "error", "details": f"Replication deletion failed: Replication was not properly authorized or does not exist. Original error: {error_message}"}
-        else:
-            if print_output:
-                logger.error(f"Failed to delete replication: {error_message}")
-            return {"status": "error", "details": f"Failed to delete replication: {error_message}"}

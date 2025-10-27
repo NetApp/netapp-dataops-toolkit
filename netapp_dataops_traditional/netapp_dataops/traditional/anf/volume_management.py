@@ -848,13 +848,17 @@ def list_volumes(
         if print_output:
             logger.info("Listing volumes...")
         
-        # Convert to list (since it returns an iterator)
+        # Convert to list and serialize (since it returns an iterator)
         volume_list = list(volumes)
+        
+        # Serialize the Azure SDK Volume objects to dictionaries
+        serialized_volumes = [_serialize(volume) for volume in volume_list]
 
         if print_output:
-            logger.info(f"Volumes fetched: {volume_list}")
+            logger.info(f"Number of volumes fetched: {len(serialized_volumes)}")
+            logger.info(f"Volumes fetched:\n{serialized_volumes}")
 
-        return {"status": "success", "details": volume_list}
+        return {"status": "success", "details": serialized_volumes}
 
     except Exception as e:
         if print_output:

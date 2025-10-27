@@ -256,13 +256,17 @@ def list_snapshots(
         if print_output:
             logger.info("Listing snapshots...")
         
-        # Convert to list (since it returns an iterator)
+        # Convert to list and serialize (since it returns an iterator)
         snapshot_list = list(snapshots)
+        
+        # Serialize the Azure SDK Snapshot objects to dictionaries
+        serialized_snapshots = [_serialize(snapshot) for snapshot in snapshot_list]
 
         if print_output:
-            logger.info(f"Snapshots fetched: {snapshot_list}")
+            logger.info(f"Number of snapshots fetched: {len(serialized_snapshots)}")
+            # logger.info(f"Snapshots fetched:\n{serialized_snapshots}")
 
-        return {"status": "success", "details": snapshot_list}
+        return {"status": "success", "details": serialized_snapshots}
 
     except ResourceNotFoundError as e:
         if print_output:
