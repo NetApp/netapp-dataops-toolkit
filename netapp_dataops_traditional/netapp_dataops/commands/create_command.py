@@ -8,12 +8,14 @@ from .base_command import BaseCommand
 from netapp_dataops.help_text import (
     HELP_TEXT_CREATE_SNAPSHOT,
     HELP_TEXT_CREATE_VOLUME,
-    HELP_TEXT_CREATE_SNAPMIRROR_RELATIONSHIP
+    HELP_TEXT_CREATE_SNAPMIRROR_RELATIONSHIP,
+    HELP_TEXT_CREATE_QTREE
 )
 from netapp_dataops.traditional import (
     create_snapshot,
     create_volume,
     create_snap_mirror_relationship,
+    create_qtree,
     InvalidConfigError,
     APIConnectionError,
     InvalidVolumeParameterError,
@@ -36,6 +38,8 @@ class CreateCommand(BaseCommand):
             self._create_volume()
         elif target in ("snapmirror-relationship", "sm", "snapmirror"):
             self._create_snapmirror_relationship()
+        elif target in ("qtree", "qt"):
+            self._create_qtree()
         else:
             self.handle_invalid_command()
     
@@ -291,5 +295,68 @@ class CreateCommand(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
+            import sys
+            sys.exit(1)
+    
+    def _create_qtree(self) -> None:
+        """Handle qtree creation."""
+        # Initialize variables
+        qtree_name = None
+        volume_name = None
+        cluster_name = None
+        svm_name = None
+        security_style = None
+        unix_permissions = None
+        export_policy = None
+        
+        # Get command line options
+        try:
+            opts, args = getopt.getopt(
+                self.args[3:], 
+                "hn:v:u:s:t:p:e:", 
+                ["help", "name=", "volume=", "cluster-name=", "svm=", 
+                 "security-style=", "permissions=", "export-policy="]
+            )
+        except Exception as err:
+            print(err)
+            self.handle_invalid_command(help_text=HELP_TEXT_CREATE_QTREE, invalid_opt_arg=True)
+        
+        # Parse command line options
+        for opt, arg in opts:
+            if opt in ("-h", "--help"):
+                print(HELP_TEXT_CREATE_QTREE)
+                return
+            elif opt in ("-n", "--name"):
+                qtree_name = arg
+            elif opt in ("-v", "--volume"):
+                volume_name = arg
+            elif opt in ("-u", "--cluster-name"):
+                cluster_name = arg
+            elif opt in ("-s", "--svm"):
+                svm_name = arg
+            elif opt in ("-t", "--security-style"):
+                security_style = arg
+            elif opt in ("-p", "--permissions"):
+                unix_permissions = arg
+            elif opt in ("-e", "--export-policy"):
+                export_policy = arg
+        
+        # Check for required options
+        if not qtree_name or not volume_name:
+            self.handle_invalid_command(help_text=HELP_TEXT_CREATE_QTREE, invalid_opt_arg=True)
+        
+        # Create qtree
+        try:
+            create_qtree(
+                qtree_name=qtree_name,
+                volume_name=volume_name,
+                cluster_name=cluster_name,
+                svm_name=svm_name,
+                security_style=security_style,
+                unix_permissions=unix_permissions,
+                export_policy=export_policy,
+                print_output=True
+            )
+        except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
             import sys
             sys.exit(1)

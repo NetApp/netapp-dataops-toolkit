@@ -501,3 +501,27 @@ Examples:
 \tnetapp_dataops_cli.py prepopulate flexcache --name=project1 --paths=/datasets/project1,/datasets/project2
 \tnetapp_dataops_cli.py prepopulate flexcache -n test1 -p /datasets/project1,/datasets/project2
 '''
+
+# Qtree operations help text
+HELP_TEXT_CREATE_QTREE = '''
+Command: create qtree
+
+Create a new qtree in a FlexVol or FlexGroup volume.
+
+Required Options/Arguments:
+\t-n, --name=\t\tName of qtree to create.
+\t-v, --volume=\t\tName of volume in which to create the qtree.
+
+Optional Options/Arguments:
+\t-u, --cluster-name=\tNon default hosting cluster.
+\t-s, --svm=\t\tNon default SVM name.
+\t-t, --security-style=\tSecurity style for the qtree.
+\t-p, --permissions=\tUNIX permissions for the qtree (octal format, e.g., 0755).
+\t-e, --export-policy=\tExport policy name for the qtree.
+\t-h, --help\t\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py create qtree --name=qtree1 --volume=project1
+\tnetapp_dataops_cli.py create qtree -n qtree2 -v project2 -t unix -p 0755
+\tnetapp_dataops_cli.py create qtree --name=qtree3 --volume=project3 --security-style=mixed --export-policy=default
+'''

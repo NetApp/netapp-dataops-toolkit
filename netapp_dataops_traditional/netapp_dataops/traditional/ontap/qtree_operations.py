@@ -9,19 +9,16 @@ to avoid code duplication and ensure consistency across the toolkit.
 import os
 from netapp_ontap.error import NetAppRestError
 from netapp_ontap.resources import Qtree as NetAppQtree
-from netapp_dataops.logging_utils import setup_logger
 
-# Import shared functions and exceptions from the main module
-from . import (
+# Import shared functions and exceptions from the modular structure
+from ..exceptions import (
     InvalidConfigError,
     InvalidVolumeParameterError,
     APIConnectionError,
-    ConnectionTypeError,
-    _retrieve_config,
-    _instantiate_connection
+    ConnectionTypeError
 )
-
-logger = setup_logger(__name__)
+from ..core.config import _retrieve_config
+from ..core.connection import _instantiate_connection
 
 
 def create_qtree(qtree_name: str, volume_name: str, cluster_name: str = None, svm_name: str = None,
@@ -58,7 +55,7 @@ def create_qtree(qtree_name: str, volume_name: str, cluster_name: str = None, sv
         connectionType = config["connectionType"]
     except:
         if print_output:
-            logger.error("Error: Missing 'connectionType' in config file.")
+            print("Error: Missing 'connectionType' in config file.")
         raise InvalidConfigError()
 
     if cluster_name:
@@ -75,8 +72,8 @@ def create_qtree(qtree_name: str, volume_name: str, cluster_name: str = None, sv
                 svm_name = config["svm"]
         except Exception as e:
             if print_output:
-                logger.error("Error: Missing required parameters (svm name) in config file.")
-                logger.error("Exception: %s", e)
+                print("Error: Missing required parameters (svm name) in config file.")
+                print("Exception: ", e)
             raise InvalidConfigError()
 
         # Validate unix_permissions format
@@ -88,7 +85,7 @@ def create_qtree(qtree_name: str, volume_name: str, cluster_name: str = None, sv
                     raise ValueError("Permissions out of range")
             except ValueError:
                 if print_output:
-                    logger.error("Error: Invalid UNIX permissions format. Use octal format (e.g., '0755').")
+                    print("Error: Invalid UNIX permissions format. Use octal format (e.g., '0755').")
                 raise InvalidVolumeParameterError("Invalid UNIX permissions format")
 
         # Check if qtree already exists
@@ -97,17 +94,17 @@ def create_qtree(qtree_name: str, volume_name: str, cluster_name: str = None, sv
             existing_qtree_list = list(existing_qtrees)
             if existing_qtree_list:
                 if print_output:
-                    logger.error("Error: Qtree '%s' already exists in volume '%s'.", qtree_name, volume_name)
+                    print("Error: Qtree '" + qtree_name + "' already exists in volume '" + volume_name + "'.")
                 raise InvalidVolumeParameterError(f"Qtree '{qtree_name}' already exists")
         except NetAppRestError as err:
             if print_output:
-                logger.error("Error: Error checking for existing qtree.")
-                logger.error("API Error: %s", err)
+                print("Error: Error checking for existing qtree.")
+                print("API Error: ", err)
             raise APIConnectionError(err)
 
         # Create qtree
         if print_output:
-            logger.info("Creating qtree '%s' in volume '%s' on SVM '%s'.", qtree_name, volume_name, svm_name)
+            print("Creating qtree '" + qtree_name + "' in volume '" + volume_name + "' on SVM '" + svm_name + "'.")
 
         try:
             # Create NetApp Qtree resource
@@ -132,13 +129,13 @@ def create_qtree(qtree_name: str, volume_name: str, cluster_name: str = None, sv
             qtree.post(poll=True, poll_timeout=120)
             
             if print_output:
-                logger.info("Qtree '%s' created successfully.", qtree_name)
-                logger.info("Qtree ID: %s", qtree.id)
+                print("Qtree '" + qtree_name + "' created successfully.")
+                print("Qtree ID: " + str(qtree.id))
 
         except NetAppRestError as err:
             if print_output:
-                logger.error("Error: Error creating qtree.")
-                logger.error("API Error: %s", err)
+                print("Error: Error creating qtree.")
+                print("API Error: ", err)
             raise APIConnectionError(err)
 
     else:
@@ -172,27 +169,25 @@ def list_qtrees(volume_name: str = None, cluster_name: str = None, svm_name: str
         connectionType = config["connectionType"]
     except:
         if print_output:
-            logger.error("Error: Missing 'connectionType' in config file.")
+            print("Error: Missing 'connectionType' in config file.")
         raise InvalidConfigError()
 
     if cluster_name:
         config["hostname"] = cluster_name
 
     if connectionType == "ONTAP":
-        # Instantiate connection to ONTAP cluster
         try:
             _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
         except InvalidConfigError:
             raise
 
-        # Retrieve values from config file if not passed into function
         try:
             if not svm_name:
                 svm_name = config["svm"]
         except Exception as e:
             if print_output:
-                logger.error("Error: Missing required parameters in config file.")
-                logger.error("Exception: %s", e)
+                print("Error: Missing required parameters (svm name) in config file.")
+                print("Exception: ", e)
             raise InvalidConfigError()
 
         try:
@@ -209,7 +204,7 @@ def list_qtrees(volume_name: str = None, cluster_name: str = None, svm_name: str
             for qtree in qtrees:
                 qtree_info = {
                     "id": qtree.id,
-                    "name": qtree.name if qtree.name else "",  # Root qtree has empty name
+                    "name": qtree.name if qtree.name else "",
                     "volume": qtree.volume.name if hasattr(qtree.volume, 'name') else None,
                     "svm": qtree.svm.name if hasattr(qtree.svm, 'name') else None,
                     "security_style": qtree.security_style if hasattr(qtree, 'security_style') else None,
@@ -223,106 +218,20 @@ def list_qtrees(volume_name: str = None, cluster_name: str = None, svm_name: str
             # Print qtrees if requested
             if print_output:
                 if qtrees_list:
-                    logger.info("Qtrees:")
+                    print("Qtrees:")
                     for qtree in qtrees_list:
                         qtree_name = qtree["name"] if qtree["name"] else "<root>"
-                        logger.info("  ID: %s, Name: %s, Volume: %s, Security Style: %s, Path: %s", 
-                                  qtree["id"], qtree_name, qtree["volume"], 
-                                  qtree["security_style"], qtree["path"])
+                        print("  ID: " + str(qtree["id"]) + ", Name: " + qtree_name + ", Volume: " + str(qtree["volume"]) + 
+                              ", Security Style: " + str(qtree["security_style"]) + ", Path: " + str(qtree["path"]))
                 else:
-                    logger.info("No qtrees found.")
+                    print("No qtrees found.")
 
             return qtrees_list
 
         except NetAppRestError as err:
             if print_output:
-                logger.error("Error: Error retrieving qtrees.")
-                logger.error("API Error: %s", err)
-            raise APIConnectionError(err)
-
-    else:
-        raise InvalidConfigError("Unsupported connection type")
-
-
-def delete_qtree(qtree_name: str, volume_name: str, cluster_name: str = None, svm_name: str = None,
-                 print_output: bool = False):
-    """
-    Delete an existing qtree.
-
-    Required Arguments:
-        qtree_name (str): Name of the qtree to delete.
-        volume_name (str): Name of the volume containing the qtree.
-
-    Optional Arguments:
-        cluster_name (str): Name of the hosting cluster (defaults to config cluster).
-        svm_name (str): Name of the SVM (defaults to config SVM).
-        print_output (bool): Print detailed output if True.
-
-    Raises:
-        InvalidConfigError: If configuration is missing or invalid.
-        InvalidVolumeParameterError: If the qtree does not exist.
-        APIConnectionError: If there is an error connecting to the API.
-
-    Returns:
-        None
-    """
-    # Retrieve config details from config file
-    try:
-        config = _retrieve_config(print_output=print_output)
-    except InvalidConfigError:
-        raise
-    try:
-        connectionType = config["connectionType"]
-    except:
-        if print_output:
-            logger.error("Error: Missing 'connectionType' in config file.")
-        raise InvalidConfigError()
-
-    if cluster_name:
-        config["hostname"] = cluster_name
-
-    if connectionType == "ONTAP":
-        # Instantiate connection to ONTAP cluster
-        try:
-            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
-        except InvalidConfigError:
-            raise
-
-        # Retrieve values from config file if not passed into function
-        try:
-            if not svm_name:
-                svm_name = config["svm"]
-        except Exception as e:
-            if print_output:
-                logger.error("Error: Missing required parameters in config file.")
-                logger.error("Exception: %s", e)
-            raise InvalidConfigError()
-
-        try:
-            # Find the qtree to delete
-            qtrees = NetAppQtree.get_collection(**{"svm.name": svm_name, "volume.name": volume_name, "name": qtree_name})
-            qtree_list = list(qtrees)
-            
-            if not qtree_list:
-                if print_output:
-                    logger.error("Error: Qtree '%s' not found in volume '%s'.", qtree_name, volume_name)
-                raise InvalidVolumeParameterError(f"Qtree '{qtree_name}' not found")
-            
-            qtree = qtree_list[0]
-            
-            if print_output:
-                logger.info("Deleting qtree '%s' from volume '%s' on SVM '%s'.", qtree_name, volume_name, svm_name)
-            
-            # Delete the qtree
-            qtree.delete()
-            
-            if print_output:
-                logger.info("Qtree '%s' deleted successfully.", qtree_name)
-
-        except NetAppRestError as err:
-            if print_output:
-                logger.error("Error: Error deleting qtree.")
-                logger.error("API Error: %s", err)
+                print("Error: Error retrieving qtrees.")
+                print("API Error: ", err)
             raise APIConnectionError(err)
 
     else:
