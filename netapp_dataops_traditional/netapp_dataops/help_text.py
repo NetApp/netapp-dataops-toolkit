@@ -25,6 +25,13 @@ Note: To view details regarding options/arguments for a specific command, run th
 \tmount volume\t\t\tMount an existing data volume locally. Note: on Linux hosts - must be run as root.
 \tunmount volume\t\t\tUnmount an existing data volume. Note: on Linux hosts - must be run as root.
 
+Qtree Management Commands:
+Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
+
+\tcreate qtree\t\t\tCreate a new qtree in a volume.
+\tget qtree\t\t\tRetrieve properties for a specific qtree.
+\tlist qtrees\t\t\tList qtrees in a volume or SVM.
+
 Snapshot Management Commands:
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
 
@@ -543,4 +550,22 @@ Examples:
 \tnetapp_dataops_cli.py get qtree --volume-uuid=cb20da45-4f6b-11e9-9a71-005056a7f717 --id=1
 \tnetapp_dataops_cli.py get qtree -v cb20da45-4f6b-11e9-9a71-005056a7f717 -i 2
 \tnetapp_dataops_cli.py get qtree --volume-uuid=cb20da45-4f6b-11e9-9a71-005056a7f717 --id=1 --cluster-name=cluster1
+'''
+
+HELP_TEXT_LIST_QTREES = '''
+Command: list qtrees
+
+List qtrees in a volume or all qtrees in an SVM.
+
+Optional Options/Arguments:
+\t-v, --volume=\t\tName of the volume to list qtrees from. If not specified, lists qtrees from all volumes.
+\t-u, --cluster-name=\tNon default hosting cluster.
+\t-s, --svm=\t\tNon default SVM name.
+\t-h, --help\t\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py list qtrees
+\tnetapp_dataops_cli.py list qtrees --volume=project1
+\tnetapp_dataops_cli.py list qtrees -v project2 -s svm1
+\tnetapp_dataops_cli.py list qtrees --volume=project3 --cluster-name=cluster1
 '''

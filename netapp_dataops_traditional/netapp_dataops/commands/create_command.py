@@ -345,6 +345,11 @@ class CreateCommand(BaseCommand):
         if not qtree_name or not volume_name:
             self.handle_invalid_command(help_text=HELP_TEXT_CREATE_QTREE, invalid_opt_arg=True)
         
+        # Validate security style if provided
+        if security_style and security_style not in ["unix", "ntfs", "mixed"]:
+            print("Error: Security style must be one of: unix, ntfs, mixed")
+            self.handle_invalid_command(help_text=HELP_TEXT_CREATE_QTREE, invalid_opt_arg=True)
+        
         # Create qtree
         try:
             create_qtree(
