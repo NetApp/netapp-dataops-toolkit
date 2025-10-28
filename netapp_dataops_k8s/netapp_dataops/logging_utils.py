@@ -7,6 +7,8 @@ class UserFriendlyFormatter(logging.Formatter):
         if record.levelno >= logging.ERROR and record.exc_info:
             # Prevents stack trace from being displayed
             record.exc_info = None
+            record.exc_text = None
+            record.stack_info = None
         return super().format(record)
 
 def setup_logger(name: str, level: int = logging.DEBUG) -> logging.Logger:
