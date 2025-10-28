@@ -525,3 +525,22 @@ Examples:
 \tnetapp_dataops_cli.py create qtree -n qtree2 -v project2 -t unix -p 0755
 \tnetapp_dataops_cli.py create qtree --name=qtree3 --volume=project3 --security-style=mixed --export-policy=default
 '''
+
+HELP_TEXT_GET_QTREE = '''
+Command: get qtree
+
+Retrieve properties for a specific qtree identified by volume UUID and qtree ID.
+
+Required Options/Arguments:
+\t-v, --volume-uuid=\tUUID of the volume containing the qtree.
+\t-i, --id=\t\tID of the qtree to retrieve.
+
+Optional Options/Arguments:
+\t-u, --cluster-name=\tNon default hosting cluster.
+\t-h, --help\t\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py get qtree --volume-uuid=cb20da45-4f6b-11e9-9a71-005056a7f717 --id=1
+\tnetapp_dataops_cli.py get qtree -v cb20da45-4f6b-11e9-9a71-005056a7f717 -i 2
+\tnetapp_dataops_cli.py get qtree --volume-uuid=cb20da45-4f6b-11e9-9a71-005056a7f717 --id=1 --cluster-name=cluster1
+'''

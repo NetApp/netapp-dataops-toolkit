@@ -236,3 +236,119 @@ def list_qtrees(volume_name: str = None, cluster_name: str = None, svm_name: str
 
     else:
         raise InvalidConfigError("Unsupported connection type")
+
+
+def get_qtree(volume_uuid: str, qtree_id: int, cluster_name: str = None, 
+              print_output: bool = False) -> dict:
+    """
+    Retrieve properties for a specific qtree identified by volume UUID and qtree ID.
+
+    Required Arguments:
+        volume_uuid (str): UUID of the volume containing the qtree.
+        qtree_id (int): ID of the qtree to retrieve.
+
+    Optional Arguments:
+        cluster_name (str): Name of the hosting cluster (defaults to config cluster).
+        print_output (bool): Print detailed output if True.
+
+    Raises:
+        InvalidConfigError: If configuration is missing or invalid.
+        InvalidVolumeParameterError: If the qtree does not exist.
+        APIConnectionError: If there is an error connecting to the API.
+
+    Returns:
+        dict: Dictionary containing qtree information.
+    """
+    try:
+        config = _retrieve_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+    try:
+        connectionType = config["connectionType"]
+    except:
+        if print_output:
+            print("Error: Missing 'connectionType' in config file.")
+        raise InvalidConfigError()
+
+    if cluster_name:
+        config["hostname"] = cluster_name
+
+    if connectionType == "ONTAP":
+        try:
+            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
+        except InvalidConfigError:
+            raise
+
+        try:
+            # Create qtree resource with volume UUID and qtree ID
+            qtree = NetAppQtree(id=qtree_id, **{"volume.uuid": volume_uuid})
+            
+            # Get all properties of the qtree
+            qtree.get(fields="*")
+            
+            # Build qtree information dictionary
+            qtree_info = {
+                "id": qtree.id,
+                "name": qtree.name if qtree.name else "",
+                "volume": {
+                    "uuid": qtree.volume.uuid if hasattr(qtree.volume, 'uuid') else None,
+                    "name": qtree.volume.name if hasattr(qtree.volume, 'name') else None
+                },
+                "svm": {
+                    "uuid": qtree.svm.uuid if hasattr(qtree.svm, 'uuid') else None,
+                    "name": qtree.svm.name if hasattr(qtree.svm, 'name') else None
+                },
+                "security_style": qtree.security_style if hasattr(qtree, 'security_style') else None,
+                "unix_permissions": qtree.unix_permissions if hasattr(qtree, 'unix_permissions') else None,
+                "path": qtree.path if hasattr(qtree, 'path') else None,
+                "export_policy": {
+                    "id": qtree.export_policy.id if hasattr(qtree, 'export_policy') and qtree.export_policy and hasattr(qtree.export_policy, 'id') else None,
+                    "name": qtree.export_policy.name if hasattr(qtree, 'export_policy') and qtree.export_policy and hasattr(qtree.export_policy, 'name') else None
+                },
+                "qos_policy": {
+                    "uuid": qtree.qos_policy.uuid if hasattr(qtree, 'qos_policy') and qtree.qos_policy and hasattr(qtree.qos_policy, 'uuid') else None,
+                    "name": qtree.qos_policy.name if hasattr(qtree, 'qos_policy') and qtree.qos_policy and hasattr(qtree.qos_policy, 'name') else None
+                },
+                "user": {
+                    "name": qtree.user.name if hasattr(qtree, 'user') and qtree.user and hasattr(qtree.user, 'name') else None
+                },
+                "group": {
+                    "name": qtree.group.name if hasattr(qtree, 'group') and qtree.group and hasattr(qtree.group, 'name') else None
+                }
+            }
+
+            # Print qtree details if requested
+            if print_output:
+                qtree_name = qtree_info["name"] if qtree_info["name"] else "<root>"
+                print("Qtree Details:")
+                print("  ID: " + str(qtree_info["id"]))
+                print("  Name: " + qtree_name)
+                print("  Volume: " + str(qtree_info["volume"]["name"]) + " (UUID: " + str(qtree_info["volume"]["uuid"]) + ")")
+                print("  SVM: " + str(qtree_info["svm"]["name"]) + " (UUID: " + str(qtree_info["svm"]["uuid"]) + ")")
+                print("  Security Style: " + str(qtree_info["security_style"]))
+                print("  UNIX Permissions: " + str(qtree_info["unix_permissions"]))
+                print("  Path: " + str(qtree_info["path"]))
+                if qtree_info["export_policy"]["name"]:
+                    print("  Export Policy: " + str(qtree_info["export_policy"]["name"]))
+                if qtree_info["qos_policy"]["name"]:
+                    print("  QoS Policy: " + str(qtree_info["qos_policy"]["name"]))
+                if qtree_info["user"]["name"]:
+                    print("  User: " + str(qtree_info["user"]["name"]))
+                if qtree_info["group"]["name"]:
+                    print("  Group: " + str(qtree_info["group"]["name"]))
+
+            return qtree_info
+
+        except NetAppRestError as err:
+            if print_output:
+                print("Error: Error retrieving qtree.")
+                print("API Error: ", err)
+            raise APIConnectionError(err)
+        except Exception as e:
+            if print_output:
+                print("Error: Qtree with ID '" + str(qtree_id) + "' not found in volume '" + volume_uuid + "'.")
+                print("Exception: ", e)
+            raise InvalidVolumeParameterError(f"Qtree with ID '{qtree_id}' not found")
+
+    else:
+        raise InvalidConfigError("Unsupported connection type")
