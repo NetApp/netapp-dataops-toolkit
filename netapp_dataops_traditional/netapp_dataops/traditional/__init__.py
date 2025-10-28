@@ -235,3 +235,24 @@ def restoreSnapshot(volumeName: str, snapshotName: str, printOutput: bool = Fals
     restore_snapshot(volume_name=volumeName, snapshot_name=snapshotName, print_output=printOutput)
 
 
+@deprecated
+def restoreSnapshot(volumeName: str, snapshotName: str, printOutput: bool = False) :
+    restore_snapshot(volume_name=volumeName, snapshot_name=snapshotName, print_output=printOutput)
+
+
+#
+# Qtree functions - Import from qtree module
+#
+
+try:
+    from .qtree import create_qtree, list_qtrees, delete_qtree
+except ImportError:
+    # If qtree module is not available, define placeholder functions
+    def create_qtree(*args, **kwargs):
+        raise NotImplementedError("Qtree functionality is not available. Please ensure the qtree module is properly installed.")
+    
+    def list_qtrees(*args, **kwargs):
+        raise NotImplementedError("Qtree functionality is not available. Please ensure the qtree module is properly installed.")
+    
+    def delete_qtree(*args, **kwargs):
+        raise NotImplementedError("Qtree functionality is not available. Please ensure the qtree module is properly installed.")
