@@ -4,12 +4,32 @@ class UserFriendlyFormatter(logging.Formatter):
     """Custom formatter that suppresses stack traces for user-facing messages."""
     
     def format(self, record):
-        if record.levelno >= logging.ERROR and record.exc_info:
-            # Prevents stack trace from being displayed
-            record.exc_info = None
-            record.exc_text = None
-            record.stack_info = None
-        return super().format(record)
+        try:
+            # For ERROR and CRITICAL levels, only show the message without stack trace
+            if record.levelno >= logging.ERROR:
+                # Clear exc_info to prevent stack trace from being displayed
+                record.exc_info = None
+                record.exc_text = None
+                record.stack_info = None
+                
+                # Handle cases where args don't match the message format
+                if record.args:
+                    try:
+                        # Try to format normally first
+                        record.getMessage()
+                    except (TypeError, ValueError):
+                        # If formatting fails, combine message and args manually
+                        if len(record.args) == 1:
+                            record.msg = str(record.msg) + str(record.args[0])
+                        else:
+                            record.msg = str(record.msg) + ' '.join(str(arg) for arg in record.args)
+                        record.args = None
+            
+            return super().format(record)
+        except Exception:
+            # Fallback: return a simple error message
+            return f"Error occurred: {getattr(record, 'msg', 'Unknown error')}"
+
 
 def setup_logger(name: str, level: int = logging.DEBUG) -> logging.Logger:
     """
