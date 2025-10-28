@@ -158,7 +158,7 @@ def _get_cloud_central_access_token(refreshToken: str, print_output: bool = Fals
     except:
         errorMessage = "Error obtaining access token from Cloud Sync API"
         if print_output:
-            logger.error("Error:", errorMessage)
+            logger.error("Error: %s", errorMessage)
             _print_api_response(response)
         raise APIConnectionError(errorMessage, response)
 
@@ -995,7 +995,7 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
                 logger.info("Volume created successfully.")
         except NetAppRestError as err:
             if print_output:
-                logger.error("Error: ONTAP Rest API Error: ", err)
+                logger.error("Error: ONTAP Rest API Error: %s", err)
             raise APIConnectionError(err)
 
         # Optionally mount newly created volume
@@ -1082,7 +1082,7 @@ def delete_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = No
 
         except NetAppRestError as err :
             if print_output:
-                logger.error("Error: ONTAP Rest API Error: ", err)
+                logger.error("Error: ONTAP Rest API Error: %s", err)
             raise APIConnectionError(err)
 
     else:
@@ -1137,7 +1137,7 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
                 raise InvalidVolumeParameterError("delete-non-clone")
         except NetAppRestError as err:
             if print_output:
-                logger.error("Error: ONTAP Rest API Error: ", err)
+                logger.error("Error: ONTAP Rest API Error: %s", err)
             raise APIConnectionError(err)
 
 
@@ -1152,7 +1152,7 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
                     uuid = rel.uuid
             except NetAppRestError as err:
                 if print_output:
-                    logger.error("Error: ONTAP Rest API Error: ", err)
+                    logger.error("Error: ONTAP Rest API Error: %s", err)
 
             if uuid:
                 if print_output:
@@ -1162,7 +1162,7 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
                     deleteRelation.delete(poll=True, poll_timeout=120)
                 except NetAppRestError as err:
                     if print_output:
-                        logger.error("Error: ONTAP Rest API Error: ", err)
+                        logger.error("Error: ONTAP Rest API Error: %s", err)
 
             #check if this volume has snapmirror destination relationship
             uuid = None
@@ -1178,7 +1178,7 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
                     deleteRelation.delete(poll=True, poll_timeout=120,source_only=True)
             except NetAppRestError as err:
                 if print_output:
-                    logger.error("Error: ONTAP Rest API Error: ", err)
+                    logger.error("Error: ONTAP Rest API Error: %s", err)
 
         #Unmount volume and skip if not sudo or not locally mounted
         try:
@@ -1225,7 +1225,7 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
                     logger.info("Flexcache volume deleted successfully.")
             except NetAppRestError as err:
                 if print_output:
-                    logger.error("Error: ONTAP Rest API Error: ", err)
+                    logger.error("Error: ONTAP Rest API Error: %s", err)
                 raise APIConnectionError(err)
         else:
             try:
@@ -1244,7 +1244,7 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
                     elif "the source endpoint of one or more SnapMirror relationships" in str(err):
                         logger.error("Error: volume is snapmirror source. add --delete-mirror to release snapmirror relationship before deleting the volume")
                     else:
-                        logger.error("Error: ONTAP Rest API Error: ", err)
+                        logger.error("Error: ONTAP Rest API Error: %s", err)
                 raise APIConnectionError(err)
 
     else:
@@ -1283,7 +1283,7 @@ def list_cloud_sync_relationships(print_output: bool = False) -> list():
     if response.status_code != 200:
         errorMessage = "Error calling Cloud Sync API to retrieve list of relationships."
         if print_output:
-            logger.error("Error:", errorMessage)
+            logger.error("Error: %s", errorMessage)
             _print_api_response(response)
         raise APIConnectionError(errorMessage, response)
 
@@ -1385,7 +1385,7 @@ def list_snap_mirror_relationships(print_output: bool = False, cluster_name: str
 
         except NetAppRestError as err:
             if print_output:
-                logger.error("Error: ONTAP Rest API Error: ", err)
+                logger.error("Error: ONTAP Rest API Error: %s", err)
             raise APIConnectionError(err)
 
         # Print list of relationships
@@ -1573,7 +1573,7 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
                                     flexcacheParentVolume = getattr(relation.origins[0].volume, "name", "")
                         except NetAppRestError as err:
                             if print_output:
-                                logger.error("Error: ONTAP Rest API Error: ", err)
+                                logger.error("Error: ONTAP Rest API Error: %s", err)
                             pass
 
                     # Convert size in bytes to "pretty" size (size in KB, MB, GB, or TB)
@@ -1635,7 +1635,7 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
 
         except NetAppRestError as err:
             if print_output :
-                logger.error("Error: ONTAP Rest API Error: ", err)
+                logger.error("Error: ONTAP Rest API Error: %s", err)
             raise APIConnectionError(err)
 
         # Print list of volumes

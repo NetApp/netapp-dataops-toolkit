@@ -2136,7 +2136,7 @@ def list_volume_snapshots(pvc_name: str = None, namespace: str = "default", prin
                                                                namespace=namespace, plural="volumesnapshots")
     except ApiException as err:
         if print_output:
-            logger.error("Error: Kubernetes API Error: ", err)
+            logger.error("Error: Kubernetes API Error: %s", err)
         raise APIConnectionError(err)
 
     # Construct list of snapshots
