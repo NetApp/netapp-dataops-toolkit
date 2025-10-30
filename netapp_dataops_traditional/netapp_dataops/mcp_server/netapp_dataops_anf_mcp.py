@@ -11,8 +11,7 @@ from netapp_dataops.traditional.anf import (
     list_volumes,
     create_snapshot,
     list_snapshots,
-    create_replication,
-    create_data_protection_volume
+    create_replication
 )
 
 from netapp_dataops.logging_utils import setup_logger
@@ -629,21 +628,19 @@ async def create_replication_tool(
     account_name: str,
     pool_name: str,
     volume_name: str,
-    # Destination volume parameters (optional - if not provided, will use remote_volume_resource_id)
-    destination_resource_group_name: Optional[str] = None,
-    destination_account_name: Optional[str] = None,
-    destination_pool_name: Optional[str] = None,
-    destination_volume_name: Optional[str] = None,
-    destination_location: Optional[str] = None,
-    destination_creation_token: Optional[str] = None,
-    destination_virtual_network_name: Optional[str] = None,
-    destination_subnet_name: Optional[str] = "default",
-    destination_zones: Optional[list] = None,
-    destination_usage_threshold: Optional[int] = 107374182400,
-    destination_protocol_types: Optional[list] = None,
-    destination_service_level: Optional[str] = "Premium",
-    # For existing destination volume
-    remote_volume_resource_id: Optional[str] = None,
+    # Destination volume parameters
+    destination_resource_group_name: str,
+    destination_account_name: str,
+    destination_pool_name: str,
+    destination_volume_name: str,
+    destination_location: str,
+    destination_creation_token: str,
+    destination_usage_threshold: int,
+    destination_protocol_types: list,
+    destination_virtual_network_name: str,
+    destination_subnet_name: str = "default",
+    destination_service_level: str = None,
+    destination_zones: list = None,
     # Common parameters
     subscription_id: Optional[str] = None,
     print_output: Optional[bool] = False
@@ -670,28 +667,30 @@ async def create_replication_tool(
         destination_resource_group_name (str):
             Required. Destination resource group name.
         destination_account_name (str):
-            Optional. Destination NetApp account name. 
+            Required. Destination NetApp account name. 
         destination_pool_name (str):
-            Optional. Destination capacity pool name.
+            Required. Destination capacity pool name.
         destination_volume_name (str):
-            Optional. Destination volume name.
+            Required. Destination volume name.
         destination_location (str):
-            Optional. Destination Azure region (must differ from source).
+            Required. Destination Azure region (must differ from source).
         destination_creation_token (str):
-            Optional. Destination volume file path. Must be unique within the account.
-        destination_virtual_network_name (str):
-            Optional. Destination virtual network name.
-        destination_subnet_name (str):
-            Optional. Destination subnet name.
-            Defaults to "default".
-        destination_zones (list):
-            Optional. Availability zones for destination volume.
+            Required. Destination volume file path. Must be unique within the account.
         destination_usage_threshold (int):
-            Optional. Destination volume quota in bytes (default: 100 GiB).
+            Required. Destination volume quota in bytes.
+            This must be at least as large as the source volume's usage threshold.
+        destination_protocol_types (list):
+            Required. List of protocol types for destination volume (e.g., ["NFSv4.1"]).
+        destination_virtual_network_name (str):
+            Required. Destination virtual network name.
+        destination_subnet_name (str):
+            Required. Destination subnet name. Defaults to "default".
         destination_service_level (str):
-            Optional. Destination service level (Standard/Premium/Ultra).
+            Required. Destination service level (Standard/Premium/Ultra).
             Defaults to "Premium".
-
+        destination_zones (list):
+            Required. Availability zones for destination volume. If None, defaults to ["1"].
+        
         # For existing destination volume:
         remote_volume_resource_id (str):
             Required. Resource ID of existing data protection volume
@@ -727,13 +726,12 @@ async def create_replication_tool(
             destination_volume_name=destination_volume_name,
             destination_location=destination_location,
             destination_creation_token=destination_creation_token,
-            destination_virtual_network_name=destination_virtual_network_name,
-            destination_subnet_name=destination_subnet_name,
-            destination_zones=destination_zones,
             destination_usage_threshold=destination_usage_threshold,
             destination_protocol_types=destination_protocol_types,
+            destination_virtual_network_name=destination_virtual_network_name,
+            destination_subnet_name=destination_subnet_name,
             destination_service_level=destination_service_level,
-            remote_volume_resource_id=remote_volume_resource_id,
+            destination_zones=destination_zones,
             subscription_id=subscription_id,
             print_output=print_output
         )
@@ -745,102 +743,6 @@ async def create_replication_tool(
         if print_output:
             logger.error(f"Error creating ANF replication: {e}")
         return {"status": "error", "details": f"Error creating ANF replication: {e}"}
-
-
-@mcp.tool(name="Create Data Protection Volume")
-async def create_data_protection_volume_tool(
-    resource_group_name: str,
-    account_name: str,
-    pool_name: str,
-    volume_name: str,
-    location: str,
-    creation_token: str,
-    virtual_network_name: str,
-    subnet_name: str,
-    source_volume_resource_id: str,
-    zones: Optional[list] = None,
-    usage_threshold: Optional[int] = 107374182400,
-    service_level: Optional[str] = "Premium",
-    subscription_id: Optional[str] = None,
-    print_output: Optional[bool] = False
-) -> Dict[str, Any]:
-    """
-    Use this tool to create a data protection volume for cross-region replication.
-    
-    This creates a destination volume specifically designed for replication. After creating
-    this volume, use its resource ID in the "Create Replication" tool to authorize
-    replication from the source volume.
-    
-    Args:
-        resource_group_name (str):
-            Required. The name of the destination resource group.
-        account_name (str):
-            Required. The name of the destination NetApp account.
-        pool_name (str):
-            Required. The name of the destination capacity pool.
-        volume_name (str):
-            Required. The name of the destination volume.
-        location (str):
-            Required. Azure region for the destination (must be different from source).
-        creation_token (str):
-            Required. Unique file path for the destination volume.
-        virtual_network_name (str):
-            Required. The name of the virtual network to which the volume will be connected.
-        subnet_name (str):
-            Optional. The name of a delegated Azure subnet to construct the Azure Resource ID for a delegated subnet.
-            If not provided, the default subnet will be used.
-        source_volume_resource_id (str):
-            Required. The resource ID of the source volume to replicate from.
-        zones (list):
-            Required. List of availability zones for cross-zone replication (e.g., ["1"] or ["1", "2", "3"]).
-        usage_threshold (int):
-            Required. Volume quota in bytes (default: 100 GiB).
-        service_level (str):
-            Required. Service level (Standard, Premium, Ultra).
-        subscription_id (str):
-            Required. Azure subscription ID.
-        print_output (bool):
-            Optional. If set to True, prints log messages to the console.
-            Defaults to False.
-
-    Returns:
-        Dictionary with status and volume creation details
-
-    Raises:
-        ValueError: If required parameters are missing or invalid
-        ResourceNotFoundError: If the source volume does not exist
-        Exception: If there is an error during volume creation
-        
-    Note:
-        - For cross-zone replication, zones parameter is required
-        - After creating this volume, use its resource ID as the remote_volume_resource_id
-          parameter in the create_replication function on the source volume
-        - Common zone values: ["1"], ["2"], ["3"], or ["1", "2", "3"] for zone redundancy
-        - The destination pool must have the same or higher service level as source
-    """
-
-    try:
-        result = create_data_protection_volume(
-            resource_group_name=resource_group_name,
-            account_name=account_name,
-            pool_name=pool_name,
-            volume_name=volume_name,
-            location=location,
-            creation_token=creation_token,
-            virtual_network_name=virtual_network_name,
-            subnet_name=subnet_name,
-            source_volume_resource_id=source_volume_resource_id,
-            zones=zones,
-            usage_threshold=usage_threshold,
-            service_level=service_level,
-            subscription_id=subscription_id,
-            print_output=print_output
-        )
-        return result
-    except Exception as e:
-        if print_output:
-            logger.error(f"Error creating ANF data protection volume: {e}")
-        raise
 
 
 if __name__ == "__main__":
