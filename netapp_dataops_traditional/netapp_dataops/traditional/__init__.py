@@ -129,6 +129,12 @@ from .gcnv.snapshot_operations import (
     list_snapshots as gcnv_list_snapshots
 )
 
+from .protocols.cifs_share_operations import (
+    create_cifs_share,
+    list_cifs_shares,
+    get_cifs_share
+)
+
 
 @deprecated
 def restore_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = None, svm_name : str = None, print_output: bool = False):
