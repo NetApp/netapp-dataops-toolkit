@@ -235,7 +235,7 @@ def list_qtrees(volume_name: str = None, cluster_name: str = None, svm_name: str
                             qtree["export_policy"],
                             qtree["qos_policy"]
                         ])
-                    print(tabulate(table, headers=headers, tablefmt="grid"))
+                    print(tabulate(table, headers=headers, tablefmt="simple"))
                 else:
                     print("No qtrees found.")
 
