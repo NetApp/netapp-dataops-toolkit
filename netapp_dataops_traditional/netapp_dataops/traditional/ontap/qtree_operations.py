@@ -7,8 +7,11 @@ to avoid code duplication and ensure consistency across the toolkit.
 """
 
 import os
+import requests
+import json
 from netapp_ontap.error import NetAppRestError
 from netapp_ontap.resources import Qtree as NetAppQtree
+from netapp_ontap import HostConnection
 
 # Import shared functions and exceptions from the modular structure
 from ..exceptions import (
@@ -362,6 +365,149 @@ def get_qtree(volume_uuid: str, qtree_id: int, cluster_name: str = None,
                 print("Error: Qtree with ID '" + str(qtree_id) + "' not found in volume '" + volume_uuid + "'.")
                 print("Exception: ", e)
             raise InvalidVolumeParameterError(f"Qtree with ID '{qtree_id}' not found")
+
+    else:
+        raise InvalidConfigError("Unsupported connection type")
+
+
+def get_qtree_metrics(volume_uuid: str, qtree_id: int, cluster_name: str = None,
+                      print_output: bool = False) -> dict:
+    """
+    Retrieve historical performance metrics for a qtree with extended performance monitoring enabled.
+
+    Required Arguments:
+        volume_uuid (str): UUID of the volume containing the qtree.
+        qtree_id (int): ID of the qtree to retrieve metrics for.
+
+    Optional Arguments:
+        cluster_name (str): Name of the hosting cluster (defaults to config cluster).
+        print_output (bool): Print detailed output if True.
+
+    Raises:
+        InvalidConfigError: If configuration is missing or invalid.
+        InvalidVolumeParameterError: If the qtree does not exist or extended monitoring is not enabled.
+        APIConnectionError: If there is an error connecting to the API.
+
+    Returns:
+        dict: Dictionary containing qtree performance metrics.
+    """
+    try:
+        config = _retrieve_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+    try:
+        connectionType = config["connectionType"]
+    except:
+        if print_output:
+            print("Error: Missing 'connectionType' in config file.")
+        raise InvalidConfigError()
+
+    if cluster_name:
+        config["hostname"] = cluster_name
+
+    if connectionType == "ONTAP":
+        try:
+            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
+        except InvalidConfigError:
+            raise
+
+        try:
+            # First verify that the qtree exists and has extended performance monitoring enabled
+            qtree = NetAppQtree(id=qtree_id, **{"volume.uuid": volume_uuid})
+            qtree.get(fields="ext_performance_monitoring")
+            
+            if not hasattr(qtree, 'ext_performance_monitoring') or not qtree.ext_performance_monitoring.enabled:
+                if print_output:
+                    print("Error: Extended performance monitoring is not enabled for this qtree.")
+                raise InvalidVolumeParameterError("Extended performance monitoring not enabled")
+
+            # Get the current connection
+            connection = HostConnection.get_connection()
+            
+            # Construct the metrics URL
+            metrics_url = f"https://{connection.host}/api/storage/qtrees/{volume_uuid}/{qtree_id}/metrics"
+            
+            # Make the API request
+            response = requests.get(
+                metrics_url,
+                auth=(connection.username, connection.password),
+                verify=connection.verify,
+                headers={'Accept': 'application/json'}
+            )
+            
+            if response.status_code != 200:
+                if print_output:
+                    print(f"Error: Failed to retrieve metrics. Status code: {response.status_code}")
+                    print(f"Response: {response.text}")
+                raise APIConnectionError(f"Failed to retrieve metrics: {response.status_code}")
+            
+            metrics_data = response.json()
+            
+            # Print metrics if requested
+            if print_output:
+                print("Qtree Performance Metrics:")
+                print(f"  Volume UUID: {volume_uuid}")
+                print(f"  Qtree ID: {qtree_id}")
+                
+                if 'records' in metrics_data:
+                    print(f"  Number of data points: {len(metrics_data['records'])}")
+                    
+                    for i, record in enumerate(metrics_data['records'][:5]):  # Show first 5 records
+                        print(f"  Data point {i+1}:")
+                        if 'timestamp' in record:
+                            print(f"    Timestamp: {record['timestamp']}")
+                        if 'duration' in record:
+                            print(f"    Duration: {record['duration']}")
+                        
+                        # Print IOPS metrics
+                        if 'iops' in record:
+                            iops = record['iops']
+                            if 'read' in iops:
+                                print(f"    Read IOPS: {iops['read']}")
+                            if 'write' in iops:
+                                print(f"    Write IOPS: {iops['write']}")
+                            if 'total' in iops:
+                                print(f"    Total IOPS: {iops['total']}")
+                        
+                        # Print latency metrics
+                        if 'latency' in record:
+                            latency = record['latency']
+                            if 'read' in latency:
+                                print(f"    Read Latency (μs): {latency['read']}")
+                            if 'write' in latency:
+                                print(f"    Write Latency (μs): {latency['write']}")
+                            if 'total' in latency:
+                                print(f"    Total Latency (μs): {latency['total']}")
+                        
+                        # Print throughput metrics
+                        if 'throughput' in record:
+                            throughput = record['throughput']
+                            if 'read' in throughput:
+                                print(f"    Read Throughput (bytes/s): {throughput['read']}")
+                            if 'write' in throughput:
+                                print(f"    Write Throughput (bytes/s): {throughput['write']}")
+                            if 'total' in throughput:
+                                print(f"    Total Throughput (bytes/s): {throughput['total']}")
+                        
+                        print()  # Empty line between records
+                    
+                    if len(metrics_data['records']) > 5:
+                        print(f"  ... and {len(metrics_data['records']) - 5} more data points")
+                else:
+                    print("  No metrics data available")
+
+            return metrics_data
+
+        except NetAppRestError as err:
+            if print_output:
+                print("Error: Error retrieving qtree metrics.")
+                print("API Error: ", err)
+            raise APIConnectionError(err)
+        except Exception as e:
+            if print_output:
+                print("Error: Failed to retrieve qtree metrics.")
+                print("Exception: ", e)
+            raise InvalidVolumeParameterError(f"Failed to retrieve metrics for qtree '{qtree_id}'")
 
     else:
         raise InvalidConfigError("Unsupported connection type")
