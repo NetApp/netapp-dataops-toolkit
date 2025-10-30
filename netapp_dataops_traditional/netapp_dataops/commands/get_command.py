@@ -9,6 +9,7 @@ from netapp_dataops.help_text import (
 )
 from netapp_dataops.traditional import (
     get_qtree,
+    get_qtree_metrics,
     InvalidConfigError,
     APIConnectionError,
     InvalidVolumeParameterError
@@ -26,6 +27,8 @@ class GetCommand(BaseCommand):
         # Route to appropriate handler based on target
         if target in ("qtree", "qt"):
             self._get_qtree()
+        elif target in ("qtree-metrics", "qtm"):
+            self._get_qtree_metrics()
         else:
             self.handle_invalid_command()
     
@@ -74,6 +77,75 @@ class GetCommand(BaseCommand):
         # Get qtree
         try:
             get_qtree(
+                volume_uuid=volume_uuid,
+                qtree_id=qtree_id,
+                cluster_name=cluster_name,
+                print_output=True
+            )
+        except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
+            import sys
+            sys.exit(1)
+    
+    def _get_qtree_metrics(self) -> None:
+        """Handle qtree metrics retrieval."""
+        volume_uuid = None
+        qtree_id = None
+        cluster_name = None
+        
+        # Get command line options
+        try:
+            opts, args = getopt.getopt(
+                self.args[3:], 
+                "hv:i:u:", 
+                ["help", "volume-uuid=", "id=", "cluster-name="]
+            )
+        except Exception as err:
+            print(err)
+            print("Error: Invalid command line options for qtree metrics.")
+            print("Usage: get qtree-metrics --volume-uuid <uuid> --id <qtree_id> [--cluster-name <name>]")
+            self.handle_invalid_command(invalid_opt_arg=True)
+        
+        # Parse command line options
+        for opt, arg in opts:
+            if opt in ("-h", "--help"):
+                print("Get Qtree Metrics Help:")
+                print("Usage: get qtree-metrics --volume-uuid <uuid> --id <qtree_id> [--cluster-name <name>]")
+                print("")
+                print("Required Arguments:")
+                print("  -v, --volume-uuid    UUID of the volume containing the qtree")
+                print("  -i, --id             ID of the qtree to get metrics for")
+                print("")
+                print("Optional Arguments:")
+                print("  -u, --cluster-name   Name of the hosting cluster")
+                print("  -h, --help           Show this help message")
+                print("")
+                print("Note: Extended performance monitoring must be enabled for the qtree.")
+                return
+            elif opt in ("-v", "--volume-uuid"):
+                volume_uuid = arg
+            elif opt in ("-i", "--id"):
+                try:
+                    qtree_id = int(arg)
+                except ValueError:
+                    print("Error: Qtree ID must be a valid integer.")
+                    self.handle_invalid_command(invalid_opt_arg=True)
+            elif opt in ("-u", "--cluster-name"):
+                cluster_name = arg
+        
+        # Check for required options
+        if not volume_uuid or qtree_id is None:
+            print("Error: Both --volume-uuid and --id are required.")
+            print("Usage: get qtree-metrics --volume-uuid <uuid> --id <qtree_id> [--cluster-name <name>]")
+            self.handle_invalid_command(invalid_opt_arg=True)
+        
+        # Validate qtree_id is non-negative
+        if qtree_id < 0:
+            print("Error: Qtree ID must be a non-negative integer.")
+            self.handle_invalid_command(invalid_opt_arg=True)
+        
+        # Get qtree metrics
+        try:
+            get_qtree_metrics(
                 volume_uuid=volume_uuid,
                 qtree_id=qtree_id,
                 cluster_name=cluster_name,

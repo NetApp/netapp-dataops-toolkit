@@ -245,7 +245,7 @@ def restoreSnapshot(volumeName: str, snapshotName: str, printOutput: bool = Fals
 #
 
 try:
-    from .ontap.qtree_operations import create_qtree, list_qtrees, get_qtree
+    from .ontap.qtree_operations import create_qtree, list_qtrees, get_qtree, get_qtree_metrics
 except ImportError:
     # If qtree module is not available, define placeholder functions
     def create_qtree(*args, **kwargs):
@@ -255,4 +255,7 @@ except ImportError:
         raise NotImplementedError("Qtree functionality is not available. Please ensure the qtree module is properly installed.")
     
     def get_qtree(*args, **kwargs):
+        raise NotImplementedError("Qtree functionality is not available. Please ensure the qtree module is properly installed.")
+    
+    def get_qtree_metrics(*args, **kwargs):
         raise NotImplementedError("Qtree functionality is not available. Please ensure the qtree module is properly installed.")
