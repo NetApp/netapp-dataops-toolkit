@@ -41,3 +41,4 @@ This MCP Server provides the following tools for managing JupyterLab workspaces 
 - **ListVolumes**: List all volumes.
 - **CreateVolumeSnapshot**: Create a snapshot of a volume.
 - **ListVolumeSnapshots**: List all snapshots of volumes.
+- **CreateFlexCache**: Create a FlexCache volume.
