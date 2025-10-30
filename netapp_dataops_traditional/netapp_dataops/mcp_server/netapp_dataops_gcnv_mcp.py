@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
-import sys
 import asyncio
-import json
-import logging
 from typing import Any, Dict, Optional
 from fastmcp import FastMCP
 from google.protobuf.json_format import MessageToDict
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from netapp_dataops.logging_utils import setup_logger
+
+logger = setup_logger(__name__)
 
 # Importing the necessary functions from the traditional GCNV module
 from netapp_dataops.traditional.gcnv import (
@@ -50,7 +47,8 @@ async def create_volume_tool(
     large_capacity: Optional[bool] = None,
     multiple_endpoints: Optional[bool] = None,
     tiering_enabled: Optional[bool] = None,
-    cooling_threshold_days: Optional[int] = None
+    cooling_threshold_days: Optional[int] = None,
+    print_output: bool = False
 ) -> Dict[str, Any]:
     """
     Use this tool to create a new volume in the specified project and location.
@@ -144,6 +142,9 @@ async def create_volume_tool(
             Optional. Time in days to mark the volume's data block as cold and make it eligible for tiering.
             It can be range from 2-183.
             Defaults to 31.
+        print_output (bool):
+            Optional. If set to True, prints log messages to the console.
+            Defaults to False.
 
     Returns:
         dict: Dictionary with keys
@@ -180,10 +181,12 @@ async def create_volume_tool(
         large_capacity=large_capacity,
         multiple_endpoints=multiple_endpoints,
         tiering_enabled=tiering_enabled,
-        cooling_threshold_days=cooling_threshold_days
+        cooling_threshold_days=cooling_threshold_days,
+        print_output=print_output
     )
     if response['status'] == 'error':
-        logger.error(f"Error creating volume: {response['message']}")
+        if print_output:
+            logger.error(f"Error creating volume: {response['message']}")
     return response
     
     
@@ -214,7 +217,8 @@ async def clone_volume_tool(
     large_capacity: Optional[bool] = None,
     multiple_endpoints: Optional[bool] = None,
     tiering_enabled: Optional[bool] = None,
-    cooling_threshold_days: Optional[int] = None
+    cooling_threshold_days: Optional[int] = None,
+    print_output: bool = False
 ) -> Dict[str, Any]:
     """
     Use this tool to clone an existing volume.
@@ -308,6 +312,9 @@ async def clone_volume_tool(
             Optional. Time in days to mark the volume's data block as cold and make it eligible for tiering.
             It can be range from 2-183.
             Defaults to 31.
+        print_output (bool):
+            Optional. If set to True, prints log messages to the console.
+            Defaults to False.
 
     Returns:
         dict: Dictionary with keys
@@ -345,16 +352,19 @@ async def clone_volume_tool(
         large_capacity=large_capacity,
         multiple_endpoints=multiple_endpoints,
         tiering_enabled=tiering_enabled,
-        cooling_threshold_days=cooling_threshold_days
+        cooling_threshold_days=cooling_threshold_days,
+        print_output=print_output
     )
     if response['status'] == 'error':
-        logger.error(f"Error cloning volume: {response.get('message', 'Unknown error')}")
+        if print_output:
+            logger.error(f"Error cloning volume: {response.get('message', 'Unknown error')}")
     return response
     
 @mcp.tool(name = "List Volumes")
 async def list_volumes_tool(
     project_id: str,
-    location: str
+    location: str,
+    print_output: bool = False
 ) -> Dict[str, Any]:
     """
     Use this tool to list all volumes in a project and location.
@@ -364,6 +374,9 @@ async def list_volumes_tool(
             Required. The ID of the project.
         location (str):
             Required. The location to list volumes from.
+        print_output (bool):
+            Optional. If set to True, prints log messages to the console.
+            Defaults to False.
 
     Returns:
         dict: Dictionary with keys
@@ -377,10 +390,12 @@ async def list_volumes_tool(
     """    
     response = list_volumes(
         project_id=project_id,
-        location=location
+        location=location,
+        print_output=print_output
     )
     if response['status'] == 'error':
-        logger.error(f"Error listing volumes: {response['message']}")
+        if print_output:
+            logger.error(f"Error listing volumes: {response['message']}")
     return response
 
 @mcp.tool(name = "Create Snapshot")
@@ -390,7 +405,8 @@ async def create_snapshot_tool(
     volume_id: str,
     snapshot_id: str,
     description: Optional[str] = None,
-    labels: Optional[dict] = None
+    labels: Optional[dict] = None,
+    print_output: bool = False
 ) -> Dict[str, Any]:
     """
     Use this tool to create a near-instantaneous, space-efficient, read-only copy of an existing data volume, called a snapshot. 
@@ -410,6 +426,9 @@ async def create_snapshot_tool(
             Optional. The description of the snapshot. Defaults to None.
         labels (dict, optional):
             Optional. The labels to assign to the snapshot. Defaults to None.
+        print_output (bool):
+            Optional. If set to True, prints log messages to the console.
+            Defaults to False.
 
     Returns:
         dict: Dictionary with keys
@@ -427,17 +446,20 @@ async def create_snapshot_tool(
         volume_id=volume_id,
         snapshot_id=snapshot_id,
         description=description,
-        labels=labels
+        labels=labels,
+        print_output=print_output
     )
     if response['status'] == 'error':
-        logger.error(f"Error creating snapshot: {response['message']}")
+        if print_output:
+            logger.error(f"Error creating snapshot: {response['message']}")
     return response
     
 @mcp.tool(name = "List Snapshots")
 async def list_snapshots_tool(
     project_id: str,
     location: str,
-    volume_id: str
+    volume_id: str,
+    print_output: bool = False
 ) -> Dict[str, Any]:
     """
     Use this tool to list all snapshots for a given volume.
@@ -449,6 +471,9 @@ async def list_snapshots_tool(
             Required. The location to list volumes from.
         volume_id (str):
             Required. The ID of the volume to list snapshots for.
+        print_output (bool):
+            Optional. If set to True, prints log messages to the console.
+            Defaults to False.
 
     Returns:
         dict: Dictionary with keys
@@ -463,10 +488,12 @@ async def list_snapshots_tool(
     response = list_snapshots(
             project_id=project_id,
             location=location,
-            volume_id=volume_id
+            volume_id=volume_id,
+            print_output=print_output
     )
     if response['status'] == 'error':
-        logger.error(f"Error listing snapshots: {response['message']}")
+        if print_output:
+            logger.error(f"Error listing snapshots: {response['message']}")
     return response
 
 @mcp.tool(name = "Create Replication")
@@ -483,7 +510,8 @@ async def create_replication_tool(
     tiering_enabled: Optional[bool] = None,
     cooling_threshold_days: Optional[int] = None,
     description: Optional[str] = None,
-    labels: Optional[dict] = None
+    labels: Optional[dict] = None,
+    print_output: bool = False
 ) -> Dict[str, Any]:
     """
     Use this tool to create a replication for a volume.
@@ -565,6 +593,9 @@ async def create_replication_tool(
         labels (dict, MutableMapping[str, str]):
             Optional. Resource labels to represent user provided
             metadata.
+        print_output (bool):
+            Optional. If set to True, prints log messages to the console.
+            Defaults to False.
 
     Returns:
         dict: Dictionary with keys
@@ -589,10 +620,12 @@ async def create_replication_tool(
         tiering_enabled=tiering_enabled,
         cooling_threshold_days=cooling_threshold_days,
         description=description,
-        labels=labels
+        labels=labels,
+        print_output=print_output
     )
     if response['status'] == 'error':
-        logger.error(f"Error creating replication: {response['message']}")
+        if print_output:
+            logger.error(f"Error creating replication: {response['message']}")
     return response
 
 # Register the MCP instance to run the tools

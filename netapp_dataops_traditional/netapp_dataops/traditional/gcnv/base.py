@@ -1,10 +1,10 @@
 from google.cloud import netapp_v1
 from google.protobuf.json_format import MessageToDict
 from typing import Dict, List, Any, Union
-import logging
 
-logger = logging.getLogger(__name__)
+from netapp_dataops.logging_utils import setup_logger
 
+logger = setup_logger(__name__)
 
 def _serialize(details) -> Union[Dict[str, Any], List[Any], str, int, float, bool, None]:
     """Internal helper to convert protobuf objects (and lists) to JSON-serializable structures."""
@@ -18,9 +18,14 @@ def _serialize(details) -> Union[Dict[str, Any], List[Any], str, int, float, boo
     return str(details)
 
 
-def create_client() -> netapp_v1.NetAppClient:
+def create_client(print_output: bool = False) -> netapp_v1.NetAppClient:
     """Create and return a NetApp client.
     
+    Args:
+        print_output (bool):
+            Optional. If set to True, prints log messages to the console.
+            Defaults to False.
+
     Returns:
         netapp_v1.NetAppClient: The NetApp client instance.
         
@@ -30,7 +35,8 @@ def create_client() -> netapp_v1.NetAppClient:
     try:
         return netapp_v1.NetAppClient()
     except Exception as e:
-        logger.error(f"An error occurred while creating the NetApp client: {e}")
+        if print_output:
+            logger.error(f"An error occurred while creating the NetApp client: {e}")
         raise e
 
 

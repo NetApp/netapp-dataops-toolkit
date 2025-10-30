@@ -1,10 +1,10 @@
 from google.cloud import netapp_v1
 from typing import Dict, Any
-import logging
 from .base import _serialize, create_client, validate_required_params
 
-logger = logging.getLogger(__name__)
+from netapp_dataops.logging_utils import setup_logger
 
+logger = setup_logger(__name__)
 
 def create_snapshot(
     project_id: str,
@@ -12,7 +12,8 @@ def create_snapshot(
     volume_id: str,
     snapshot_id: str,
     description: str = None,
-    labels: dict = None
+    labels: dict = None,
+    print_output: bool = False
 ) -> Dict[str, Any]:
     """
     Create a snapshot of a NetApp volume in Google Cloud.
@@ -30,8 +31,11 @@ def create_snapshot(
             Required. The ID of the snapshot to create.
         description (str):
             Optional. The description of the snapshot. Defaults to None.
-        labels (dict, optional):
+        labels (dict):
             Optional. The labels to assign to the snapshot. Defaults to None.
+        print_output (bool):
+            Optional. If set to True, prints log messages to the console.
+            Defaults to False.
 
     Returns:
         dict: Dictionary with keys
@@ -57,7 +61,7 @@ def create_snapshot(
     
     try:
     
-        client = create_client()
+        client = create_client(print_output=print_output)
 
         # Construct a parent string
         parent = f"projects/{project_id}/locations/{location}/volumes/{volume_id}"
@@ -71,16 +75,19 @@ def create_snapshot(
         # Make the request
         operation = client.create_snapshot(request=request)
 
-        logger.info("Creating snapshot...")
+        if print_output:
+            logger.info("Creating snapshot...")
 
         response = operation.result()
 
-        logger.info(f"Snapshot created:\n{response}")
+        if print_output:
+            logger.info(f"Snapshot created:\n{response}")
 
         return {"status": "success", "details": _serialize(response)}
 
     except Exception as e:
-        logger.error(f"An error occurred while creating the snapshot: {e}")
+        if print_output:
+            logger.error(f"An error occurred while creating the snapshot: {e}")
         return {"status": "error", "message": str(e)}
 
 
@@ -88,7 +95,8 @@ def delete_snapshot(
     project_id: str,
     location: str,
     volume_id: str,
-    snapshot_id: str
+    snapshot_id: str,
+    print_output: bool = False
 ) -> Dict[str, Any]:
     """
     Delete a snapshot from a NetApp volume in Google Cloud.
@@ -102,6 +110,9 @@ def delete_snapshot(
             Required. The ID of the volume.
         snapshot_id (str):
             Required. The ID of the snapshot to delete.
+        print_output (bool):
+            Optional. If set to True, prints log messages to the console.
+            Defaults to False.
 
     Returns:
         dict: Dictionary with keys
@@ -124,7 +135,7 @@ def delete_snapshot(
 
     try:
 
-        client = create_client()
+        client = create_client(print_output=print_output)
 
         # Construct a name string
         name = f"projects/{project_id}/locations/{location}/volumes/{volume_id}/snapshots/{snapshot_id}"
@@ -135,23 +146,27 @@ def delete_snapshot(
         # Make the request
         operation = client.delete_snapshot(request=request)
 
-        logger.info(f"Deleting snapshot: {name}...")
+        if print_output:
+            logger.info(f"Deleting snapshot: {name}...")
 
         response = operation.result()
 
-        logger.info(f"Snapshot deleted: {name}")
+        if print_output:
+            logger.info(f"Snapshot deleted: {name}")
 
-        return {"status": "success", "details": _serialize(response)}
+        return {"status": "success", "details": f"Snapshot deleted: {name}"}
 
     except Exception as e:
-        logger.error(f"An error occurred while deleting the snapshot: {e}")
+        if print_output:
+            logger.error(f"An error occurred while deleting the snapshot: {e}")
         return {"status": "error", "message": str(e)}
 
 
 def list_snapshots(
     project_id: str,
     location: str,
-    volume_id: str
+    volume_id: str,
+    print_output: bool = False
 ) -> Dict[str, Any]:
     """
     List all snapshots for a NetApp volume in the specified Google Cloud project and location.
@@ -163,6 +178,9 @@ def list_snapshots(
             Required. The location to list volumes from.
         volume_id (str):
             Required. The ID of the volume to list snapshots for.
+        print_output (bool):
+            Optional. If set to True, prints log messages to the console.
+            Defaults to False.
 
     Returns:
         dict: Dictionary with keys
@@ -184,7 +202,7 @@ def list_snapshots(
 
     try:
 
-        client = create_client()
+        client = create_client(print_output=print_output)
 
         # Construct a parent string
         parent = f"projects/{project_id}/locations/{location}/volumes/{volume_id}"
@@ -197,14 +215,17 @@ def list_snapshots(
         # Make the request
         page_result = client.list_snapshots(request=request)
 
-        logger.info("Fetching list of snapshots...")
+        if print_output:
+            logger.info("Fetching list of snapshots...")
 
         snapshots = [s for s in page_result]
 
-        logger.info(f"Snapshots fetched:\n{snapshots}")
+        if print_output:
+            logger.info(f"Snapshots fetched:\n{snapshots}")
 
         return {"status": "success", "details": _serialize(snapshots)}
 
     except Exception as e:
-        logger.error(f"An error occurred while listing snapshots: {e}")
+        if print_output:
+            logger.error(f"An error occurred while listing snapshots: {e}")
         return {"status": "error", "message": str(e)}
