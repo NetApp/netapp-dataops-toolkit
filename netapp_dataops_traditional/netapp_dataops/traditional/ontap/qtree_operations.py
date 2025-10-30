@@ -215,14 +215,27 @@ def list_qtrees(volume_name: str = None, cluster_name: str = None, svm_name: str
                 }
                 qtrees_list.append(qtree_info)
 
-            # Print qtrees if requested
+            # Print qtrees in tabular format if requested
             if print_output:
                 if qtrees_list:
-                    print("Qtrees:")
+                    from tabulate import tabulate
+                    headers = [
+                        "ID", "Name", "Volume", "SVM", "Security Style", "UNIX Permissions", "Path", "Export Policy", "QoS Policy"
+                    ]
+                    table = []
                     for qtree in qtrees_list:
-                        qtree_name = qtree["name"] if qtree["name"] else "<root>"
-                        print("  ID: " + str(qtree["id"]) + ", Name: " + qtree_name + ", Volume: " + str(qtree["volume"]) + 
-                              ", Security Style: " + str(qtree["security_style"]) + ", Path: " + str(qtree["path"]))
+                        table.append([
+                            qtree["id"],
+                            qtree["name"] if qtree["name"] else "<root>",
+                            qtree["volume"],
+                            qtree["svm"],
+                            qtree["security_style"],
+                            qtree["unix_permissions"],
+                            qtree["path"],
+                            qtree["export_policy"],
+                            qtree["qos_policy"]
+                        ])
+                    print(tabulate(table, headers=headers, tablefmt="grid"))
                 else:
                     print("No qtrees found.")
 
