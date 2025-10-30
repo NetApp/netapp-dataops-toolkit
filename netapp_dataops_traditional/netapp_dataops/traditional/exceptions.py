@@ -49,3 +49,7 @@ class SnapMirrorSyncOperationError(Exception) :
 class APIConnectionError(Exception) :
     '''Error that will be raised when an API connection cannot be established'''
     pass
+
+class InvalidCifsShareParameterError(Exception):
+    """Error that will be raised when an invalid CIFS share parameter is given"""
+    pass
