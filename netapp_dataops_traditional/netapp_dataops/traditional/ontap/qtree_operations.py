@@ -446,7 +446,7 @@ def get_qtree_metrics(volume_uuid: str, qtree_id: int, cluster_name: str = None,
             hostname = config["hostname"]
             username = config["username"]
             password = config["password"]
-            verify_ssl = config.get("verifySslCert", True)
+            verify_ssl = config.get("verifySslCert", False)
             
             # Construct the metrics URL
             metrics_url = f"https://{hostname}/api/storage/qtrees/{volume_uuid}/{qtree_id}/metrics"
