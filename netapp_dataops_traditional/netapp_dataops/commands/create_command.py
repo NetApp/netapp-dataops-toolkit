@@ -16,11 +16,11 @@ from netapp_dataops.traditional import (
     create_snapshot,
     create_volume,
     create_snap_mirror_relationship,
+    create_cifs_share,
     InvalidConfigError,
     APIConnectionError,
     InvalidVolumeParameterError,
-    MountOperationError,
-    create_cifs_share
+    MountOperationError
 )
 
 

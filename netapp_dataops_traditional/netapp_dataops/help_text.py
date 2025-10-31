@@ -504,7 +504,7 @@ Examples:
 
 # CIFS Share operations help text
 HELP_TEXT_CREATE_CIFS_SHARE = '''
-Command: create cifs share
+Command: create cifs-share
 
 Create a new CIFS share.
 
@@ -523,4 +523,21 @@ Optional Options/Arguments:
 Examples:
 \tnetapp_dataops_cli.py create cifs share --name=project1 --path=/mnt/project1 
 \tnetapp_dataops_cli.py create cifs share -n project2 -p /mnt/project2
+'''
+
+# List CIFS Shares help text
+HELP_TEXT_LIST_CIFS_SHARES = '''
+Command: list cifs-shares
+
+List all CIFS shares.
+
+Optional Options/Arguments:
+\t-s, --svm=\tExisting SVM in which to create the CIFS share.
+\t-n, --name-pattern=\tPattern to filter share names by (supports wildcard '*').
+\t-u, --cluster-name=\tNon default hosting cluster
+\t-h, --help\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py list cifs shares --cluster-name=cluster1
+\tnetapp_dataops_cli.py list cifs shares -u cluster1
 '''

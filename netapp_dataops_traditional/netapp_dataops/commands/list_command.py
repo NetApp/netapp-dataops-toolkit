@@ -8,13 +8,15 @@ from netapp_dataops.help_text import (
     HELP_TEXT_LIST_CLOUD_SYNC_RELATIONSHIPS,
     HELP_TEXT_LIST_SNAPMIRROR_RELATIONSHIPS,
     HELP_TEXT_LIST_SNAPSHOTS,
-    HELP_TEXT_LIST_VOLUMES
+    HELP_TEXT_LIST_VOLUMES,
+    HELP_TEXT_LIST_CIFS_SHARES
 )
 from netapp_dataops.traditional import (
     list_cloud_sync_relationships,
     list_snap_mirror_relationships,
     list_snapshots,
     list_volumes,
+    list_cifs_shares,
     InvalidConfigError,
     APIConnectionError,
     InvalidVolumeParameterError
@@ -38,6 +40,8 @@ class ListCommand(BaseCommand):
             self._list_snapshots()
         elif target in ("volume", "vol", "volumes", "vols"):
             self._list_volumes()
+        elif target in ("cifs-shares", "cifs-share", "cifs"):
+            self._list_cifs_shares()
         else:
             self.handle_invalid_command()
     
@@ -175,5 +179,46 @@ class ListCommand(BaseCommand):
                 cluster_name=cluster_name
             )
         except (InvalidConfigError, APIConnectionError):
+            import sys
+            sys.exit(1)
+
+    def _list_cifs_shares(self) -> None:
+        """Handle CIFS shares listing."""
+        svm = None
+        name_pattern = None
+        cluster_name = None
+        
+        # Get command line options
+        try:
+            opts, args = getopt.getopt(
+                self.args[3:], 
+                "hv:u:n:", 
+                ["cluster-name=", "help", "svm=", "name-pattern="]
+            )
+        except Exception as err:
+            print(err)
+            self.handle_invalid_command(help_text=HELP_TEXT_LIST_CIFS_SHARES, invalid_opt_arg=True)
+
+        # Parse command line options
+        for opt, arg in opts:
+            if opt in ("-h", "--help"):
+                print(HELP_TEXT_LIST_CIFS_SHARES)
+                return
+            elif opt in ("-s", "--svm"):
+                svm = arg
+            elif opt in ("-u", "--cluster-name"):
+                cluster_name = arg
+            elif opt in ("-n", "--name-pattern"):
+                name_pattern = arg
+        
+        # List CIFS shares
+        try:
+            list_cifs_shares(
+                svm=svm, 
+                name_pattern=name_pattern,
+                cluster_name=cluster_name,
+                print_output=True
+            )
+        except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
             import sys
             sys.exit(1)
