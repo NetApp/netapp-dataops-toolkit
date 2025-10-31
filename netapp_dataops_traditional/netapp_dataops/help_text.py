@@ -541,3 +541,22 @@ Examples:
 \tnetapp_dataops_cli.py list cifs shares --cluster-name=cluster1
 \tnetapp_dataops_cli.py list cifs shares -u cluster1
 '''
+
+# Get CIFS Share help text
+HELP_TEXT_GET_CIFS_SHARE = '''
+Command: get cifs-share
+
+Get details of a specific CIFS share.
+
+Required Options/Arguments:
+\t-n, --name=\tName of the CIFS share to retrieve.
+\t-s, --svm=\tExisting SVM in which the CIFS share resides.
+
+Optional Options/Arguments:
+\t-u, --cluster-name=\tNon default hosting cluster
+\t-h, --help\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py get cifs share --name=project1
+\tnetapp_dataops_cli.py get cifs share -n project2
+'''
