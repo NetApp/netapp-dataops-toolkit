@@ -5,10 +5,12 @@ Create command module for NetApp DataOps Toolkit CLI.
 import getopt
 import re
 from .base_command import BaseCommand
+import json
 from netapp_dataops.help_text import (
     HELP_TEXT_CREATE_SNAPSHOT,
     HELP_TEXT_CREATE_VOLUME,
-    HELP_TEXT_CREATE_SNAPMIRROR_RELATIONSHIP
+    HELP_TEXT_CREATE_SNAPMIRROR_RELATIONSHIP,
+    HELP_TEXT_CREATE_CIFS_SHARE
 )
 from netapp_dataops.traditional import (
     create_snapshot,
@@ -17,7 +19,8 @@ from netapp_dataops.traditional import (
     InvalidConfigError,
     APIConnectionError,
     InvalidVolumeParameterError,
-    MountOperationError
+    MountOperationError,
+    create_cifs_share
 )
 
 
@@ -291,5 +294,72 @@ class CreateCommand(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
+            import sys
+            sys.exit(1)
+
+    def _create_cifs_share(self) -> None:
+        """Handle CIFS share creation."""
+        # Initialize variables
+        svm = None
+        name = None
+        path = None
+        cluster_name = None
+        comment = None
+        acls = None
+        properties = None
+
+        
+        # Get command line options
+        try:
+            opts, args = getopt.getopt(
+                self.args[3:], 
+                "u:h:s:n:l:a:p:c:", 
+                ["cluster-name=", "help", "svm=", "name=", "properties=", "acls=", "path=", "comment="]
+            )
+        except Exception as err:
+            print(err)
+            self.handle_invalid_command(help_text=HELP_TEXT_CREATE_CIFS_SHARE, invalid_opt_arg=True)
+        
+        # Parse command line options
+        for opt, arg in opts:
+            if opt in ("-h", "--help"):
+                print(HELP_TEXT_CREATE_CIFS_SHARE)
+                return
+            elif opt in ("-s", "--svm"):
+                svm = arg
+            elif opt in ("-u", "--cluster-name"):
+                cluster_name = arg
+            elif opt in ("-n", "--name"):
+                name = arg
+            elif opt in ("-p", "--path"):
+                path = arg
+            elif opt in ("-c", "--comment"):
+                comment = arg
+            elif opt in ("-l", "--properties"):
+                properties = arg.split(',')
+            elif opt in ("-a", "--acls"):
+                try:
+                    acls = json.loads(arg)
+                except json.JSONDecodeError as e:
+                    print("Error parsing ACLs JSON: %s" % e)
+                    self.handle_invalid_command(help_text=HELP_TEXT_CREATE_CIFS_SHARE, invalid_opt_arg=True)
+        
+        # Check for required options
+        if not name or not svm or not path:
+            self.handle_invalid_command(help_text=HELP_TEXT_CREATE_CIFS_SHARE, invalid_opt_arg=True)
+        
+        # Create CIFS share
+        try:
+            create_cifs_share(
+                svm=svm,
+                name=name,
+                path=path,
+                cluster_name=cluster_name,
+                acls=acls,
+                properties=properties,
+                comment=comment,
+                print_output=True
+            )
+        except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
             import sys
             sys.exit(1)

@@ -501,3 +501,26 @@ Examples:
 \tnetapp_dataops_cli.py prepopulate flexcache --name=project1 --paths=/datasets/project1,/datasets/project2
 \tnetapp_dataops_cli.py prepopulate flexcache -n test1 -p /datasets/project1,/datasets/project2
 '''
+
+# CIFS Share operations help text
+HELP_TEXT_CREATE_CIFS_SHARE = '''
+Command: create cifs share
+
+Create a new CIFS share.
+
+Required Options/Arguments:
+\t-n, --name=\tName of the CIFS share.
+\t-p, --path=\tPath in the owning SVM namespace that is shared through this share.
+\t-s, --svm=\tExisting SVM in which to create the CIFS share.
+
+Optional Options/Arguments:
+\t-u, --cluster-name=\tNon default hosting cluster
+\t-c, --comment=\tComment/description for the CIFS share.
+\t-a, --acls=\tComma-separated list of ACLs to apply to the share. 
+\t-l, --properties=\tComma-separated list of properties to apply to the share ('browsable', 'oplocks', 'showsnapshot', 'changenotify', 'attributecache', 'continuously_available', 'encryption').
+\t-h, --help\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py create cifs share --name=project1 --path=/mnt/project1 
+\tnetapp_dataops_cli.py create cifs share -n project2 -p /mnt/project2
+'''
