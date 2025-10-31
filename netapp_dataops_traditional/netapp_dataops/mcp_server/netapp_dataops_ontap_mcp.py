@@ -5,7 +5,7 @@ import sys
 import asyncio
 from typing import Optional
 from fastmcp import FastMCP
-from netapp_dataops.mcp_server.config  import load_credentials
+from netapp_dataops.mcp_server.config import load_credentials
 from netapp_dataops.traditional import (
     create_volume, 
     clone_volume, 
@@ -17,12 +17,6 @@ from netapp_dataops.traditional import (
     list_snap_mirror_relationships
 )
 
-#Sets up logging
-from netapp_dataops.logging_utils import setup_logger
-
-logger = setup_logger(__name__)
-
-# Creates the FastMCP server instance
 mcp = FastMCP("NetApp DataOps Traditional Toolkit MCP")
 
 @mcp.tool(name="Create Volume")
@@ -97,7 +91,7 @@ async def create_volume_tool(
             snaplock_type=snaplock_type
         )
     except Exception as e:
-        logger.error(f"Error creating volume: {e}")
+        print(f"Error creating volume: {e}")
         raise
 
 
@@ -172,7 +166,7 @@ async def clone_volume_tool(
             print_output=print_output
         )
     except Exception as e:
-        logger.error(f"Error cloning volume: {e}")
+        print(f"Error cloning volume: {e}")
         raise
 
 
@@ -217,7 +211,7 @@ async def list_volumes_tool(
             return []
         return volumes
     except Exception as e:
-        logger.error(f"Error listing volumes: {e}")
+        print(f"Error listing volumes: {e}")
         raise
 
 
@@ -263,7 +257,7 @@ async def mount_volume_tool(
             print_output=print_output
         )
     except Exception as e:
-        logger.error(f"Error mounting volume: {e}")
+        print(f"Error mounting volume: {e}")
         raise
 
 
@@ -308,7 +302,7 @@ async def create_snapshot_tool(
             print_output=print_output
         )
     except Exception as e:
-        logger.error(f"Error creating snapshot: {e}")
+        print(f"Error creating snapshot: {e}")
         raise
 
 
@@ -341,7 +335,7 @@ async def list_snapshots_tool(
             return []
         return snapshots
     except Exception as e:
-        logger.error(f"Error listing snapshots: {e}")
+        print(f"Error listing snapshots: {e}")
         raise
 
 
@@ -391,7 +385,7 @@ async def create_snap_mirror_relationship_tool(
             print_output=print_output
         )
     except Exception as e:
-        logger.error(f"Error creating snapmirror relationship: {e}")
+        print(f"Error creating snapmirror relationship: {e}")
         raise
 
 
@@ -422,7 +416,7 @@ async def list_snap_mirror_relationships_tool(
             return []
         return snap_mirror_relationships
     except Exception as e:
-        logger.error(f"Error listing snapmirror relationships: {e}")
+        print(f"Error listing snapmirror relationships: {e}")
         raise
 
 
@@ -433,9 +427,12 @@ if __name__ == "__main__":
         # Validates the configuration
         load_credentials()
 
+        # Sets up basic logging to capture server events and errors
+        logging.basicConfig(level=logging.INFO)
+
         if hasattr(mcp, '_tool_manager'):
-            logger.info("Registered tools:")
-            logger.info(asyncio.run(mcp._tool_manager.get_tools()))
+            logging.info("Registered tools:") 
+            logging.info(asyncio.run(mcp._tool_manager.get_tools()))
 
         # Starts the MCP server using stdio transport for local operation
         mcp.run(transport="stdio")

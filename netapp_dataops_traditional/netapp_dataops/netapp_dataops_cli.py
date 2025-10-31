@@ -9,10 +9,10 @@ from netapp_dataops.help_text import HELP_TEXT_STANDARD
 def handleInvalidCommand(helpText: str = HELP_TEXT_STANDARD, invalidOptArg: bool = False):
     """Handle invalid command scenarios and exit."""
     if invalidOptArg:
-        logger.error("Error: Invalid option/argument.")
+        print("Error: Invalid option/argument.")
     else:
-        logger.error("Error: Invalid command.")
-    logger.error(helpText)
+        print("Error: Invalid command.")
+    print(helpText)
     sys.exit(1)
 
 
