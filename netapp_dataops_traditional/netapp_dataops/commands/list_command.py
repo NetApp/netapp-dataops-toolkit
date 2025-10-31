@@ -41,7 +41,7 @@ class ListCommand(BaseCommand):
             self._list_snapshots()
         elif target in ("volume", "vol", "volumes", "vols"):
             self._list_volumes()
-        elif target in ("cifs-shares", "cifs-share", "cifs"):
+        elif target in ("cifs-shares", "cifs-share", "cifs", "cifsshare", "cifsshares"):
             self._list_cifs_shares()
         else:
             self.handle_invalid_command()
