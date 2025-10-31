@@ -27,8 +27,12 @@ import requests
 from tabulate import tabulate
 import yaml
 
+from netapp_dataops.logging_utils import setup_logger
 
-__version__ = "2.5.0"
+logger = setup_logger(__name__)
+
+
+__version__ = "2.6.0"
 
 
 # Import modular operations
@@ -172,31 +176,31 @@ def restore_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = N
             raise InvalidConfigError()
 
         if print_output:
-            print("Restoring snapshot '" + snapshot_name + "'.")
+            logger.info("Restoring snapshot '%s'.", snapshot_name)
 
         try:
             # Retrieve volume
             volume = NetAppVolume.find(name=volume_name, svm=svm)
             if not volume:
                 if print_output:
-                    print("Error: Invalid volume name.")
+                    logger.error("Error: Invalid volume name.")
                 raise InvalidVolumeParameterError("name")
 
             # Retrieve snapshot
             snapshot = NetAppSnapshot.find(volume.uuid, name=snapshot_name)
             if not snapshot:
                 if print_output:
-                    print("Error: Invalid snapshot name.")
+                    logger.error("Error: Invalid snapshot name.")
                 raise InvalidSnapshotParameterError("name")
 
             # Restore snapshot
             volume.patch(volume.uuid, **{"restore_to.snapshot.name": snapshot.name, "restore_to.snapshot.uuid": snapshot.uuid}, poll=True)
             if print_output:
-                print("Snapshot restored successfully.")
+                logger.info("Snapshot restored successfully.")
 
         except NetAppRestError as err:
             if print_output:
-                print("Error: ONTAP Rest API Error: ", err)
+                logger.error("Error: ONTAP Rest API Error: %s", err)
             raise APIConnectionError(err)
 
     else:

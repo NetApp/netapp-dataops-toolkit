@@ -20,6 +20,11 @@ from netapp_dataops.k8s import (
     list_volume_snapshots
 )
 
+#Sets up logging
+from netapp_dataops.logging_utils import setup_logger
+
+logger = setup_logger(__name__)
+
 # Creates the FastMCP server instance
 mcp = FastMCP("NetApp DataOps K8s MCP Server")
 
@@ -92,7 +97,7 @@ def create_jupyter_lab_tool(
         )
         return url
     except Exception as e:
-        print(f"Error creating JupyterLab: {e}")
+        logger.error(f"Error creating JupyterLab: {e}")
         raise
 
 @mcp.tool(name="CloneJupyterLab")
@@ -153,7 +158,7 @@ def clone_jupyter_lab_tool(
         )
         return url
     except Exception as e:
-        print(f"Error cloning JupyterLab: {e}")
+        logger.error(f"Error cloning JupyterLab: {e}")
         raise
 
 @mcp.tool(name="ListJupyterLabs")
@@ -185,7 +190,7 @@ def list_jupyter_labs_tool(
         )
         return workspaces_list
     except Exception as e:
-        print(f"Error listing JupyterLabs: {e}")
+        logger.error(f"Error listing JupyterLabs: {e}")
         raise
 
 @mcp.tool(name="CreateJupyterLabSnapshot")
@@ -224,7 +229,7 @@ def create_jupyter_lab_snapshot_tool(
         )
         return snapshot_name
     except Exception as e:
-        print(f"Error creating JupyterLab snapshot: {e}")
+        logger.error(f"Error creating JupyterLab snapshot: {e}")
         raise
 
 @mcp.tool(name="ListJupyterLabSnapshots")
@@ -258,7 +263,7 @@ def list_jupyter_lab_snapshots_tool(
         )
         return snapshots_list
     except Exception as e:
-        print(f"Error listing JupyterLab snapshots: {e}")
+        logger.error(f"Error listing JupyterLab snapshots: {e}")
         raise
 
 # --- Volume management tools ---
@@ -300,7 +305,7 @@ def create_volume_tool(
             print_output
         )
     except Exception as e:
-        print(f"Error creating volume: {e}")
+        logger.error(f"Error creating volume: {e}")
         raise
 
 @mcp.tool(name="CloneVolume")
@@ -342,7 +347,7 @@ def clone_volume_tool(
             print_output
         )
     except Exception as e:
-        print(f"Error cloning volume: {e}")
+        logger.error(f"Error cloning volume: {e}")
         raise
 
 @mcp.tool(name="ListVolumes")
@@ -374,7 +379,7 @@ def list_volumes_tool(
         )
         return volumes_list
     except Exception as e:
-        print(f"Error listing volumes: {e}")
+        logger.error(f"Error listing volumes: {e}")
         raise
 
 @mcp.tool(name="CreateVolumeSnapshot")
@@ -414,7 +419,7 @@ def create_volume_snapshot_tool(
         )
         return snapshot_name
     except Exception as e:
-        print(f"Error creating volume snapshot: {e}")
+        logger.error(f"Error creating volume snapshot: {e}")
         raise
 
 @mcp.tool(name="ListVolumeSnapshots")
@@ -450,20 +455,17 @@ def list_volume_snapshots_tool(
         )
         return snapshots_list
     except Exception as e:
-        print(f"Error listing volume snapshots: {e}")
+        logger.error(f"Error listing volume snapshots: {e}")
         raise
 
 def main():
     try:
-        # Sets up basic logging to capture server events and errors
-        logging.basicConfig(level=logging.INFO)
-
         # Starts the MCP server using stdio transport for local operation
         mcp.run(transport="stdio")
 
     except Exception as e:
         # Logs and prints any startup errors, then exits with an error code
-        logging.error(f"Server startup failed: {e}")
+        logger.error(f"Server startup failed: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
