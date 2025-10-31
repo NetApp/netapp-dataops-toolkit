@@ -428,20 +428,37 @@ def get_qtree_metrics(volume_uuid: str, qtree_id: int, cluster_name: str = None,
             if print_output:
                 print(f"Debug: Qtree found. Available fields: {[attr for attr in dir(qtree) if not attr.startswith('_')]}")
                 
+                # Check if ext_performance_monitoring exists and is enabled
+                if hasattr(qtree, 'ext_performance_monitoring'):
+                    ext_perf_mon = qtree.ext_performance_monitoring
+                    print(f"Debug: ext_performance_monitoring object: {ext_perf_mon}")
+                    if hasattr(ext_perf_mon, 'enabled'):
+                        print(f"Debug: ext_performance_monitoring.enabled: {ext_perf_mon.enabled}")
+                    else:
+                        print("Debug: ext_performance_monitoring.enabled attribute not found")
+                else:
+                    print("Debug: ext_performance_monitoring attribute not found")
+                
             # Note: Qtree metrics may be available even without explicit extended monitoring field
             # The metrics endpoint will return appropriate error if metrics are not available
 
-            # Get the current connection
-            connection = HostConnection.get_connection()
+            # Use the config to construct the API request
+            hostname = config["hostname"]
+            username = config["username"]
+            password = config["password"]
+            verify_ssl = config.get("verifySslCert", True)
             
             # Construct the metrics URL
-            metrics_url = f"https://{connection.host}/api/storage/qtrees/{volume_uuid}/{qtree_id}/metrics"
+            metrics_url = f"https://{hostname}/api/storage/qtrees/{volume_uuid}/{qtree_id}/metrics"
+            
+            if print_output:
+                print(f"Debug: Making request to: {metrics_url}")
             
             # Make the API request
             response = requests.get(
                 metrics_url,
-                auth=(connection.username, connection.password),
-                verify=connection.verify,
+                auth=(username, password),
+                verify=verify_ssl,
                 headers={'Accept': 'application/json'}
             )
             
