@@ -81,8 +81,8 @@ def create_cifs_share(
         
         try:
             # Verify SVM exists
-            svm = NetAppSvm.find(name=svm)
-            if not svm:
+            svm_object = NetAppSvm.find(name=svm)
+            if not svm_object:
                 raise InvalidCifsShareParameterError("SVM %s not found" % svm)
             
             # Check if CIFS share already exists
@@ -189,8 +189,8 @@ def list_cifs_shares(
             query = {}
             if svm:
                 # Verify SVM exists
-                svm = NetAppSvm.find(name=svm)
-                if not svm:
+                svm_object = NetAppSvm.find(name=svm)
+                if not svm_object:
                     raise InvalidCifsShareParameterError("SVM %s not found" % svm)
                 query['svm.name'] = svm
                 
@@ -272,8 +272,8 @@ def get_cifs_share(
         
         try:
             # Verify SVM exists
-            svm = NetAppSvm.find(name=svm)
-            if not svm:
+            svm_object = NetAppSvm.find(name=svm)
+            if not svm_object:
                 raise InvalidCifsShareParameterError("SVM %s not found" % svm)
             
             # Find the specific CIFS share
