@@ -39,6 +39,8 @@ class CreateCommand(BaseCommand):
             self._create_volume()
         elif target in ("snapmirror-relationship", "sm", "snapmirror"):
             self._create_snapmirror_relationship()
+        elif target in ("cifs-share", "cifs", "cifsshare"):
+            self._create_cifs_share()
         else:
             self.handle_invalid_command()
     
