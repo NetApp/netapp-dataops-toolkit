@@ -50,6 +50,12 @@ Note: To view details regarding options/arguments for a specific command, run th
 \tlist snapmirror-relationships\tList all existing SnapMirror relationships.
 \tsync snapmirror-relationship\tTrigger a sync operation for an existing SnapMirror relationship.
 \tcreate snapmirror-relationship\tCreate new SnapMirror relationship.
+
+CIFS Share Management Commands:
+Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
+\tcreate cifs-share\t\tCreate a new CIFS share.
+\tlist cifs-shares\t\tList all CIFS shares.
+\tget cifs-share\t\t\tGet details of a specific CIFS share.
 '''
 
 # Configuration command help text
