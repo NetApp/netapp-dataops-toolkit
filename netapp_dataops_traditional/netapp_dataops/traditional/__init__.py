@@ -914,7 +914,7 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
             raise InvalidVolumeParameterError("size")
 		
         # Create option to choose snaplock type
-        if snaplock_type not in ['compliance', 'enterprise', None]:
+        if snaplock_type not in ['compliance', 'enterprise', '', None]:
             if print_output:
                 logger.error("Error: Invalid snaplock volume type specified. Value must be either 'compliance' or 'enterprise'")
             raise InvalidVolumeParameterError("snaplockVolume")
@@ -927,7 +927,7 @@ def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = Fa
 
 
         #check tiering policy
-        if not tiering_policy in ['none','auto','snapshot-only','all', None]:
+        if not tiering_policy in ['none','auto','snapshot-only','all', '', None]:
             if print_output:
                 logger.error("Error: tiering policy can be: none,auto,snapshot-only or all")
             raise InvalidVolumeParameterError("tieringPolicy")
