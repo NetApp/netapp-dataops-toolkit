@@ -17,9 +17,9 @@ from ..core import (
 )
 
 def create_cifs_share(
-    share_name: str,
+    name: str,
     path: str,
-    svm_name: str,
+    svm: str,
     comment: Optional[str] = None,
     acls: Optional[List[Dict]] = None,
     properties: Optional[List[str]] = None,
@@ -30,12 +30,13 @@ def create_cifs_share(
     Create a CIFS share.
     
     Args:
-        share_name (str): Name of the CIFS share
+        name (str): Name of the CIFS share
         path (str): Path in the owning SVM namespace that is shared through this share.
-        svm_name (str): Existing SVM in which to create the CIFS share.
+        svm (str): Existing SVM in which to create the CIFS share.
         comment (str, optional): Comment for the share
         properties (List[str], optional): Share properties (e.g., ['browsable', 'oplocks'])
         acls (List[Dict], optional): Access Control List entries
+        cluster_name (str, optional): Non default hosting cluster name
         print_output (bool): Whether to print output messages
         
     Returns:
@@ -71,25 +72,25 @@ def create_cifs_share(
             raise
 
         if print_output:
-            # logger.info("Creating CIFS share %s at path %s on SVM %s", share_name, path, svm_name)
+            # logger.info("Creating CIFS share %s at path %s on SVM %s", name, path, svm)
             pass
         
         try:
             # Verify SVM exists
-            svm = NetAppSvm.find(name=svm_name)
+            svm = NetAppSvm.find(name=svm)
             if not svm:
-                raise InvalidCifsShareParameterError("SVM %s not found" % svm_name)
+                raise InvalidCifsShareParameterError("SVM %s not found" % svm)
             
             # Check if CIFS share already exists
-            existing_share = NetAppCifsShare.find(name=share_name, svm=svm_name)
+            existing_share = NetAppCifsShare.find(name=name, svm=svm)
             if existing_share:
-                raise InvalidCifsShareParameterError("CIFS share %s already exists on SVM %s" % (share_name, svm_name))
+                raise InvalidCifsShareParameterError("CIFS share %s already exists on SVM %s" % (name, svm))
             
             # Create the CIFS share object
             cifs_share = NetAppCifsShare()
-            cifs_share.name = share_name
+            cifs_share.name = name
             cifs_share.path = path
-            cifs_share.svm = {"name": svm_name}
+            cifs_share.svm = {"name": svm}
             
             # Add optional parameters
             if comment:
@@ -113,7 +114,7 @@ def create_cifs_share(
             cifs_share.post(poll=True)
             
             if print_output:
-                # logger.info("CIFS share '%s' created successfully", share_name)
+                # logger.info("CIFS share '%s' created successfully", name)
                 pass
                 
             return cifs_share
@@ -129,7 +130,7 @@ def create_cifs_share(
     
 
 def list_cifs_shares(
-    svm_name: Optional[str] = None,
+    svm: Optional[str] = None,
     name_pattern: Optional[str] = None,
     cluster_name: Optional[str] = None,
     print_output: bool = False
@@ -138,8 +139,9 @@ def list_cifs_shares(
     List all CIFS shares.
     
     Args:
-        svm_name (str, optional): Name of the SVM to filter shares
+        svm (str, optional): Name of the SVM to filter shares
         name_pattern (str, optional): Pattern to filter share names
+        cluster_name (str, optional): Non default hosting cluster name
         print_output (bool): Whether to print output messages
         
     Returns:
@@ -181,12 +183,12 @@ def list_cifs_shares(
         try:
             # Build query parameters
             query = {}
-            if svm_name:
+            if svm:
                 # Verify SVM exists
-                svm = NetAppSvm.find(name=svm_name)
+                svm = NetAppSvm.find(name=svm)
                 if not svm:
-                    raise InvalidCifsShareParameterError("SVM %s not found" % svm_name)
-                query['svm.name'] = svm_name
+                    raise InvalidCifsShareParameterError("SVM %s not found" % svm)
+                query['svm.name'] = svm
                 
             if name_pattern:
                 query['name'] = name_pattern
@@ -214,8 +216,8 @@ def list_cifs_shares(
     
 
 def get_cifs_share(
-    share_name: str,
-    svm_name: str,
+    name: str,
+    svm: str,
     cluster_name: Optional[str] = None,
     print_output: bool = False
 ) -> NetAppCifsShare:
@@ -223,8 +225,9 @@ def get_cifs_share(
     Get detailed configuration of a specific CIFS share.
     
     Args:
-        share_name (str): Name of the CIFS share
-        svm_name (str): Name of the Storage Virtual Machine (SVM)
+        name (str): Name of the CIFS share
+        svm (str): Name of the Storage Virtual Machine (SVM)
+        cluster_name (str, optional): Non default hosting cluster name
         print_output (bool): Whether to print output messages
         
     Returns:
@@ -260,20 +263,20 @@ def get_cifs_share(
             raise
     
         if print_output:
-            # logger.info("Retrieving CIFS share %s from SVM %s", share_name, svm_name)
+            # logger.info("Retrieving CIFS share %s from SVM %s", name, svm)
             pass
         
         try:
             # Verify SVM exists
-            svm = NetAppSvm.find(name=svm_name)
+            svm = NetAppSvm.find(name=svm)
             if not svm:
-                raise InvalidCifsShareParameterError("SVM %s not found" % svm_name)
+                raise InvalidCifsShareParameterError("SVM %s not found" % svm)
             
             # Find the specific CIFS share
-            cifs_share = NetAppCifsShare.find(name=share_name, svm=svm_name)
+            cifs_share = NetAppCifsShare.find(name=name, svm=svm)
             
             if not cifs_share:
-                raise InvalidCifsShareParameterError("CIFS share %s not found on SVM %s" % (share_name, svm_name))
+                raise InvalidCifsShareParameterError("CIFS share %s not found on SVM %s" % (name, svm))
             
             # Get detailed information by retrieving the full object
             cifs_share.get()
@@ -292,7 +295,7 @@ def get_cifs_share(
                 pass
             
             if print_output:
-                # logger.info("Successfully retrieved CIFS share %s", share_name)
+                # logger.info("Successfully retrieved CIFS share %s", name)
                 pass
                 
             return cifs_share
