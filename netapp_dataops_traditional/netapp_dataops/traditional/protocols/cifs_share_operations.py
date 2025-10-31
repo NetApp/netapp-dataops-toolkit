@@ -16,6 +16,10 @@ from ..core import (
     _print_invalid_config_error
 )
 
+from ...logging_utils import setup_logger
+
+logger = setup_logger(__name__)
+
 def create_cifs_share(
     name: str,
     path: str,
@@ -72,7 +76,7 @@ def create_cifs_share(
             raise
 
         if print_output:
-            # logger.info("Creating CIFS share %s at path %s on SVM %s", name, path, svm)
+            logger.info("Creating CIFS share %s at path %s on SVM %s", name, path, svm)
             pass
         
         try:
@@ -103,7 +107,7 @@ def create_cifs_share(
                 for prop in properties:
                     if prop not in valid_properties:
                         if print_output:
-                            # logger.warning("Property '%s' may not be valid. Valid properties: %s", prop, valid_properties)
+                            logger.warning("Property '%s' may not be valid. Valid properties: %s", prop, valid_properties)
                             pass
                 cifs_share.properties = properties
                 
@@ -114,14 +118,14 @@ def create_cifs_share(
             cifs_share.post(poll=True)
             
             if print_output:
-                # logger.info("CIFS share '%s' created successfully", name)
+                logger.info("CIFS share '%s' created successfully", name)
                 pass
                 
             return cifs_share
             
         except NetAppRestError as err:
             if print_output:
-                # logger.error("Error: ONTAP Rest API Error: %s", err)
+                logger.error("Error: ONTAP Rest API Error: %s", err)
                 pass
             raise APIConnectionError(err)
     
@@ -177,7 +181,7 @@ def list_cifs_shares(
             raise
     
         if print_output:
-            # logger.info("Retrieving CIFS shares...")
+            logger.info("Retrieving CIFS shares...")
             pass
         
         try:
@@ -200,14 +204,14 @@ def list_cifs_shares(
                 shares = list(NetAppCifsShare.get_collection())
             
             if print_output:
-                # logger.info("Found %d CIFS share(s)", len(shares))
+                logger.info("Found %d CIFS share(s)", len(shares))
                 pass
                 
             return shares
             
         except NetAppRestError as err:
             if print_output:
-                # logger.error("Error: ONTAP Rest API Error: %s", err)
+                logger.error("Error: ONTAP Rest API Error: %s", err)
                 pass
             raise APIConnectionError(err)
     
@@ -263,7 +267,7 @@ def get_cifs_share(
             raise
     
         if print_output:
-            # logger.info("Retrieving CIFS share %s from SVM %s", name, svm)
+            logger.info("Retrieving CIFS share %s from SVM %s", name, svm)
             pass
         
         try:
@@ -283,26 +287,26 @@ def get_cifs_share(
 
             if print_output:
                 # Log share details
-                # logger.info("Share Name: %s", cifs_share.name)
-                # logger.info("Path: %s", cifs_share.path)
-                # logger.info("SVM: %s", cifs_share.svm.name if hasattr(cifs_share.svm, 'name') else cifs_share.svm)
-                # if hasattr(cifs_share, 'comment') and cifs_share.comment:
-                #     logger.info("Comment: %s", cifs_share.comment)
-                # if hasattr(cifs_share, 'properties') and cifs_share.properties:
-                #     logger.info("Properties: %s", cifs_share.properties)
-                # if hasattr(cifs_share, 'acls') and cifs_share.acls:
-                #     logger.info("ACLs: %s", cifs_share.acls)
+                logger.info("Share Name: %s", cifs_share.name)
+                logger.info("Path: %s", cifs_share.path)
+                logger.info("SVM: %s", cifs_share.svm.name if hasattr(cifs_share.svm, 'name') else cifs_share.svm)
+                if hasattr(cifs_share, 'comment') and cifs_share.comment:
+                    logger.info("Comment: %s", cifs_share.comment)
+                if hasattr(cifs_share, 'properties') and cifs_share.properties:
+                    logger.info("Properties: %s", cifs_share.properties)
+                if hasattr(cifs_share, 'acls') and cifs_share.acls:
+                    logger.info("ACLs: %s", cifs_share.acls)
                 pass
             
             if print_output:
-                # logger.info("Successfully retrieved CIFS share %s", name)
+                logger.info("Successfully retrieved CIFS share %s", name)
                 pass
                 
             return cifs_share
               
         except NetAppRestError as err:
             if print_output:
-                # logger.error("Error: ONTAP Rest API Error: %s", err)
+                logger.error("Error: ONTAP Rest API Error: %s", err)
                 pass
             raise APIConnectionError(err)
     
