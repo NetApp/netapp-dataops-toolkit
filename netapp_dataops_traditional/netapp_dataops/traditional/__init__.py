@@ -49,7 +49,8 @@ from .exceptions import (
     MountOperationError,
     InvalidSnapMirrorParameterError,
     SnapMirrorSyncOperationError,
-    CloudSyncSyncOperationError
+    CloudSyncSyncOperationError,
+    InvalidCifsShareParameterError
 )
 
 # Import volume operations from ontap package

@@ -20,7 +20,9 @@ from netapp_dataops.traditional import (
     InvalidConfigError,
     APIConnectionError,
     InvalidVolumeParameterError,
-    MountOperationError
+    MountOperationError,
+    ConnectionTypeError,
+    InvalidCifsShareParameterError
 )
 
 
@@ -362,6 +364,6 @@ class CreateCommand(BaseCommand):
                 comment=comment,
                 print_output=True
             )
-        except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
+        except (InvalidConfigError, APIConnectionError, InvalidCifsShareParameterError):
             import sys
             sys.exit(1)

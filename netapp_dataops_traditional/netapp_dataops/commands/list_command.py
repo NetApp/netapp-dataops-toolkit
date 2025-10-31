@@ -19,7 +19,8 @@ from netapp_dataops.traditional import (
     list_cifs_shares,
     InvalidConfigError,
     APIConnectionError,
-    InvalidVolumeParameterError
+    InvalidVolumeParameterError,
+    InvalidCifsShareParameterError
 )
 
 
@@ -219,6 +220,6 @@ class ListCommand(BaseCommand):
                 cluster_name=cluster_name,
                 print_output=True
             )
-        except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
+        except (InvalidConfigError, APIConnectionError, InvalidCifsShareParameterError):
             import sys
             sys.exit(1)
