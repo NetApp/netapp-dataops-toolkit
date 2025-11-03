@@ -481,36 +481,62 @@ def get_qtree_metrics(volume_uuid: str, qtree_id: int, cluster_name: str = None,
                             print(f"    Timestamp: {record['timestamp']}")
                         if 'duration' in record:
                             print(f"    Duration: {record['duration']}")
+                        if 'status' in record:
+                            print(f"    Status: {record['status']}")
+                        
+                        # Print qtree info from response
+                        if 'qtree' in record:
+                            qtree_info = record['qtree']
+                            print(f"    Qtree Name: {qtree_info.get('name', 'N/A')}")
+                        
+                        # Print SVM info from response
+                        if 'svm' in record:
+                            svm_info = record['svm']
+                            print(f"    SVM: {svm_info.get('name', 'N/A')} (UUID: {svm_info.get('uuid', 'N/A')})")
+                        
+                        # Print volume info from response
+                        if 'volume' in record:
+                            vol_info = record['volume']
+                            print(f"    Volume: {vol_info.get('name', 'N/A')} (UUID: {vol_info.get('uuid', 'N/A')})")
                         
                         # Print IOPS metrics
                         if 'iops' in record:
                             iops = record['iops']
+                            print(f"    IOPS:")
                             if 'read' in iops:
-                                print(f"    Read IOPS: {iops['read']}")
+                                print(f"      Read: {iops['read']}")
                             if 'write' in iops:
-                                print(f"    Write IOPS: {iops['write']}")
+                                print(f"      Write: {iops['write']}")
+                            if 'other' in iops:
+                                print(f"      Other: {iops['other']}")
                             if 'total' in iops:
-                                print(f"    Total IOPS: {iops['total']}")
+                                print(f"      Total: {iops['total']}")
                         
                         # Print latency metrics
                         if 'latency' in record:
                             latency = record['latency']
+                            print(f"    Latency:")
                             if 'read' in latency:
-                                print(f"    Read Latency (μs): {latency['read']}")
+                                print(f"      Read: {latency['read']}")
                             if 'write' in latency:
-                                print(f"    Write Latency (μs): {latency['write']}")
+                                print(f"      Write: {latency['write']}")
+                            if 'other' in latency:
+                                print(f"      Other: {latency['other']}")
                             if 'total' in latency:
-                                print(f"    Total Latency (μs): {latency['total']}")
+                                print(f"      Total: {latency['total']}")
                         
                         # Print throughput metrics
                         if 'throughput' in record:
                             throughput = record['throughput']
+                            print(f"    Throughput:")
                             if 'read' in throughput:
-                                print(f"    Read Throughput (bytes/s): {throughput['read']}")
+                                print(f"      Read: {throughput['read']}")
                             if 'write' in throughput:
-                                print(f"    Write Throughput (bytes/s): {throughput['write']}")
+                                print(f"      Write: {throughput['write']}")
+                            if 'other' in throughput:
+                                print(f"      Other: {throughput['other']}")
                             if 'total' in throughput:
-                                print(f"    Total Throughput (bytes/s): {throughput['total']}")
+                                print(f"      Total: {throughput['total']}")
                         
                         print()  # Empty line between records
                     
