@@ -425,38 +425,6 @@ def get_qtree_metrics(volume_uuid: str, qtree_id: int, cluster_name: str = None,
                 if print_output:
                     print("Error: Qtree not found.")
                 raise InvalidVolumeParameterError("Qtree not found")
-            
-            if print_output:
-                print(f"Debug: Qtree found. Available fields: {[attr for attr in dir(qtree) if not attr.startswith('_')]}")
-                
-                # Check if ext_performance_monitoring exists and is enabled
-                try:
-                    # Try to access ext_performance_monitoring as attribute
-                    if hasattr(qtree, 'ext_performance_monitoring'):
-                        ext_perf_mon = getattr(qtree, 'ext_performance_monitoring')
-                        print(f"Debug: ext_performance_monitoring object: {ext_perf_mon}")
-                        print(f"Debug: ext_performance_monitoring type: {type(ext_perf_mon)}")
-                        if hasattr(ext_perf_mon, 'enabled'):
-                            print(f"Debug: ext_performance_monitoring.enabled: {ext_perf_mon.enabled}")
-                        else:
-                            print("Debug: ext_performance_monitoring.enabled attribute not found")
-                    else:
-                        print("Debug: ext_performance_monitoring attribute not found")
-                        
-                    # Try to get it with specific field request
-                    qtree_check = NetAppQtree(id=qtree_id, **{"volume.uuid": volume_uuid})
-                    qtree_check.get(fields="ext_performance_monitoring")
-                    if hasattr(qtree_check, 'ext_performance_monitoring'):
-                        ext_perf_mon_check = qtree_check.ext_performance_monitoring
-                        print(f"Debug: ext_performance_monitoring via field request: {ext_perf_mon_check}")
-                        if hasattr(ext_perf_mon_check, 'enabled'):
-                            print(f"Debug: ext_performance_monitoring.enabled via field request: {ext_perf_mon_check.enabled}")
-                    
-                except Exception as e:
-                    print(f"Debug: Error checking ext_performance_monitoring: {e}")
-                
-            # Note: Qtree metrics may be available even without explicit extended monitoring field
-            # The metrics endpoint will return appropriate error if metrics are not available
 
             # Use the config to construct the API request
             hostname = config["hostname"]
@@ -468,20 +436,13 @@ def get_qtree_metrics(volume_uuid: str, qtree_id: int, cluster_name: str = None,
             try:
                 # Try to decode the password as base64
                 decoded_password = base64.b64decode(password).decode('utf-8')
-                if print_output:
-                    print(f"Debug: Password was base64 encoded, decoded successfully")
                 password = decoded_password
-            except Exception as e:
+            except Exception:
                 # If decoding fails, assume password is already in plain text
-                if print_output:
-                    print(f"Debug: Password appears to be plain text (base64 decode failed): {e}")
+                pass
             
             # Construct the metrics URL
             metrics_url = f"https://{hostname}/api/storage/qtrees/{volume_uuid}/{qtree_id}/metrics"
-            
-            if print_output:
-                print(f"Debug: Making request to: {metrics_url}")
-                print(f"Debug: Using username: {username}")
             
             # Make the API request
             response = requests.get(
@@ -491,49 +452,21 @@ def get_qtree_metrics(volume_uuid: str, qtree_id: int, cluster_name: str = None,
                 headers={'Accept': 'application/json'}
             )
             
-            if response.status_code == 404:
+            if response.status_code != 200:
                 if print_output:
-                    print("Error: Qtree metrics endpoint not found. This may indicate:")
-                    print("  1. The qtree does not exist")
-                    print("  2. Performance metrics are not enabled for this qtree")
-                    print("  3. The ONTAP version may not support qtree metrics")
-                raise InvalidVolumeParameterError("Qtree metrics not available")
-            elif response.status_code == 401:
-                if print_output:
-                    print("Error: Unauthorized access to qtree metrics. This may indicate:")
-                    print("  1. The user account lacks sufficient privileges for performance monitoring")
-                    print("  2. Additional roles may be required (e.g., 'readonly' + performance monitoring privileges)")
-                    print("  3. The user may need 'admin' or 'performance-admin' role")
-                    print("  4. Qtree-level metrics may require special permissions beyond volume metrics")
+                    print(f"Error: Failed to retrieve qtree metrics. Status code: {response.status_code}")
                     print(f"Response: {response.text}")
-                raise InvalidVolumeParameterError("Insufficient permissions for qtree metrics")
-            elif response.status_code == 400:
-                if print_output:
-                    print("Error: Bad request. This may indicate:")
-                    print("  1. Analytics/activity tracking is not enabled on the parent volume")
-                    print("  2. Invalid qtree ID or volume UUID")
-                    print("  3. Qtree metrics may not be supported in this ONTAP version")
-                    print(f"Response: {response.text}")
-                raise InvalidVolumeParameterError("Cannot retrieve qtree metrics - check analytics settings")
-            elif response.status_code != 200:
-                if print_output:
-                    print(f"Error: Failed to retrieve metrics. Status code: {response.status_code}")
-                    print(f"Response: {response.text}")
-                raise APIConnectionError(f"Failed to retrieve metrics: {response.status_code}")
-            
+                raise APIConnectionError(f"Failed to retrieve qtree metrics: {response.status_code}")
+
             metrics_data = response.json()
             
             # Check if we actually got metrics data
             if not metrics_data or ('records' in metrics_data and len(metrics_data['records']) == 0):
                 if print_output:
                     print("Warning: No metrics data available for this qtree.")
-                    print("This may indicate that:")
-                    print("  1. Analytics/activity tracking needs to be enabled on the parent volume")
-                    print("  2. Insufficient time has passed to collect metrics")
-                    print("  3. No I/O activity has occurred on this qtree")
                 return {"records": [], "message": "No metrics data available"}
             
-            # Print metrics if requested
+            # Print metrics
             if print_output:
                 print("Qtree Performance Metrics:")
                 print(f"  Volume UUID: {volume_uuid}")
