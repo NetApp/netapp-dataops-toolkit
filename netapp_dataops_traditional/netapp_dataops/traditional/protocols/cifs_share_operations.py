@@ -1,7 +1,6 @@
 from typing import Dict, List, Optional
 from netapp_ontap.resources import CifsShare as NetAppCifsShare
 from netapp_ontap.resources import Svm as NetAppSvm
-from netapp_ontap.resources import CifsService as NetAppCifsService
 from netapp_ontap.error import NetAppRestError
 
 from ..exceptions import (
@@ -20,68 +19,6 @@ from ..core import (
 from ...logging_utils import setup_logger
 
 logger = setup_logger(__name__)
-
-def _check_and_create_cifs_server(
-    svm: str,
-    workgroup: str = "WORKGROUP",
-    cifs_server_name: Optional[str] = None,
-    print_output: bool = False
-) -> bool:
-    """
-    Check if CIFS server exists on SVM, create one if it doesn't exist.
-    
-    Args:
-        svm (str): Name of the SVM
-        workgroup (str): Workgroup name for the CIFS server (default: WORKGROUP)
-        cifs_server_name (str, optional): CIFS server name (default: auto-generated)
-        print_output (bool): Whether to print output messages
-        
-    Returns:
-        bool: True if CIFS server exists or was created successfully
-        
-    Raises:
-        InvalidCifsShareParameterError: If unable to create CIFS server
-        APIConnectionError: If API request fails
-    """
-    try:
-        # Check if CIFS service already exists
-        existing_cifs = NetAppCifsService.find(svm={"name": svm})
-      
-        if existing_cifs:
-            if print_output:
-                logger.info("CIFS server already exists on SVM %s", svm)
-            return True
-        
-        # CIFS server doesn't exist, create one
-        if print_output:
-            logger.info("CIFS server not found on SVM %s. Creating CIFS server...", svm)
-        
-        # Auto-generate CIFS server name if not provided
-        if not cifs_server_name:
-            # Use SVM name with CIFS prefix, limited to 15 characters for NetBIOS compatibility
-            cifs_server_name = f"CIFS-{svm.upper()}"[:15]
-        
-        # Create CIFS service object
-        cifs_service = NetAppCifsService()
-        cifs_service.svm = {"name": svm}
-        cifs_service.name = cifs_server_name
-        cifs_service.workgroup = workgroup
-        
-        # Create the CIFS server
-        cifs_service.post(poll=True)
-        
-        if print_output:
-            logger.info("CIFS server '%s' created successfully on SVM %s in workgroup '%s'", 
-                       cifs_server_name, svm, workgroup)
-        
-        return True
-        
-    except NetAppRestError as err:
-        error_msg = f"Failed to create CIFS server on SVM {svm}: {err}"
-        if print_output:
-            logger.error(error_msg)
-        raise InvalidCifsShareParameterError(error_msg)
-
 
 def create_cifs_share(
     name: str,
