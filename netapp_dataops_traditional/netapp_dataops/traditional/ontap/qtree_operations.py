@@ -9,6 +9,7 @@ to avoid code duplication and ensure consistency across the toolkit.
 import os
 import requests
 import json
+import base64
 from netapp_ontap.error import NetAppRestError
 from netapp_ontap.resources import Qtree as NetAppQtree
 from netapp_ontap import HostConnection
@@ -463,11 +464,24 @@ def get_qtree_metrics(volume_uuid: str, qtree_id: int, cluster_name: str = None,
             password = config["password"]
             verify_ssl = config.get("verifySslCert", False)
             
+            # Decode base64 password if it's encoded
+            try:
+                # Try to decode the password as base64
+                decoded_password = base64.b64decode(password).decode('utf-8')
+                if print_output:
+                    print(f"Debug: Password was base64 encoded, decoded successfully")
+                password = decoded_password
+            except Exception as e:
+                # If decoding fails, assume password is already in plain text
+                if print_output:
+                    print(f"Debug: Password appears to be plain text (base64 decode failed): {e}")
+            
             # Construct the metrics URL
             metrics_url = f"https://{hostname}/api/storage/qtrees/{volume_uuid}/{qtree_id}/metrics"
             
             if print_output:
                 print(f"Debug: Making request to: {metrics_url}")
+                print(f"Debug: Using username: {username}")
             
             # Make the API request
             response = requests.get(
