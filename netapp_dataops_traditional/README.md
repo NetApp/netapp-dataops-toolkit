@@ -742,9 +742,9 @@ Qtree Details:
 
 #### Retrieve Performance Metrics for a Specific Qtree
 
-The NetApp DataOps Toolkit can be used to retrieve historical performance metrics for a specific qtree. This functionality requires analytics/activity tracking to be enabled on the parent volume. The command for retrieving qtree metrics is `netapp_dataops_cli.py get qtree-metrics`.
+The NetApp DataOps Toolkit can be used to retrieve historical performance metrics for a specific qtree. This functionality requires performance monitoring to be enabled on the qtree. The command for retrieving qtree metrics is `netapp_dataops_cli.py get qtree-metrics`.
 
-Note: Requires analytics/activity tracking to be enabled on the parent volume through ONTAP System Manager or CLI. May require ONTAP 9.8+ for qtree metrics support.
+Note: Requires performance monitoring to be enabled on the qtree.
 
 The following options/arguments are required:
 
@@ -1694,7 +1694,7 @@ InvalidVolumeParameterError     # An invalid parameter was specified.
 
 #### Create a New Qtree in a Volume
 
-The NetApp DataOps Toolkit can be used to create a new qtree within an existing FlexVol or FlexGroup volume as part of any Python program or workflow. Qtrees provide a way to partition data within a volume and can have their own security settings, export policies, and quotas.
+The NetApp DataOps Toolkit can be used to create a new qtree within an existing volume as part of any Python program or workflow. Qtrees provide a way to partition data within a volume and can have their own security settings, export policies, and quotas.
 
 ##### Function Definition
 
@@ -1790,9 +1790,9 @@ InvalidVolumeParameterError     # An invalid parameter was specified.
 
 #### Retrieve Performance Metrics for a Specific Qtree
 
-The NetApp DataOps Toolkit can be used to retrieve historical performance metrics for a specific qtree as part of any Python program or workflow. This functionality requires analytics/activity tracking to be enabled on the parent volume through ONTAP System Manager or CLI.
+The NetApp DataOps Toolkit can be used to retrieve historical performance metrics for a specific qtree as part of any Python program or workflow. This functionality requires performance monitoring to be enabled on the qtree. 
 
-Note: Requires analytics/activity tracking to be enabled on the parent volume. May require ONTAP 9.8+ for qtree metrics support.
+Note: Requires performance monitoring to be enabled on the qtree.
 
 ##### Function Definition
 
