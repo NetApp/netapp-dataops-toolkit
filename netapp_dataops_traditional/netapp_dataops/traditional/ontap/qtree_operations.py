@@ -421,7 +421,7 @@ def get_qtree_metrics(volume_uuid: str, qtree_id: int, cluster_name: str = None,
             qtree.get(fields="*")
             
             # Check if qtree exists
-            if not qtree.id:
+            if qtree.id is None:
                 if print_output:
                     print("Error: Qtree not found.")
                 raise InvalidVolumeParameterError("Qtree not found")
