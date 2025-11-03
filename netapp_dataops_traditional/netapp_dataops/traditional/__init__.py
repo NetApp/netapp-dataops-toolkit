@@ -224,15 +224,8 @@ def deleteVolume(volumeName: str, printOutput: bool = False) :
 
 
 @deprecated
-@deprecated
 def mountVolume(volumeName: str, mountpoint: str, printOutput: bool = False) :
     mount_volume(volume_name=volumeName, mountpoint=mountpoint, print_output=printOutput)
-
-
-@deprecated
-@deprecated
-def restoreSnapshot(volumeName: str, snapshotName: str, printOutput: bool = False) :
-    restore_snapshot(volume_name=volumeName, snapshot_name=snapshotName, print_output=printOutput)
 
 
 @deprecated

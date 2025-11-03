@@ -29,7 +29,7 @@ def create_qtree(qtree_name: str, volume_name: str, cluster_name: str = None, sv
                  security_style: str = None, unix_permissions: str = None, export_policy: str = None,
                  print_output: bool = False):
     """
-    Create a new qtree in a FlexVol or FlexGroup volume.
+    Create a new qtree in a volume.
 
     Required Arguments:
         qtree_name (str): Name of the qtree to create.
@@ -376,8 +376,7 @@ def get_qtree_metrics(volume_uuid: str, qtree_id: int, cluster_name: str = None,
     """
     Retrieve historical performance metrics for a qtree.
     
-    Note: Requires analytics/activity tracking to be enabled on the parent volume
-    through ONTAP System Manager or CLI. May require ONTAP 9.8+ for qtree metrics support.
+    Note: Requires extended performance monitoring to be enabled on the qtree.
 
     Required Arguments:
         volume_uuid (str): UUID of the volume containing the qtree.

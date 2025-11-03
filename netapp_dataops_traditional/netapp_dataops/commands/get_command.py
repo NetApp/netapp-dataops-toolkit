@@ -5,7 +5,8 @@ Get command module for NetApp DataOps Toolkit CLI.
 import getopt
 from .base_command import BaseCommand
 from netapp_dataops.help_text import (
-    HELP_TEXT_GET_QTREE
+    HELP_TEXT_GET_QTREE,
+    HELP_TEXT_GET_QTREE_METRICS
 )
 from netapp_dataops.traditional import (
     get_qtree,
@@ -101,25 +102,12 @@ class GetCommand(BaseCommand):
             )
         except Exception as err:
             print(err)
-            print("Error: Invalid command line options for qtree metrics.")
-            print("Usage: get qtree-metrics --volume-uuid <uuid> --id <qtree_id> [--cluster-name <name>]")
-            self.handle_invalid_command(invalid_opt_arg=True)
+            self.handle_invalid_command(help_text=HELP_TEXT_GET_QTREE_METRICS, invalid_opt_arg=True)
         
         # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print("Get Qtree Metrics Help:")
-                print("Usage: get qtree-metrics --volume-uuid <uuid> --id <qtree_id> [--cluster-name <name>]")
-                print("")
-                print("Required Arguments:")
-                print("  -v, --volume-uuid    UUID of the volume containing the qtree")
-                print("  -i, --id             ID of the qtree to get metrics for")
-                print("")
-                print("Optional Arguments:")
-                print("  -u, --cluster-name   Name of the hosting cluster")
-                print("  -h, --help           Show this help message")
-                print("")
-                print("Note: Extended performance monitoring must be enabled for the qtree.")
+                print(HELP_TEXT_GET_QTREE_METRICS)
                 return
             elif opt in ("-v", "--volume-uuid"):
                 volume_uuid = arg
@@ -134,14 +122,12 @@ class GetCommand(BaseCommand):
         
         # Check for required options
         if not volume_uuid or qtree_id is None:
-            print("Error: Both --volume-uuid and --id are required.")
-            print("Usage: get qtree-metrics --volume-uuid <uuid> --id <qtree_id> [--cluster-name <name>]")
-            self.handle_invalid_command(invalid_opt_arg=True)
+            self.handle_invalid_command(help_text=HELP_TEXT_GET_QTREE_METRICS, invalid_opt_arg=True)
         
         # Validate qtree_id is non-negative
         if qtree_id < 0:
             print("Error: Qtree ID must be a non-negative integer.")
-            self.handle_invalid_command(invalid_opt_arg=True)
+            self.handle_invalid_command(help_text=HELP_TEXT_GET_QTREE_METRICS, invalid_opt_arg=True)
         
         # Get qtree metrics
         try:

@@ -30,6 +30,7 @@ Note: To view details regarding options/arguments for a specific command, run th
 
 \tcreate qtree\t\t\tCreate a new qtree in a volume.
 \tget qtree\t\t\tRetrieve properties for a specific qtree.
+\tget qtree-metrics\t\tRetrieve performance metrics for a specific qtree.
 \tlist qtrees\t\t\tList qtrees in a volume or SVM.
 
 Snapshot Management Commands:
@@ -568,4 +569,25 @@ Examples:
 \tnetapp_dataops_cli.py list qtrees --volume=project1
 \tnetapp_dataops_cli.py list qtrees -v project2 -s svm1
 \tnetapp_dataops_cli.py list qtrees --volume=project3 --cluster-name=cluster1
+'''
+
+HELP_TEXT_GET_QTREE_METRICS = '''
+Command: get qtree-metrics
+
+Retrieve historical performance metrics for a qtree with analytics/activity tracking enabled.
+
+Note: Requires extended performance monitoring to be enabled on the qtree.
+
+Required Options/Arguments:
+\t-v, --volume-uuid=\tUUID of the volume containing the qtree.
+\t-i, --id=\t\tID of the qtree to retrieve metrics for.
+
+Optional Options/Arguments:
+\t-u, --cluster-name=\tNon default hosting cluster.
+\t-h, --help\t\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py get qtree-metrics --volume-uuid=cb20da45-4f6b-11e9-9a71-005056a7f717 --id=1
+\tnetapp_dataops_cli.py get qtree-metrics -v cb20da45-4f6b-11e9-9a71-005056a7f717 -i 2
+\tnetapp_dataops_cli.py get qtree-metrics --volume-uuid=cb20da45-4f6b-11e9-9a71-005056a7f717 --id=0 --cluster-name=cluster1
 '''
