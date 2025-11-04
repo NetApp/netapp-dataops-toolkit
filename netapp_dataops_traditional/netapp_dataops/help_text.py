@@ -515,16 +515,16 @@ Command: create cifs-share
 Create a new CIFS share.
 
 Required Options/Arguments:
-\t-n, --name=\tName of the CIFS share.
-\t-p, --path=\tPath in the owning SVM namespace that is shared through this share.
-\t-s, --svm=\tExisting SVM in which to create the CIFS share.
+\t-n, --name=\t\tName of the CIFS share.
+\t-p, --path=\tP\tath in the owning SVM namespace that is shared through this share.
+\t-s, --svm=\t\tExisting SVM in which to create the CIFS share.
 
 Optional Options/Arguments:
 \t-u, --cluster-name=\tNon default hosting cluster
-\t-c, --comment=\tComment/description for the CIFS share.
-\t-a, --acls=\tComma-separated list of ACLs to apply to the share. 
+\t-c, --comment=\t\tComment/description for the CIFS share.
+\t-a, --acls=\t\tComma-separated list of ACLs to apply to the share. 
 \t-l, --properties=\tComma-separated list of properties to apply to the share ('browsable', 'oplocks', 'showsnapshot', 'changenotify', 'attributecache', 'continuously_available', 'encryption').
-\t-h, --help\tPrint help text.
+\t-h, --help\t\tPrint help text.
 
 Examples:
 \tnetapp_dataops_cli.py create cifs share --name=project1 --path=/mnt/project1 
@@ -540,10 +540,10 @@ List all CIFS shares.
 Note: Administrative shares (c$, ipc$, admin$, print$) are hidden by default.
 
 Optional Options/Arguments:
-\t-s, --svm=\tExisting SVM in which to create the CIFS share.
+\t-s, --svm=\t\tExisting SVM in which to create the CIFS share.
 \t-n, --name-pattern=\tPattern to filter share names by (supports wildcard '*').
 \t-u, --cluster-name=\tNon default hosting cluster
-\t-h, --help\tPrint help text.
+\t-h, --help\t\tPrint help text.
 
 Examples:
 \tnetapp_dataops_cli.py list cifs shares --cluster-name=cluster1
@@ -557,12 +557,12 @@ Command: get cifs-share
 Get details of a specific CIFS share.
 
 Required Options/Arguments:
-\t-n, --name=\tName of the CIFS share to retrieve.
-\t-s, --svm=\tExisting SVM in which the CIFS share resides.
+\t-n, --name=\t\tName of the CIFS share to retrieve.
+\t-s, --svm=\t\tExisting SVM in which the CIFS share resides.
 
 Optional Options/Arguments:
 \t-u, --cluster-name=\tNon default hosting cluster
-\t-h, --help\tPrint help text.
+\t-h, --help\t\tPrint help text.
 
 Examples:
 \tnetapp_dataops_cli.py get cifs share --name=project1
