@@ -527,8 +527,8 @@ Optional Options/Arguments:
 \t-h, --help\t\tPrint help text.
 
 Examples:
-\tnetapp_dataops_cli.py create cifs share --name=project1 --path=/mnt/project1 
-\tnetapp_dataops_cli.py create cifs share -n project2 -p /mnt/project2
+\tnetapp_dataops_cli.py create cifs share --name=cifs-share1 --path=/mnt/project1 
+\tnetapp_dataops_cli.py create cifs share -n cifs-share2 -p /mnt/project2
 '''
 
 # List CIFS Shares help text
@@ -548,6 +548,7 @@ Optional Options/Arguments:
 Examples:
 \tnetapp_dataops_cli.py list cifs shares --cluster-name=cluster1
 \tnetapp_dataops_cli.py list cifs shares -u cluster1
+\tnetapp_dataops_cli.py list cifs-shares --name-pattern="cifs*"
 '''
 
 # Get CIFS Share help text
@@ -565,6 +566,6 @@ Optional Options/Arguments:
 \t-h, --help\t\tPrint help text.
 
 Examples:
-\tnetapp_dataops_cli.py get cifs share --name=project1
-\tnetapp_dataops_cli.py get cifs share -n project2
+\tnetapp_dataops_cli.py get cifs share --name=cifs-share1
+\tnetapp_dataops_cli.py get cifs share -n cifs-share2
 '''
