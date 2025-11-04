@@ -601,6 +601,8 @@ Snapshot restored successfully.
 
 ### CIFS Share Management Operations
 
+**Prerequisites:** The SVM must be configured for CIFS protocol before using CIFS share commands. 
+
 <a name="cli-create-cifs-share"></a>
 
 #### Create a New CIFS Share
@@ -1578,6 +1580,8 @@ InvalidVolumeParameterError     # An invalid parameter was specified.
 ```
 
 ### CIFS Share Management Operations
+
+**Prerequisites:** The SVM must be configured for CIFS protocol before using CIFS share commands. 
 
 <a name="lib-create-cifs-share"></a>
 
