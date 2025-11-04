@@ -2,6 +2,8 @@ from typing import Dict, List, Optional
 from netapp_ontap.resources import CifsShare as NetAppCifsShare
 from netapp_ontap.resources import Svm as NetAppSvm
 from netapp_ontap.error import NetAppRestError
+import pandas as pd
+from tabulate import tabulate
 
 from ..exceptions import (
     InvalidConfigError,
@@ -203,8 +205,37 @@ def list_cifs_shares(
             else:
                 shares = list(NetAppCifsShare.get_collection())
             
+            # Construct list of CIFS shares
+            sharesList = list()
+            for share in shares:
+                # Get detailed information for each share
+                share.get()
+                
+                # Get SVM name
+                svm_name = share.svm.name if hasattr(share.svm, 'name') else str(share.svm)
+                
+                # Get properties as comma-separated string
+                properties_str = ', '.join(share.properties) if hasattr(share, 'properties') and share.properties else ""
+                
+                # Construct dict containing CIFS share details
+                shareDict = {
+                    "Share Name": share.name,
+                    "SVM": svm_name,
+                    "Path": share.path,
+                    "Comment": share.comment if hasattr(share, 'comment') and share.comment else "",
+                    "Properties": properties_str
+                }
+                
+                # Append dict to list of shares
+                sharesList.append(shareDict)
+            
             if print_output:
-                logger.info("Found %d CIFS share(s)", len(shares))
+                # Convert shares array to Pandas DataFrame and print as table
+                if sharesList:
+                    sharesDF = pd.DataFrame.from_dict(sharesList, dtype="string")
+                    print(tabulate(sharesDF, showindex=False, headers=sharesDF.columns))
+                else:
+                    print("No CIFS shares found.")
                 pass
                 
             return shares
