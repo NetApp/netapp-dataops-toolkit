@@ -160,6 +160,9 @@ def list_cifs_shares(
         InvalidCifsShareParameterError: If invalid parameters are provided
     """
 
+    # Define administrative/hidden shares to filter out
+    admin_shares = ['c$', 'ipc$', 'admin$', 'print$']
+
     # Retrieve config details from config file
     try:
         config = _retrieve_config(print_output=print_output)
@@ -204,6 +207,10 @@ def list_cifs_shares(
                 shares = list(NetAppCifsShare.get_collection(**query))
             else:
                 shares = list(NetAppCifsShare.get_collection())
+
+            # Filter out administrative shares
+            shares = [share for share in shares if share.name.lower() not in admin_shares]
+            
             
             # Construct list of CIFS shares
             sharesList = list()

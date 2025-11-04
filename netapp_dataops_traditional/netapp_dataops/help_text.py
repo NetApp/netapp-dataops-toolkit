@@ -537,6 +537,8 @@ Command: list cifs-shares
 
 List all CIFS shares.
 
+Note: Administrative shares (c$, ipc$, admin$, print$) are hidden by default.
+
 Optional Options/Arguments:
 \t-s, --svm=\tExisting SVM in which to create the CIFS share.
 \t-n, --name-pattern=\tPattern to filter share names by (supports wildcard '*').
