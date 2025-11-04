@@ -99,6 +99,11 @@ Snapshot management operations:
 - [List all snapshots for a data volume.](#cli-list-snapshots)
 - [Restore a snapshot for a data volume.](#cli-restore-snapshot)
 
+CIFS share management operations:
+- [Create a new CIFS share.](#cli-create-cifs-share)
+- [List all CIFS shares.](#cli-list-cifs-shares)
+- [Get an existing CIFS share.](#cli-get-cifs-share)
+
 Data fabric operations:
 - [List all Cloud Sync relationships.](#cli-list-cloud-sync-relationships)
 - [Trigger a sync operation for an existing Cloud Sync relationship.](#cli-sync-cloud-sync-relationship)
@@ -594,6 +599,127 @@ Restoring snapshot 'initial_dataset'.
 Snapshot restored successfully.
 ```
 
+### CIFS Share Management Operations
+
+<a name="cli-create-cifs-share"></a>
+
+#### Create a New CIFS Share
+
+The NetApp DataOps Toolkit can be used to create a new CIFS share for an existing data volume. The command for creating a new CIFS share is `netapp_dataops_cli.py create cifs-share`.
+
+The following options/arguments are required:
+
+```
+    -n, --name=         Name of the CIFS share.
+    -p, --path=         Path in the owning SVM namespace that is shared through this share.
+    -s, --svm=          Existing SVM in which to create the CIFS share.
+```
+
+The following options/arguments are optional:
+
+```
+    -u, --cluster-name= Non-default hosting cluster.
+    -c, --comment=      Comment/ description for the CIFS share.
+    -a, --acls=         Comma-separated list of ACLs to apply to the share. 
+    -l, --properties=   Comma-separated list of properties to apply to the share ('browsable', 'oplocks', 'showsnapshot', 'changenotify', 'attributecache', 'continuously_available', 'encryption').
+    -h, --help          Print help text.
+```
+
+##### Example Usage
+
+Create a CIFS share named 'cifs-share-vol-1' at the path '/cifsshare_test_vol_1'.
+
+```sh
+netapp_dataops_cli.py create cifs-share -n cifs-share-vol-1 -p /cifsshare_test_vol_1 -s svm0
+Creating CIFS share cifs-share-vol-1 at path /cifsshare_test_vol_1 on SVM svm0
+CIFS share cifs-share-vol-1' created
+```
+
+Create a CIFS share named 'cifs-share-vol-2' for the volume 'cifsshare_test_vol_2' with a specific path and comment.
+
+```sh
+netapp_dataops_cli.py create cifs-share --name=cifs-share-vol-2 --path=cifsshare_test_vol_2 --comment="Data access share" --svm=svm0
+Creating CIFS share 'cifs-share-vol-2' at path /cifsshare_test_vol_2 on SVM svm0
+CIFS share created successfully.
+```
+
+<a name="cli-list-cifs-shares"></a>
+
+#### List All CIFS Shares
+
+The NetApp DataOps Toolkit can be used to print a list of all existing CIFS shares. The command for printing a list of all existing CIFS shares is `netapp_dataops_cli.py list cifs-shares`.
+
+Note: Administrative shares (c$, ipc$, admin$, print$) are filtered out from the results.
+
+No options/arguments are required for this command.
+
+The following options/arguments are optional:
+
+Optional Options/Arguments:
+
+```
+    -s, --svm=          Existing SVM in which to create the CIFS share.
+    -n, --name-pattern= Pattern to filter share names by (supports wildcard '*').
+    -u, --cluster-name= Non-default hosting cluster.
+    -h, --help          Print help text.
+```
+
+##### Example Usage
+
+List all CIFS shares.
+
+```sh
+netapp_dataops_cli.py list cifs-shares
+Retrieving CIFS shares...
+Share Name        SVM    Path                   Comment    Properties
+----------------  -----  ---------------------  ---------  ------------
+cifs-share-vol-1  svm0   /cifsshare_test_vol_1
+```
+
+List all CIFS shares on a specific SVM.
+
+```sh
+netapp_dataops_cli.py list cifs-shares --svm=svm0
+Retrieving CIFS shares...
+Share Name        SVM    Path                   Comment    Properties
+----------------  -----  ---------------------  ---------  ------------
+cifs-share-vol-1  svm0   /cifsshare_test_vol_1             browsable,oplocks
+```
+
+<a name="cli-get-cifs-share"></a>
+
+#### Get an existing CIFS Share
+
+The NetApp DataOps Toolkit can be used to retrieve details of a specific CIFS share. The command for getting the information of an existing CIFS shares is `netapp_dataops_cli.py get cifs-share`.
+
+The following options/arguments are required:
+
+```
+    -n, --name=         Name of the CIFS share to retrieve.
+    -s, --svm=          Existing SVM in which the CIFS share resides.
+```
+
+The following options/arguments are optional:
+
+```
+    -u, --cluster-name= Non-default hosting cluster.
+    -h, --help          Print help text.
+```
+
+##### Example Usage
+
+Get details for the CIFS share named 'cifs-share-vol-1'.
+
+```sh
+netapp_dataops_cli.py get cifs-share --name=cifs-share-vol-1 --svm=svm0
+Retrieving CIFS share cifs-share-vol-1 from SVM svm0
+Share Name: cifs-share-vol-1
+Path: /cifsshare_test_vol_1
+SVM: svm0
+ACLs: [ShareAcl({'permission': 'full_control', 'type': 'windows', 'user_or_group': 'Everyone', 'win_sid_unix_id': 'S-1-1-0'})]
+Successfully retrieved CIFS share cifs-share-vol-1
+```
+
 ### Data Fabric Operations
 
 <a name="cli-list-cloud-sync-relationships"></a>
@@ -989,7 +1115,7 @@ Setting state to snapmirrored, action:resync
 The NetApp DataOps Toolkit can also be utilized as a library of functions that can be imported into any Python program or Jupyter Notebook. In this manner, data scientists and data engineers can easily incorporate data management tasks into their existing projects, programs, and workflows. This functionality is only recommended for advanced users who are proficient in Python.
 
 ```py
-from netapp_dataops.traditional import clone_volume, create_volume, delete_volume, list_volumes, mount_volume, create_snapshot, delete_snapshot, list_snapshots, restore_snapshot, list_cloud_sync_relationships, sync_cloud_sync_relationship, list_snap_mirror_relationships, sync_snap_mirror_relationship, create_flexcache, prepopulate_flex_cache, push_directory_to_s3, push_file_to_s3, pull_bucket_from_s3, pull_object_from_s3
+from netapp_dataops.traditional import clone_volume, create_volume, delete_volume, list_volumes, mount_volume, create_snapshot, delete_snapshot, list_snapshots, restore_snapshot, list_cloud_sync_relationships, sync_cloud_sync_relationship, list_snap_mirror_relationships, sync_snap_mirror_relationship, create_flexcache, prepopulate_flex_cache, push_directory_to_s3, push_file_to_s3, pull_bucket_from_s3, pull_object_from_s3, create_cifs_share, list_cifs_shares, get_cifs_share
 ```
 
 Note: The prerequisite steps outlined in the [Getting Started](#getting-started) section still appy when the toolkit is being utilized as an importable library of functions.
@@ -1010,6 +1136,11 @@ Snapshot management operations:
 - [Delete an existing snapshot for a data volume.](#lib-delete-snapshot)
 - [List all snapshots for a data volume.](#lib-list-snapshots)
 - [Restore a snapshot for a data volume.](#lib-restore-snapshot)
+
+CIFS share management operations:
+- [Create a new CIFS share.](#lib-create-cifs-share)
+- [List all CIFS shares.](#lib-list-cifs-shares)
+- [Get an existing CIFS share.](#lib-get-cifs-share)
 
 Data fabric operations:
 - [List all Cloud Sync relationships.](#lib-list-cloud-sync-relationships)
@@ -1444,6 +1575,108 @@ InvalidConfigError              # Config file is missing or contains an invalid 
 APIConnectionError              # The storage system/service API returned an error.
 InvalidSnapshotParameterError   # An invalid parameter was specified.
 InvalidVolumeParameterError     # An invalid parameter was specified.
+```
+
+### CIFS Share Management Operations
+
+<a name="lib-create-cifs-share"></a>
+
+#### Create a New CIFS Share
+
+The NetApp DataOps Toolkit can be used to create a new CIFS share for an existing data volume as part of any Python program or workflow.
+
+##### Function Definition
+
+```py
+def create_cifs_share(
+    name: str,                           # Name of the CIFS share (required).
+    path: str,                           # Path in the owning SVM namespace that is shared through this share (required).
+    svm: str,                            # Existing SVM in which to create the CIFS share (required).
+    comment: str = None,                 # Comment for the share (optional).
+    acls: List[Dict] = None,             # Access Control List entries (optional).
+    properties: List[str] = None,        # Share properties (e.g., ['browsable', 'oplocks']) (optional).
+    cluster_name: str = None,            # Non-default cluster name.
+    print_output: bool = False           # Denotes whether or not to print messages to the console during execution.
+) -> NetAppCifsShare:
+```
+
+##### Return Value
+
+The function returns a NetAppCifsShare object representing the created CIFS share.
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError                  # Config file is missing or contains an invalid value.
+APIConnectionError                  # The storage system/service API returned an error.
+InvalidCifsShareParameterError      # An invalid parameter was specified.
+ConnectionTypeError                 # Invalid connection type specified.
+```
+
+<a name="lib-list-cifs-shares"></a>
+
+#### List All CIFS Shares
+
+The NetApp DataOps Toolkit can be used to retrieve a list of all existing CIFS shares as part of any Python program or workflow.
+
+##### Function Definition
+
+```py
+def list_cifs_shares(
+    svm: str = None,                     # Name of the SVM to filter shares (optional).
+    name_pattern: str = None,            # Pattern to filter share names (optional).
+    cluster_name: str = None,            # Non-default cluster name.
+    print_output: bool = False           # Denotes whether or not to print messages to the console during execution.
+) -> List[NetAppCifsShare]:
+```
+
+##### Return Value
+
+The function returns a list of NetAppCifsShare objects representing all existing CIFS shares. Administrative shares (c$, ipc$, admin$, print$) are filtered out from the results.
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError                  # Config file is missing or contains an invalid value.
+APIConnectionError                  # The storage system/service API returned an error.
+InvalidCifsShareParameterError      # An invalid parameter was specified.
+ConnectionTypeError                 # Invalid connection type specified.
+```
+
+<a name="lib-get-cifs-share"></a>
+
+#### Get an Existing CIFS Share
+
+The NetApp DataOps Toolkit can be used to retrieve details of a specific CIFS share as part of any Python program or workflow.
+
+##### Function Definition
+
+```py
+def get_cifs_share(
+    name: str,                           # Name of the CIFS share (required).
+    svm: str,                            # Name of the Storage Virtual Machine (SVM) (required).
+    cluster_name: str = None,            # Non-default cluster name.
+    print_output: bool = False           # Denotes whether or not to print messages to the console during execution.
+) -> NetAppCifsShare:
+```
+
+##### Return Value
+
+The function returns a NetAppCifsShare object containing detailed configuration of the specific CIFS share.
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError                  # Config file is missing or contains an invalid value.
+APIConnectionError                  # The storage system/service API returned an error.
+InvalidCifsShareParameterError      # If share or SVM not found.
+ConnectionTypeError                 # Invalid connection type specified.
 ```
 
 ### Data Fabric Operations

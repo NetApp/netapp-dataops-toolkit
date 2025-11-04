@@ -521,7 +521,7 @@ Required Options/Arguments:
 
 Optional Options/Arguments:
 \t-u, --cluster-name=\tNon default hosting cluster
-\t-c, --comment=\t\tComment/description for the CIFS share.
+\t-c, --comment=\t\tComment/ description for the CIFS share.
 \t-a, --acls=\t\tComma-separated list of ACLs to apply to the share. 
 \t-l, --properties=\tComma-separated list of properties to apply to the share ('browsable', 'oplocks', 'showsnapshot', 'changenotify', 'attributecache', 'continuously_available', 'encryption').
 \t-h, --help\t\tPrint help text.
