@@ -7,6 +7,7 @@ from .clone_command import CloneCommand
 from .config_command import ConfigCommand
 from .create_command import CreateCommand
 from .delete_command import DeleteCommand
+from .get_command import GetCommand
 from .list_command import ListCommand
 from .mount_command import MountCommand
 from .unmount_command import UnmountCommand
@@ -24,6 +25,7 @@ __all__ = [
     'ConfigCommand', 
     'CreateCommand',
     'DeleteCommand',
+    'GetCommand',
     'ListCommand',
     'MountCommand',
     'UnmountCommand',
