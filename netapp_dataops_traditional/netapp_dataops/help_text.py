@@ -516,7 +516,7 @@ Create a new CIFS share.
 
 Required Options/Arguments:
 \t-n, --name=\t\tName of the CIFS share.
-\t-p, --path=\tP\tath in the owning SVM namespace that is shared through this share.
+\t-p, --path=\t\tPath in the owning SVM namespace that is shared through this share.
 \t-s, --svm=\t\tExisting SVM in which to create the CIFS share.
 
 Optional Options/Arguments:
