@@ -9,7 +9,6 @@ from getpass import getpass
 import sys
 sys.path.insert(0, "/root/netapp-dataops-toolkit/netapp_dataops_traditional/netapp_dataops")
 
-from dotenv import load_dotenv
 import keyring
 from netapp_dataops import traditional
 from netapp_dataops.traditional import (
@@ -49,6 +48,8 @@ from netapp_dataops.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
 
+# Keyring configuration constants
+KEYRING_SERVICE_NAME = "netapp:dataops:ontap"
 
 ## Define contents of help text
 helpTextStandard = '''
@@ -640,13 +641,11 @@ def createConfig(configDirPath: str = "~/.netapp_dataops", configFilename: str =
         passwordString = getpass("Enter ONTAP API password (Recommendation: Use SVM account): ")
 
          # Store the password securely using keyring
-        load_dotenv()
-        service_name = os.getenv("KEYRING_SERVICE_NAME", "netapp:dataops:ontap")
         if username is not None:
-            keyring.set_password(service_name, "username", username)
+            keyring.set_password(KEYRING_SERVICE_NAME, "username", username)
         if passwordString is not None:
-            keyring.set_password(service_name, "password", passwordString)
-
+            keyring.set_password(KEYRING_SERVICE_NAME, "password", passwordString)
+        
         # Prompt user to enter value denoting whether or not to verify SSL cert when calling ONTAP API
         # Verify value entered; prompt user to re-enter if invalid
         while True:

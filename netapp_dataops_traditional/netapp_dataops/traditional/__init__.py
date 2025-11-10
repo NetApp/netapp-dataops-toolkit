@@ -17,7 +17,6 @@ import datetime
 from concurrent.futures import ThreadPoolExecutor
 import boto3
 from botocore.client import Config as BotoConfig
-from dotenv import load_dotenv
 import keyring
 from netapp_ontap import config as netappConfig
 from netapp_ontap.error import NetAppRestError
@@ -34,6 +33,7 @@ import pandas as pd
 import requests
 from tabulate import tabulate
 import yaml
+from netapp_dataops.netapp_dataops_cli import KEYRING_SERVICE_NAME
 
 from netapp_dataops.logging_utils import setup_logger
 
@@ -257,11 +257,8 @@ def _retrieve_config(configDirPath: str = "~/.netapp_dataops", configFilename: s
             config = json.load(configFile)
 
         # Retrieve username and password from os-default credential manager
-        load_dotenv()
-        # Use the value from .env file, or fall back to the default if not set
-        service_name = os.getenv("KEYRING_SERVICE_NAME", "netapp:dataops:ontap")
-        username = keyring.get_password(service_name, "username")
-        password = keyring.get_password(service_name, "password")
+        username = keyring.get_password(KEYRING_SERVICE_NAME, "username")
+        password = keyring.get_password(KEYRING_SERVICE_NAME, "password")
 
         if username:
             config["username"] = username
