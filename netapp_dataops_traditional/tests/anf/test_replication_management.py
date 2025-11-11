@@ -135,6 +135,57 @@ def test_create_replication_client_exception():
             assert result['status'] == 'error'
             assert 'Client error' in result['details']
 
+def test_create_replication_quota_exceeded():
+    """Test replication creation when quota is exceeded"""
+    with patch('netapp_dataops.traditional.anf.replication_management.get_anf_client') as mock_client_func:
+        with patch('netapp_dataops.traditional.anf.volume_management.create_volume') as mock_create_volume:
+            mock_client = MagicMock()
+            mock_client_func.return_value = (mock_client, 'test-subscription')
+            mock_create_volume.side_effect = Exception("Quota exceeded for region")
+            
+            result = replication_management.create_replication(**REPLICATION_REQUIRED_ARGS)
+            assert result['status'] == 'error'
+            assert 'quota exceeded' in result['details'].lower() or 'failed to create' in result['details'].lower()
+
+
+def test_create_replication_network_error():
+    """Test replication creation with network connectivity issues"""
+    with patch('netapp_dataops.traditional.anf.replication_management.get_anf_client') as mock_client_func:
+        with patch('netapp_dataops.traditional.anf.volume_management.create_volume') as mock_create_volume:
+            mock_client = MagicMock()
+            mock_client_func.return_value = (mock_client, 'test-subscription')
+            mock_create_volume.side_effect = Exception("Network timeout")
+            
+            result = replication_management.create_replication(**REPLICATION_REQUIRED_ARGS)
+            assert result['status'] == 'error'
+            assert 'network timeout' in result['details'].lower() or 'failed to create' in result['details'].lower()
+
+
+def test_create_replication_capacity_pool_not_found():
+    """Test replication creation when destination capacity pool doesn't exist"""
+    with patch('netapp_dataops.traditional.anf.replication_management.get_anf_client') as mock_client_func:
+        with patch('netapp_dataops.traditional.anf.volume_management.create_volume') as mock_create_volume:
+            mock_client = MagicMock()
+            mock_client_func.return_value = (mock_client, 'test-subscription')
+            mock_create_volume.side_effect = ResourceNotFoundError("Capacity pool not found")
+            
+            result = replication_management.create_replication(**REPLICATION_REQUIRED_ARGS)
+            assert result['status'] == 'error'
+            assert 'not found' in result['details'].lower() or 'failed to create' in result['details'].lower()
+
+
+def test_create_replication_account_not_found():
+    """Test replication creation when destination account doesn't exist"""
+    with patch('netapp_dataops.traditional.anf.replication_management.get_anf_client') as mock_client_func:
+        with patch('netapp_dataops.traditional.anf.volume_management.create_volume') as mock_create_volume:
+            mock_client = MagicMock()
+            mock_client_func.return_value = (mock_client, 'test-subscription')
+            mock_create_volume.side_effect = ResourceNotFoundError("NetApp account not found")
+            
+            result = replication_management.create_replication(**REPLICATION_REQUIRED_ARGS)
+            assert result['status'] == 'error'
+            assert 'not found' in result['details'].lower() or 'failed to create' in result['details'].lower()
+
 # -----------------------------------------------------------------------------
 # Input Validation
 # -----------------------------------------------------------------------------
@@ -174,6 +225,76 @@ def test_create_replication_empty_destination_location():
         result = replication_management.create_replication(**args)
         assert result['status'] == 'error'
         assert 'destination_location' in result['details'] or 'required' in result['details'].lower()
+
+def test_create_replication_invalid_protocol_type():
+    """Test replication creation with invalid protocol type"""
+    args = REPLICATION_REQUIRED_ARGS.copy()
+    args['destination_protocol_types'] = ['InvalidProtocol']
+    
+    with patch('netapp_dataops.traditional.anf.replication_management.get_anf_client') as mock_client_func:
+        with patch('netapp_dataops.traditional.anf.volume_management.create_volume') as mock_create_volume:
+            mock_client = MagicMock()
+            mock_client_func.return_value = (mock_client, 'test-subscription')
+            mock_create_volume.side_effect = Exception("Invalid protocol type")
+            
+            result = replication_management.create_replication(**args)
+            assert result['status'] == 'error'
+
+
+def test_create_replication_invalid_service_level():
+    """Test replication creation with invalid service level"""
+    args = REPLICATION_REQUIRED_ARGS.copy()
+    args['destination_service_level'] = 'InvalidLevel'
+    
+    with patch('netapp_dataops.traditional.anf.replication_management.get_anf_client') as mock_client_func:
+        with patch('netapp_dataops.traditional.anf.volume_management.create_volume') as mock_create_volume:
+            mock_client = MagicMock()
+            mock_client_func.return_value = (mock_client, 'test-subscription')
+            mock_create_volume.side_effect = Exception("Invalid service level")
+            
+            result = replication_management.create_replication(**args)
+            assert result['status'] == 'error'
+
+
+def test_create_replication_invalid_zone():
+    """Test replication creation with invalid availability zone"""
+    args = REPLICATION_REQUIRED_ARGS.copy()
+    args['destination_zones'] = ['99']  # Invalid zone
+    
+    with patch('netapp_dataops.traditional.anf.replication_management.get_anf_client') as mock_client_func:
+        with patch('netapp_dataops.traditional.anf.volume_management.create_volume') as mock_create_volume:
+            mock_client = MagicMock()
+            mock_client_func.return_value = (mock_client, 'test-subscription')
+            mock_create_volume.side_effect = Exception("Invalid availability zone")
+            
+            result = replication_management.create_replication(**args)
+            assert result['status'] == 'error'
+
+
+def test_create_replication_whitespace_destination_location():
+    """Test replication creation with whitespace-only destination location"""
+    args = REPLICATION_REQUIRED_ARGS.copy()
+    args['destination_location'] = '   '
+    
+    with patch('netapp_dataops.traditional.anf.replication_management.get_anf_client') as mock_client_func:
+        mock_client = MagicMock()
+        mock_client_func.return_value = (mock_client, 'test-subscription')
+        
+        result = replication_management.create_replication(**args)
+        assert result['status'] == 'error'
+
+
+def test_create_replication_whitespace_creation_token():
+    """Test replication creation with whitespace-only creation token"""
+    args = REPLICATION_REQUIRED_ARGS.copy()
+    args['destination_creation_token'] = '   '
+    
+    with patch('netapp_dataops.traditional.anf.replication_management.get_anf_client') as mock_client_func:
+        mock_client = MagicMock()
+        mock_client_func.return_value = (mock_client, 'test-subscription')
+        
+        result = replication_management.create_replication(**args)
+        assert result['status'] == 'error'
 
 # -----------------------------------------------------------------------------
 # Edge Cases
@@ -321,139 +442,6 @@ def test_create_replication_dual_protocol():
             
             result = replication_management.create_replication(**args)
             assert result['status'] == 'success'
-
-# -----------------------------------------------------------------------------
-# Failure Cases
-# -----------------------------------------------------------------------------
-
-def test_create_replication_quota_exceeded():
-    """Test replication creation when quota is exceeded"""
-    with patch('netapp_dataops.traditional.anf.replication_management.get_anf_client') as mock_client_func:
-        with patch('netapp_dataops.traditional.anf.volume_management.create_volume') as mock_create_volume:
-            mock_client = MagicMock()
-            mock_client_func.return_value = (mock_client, 'test-subscription')
-            mock_create_volume.side_effect = Exception("Quota exceeded for region")
-            
-            result = replication_management.create_replication(**REPLICATION_REQUIRED_ARGS)
-            assert result['status'] == 'error'
-            assert 'quota exceeded' in result['details'].lower() or 'failed to create' in result['details'].lower()
-
-
-def test_create_replication_network_error():
-    """Test replication creation with network connectivity issues"""
-    with patch('netapp_dataops.traditional.anf.replication_management.get_anf_client') as mock_client_func:
-        with patch('netapp_dataops.traditional.anf.volume_management.create_volume') as mock_create_volume:
-            mock_client = MagicMock()
-            mock_client_func.return_value = (mock_client, 'test-subscription')
-            mock_create_volume.side_effect = Exception("Network timeout")
-            
-            result = replication_management.create_replication(**REPLICATION_REQUIRED_ARGS)
-            assert result['status'] == 'error'
-            assert 'network timeout' in result['details'].lower() or 'failed to create' in result['details'].lower()
-
-
-def test_create_replication_capacity_pool_not_found():
-    """Test replication creation when destination capacity pool doesn't exist"""
-    with patch('netapp_dataops.traditional.anf.replication_management.get_anf_client') as mock_client_func:
-        with patch('netapp_dataops.traditional.anf.volume_management.create_volume') as mock_create_volume:
-            mock_client = MagicMock()
-            mock_client_func.return_value = (mock_client, 'test-subscription')
-            mock_create_volume.side_effect = ResourceNotFoundError("Capacity pool not found")
-            
-            result = replication_management.create_replication(**REPLICATION_REQUIRED_ARGS)
-            assert result['status'] == 'error'
-            assert 'not found' in result['details'].lower() or 'failed to create' in result['details'].lower()
-
-
-def test_create_replication_account_not_found():
-    """Test replication creation when destination account doesn't exist"""
-    with patch('netapp_dataops.traditional.anf.replication_management.get_anf_client') as mock_client_func:
-        with patch('netapp_dataops.traditional.anf.volume_management.create_volume') as mock_create_volume:
-            mock_client = MagicMock()
-            mock_client_func.return_value = (mock_client, 'test-subscription')
-            mock_create_volume.side_effect = ResourceNotFoundError("NetApp account not found")
-            
-            result = replication_management.create_replication(**REPLICATION_REQUIRED_ARGS)
-            assert result['status'] == 'error'
-            assert 'not found' in result['details'].lower() or 'failed to create' in result['details'].lower()
-
-# -----------------------------------------------------------------------------
-# Input Validation
-# -----------------------------------------------------------------------------
-
-def test_create_replication_invalid_protocol_type():
-    """Test replication creation with invalid protocol type"""
-    args = REPLICATION_REQUIRED_ARGS.copy()
-    args['destination_protocol_types'] = ['InvalidProtocol']
-    
-    with patch('netapp_dataops.traditional.anf.replication_management.get_anf_client') as mock_client_func:
-        with patch('netapp_dataops.traditional.anf.volume_management.create_volume') as mock_create_volume:
-            mock_client = MagicMock()
-            mock_client_func.return_value = (mock_client, 'test-subscription')
-            mock_create_volume.side_effect = Exception("Invalid protocol type")
-            
-            result = replication_management.create_replication(**args)
-            assert result['status'] == 'error'
-
-
-def test_create_replication_invalid_service_level():
-    """Test replication creation with invalid service level"""
-    args = REPLICATION_REQUIRED_ARGS.copy()
-    args['destination_service_level'] = 'InvalidLevel'
-    
-    with patch('netapp_dataops.traditional.anf.replication_management.get_anf_client') as mock_client_func:
-        with patch('netapp_dataops.traditional.anf.volume_management.create_volume') as mock_create_volume:
-            mock_client = MagicMock()
-            mock_client_func.return_value = (mock_client, 'test-subscription')
-            mock_create_volume.side_effect = Exception("Invalid service level")
-            
-            result = replication_management.create_replication(**args)
-            assert result['status'] == 'error'
-
-
-def test_create_replication_invalid_zone():
-    """Test replication creation with invalid availability zone"""
-    args = REPLICATION_REQUIRED_ARGS.copy()
-    args['destination_zones'] = ['99']  # Invalid zone
-    
-    with patch('netapp_dataops.traditional.anf.replication_management.get_anf_client') as mock_client_func:
-        with patch('netapp_dataops.traditional.anf.volume_management.create_volume') as mock_create_volume:
-            mock_client = MagicMock()
-            mock_client_func.return_value = (mock_client, 'test-subscription')
-            mock_create_volume.side_effect = Exception("Invalid availability zone")
-            
-            result = replication_management.create_replication(**args)
-            assert result['status'] == 'error'
-
-
-def test_create_replication_whitespace_destination_location():
-    """Test replication creation with whitespace-only destination location"""
-    args = REPLICATION_REQUIRED_ARGS.copy()
-    args['destination_location'] = '   '
-    
-    with patch('netapp_dataops.traditional.anf.replication_management.get_anf_client') as mock_client_func:
-        mock_client = MagicMock()
-        mock_client_func.return_value = (mock_client, 'test-subscription')
-        
-        result = replication_management.create_replication(**args)
-        assert result['status'] == 'error'
-
-
-def test_create_replication_whitespace_creation_token():
-    """Test replication creation with whitespace-only creation token"""
-    args = REPLICATION_REQUIRED_ARGS.copy()
-    args['destination_creation_token'] = '   '
-    
-    with patch('netapp_dataops.traditional.anf.replication_management.get_anf_client') as mock_client_func:
-        mock_client = MagicMock()
-        mock_client_func.return_value = (mock_client, 'test-subscription')
-        
-        result = replication_management.create_replication(**args)
-        assert result['status'] == 'error'
-
-# -----------------------------------------------------------------------------
-# Edge Cases
-# -----------------------------------------------------------------------------
 
 def test_create_replication_minimal_usage_threshold():
     """Test replication creation with minimal usage threshold"""

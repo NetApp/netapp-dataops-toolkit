@@ -16,7 +16,13 @@ def validate_required_params(**params) -> None:
     Raises:
         ValueError: If any required parameter is missing or empty.
     """
-    missing_params = [name for name, value in params.items() if value is None or (isinstance(value, str) and value == "")]
+    missing_params = []
+    for name, value in params.items():
+        if value is None:
+            missing_params.append(name)
+        elif isinstance(value, str) and (value == "" or value.strip() == ""):
+            missing_params.append(name)
+    
     if missing_params:
         param_list = ", ".join(missing_params)
         raise ValueError(f"The following required parameters are missing: {param_list}")

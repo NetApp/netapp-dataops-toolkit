@@ -744,20 +744,11 @@ async def create_replication_tool(
             logger.error(f"Error creating ANF replication: {e}")
         return {"status": "error", "details": f"Error creating ANF replication: {e}"}
 
+# Register the MCP instance to run the tools
+def main():
+    """Main entry point for the GCNV MCP server."""
+    asyncio.run(mcp.run())
 
 if __name__ == "__main__":
-    try:
-        # Sets up basic logging to capture server events and errors
-        logging.basicConfig(level=logging.INFO)
-
-        if hasattr(mcp, '_tool_manager'):
-            logging.info("Registered ANF tools:")
-            logging.info(asyncio.run(mcp._tool_manager.get_tools()))
-
-        # Starts the MCP server using stdio transport for local operation
-        mcp.run(transport="stdio")
-
-    except Exception as e:
-        # Logs and prints any startup errors, then exits with an error code
-        logging.error(f"ANF Server startup failed: {e}")
-        sys.exit(1)
+    main()
+# The module can be imported for testing and development purposes without executing the main logic
