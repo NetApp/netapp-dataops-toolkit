@@ -45,11 +45,9 @@ from netapp_dataops.traditional import (
 )
 
 from netapp_dataops.logging_utils import setup_logger
+from netapp_dataops.constants import KEYRING_SERVICE_NAME
 
 logger = setup_logger(__name__)
-
-# Keyring configuration constants
-KEYRING_SERVICE_NAME = "netapp:dataops:ontap"
 
 ## Define contents of help text
 helpTextStandard = '''

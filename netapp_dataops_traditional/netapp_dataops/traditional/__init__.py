@@ -33,7 +33,7 @@ import pandas as pd
 import requests
 from tabulate import tabulate
 import yaml
-from netapp_dataops.netapp_dataops_cli import KEYRING_SERVICE_NAME
+from netapp_dataops.constants import KEYRING_SERVICE_NAME
 
 from netapp_dataops.logging_utils import setup_logger
 
