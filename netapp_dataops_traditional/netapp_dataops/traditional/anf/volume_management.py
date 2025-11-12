@@ -4,12 +4,11 @@ NetApp DataOps Toolkit - Azure NetApp Files (ANF) Volume Management
 This module provides volume management operations for Azure NetApp Files.
 """
 
-from typing import Dict, List, Optional, Any
+from typing import Dict, Optional, Any
 from azure.mgmt.netapp.models import (
     Volume, 
     VolumePropertiesExportPolicy,
     ExportPolicyRule,
-    VolumePropertiesDataProtection
 )
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 from .client import get_anf_client
