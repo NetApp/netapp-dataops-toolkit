@@ -9,6 +9,7 @@ from getpass import getpass
 import sys
 sys.path.insert(0, "/root/netapp-dataops-toolkit/netapp_dataops_traditional/netapp_dataops")
 
+import keyring
 from netapp_dataops import traditional
 from netapp_dataops.traditional import (
     clone_volume,
@@ -44,9 +45,9 @@ from netapp_dataops.traditional import (
 )
 
 from netapp_dataops.logging_utils import setup_logger
+from netapp_dataops.constants import KEYRING_SERVICE_NAME
 
 logger = setup_logger(__name__)
-
 
 ## Define contents of help text
 helpTextStandard = '''
@@ -634,14 +635,15 @@ def createConfig(configDirPath: str = "~/.netapp_dataops", configFilename: str =
 
         # Prompt user to enter additional config details
         config["defaultAggregate"] = input("Enter aggregate to use by default when creating new FlexVol volumes: ")
-        config["username"] = input("Enter ONTAP API username (Recommendation: Use SVM account): ")
+        username = input("Enter ONTAP API username (Recommendation: Use SVM account): ")
         passwordString = getpass("Enter ONTAP API password (Recommendation: Use SVM account): ")
 
-        # Convert password to base64 enconding
-        passwordBytes = passwordString.encode("ascii")
-        passwordBase64Bytes = base64.b64encode(passwordBytes)
-        config["password"] = passwordBase64Bytes.decode("ascii")
-
+         # Store the password securely using keyring
+        if username is not None:
+            keyring.set_password(KEYRING_SERVICE_NAME, "username", username)
+        if passwordString is not None:
+            keyring.set_password(KEYRING_SERVICE_NAME, "password", passwordString)
+        
         # Prompt user to enter value denoting whether or not to verify SSL cert when calling ONTAP API
         # Verify value entered; prompt user to re-enter if invalid
         while True:

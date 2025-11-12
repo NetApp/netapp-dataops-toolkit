@@ -17,6 +17,7 @@ import datetime
 from concurrent.futures import ThreadPoolExecutor
 import boto3
 from botocore.client import Config as BotoConfig
+import keyring
 from netapp_ontap import config as netappConfig
 from netapp_ontap.error import NetAppRestError
 from netapp_ontap.host_connection import HostConnection as NetAppHostConnection
@@ -32,6 +33,7 @@ import pandas as pd
 import requests
 from tabulate import tabulate
 import yaml
+from netapp_dataops.constants import KEYRING_SERVICE_NAME
 
 from netapp_dataops.logging_utils import setup_logger
 
@@ -201,7 +203,7 @@ def _instantiate_connection(config: dict, connectionType: str = "ONTAP", print_o
         try:
             ontapClusterMgmtHostname = config["hostname"]
             ontapClusterAdminUsername = config["username"]
-            ontapClusterAdminPasswordBase64 = config["password"]
+            ontapClusterAdminPassword = config["password"]
             verifySSLCert = config["verifySSLCert"]
         except:
             if print_output:
@@ -209,9 +211,9 @@ def _instantiate_connection(config: dict, connectionType: str = "ONTAP", print_o
             raise InvalidConfigError()
 
         # Decode base64-encoded password
-        ontapClusterAdminPasswordBase64Bytes = ontapClusterAdminPasswordBase64.encode("ascii")
-        ontapClusterAdminPasswordBytes = base64.b64decode(ontapClusterAdminPasswordBase64Bytes)
-        ontapClusterAdminPassword = ontapClusterAdminPasswordBytes.decode("ascii")
+        # ontapClusterAdminPasswordBase64Bytes = ontapClusterAdminPasswordBase64.encode("ascii")
+        # ontapClusterAdminPasswordBytes = base64.b64decode(ontapClusterAdminPasswordBase64Bytes)
+        # ontapClusterAdminPassword = ontapClusterAdminPasswordBytes.decode("ascii")
 
         # Instantiate connection to ONTAP cluster
         netappConfig.CONNECTION = NetAppHostConnection(
@@ -253,6 +255,25 @@ def _retrieve_config(configDirPath: str = "~/.netapp_dataops", configFilename: s
         with open(configFilePath, 'r') as configFile:
             # Read connection details from config file; read into dict
             config = json.load(configFile)
+
+        # Retrieve username and password from os-default credential manager
+        username = keyring.get_password(KEYRING_SERVICE_NAME, "username")
+        password = keyring.get_password(KEYRING_SERVICE_NAME, "password")
+
+        if username:
+            config["username"] = username
+        else:
+            if print_output:
+                logger.error("Error: Missing username in credential manager.")
+            raise InvalidConfigError()
+        
+        if password:
+            config["password"] = password
+        else:
+            if print_output:
+                logger.error("Error: Missing password in credential manager.")
+            raise InvalidConfigError()
+
     except:
         if print_output:
             _print_invalid_config_error()
