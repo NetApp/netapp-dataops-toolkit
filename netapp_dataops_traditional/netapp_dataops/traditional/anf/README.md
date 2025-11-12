@@ -87,6 +87,84 @@ snapshot_result = create_snapshot(...)
 
 ## Configuration
 
+The ANF module supports two configuration approaches for streamlined usage:
+
+### Option 1: Interactive Configuration (Recommended)
+
+Create a configuration file with your Azure infrastructure details to simplify function calls:
+
+```python
+from netapp_dataops.traditional.anf.config import create_anf_config
+
+# Run interactive configuration setup
+create_anf_config()
+```
+
+This will prompt you for:
+- Azure subscription ID
+- Resource group name
+- NetApp account name
+- Capacity pool name
+- Azure region (location)
+- Virtual network name
+- Subnet name
+- Default protocol types (NFSv3, NFSv4.1, CIFS)
+
+The configuration is saved to `~/.netapp_dataops/anf_config.json` and allows you to call functions with minimal parameters:
+
+```python
+# After configuration, you can use simplified calls
+volume = anf.create_volume(
+    volume_name="my-volume",
+    creation_token="my-vol-001",
+    usage_threshold=107374182400  # 100 GiB
+    # All other parameters loaded from config
+)
+```
+
+### Option 2: Manual Configuration
+
+You can still pass all parameters explicitly to each function call:
+
+```python
+volume = anf.create_volume(
+    resource_group_name="my-rg",
+    account_name="my-account", 
+    pool_name="my-pool",
+    volume_name="my-volume",
+    location="eastus",
+    creation_token="my-vol-001",
+    usage_threshold=107374182400,
+    protocol_types=["NFSv3"],
+    virtual_network_name="my-vnet",
+    subscription_id="your-subscription-id"
+)
+```
+
+### Configuration File Format
+
+The configuration file (`~/.netapp_dataops/anf_config.json`) contains:
+
+```json
+{
+  "subscriptionId": "your-azure-subscription-id",
+  "resourceGroupName": "your-resource-group",
+  "accountName": "your-netapp-account",
+  "poolName": "your-capacity-pool",
+  "location": "eastus",
+  "virtualNetworkName": "your-vnet",
+  "subnetName": "default",
+  "protocolTypes": ["NFSv3"]
+}
+```
+
+### Parameter Precedence
+
+When both config file and function parameters are available:
+1. **Function parameters** take precedence (override config values)
+2. **Config file values** are used when function parameters are `None` or not provided
+3. **Error** is raised if parameter is required but not found in either location
+
 ### Environment Variables
 
 **Required for Service Principal Authentication:**
@@ -103,9 +181,70 @@ export AZURE_SUBSCRIPTION_ID="your-subscription-id"  # Optional default
 - Visual Studio Code Azure Account
 - Azure PowerShell
 
-## Complete Usage Examples
+### Complete Usage Examples
 
-### Basic Volume Management
+#### Basic Volume Management with Configuration
+```python
+from netapp_dataops.traditional import anf
+from netapp_dataops.traditional.anf.config import create_anf_config
+
+# First-time setup: create configuration
+create_anf_config()
+
+# After configuration, simplified usage
+volume = anf.create_volume(
+    volume_name="data-volume",
+    creation_token="data-vol-01",
+    usage_threshold=107374182400  # 100 GiB
+    # Other parameters loaded from config: resource_group_name, account_name, 
+    # pool_name, location, virtual_network_name, protocol_types
+)
+
+# Create a snapshot
+snapshot = anf.create_snapshot(
+    volume_name="data-volume",
+    snapshot_name="backup-001"
+    # location, resource_group_name, account_name, pool_name from config
+)
+
+# Clone the volume
+clone = anf.clone_volume(
+    source_volume_name="data-volume",
+    volume_name="data-clone",
+    creation_token="data-clone-01",
+    snapshot_name="backup-001"
+    # Other parameters from config
+)
+```
+
+#### Usage Without Configuration (Manual Parameters)
+```python
+from netapp_dataops.traditional import anf
+
+# Manual parameter specification
+volume = anf.create_volume(
+    resource_group_name="my-rg",
+    account_name="my-account",
+    pool_name="my-pool",
+    volume_name="data-volume",
+    location="eastus",
+    creation_token="data-vol-01",
+    usage_threshold=107374182400,  # 100 GiB
+    protocol_types=["NFSv3"],
+    virtual_network_name="my-vnet"
+)
+
+snapshot = anf.create_snapshot(
+    resource_group_name="my-rg",
+    account_name="my-account",
+    pool_name="my-pool",
+    volume_name="data-volume",
+    snapshot_name="backup-001",
+    location="eastus"
+)
+```
+
+### Cross-Region Replication
 ```python
 from netapp_dataops.traditional import anf
 

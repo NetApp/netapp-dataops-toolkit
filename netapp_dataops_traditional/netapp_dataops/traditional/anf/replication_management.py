@@ -9,6 +9,7 @@ from azure.mgmt.netapp.models import AuthorizeRequest
 from azure.core.exceptions import ResourceNotFoundError
 from .client import get_anf_client
 from .base import _serialize, validate_required_params
+from .config import _retrieve_anf_config, get_config_value, InvalidConfigError
 
 from netapp_dataops.logging_utils import setup_logger
 
@@ -16,9 +17,6 @@ logger = setup_logger(__name__)
 
 def create_replication(
     # Source volume parameters
-    resource_group_name: str,
-    account_name: str,
-    pool_name: str,
     volume_name: str,
     # Destination volume parameters
     destination_resource_group_name: str,
@@ -33,6 +31,10 @@ def create_replication(
     destination_subnet_name: str = "default",
     destination_service_level: str = None,
     destination_zones: list = None,
+    # Source volume parameters (optional - will use config defaults)
+    resource_group_name: str = None,
+    account_name: str = None,
+    pool_name: str = None,
     # Common parameters
     subscription_id: str = None,
     print_output: bool = False
@@ -40,22 +42,15 @@ def create_replication(
     """
     Create a complete cross-region replication setup for Azure NetApp Files.
     
-    This function can either:
-    1. Create a new data protection volume and authorize replication (provide destination_* parameters)
-    2. Authorize replication to an existing data protection volume (provide remote_volume_resource_id)
+    This function creates a new data protection volume in the destination location
+    and sets up replication from the source volume.
     
     Args:
-        # Source volume parameters (required)
-        resource_group_name (str):
-            Required. Source volume resource group name.
-        account_name (str):
-            Required. Source volume NetApp account name.
-        pool_name (str):
-            Required. Source volume capacity pool name.
+        # Source volume parameters
         volume_name (str):
             Required. Source volume name.
-
-        # For creating new destination volume:
+        
+        # Destination volume parameters (required - typically in different region/subscription)
         destination_resource_group_name (str):
             Required. Destination resource group name.
         destination_account_name (str):
@@ -76,19 +71,23 @@ def create_replication(
         destination_virtual_network_name (str):
             Required. Destination virtual network name.
         destination_subnet_name (str):
-            Required. Destination subnet name. Defaults to "default".
+            Optional. Destination subnet name. Defaults to "default".
         destination_service_level (str):
-            Required. Destination service level (Standard/Premium/Ultra).
+            Optional. Destination service level (Standard/Premium/Ultra).
             Defaults to "Premium".
         destination_zones (list):
-            Required. Availability zones for destination volume. If None, defaults to ["1"].
+            Optional. Availability zones for destination volume. If None, defaults to ["1"].
         
-        # For existing destination volume:
-        remote_volume_resource_id (str):
-            Required. Resource ID of existing data protection volume
+        # Source volume parameters (optional - will use config defaults)
+        resource_group_name (str):
+            Optional. Source volume resource group name. Will use config default if not provided.
+        account_name (str):
+            Optional. Source volume NetApp account name. Will use config default if not provided.
+        pool_name (str):
+            Optional. Source volume capacity pool name. Will use config default if not provided.
 
         subscription_id (str):
-            Optional. Azure subscription ID
+            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -97,21 +96,36 @@ def create_replication(
         Dictionary with status and replication setup details
 
     Raises:
-        ValueError: If required parameters are missing or invalid
+        InvalidConfigError: If required source volume parameters are missing from both function call and config
+        ValueError: If required destination parameters are missing or invalid
         ResourceNotFoundError: If source volume does not exist
         Exception: If there is an error during the replication setup process   
     
     Note:
-        - Must provide destination_* parameters
         - Source and destination volumes must be in different Azure zones or regions
-        - Destination volume will be created as a data protection volume if creating new
+        - Destination volume will be created as a data protection volume
     """
+    # Retrieve config details from config file
     try:
-        # Validate input parameters
+        config = _retrieve_anf_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+
+    # Resolve source volume parameters from function arguments or config
+    try:
+        resolved_subscription_id = get_config_value('subscription_id', subscription_id, config, print_output)
+        resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
+        resolved_account_name = get_config_value('account_name', account_name, config, print_output)
+        resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
+    except InvalidConfigError:
+        raise
+
+    try:
+        # Validate input parameters (using resolved values for source volume)
         validate_required_params(
-            resource_group_name=resource_group_name,
-            account_name=account_name,
-            pool_name=pool_name,
+            resource_group_name=resolved_resource_group_name,
+            account_name=resolved_account_name,
+            pool_name=resolved_pool_name,
             volume_name=volume_name,
             destination_resource_group_name=destination_resource_group_name,
             destination_account_name=destination_account_name,
@@ -124,11 +138,11 @@ def create_replication(
             destination_virtual_network_name=destination_virtual_network_name
         )
         
-        # Get ANF client and subscription ID (if not provided, will use environment variable)
-        client, subscription_id = get_anf_client(subscription_id, print_output=print_output)
+        # Get ANF client and subscription ID (using resolved value)
+        client, final_subscription_id = get_anf_client(resolved_subscription_id, print_output=print_output)
 
-        # Construct source volume resource ID
-        source_volume_resource_id = f"/subscriptions/{subscription_id}/resourceGroups/{resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{account_name}/capacityPools/{pool_name}/volumes/{volume_name}"
+        # Construct source volume resource ID (using resolved values)
+        source_volume_resource_id = f"/subscriptions/{final_subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{resolved_account_name}/capacityPools/{resolved_pool_name}/volumes/{volume_name}"
         
         
         # Create destination volume if parameters are provided
@@ -173,7 +187,7 @@ def create_replication(
                 volume_type="DataProtection",
                 zones=destination_zones,
                 data_protection=data_protection,
-                subscription_id=subscription_id
+                subscription_id=final_subscription_id
             )
             
             if volume_result.get('status') != 'success':
@@ -182,7 +196,7 @@ def create_replication(
                 return {"status": "error", "details": f"Failed to create destination volume: {volume_result.get('details', 'Unknown error')}"}
             
             # Construct destination volume resource ID
-            destination_volume_resource_id = f"/subscriptions/{subscription_id}/resourceGroups/{destination_resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{destination_account_name}/capacityPools/{destination_pool_name}/volumes/{destination_volume_name}"
+            destination_volume_resource_id = f"/subscriptions/{final_subscription_id}/resourceGroups/{destination_resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{destination_account_name}/capacityPools/{destination_pool_name}/volumes/{destination_volume_name}"
         
         
         # Validate that source and destination are not the same
@@ -196,11 +210,11 @@ def create_replication(
             remote_volume_resource_id=destination_volume_resource_id
         )
         
-        # Authorize replication on source volume
+        # Authorize replication on source volume (using resolved values)
         poller = client.volumes.begin_authorize_replication(
-            resource_group_name=resource_group_name,
-            account_name=account_name,
-            pool_name=pool_name,
+            resource_group_name=resolved_resource_group_name,
+            account_name=resolved_account_name,
+            pool_name=resolved_pool_name,
             volume_name=volume_name,
             body=authorize_request
         )
@@ -231,6 +245,8 @@ def create_replication(
         
         return {"status": "success", "details": _serialize(replication_details)}
 
+    except InvalidConfigError:
+        raise
     except ResourceNotFoundError as e:
         if print_output:
             logger.error(f"Volume '{volume_name}' not found: {str(e)}")

@@ -21,6 +21,9 @@ Built on the [Azure NetApp Files Python SDK](https://docs.microsoft.com/en-us/py
   - [Option 1: Azure CLI (Recommended)](#option-1-azure-cli-recommended)
   - [Option 2: Service Principal](#option-2-service-principal)
   - [Option 3: Environment Variables](#option-3-environment-variables)
+- [Configuration](#configuration)
+  - [Option 1: Interactive Configuration (Recommended)](#option-1-interactive-configuration-recommended)
+  - [Option 2: Manual Configuration](#option-2-manual-configuration)
 - [Available Functions](#available-functions)
   - [Function Categories](#function-categories)
 - [API Reference](#api-reference)
@@ -152,6 +155,119 @@ export AZURE_CLIENT_SECRET="your-client-secret"
 ```
 
 > **💡 Tip:** For production environments, use Option 2 with a dedicated service principal.
+
+## Configuration
+
+The ANF module supports **simplified configuration** through an interactive setup process that reduces the need to specify common parameters repeatedly.
+
+### Option 1: Interactive Configuration (Recommended)
+
+Set up a configuration file with your Azure infrastructure details:
+
+```python
+from netapp_dataops.traditional.anf.config import create_anf_config
+
+# Run interactive configuration setup
+create_anf_config()
+```
+
+**Interactive Prompts:**
+- Azure subscription ID
+- Resource group name  
+- NetApp account name
+- Capacity pool name
+- Azure region (location)
+- Virtual network name
+- Subnet name (defaults to "default")
+- Default protocol types (defaults to "NFSv3")
+
+**Benefits:**
+- ✅ **Simplified function calls** - Pass only unique parameters
+- ✅ **Consistent defaults** - Reuse infrastructure settings across operations
+- ✅ **Reduced errors** - Pre-validated configuration values
+- ✅ **Version control friendly** - Config file can be shared across teams
+
+### Configuration File Location
+
+The configuration is automatically saved to:
+```
+~/.netapp_dataops/anf_config.json
+```
+
+**Example configuration file:**
+```json
+{
+  "subscriptionId": "12345678-1234-1234-1234-123456789abc",
+  "resourceGroupName": "my-production-rg",
+  "accountName": "my-netapp-account",
+  "poolName": "premium-pool", 
+  "location": "eastus",
+  "virtualNetworkName": "production-vnet",
+  "subnetName": "netapp-subnet",
+  "protocolTypes": ["NFSv3"]
+}
+```
+
+### Usage with Configuration
+
+**Before configuration:**
+```python
+# Without config - must specify all parameters
+volume = create_volume(
+    resource_group_name="my-rg",
+    account_name="my-account", 
+    pool_name="my-pool",
+    volume_name="data-volume",
+    location="eastus",
+    creation_token="data-vol-001", 
+    usage_threshold=107374182400,
+    protocol_types=["NFSv3"],
+    virtual_network_name="my-vnet",
+    subnet_name="default"
+)
+```
+
+**After configuration:**
+```python
+# With config - specify only unique parameters
+volume = create_volume(
+    volume_name="data-volume",
+    creation_token="data-vol-001",
+    usage_threshold=107374182400
+    # All other values loaded from config file
+)
+```
+
+### Parameter Precedence Rules
+
+1. **Function parameters** take highest precedence
+2. **Config file values** are used when function parameters are `None`
+3. **Error raised** if required parameter missing from both
+
+**Example - Override config values:**
+```python
+# Use different location than config default
+volume = create_volume(
+    volume_name="dr-volume",
+    creation_token="dr-vol-001", 
+    usage_threshold=107374182400,
+    location="westus"  # Overrides config location
+)
+```
+
+### Option 2: Manual Configuration  
+
+Continue using explicit parameters for all function calls:
+
+```python
+# No config file needed - specify all parameters
+volume = create_volume(
+    resource_group_name="my-rg",
+    account_name="my-account",
+    pool_name="my-pool", 
+    # ... all parameters
+)
+```
 
 <a name="available-functions"></a>
 

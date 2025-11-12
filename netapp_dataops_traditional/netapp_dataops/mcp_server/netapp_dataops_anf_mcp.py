@@ -11,7 +11,8 @@ from netapp_dataops.traditional.anf import (
     list_volumes,
     create_snapshot,
     list_snapshots,
-    create_replication
+    create_replication,
+    create_anf_config
 )
 
 from netapp_dataops.logging_utils import setup_logger
@@ -22,16 +23,16 @@ mcp = FastMCP("NetApp DataOps ANF Toolkit MCP")
 
 @mcp.tool(name="Create Volume")
 async def create_volume_tool(
-    resource_group_name: str,
-    account_name: str,
-    pool_name: str,
     volume_name: str,
-    location: str,
     creation_token: str,
     usage_threshold: int,
-    protocol_types: list,
-    virtual_network_name: str,
-    subnet_name: str = "default",
+    resource_group_name: Optional[str] = None,
+    account_name: Optional[str] = None,
+    pool_name: Optional[str] = None,
+    location: Optional[str] = None,
+    protocol_types: Optional[list] = None,
+    virtual_network_name: Optional[str] = None,
+    subnet_name: Optional[str] = None,
     service_level: Optional[str] = None,
     tags: Optional[dict] = None,
     zones: Optional[list] = None,
@@ -62,16 +63,8 @@ async def create_volume_tool(
     """
     Use this tool to create a new Azure NetApp Files volume within the capacity pool.
 
-        resource_group_name (str):
-            Required. The name of the resource group.
-        account_name (str):
-            Required. The name of the NetApp account.
-        pool_name (str):
-            Required. The name of the capacity pool
         volume_name (str):
             Required. The name of the volume.
-        location (str):
-            Required. Azure region (e.g., "eastus").
         creation_token (str):
             Required. A unique file path for the volume. Used when creating mount targets.
         usage_threshold (int):
@@ -79,13 +72,21 @@ async def create_volume_tool(
             This is a soft quota used for alerting only. For regular volumes, valid values are in the range 50GiB to 100TiB.
             For large volumes, valid values are in the range 100TiB to 500TiB, and on an exceptional basis, from to 2400GiB to 2400TiB.
             Values expressed in bytes as multiples of 1 GiB.
+        resource_group_name (str):
+            Optional. The name of the resource group. Will use config default if not provided.
+        account_name (str):
+            Optional. The name of the NetApp account. Will use config default if not provided.
+        pool_name (str):
+            Optional. The name of the capacity pool. Will use config default if not provided.
+        location (str):
+            Optional. Azure region (e.g., "eastus"). Will use config default if not provided.
         protocol_types (List[str]):
-            Required. List of protocol types (NFSv3, NFSv4.1, CIFS).
+            Optional. List of protocol types (NFSv3, NFSv4.1, CIFS). Will use config default if not provided.
         virtual_network_name (str):
-            Required. The name of the virtual network to which the volume will be connected.
+            Optional. The name of the virtual network to which the volume will be connected. Will use config default if not provided.
         subnet_name (str):
             Optional. The name of a delegated Azure subnet to construct the Azure Resource ID for a delegated subnet.
-            If not provided, the default subnet will be used.
+            Will use config default if not provided, otherwise defaults to "default".
         service_level (str):
             Optional. Service level (Standard, Premium, Ultra, StandardZRS, Flexible).
             Defaults to Premium.
@@ -176,7 +177,7 @@ async def create_volume_tool(
             Optional. Flag indicating whether subvolume operations are enabled on the volume. Known values are: "Enabled" and "Disabled".
             Defaults to Disabled.
         subscription_id (str):
-            Optional. Azure subscription ID.
+            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -185,22 +186,23 @@ async def create_volume_tool(
         Dictionary with status and volume details
 
     Raises:
+        InvalidConfigError: If required parameters are missing from both function call and config
         ResourceExistsError: If the volume already exists
         Exception: For other errors during volume creation
     """
     try:
         result = create_volume(
+            volume_name=volume_name,
+            creation_token=creation_token,
+            usage_threshold=usage_threshold,
             resource_group_name=resource_group_name,
             account_name=account_name,
             pool_name=pool_name,
-            volume_name=volume_name,
             location=location,
-            creation_token=creation_token,
+            protocol_types=protocol_types,
             virtual_network_name=virtual_network_name,
             subnet_name=subnet_name,
-            usage_threshold=usage_threshold,
             service_level=service_level,
-            protocol_types=protocol_types,
             tags=tags,
             zones=zones,
             export_policy_rules=export_policy_rules,
@@ -239,16 +241,16 @@ async def create_volume_tool(
 
 @mcp.tool(name="Clone Volume")
 async def clone_volume_tool(
-    resource_group_name: str,
-    account_name: str,
-    pool_name: str,
     source_volume_name: str,
     volume_name: str,
-    location: str,
     creation_token: str,
     snapshot_name: str,
-    virtual_network_name: str,
-    subnet_name: str = "default",
+    resource_group_name: Optional[str] = None,
+    account_name: Optional[str] = None,
+    pool_name: Optional[str] = None,
+    location: Optional[str] = None,
+    virtual_network_name: Optional[str] = None,
+    subnet_name: Optional[str] = None,
     service_level: Optional[str] = None,
     protocol_types: Optional[list] = None,
     tags: Optional[dict] = None,
@@ -281,31 +283,32 @@ async def clone_volume_tool(
     Use this tool to clone an existing Azure NetApp Files volume from a snapshot.
     
     Args:
-        resource_group_name (str):
-            Required. The name of the resource group.
-        account_name (str):
-            Required. The name of the NetApp account.
-        pool_name (str):
-            Required. The name of the capacity pool.
+        source_volume_name (str):
+            Required. The name of the source volume to clone from.
         volume_name (str):
             Required. The name of the new clone volume.
-        location (str):
-            Required. Azure region (e.g., "eastus").
         creation_token (str):
             Required. A unique file path for the volume. Used when creating mount targets.
         snapshot_name (str):
             Required. Name of the snapshot to clone from.
+        resource_group_name (str):
+            Optional. The name of the resource group. Will use config default if not provided.
+        account_name (str):
+            Optional. The name of the NetApp account. Will use config default if not provided.
+        pool_name (str):
+            Optional. The name of the capacity pool. Will use config default if not provided.
+        location (str):
+            Optional. Azure region (e.g., "eastus"). Will use config default if not provided.
         virtual_network_name (str):
-            Required. The name of the virtual network to which the volume will be connected.
+            Optional. The name of the virtual network to which the volume will be connected. Will use config default if not provided.
         subnet_name (str):
             Optional. The name of a delegated Azure subnet to construct the Azure Resource ID for a delegated subnet.
-            If not provided, the default subnet will be used.
+            Will use config default if not provided, otherwise defaults to "default".
         service_level (str):
             Optional. Service level (Standard, Premium, Ultra, StandardZRS, Flexible).
             Defaults to Premium.
         protocol_types (List[str]):
-            Optional. List of protocol types (NFSv3, NFSv4.1, CIFS).
-            Defaults to ["NFSv3"] if not provided.
+            Optional. List of protocol types (NFSv3, NFSv4.1, CIFS). Will use config default if not provided.
         tags (Dict[str, str]):
             Optional. Resource tags.
             Defaults to None.
@@ -393,7 +396,7 @@ async def clone_volume_tool(
             Optional. Flag indicating whether subvolume operations are enabled on the volume. Known values are: "Enabled" and "Disabled".
             Defaults to Disabled.
         subscription_id (str):
-            Optional. Azure subscription ID.
+            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -402,19 +405,20 @@ async def clone_volume_tool(
         Dictionary with status and volume details
 
     Raises:
+        InvalidConfigError: If required parameters are missing from both function call and config
         ResourceExistsError: If the volume already exists
         Exception: For other errors during volume cloning
     """
     try:
         result = clone_volume(
+            source_volume_name=source_volume_name,
+            volume_name=volume_name,
+            creation_token=creation_token,
+            snapshot_name=snapshot_name,
             resource_group_name=resource_group_name,
             account_name=account_name,
             pool_name=pool_name,
-            source_volume_name=source_volume_name,
-            volume_name=volume_name,
             location=location,
-            creation_token=creation_token,
-            snapshot_name=snapshot_name,
             virtual_network_name=virtual_network_name,
             subnet_name=subnet_name,
             service_level=service_level,
@@ -457,9 +461,9 @@ async def clone_volume_tool(
 
 @mcp.tool(name="List Volumes")
 async def list_volumes_tool(
-    resource_group_name: str,
-    account_name: str,
-    pool_name: str,
+    resource_group_name: Optional[str] = None,
+    account_name: Optional[str] = None,
+    pool_name: Optional[str] = None,
     subscription_id: Optional[str] = None,
     print_output: Optional[bool] = False
 ) -> Dict[str, Any]:
@@ -468,13 +472,13 @@ async def list_volumes_tool(
 
     Args:
         resource_group_name (str):
-            Required. The name of the resource group.
+            Optional. The name of the resource group. Will use config default if not provided.
         account_name (str):
-            Required. The name of the NetApp account.
+            Optional. The name of the NetApp account. Will use config default if not provided.
         pool_name (str):
-            Required. The name of the capacity pool.
+            Optional. The name of the capacity pool. Will use config default if not provided.
         subscription_id (str):
-            Optional. Azure subscription ID.
+            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -483,6 +487,7 @@ async def list_volumes_tool(
         Dictionary with status and list of volumes
 
     Raises:
+        InvalidConfigError: If required parameters are missing from both function call and config
         Exception: For errors during volume listing
     """
     try:
@@ -505,12 +510,12 @@ async def list_volumes_tool(
 
 @mcp.tool(name="Create Snapshot")
 async def create_snapshot_tool(
-    resource_group_name: str,
-    account_name: str,
-    pool_name: str,
     volume_name: str,
     snapshot_name: str,
-    location: str,
+    resource_group_name: Optional[str] = None,
+    account_name: Optional[str] = None,
+    pool_name: Optional[str] = None,
+    location: Optional[str] = None,
     tags: Optional[dict] = None,
     subscription_id: Optional[str] = None,
     print_output: Optional[bool] = False
@@ -519,22 +524,22 @@ async def create_snapshot_tool(
     Use this tool to create a new snapshot for an Azure NetApp Files volume.
     
     Args:
-        resource_group_name (str):
-            Required. The name of the resource group.
-        account_name (str):
-            Required. The name of the NetApp account
-        pool_name (str):
-            Required. The name of the capacity pool.
         volume_name (str):
             Required. The name of the volume.
         snapshot_name (str):
             Required. The name of the snapshot.
+        resource_group_name (str):
+            Optional. The name of the resource group. Will use config default if not provided.
+        account_name (str):
+            Optional. The name of the NetApp account. Will use config default if not provided.
+        pool_name (str):
+            Optional. The name of the capacity pool. Will use config default if not provided.
         location (str):
-            Required. Azure region
+            Optional. Azure region. Will use config default if not provided.
         tags (Dict[str, str]):
             Optional. Resource tags.
         subscription_id (str):
-            Optional. Azure subscription ID.
+            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -543,17 +548,18 @@ async def create_snapshot_tool(
         Dictionary with status and snapshot details
 
     Raises:
+        InvalidConfigError: If required parameters are missing from both function call and config
         ResourceExistsError: If the snapshot already exists
         ResourceNotFoundError: If the volume does not exist
         Exception: For other errors during snapshot creation
     """
     try:
         result = create_snapshot(
+            volume_name=volume_name,
+            snapshot_name=snapshot_name,
             resource_group_name=resource_group_name,
             account_name=account_name,
             pool_name=pool_name,
-            volume_name=volume_name,
-            snapshot_name=snapshot_name,
             location=location,
             tags=tags,
             subscription_id=subscription_id,
@@ -570,10 +576,10 @@ async def create_snapshot_tool(
 
 @mcp.tool(name="List Snapshots")
 async def list_snapshots_tool(
-    resource_group_name: str,
-    account_name: str,
-    pool_name: str,
     volume_name: str,
+    resource_group_name: Optional[str] = None,
+    account_name: Optional[str] = None,
+    pool_name: Optional[str] = None,
     subscription_id: Optional[str] = None,
     print_output: Optional[bool] = False
 ) -> Dict[str, Any]:
@@ -581,16 +587,16 @@ async def list_snapshots_tool(
     Use this tool to retrieve a list of all snapshots for an Azure NetApp Files volume.
     
     Args:
-        resource_group_name (str):
-            Required. The name of the resource group.
-        account_name (str):
-            Required. The name of the NetApp account.
-        pool_name (str):
-            Required. The name of the capacity pool.
         volume_name (str):
             Required. The name of the volume.
+        resource_group_name (str):
+            Optional. The name of the resource group. Will use config default if not provided.
+        account_name (str):
+            Optional. The name of the NetApp account. Will use config default if not provided.
+        pool_name (str):
+            Optional. The name of the capacity pool. Will use config default if not provided.
         subscription_id (str):
-            Optional. Azure subscription ID.
+            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -599,15 +605,16 @@ async def list_snapshots_tool(
         Dictionary with status and list of snapshots.
 
     Raises:
+        InvalidConfigError: If required parameters are missing from both function call and config
         ResourceNotFoundError: If the volume does not exist.
         Exception: For other errors during snapshot listing.
     """
     try:
         result = list_snapshots(
+            volume_name=volume_name,
             resource_group_name=resource_group_name,
             account_name=account_name,
             pool_name=pool_name,
-            volume_name=volume_name,
             subscription_id=subscription_id,
             print_output=print_output
         )
@@ -624,9 +631,6 @@ async def list_snapshots_tool(
 @mcp.tool(name="Create Replication")
 async def create_replication_tool(
     # Source volume parameters
-    resource_group_name: str,
-    account_name: str,
-    pool_name: str,
     volume_name: str,
     # Destination volume parameters
     destination_resource_group_name: str,
@@ -641,6 +645,10 @@ async def create_replication_tool(
     destination_subnet_name: str = "default",
     destination_service_level: str = None,
     destination_zones: list = None,
+    # Source volume parameters (optional - will use config defaults)
+    resource_group_name: Optional[str] = None,
+    account_name: Optional[str] = None,
+    pool_name: Optional[str] = None,
     # Common parameters
     subscription_id: Optional[str] = None,
     print_output: Optional[bool] = False
@@ -648,22 +656,12 @@ async def create_replication_tool(
     """
     Use this tool to create a complete cross-region replication setup for Azure NetApp Files.
     
-    This function can either:
-    1. Create a new data protection volume and authorize replication (provide destination_* parameters)
-    2. Authorize replication to an existing data protection volume (provide remote_volume_resource_id)
-    
     Args:
-        # Source volume parameters (required)
-        resource_group_name (str):
-            Required. Source volume resource group name.
-        account_name (str):
-            Required. Source volume NetApp account name.
-        pool_name (str):
-            Required. Source volume capacity pool name.
+        # Source volume parameters
         volume_name (str):
             Required. Source volume name.
-
-        # For creating new destination volume:
+        
+        # Destination volume parameters (required - typically in different region/subscription)
         destination_resource_group_name (str):
             Required. Destination resource group name.
         destination_account_name (str):
@@ -684,19 +682,23 @@ async def create_replication_tool(
         destination_virtual_network_name (str):
             Required. Destination virtual network name.
         destination_subnet_name (str):
-            Required. Destination subnet name. Defaults to "default".
+            Optional. Destination subnet name. Defaults to "default".
         destination_service_level (str):
-            Required. Destination service level (Standard/Premium/Ultra).
+            Optional. Destination service level (Standard/Premium/Ultra).
             Defaults to "Premium".
         destination_zones (list):
-            Required. Availability zones for destination volume. If None, defaults to ["1"].
+            Optional. Availability zones for destination volume. If None, defaults to ["1"].
         
-        # For existing destination volume:
-        remote_volume_resource_id (str):
-            Required. Resource ID of existing data protection volume
+        # Source volume parameters (optional - will use config defaults)
+        resource_group_name (str):
+            Optional. Source volume resource group name. Will use config default if not provided.
+        account_name (str):
+            Optional. Source volume NetApp account name. Will use config default if not provided.
+        pool_name (str):
+            Optional. Source volume capacity pool name. Will use config default if not provided.
 
         subscription_id (str):
-            Optional. Azure subscription ID
+            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -705,20 +707,17 @@ async def create_replication_tool(
         Dictionary with status and replication setup details
 
     Raises:
-        ValueError: If required parameters are missing or invalid
+        InvalidConfigError: If required source volume parameters are missing from both function call and config
+        ValueError: If required destination parameters are missing or invalid
         ResourceNotFoundError: If source volume does not exist
         Exception: If there is an error during the replication setup process   
     
     Note:
-        - Must provide either destination_* parameters OR remote_volume_resource_id
         - Source and destination volumes must be in different Azure regions
-        - Destination volume will be created as a data protection volume if creating new
+        - Destination volume will be created as a data protection volume
     """
     try:
         result = create_replication(
-            resource_group_name=resource_group_name,
-            account_name=account_name,
-            pool_name=pool_name,
             volume_name=volume_name,
             destination_resource_group_name=destination_resource_group_name,
             destination_account_name=destination_account_name,
@@ -732,6 +731,9 @@ async def create_replication_tool(
             destination_subnet_name=destination_subnet_name,
             destination_service_level=destination_service_level,
             destination_zones=destination_zones,
+            resource_group_name=resource_group_name,
+            account_name=account_name,
+            pool_name=pool_name,
             subscription_id=subscription_id,
             print_output=print_output
         )
@@ -744,9 +746,76 @@ async def create_replication_tool(
             logger.error(f"Error creating ANF replication: {e}")
         return {"status": "error", "details": f"Error creating ANF replication: {e}"}
 
+@mcp.tool(name="Create ANF Config")
+async def create_anf_config_tool(
+    subscription_id: str,
+    resource_group_name: str,
+    account_name: str,
+    pool_name: str,
+    location: str,
+    virtual_network_name: str,
+    subnet_name: str = "default",
+    protocol_types: Optional[list] = None,
+    print_output: Optional[bool] = False
+) -> Dict[str, Any]:
+    """
+    Use this tool to create an ANF configuration file to avoid repetitive parameters.
+    
+    Args:
+        subscription_id (str):
+            Required. Azure subscription ID.
+        resource_group_name (str):
+            Required. The name of the resource group.
+        account_name (str):
+            Required. The name of the NetApp account.
+        pool_name (str):
+            Required. The name of the capacity pool.
+        location (str):
+            Required. Azure region (e.g., "centralus").
+        virtual_network_name (str):
+            Required. The name of the virtual network.
+        subnet_name (str):
+            Optional. The name of the subnet. Defaults to "default".
+        protocol_types (List[str]):
+            Optional. List of protocol types (NFSv3, NFSv4.1, CIFS). Defaults to ["NFSv3"].
+        print_output (bool):
+            Optional. If set to True, prints log messages to the console.
+            Defaults to False.
+
+    Returns:
+        Dictionary with status and config creation details
+
+    Raises:
+        Exception: For errors during config creation
+    """
+    try:
+        # Set default protocol types if not provided
+        if protocol_types is None:
+            protocol_types = ["NFSv3"]
+            
+        result = create_anf_config(
+            subscription_id=subscription_id,
+            resource_group_name=resource_group_name,
+            account_name=account_name,
+            pool_name=pool_name,
+            location=location,
+            virtual_network_name=virtual_network_name,
+            subnet_name=subnet_name,
+            protocol_types=protocol_types,
+            print_output=print_output
+        )
+        if result.get('status') == 'error':
+            if print_output:
+                logger.error(f"Error creating ANF config: {result.get('details', 'Unknown error')}")
+        return result
+    except Exception as e:
+        if print_output:
+            logger.error(f"Error creating ANF config: {e}")
+        return {"status": "error", "details": f"Error creating ANF config: {e}"}
+
 # Register the MCP instance to run the tools
 def main():
-    """Main entry point for the GCNV MCP server."""
+    """Main entry point for the ANF MCP server."""
     asyncio.run(mcp.run())
 
 if __name__ == "__main__":

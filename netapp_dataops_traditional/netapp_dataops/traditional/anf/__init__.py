@@ -11,6 +11,8 @@ from .snapshot_management import create_snapshot, delete_snapshot, list_snapshot
 from .replication_management import create_replication
 from .client import get_anf_client
 from .base import _serialize
+from .config import create_anf_config
+
 
 # Make all functions available at package level
 __all__ = [
@@ -23,5 +25,6 @@ __all__ = [
     "list_snapshots",
     "create_replication",
     "get_anf_client",
-    "_serialize"
+    "_serialize",
+    "create_anf_config"
 ]

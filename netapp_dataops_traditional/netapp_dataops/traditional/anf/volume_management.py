@@ -13,22 +13,23 @@ from azure.mgmt.netapp.models import (
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 from .client import get_anf_client
 from .base import _serialize, validate_required_params
+from .config import _retrieve_anf_config, get_config_value, InvalidConfigError
 
 from netapp_dataops.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
 
 def create_volume(
-    resource_group_name: str,
-    account_name: str,
-    pool_name: str,
     volume_name: str,
-    location: str,
     creation_token: str,
     usage_threshold: int,
-    protocol_types: list,
-    virtual_network_name: str,
-    subnet_name: str = "default",
+    resource_group_name: str = None,
+    account_name: str = None,
+    pool_name: str = None,
+    location: str = None,
+    protocol_types: list = None,
+    virtual_network_name: str = None,
+    subnet_name: str = None,
     service_level: str = None,
     tags: dict = None,
     zones: list = None,
@@ -60,16 +61,8 @@ def create_volume(
     Create a new Azure NetApp Files volume within the capacity pool.
     
     Args:
-        resource_group_name (str):
-            Required. The name of the resource group.
-        account_name (str):
-            Required. The name of the NetApp account.
-        pool_name (str):
-            Required. The name of the capacity pool
         volume_name (str):
             Required. The name of the volume.
-        location (str):
-            Required. Azure region (e.g., "eastus").
         creation_token (str):
             Required. A unique file path for the volume. Used when creating mount targets.
         usage_threshold (int):
@@ -77,13 +70,21 @@ def create_volume(
             This is a soft quota used for alerting only. For regular volumes, valid values are in the range 50GiB to 100TiB.
             For large volumes, valid values are in the range 100TiB to 500TiB, and on an exceptional basis, from to 2400GiB to 2400TiB.
             Values expressed in bytes as multiples of 1 GiB.
+        resource_group_name (str):
+            Optional. The name of the resource group. Will use config default if not provided.
+        account_name (str):
+            Optional. The name of the NetApp account. Will use config default if not provided.
+        pool_name (str):
+            Optional. The name of the capacity pool. Will use config default if not provided.
+        location (str):
+            Optional. Azure region (e.g., "eastus"). Will use config default if not provided.
         protocol_types (List[str]):
-            Required. List of protocol types (NFSv3, NFSv4.1, CIFS).
+            Optional. List of protocol types (NFSv3, NFSv4.1, CIFS). Will use config default if not provided.
         virtual_network_name (str):
-            Required. The name of the virtual network to which the volume will be connected.
+            Optional. The name of the virtual network to which the volume will be connected. Will use config default if not provided.
         subnet_name (str):
             Optional. The name of a delegated Azure subnet to construct the Azure Resource ID for a delegated subnet.
-            If not provided, the default subnet will be used.
+            Will use config default if not provided, otherwise defaults to "default".
         service_level (str):
             Optional. Service level (Standard, Premium, Ultra, StandardZRS, Flexible).
             Defaults to Premium.
@@ -174,7 +175,7 @@ def create_volume(
             Optional. Flag indicating whether subvolume operations are enabled on the volume. Known values are: "Enabled" and "Disabled".
             Defaults to Disabled.
         subscription_id (str):
-            Optional. Azure subscription ID.
+            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -183,29 +184,49 @@ def create_volume(
         Dictionary with status and volume details
 
     Raises:
+        InvalidConfigError: If required parameters are missing from both function call and config
         ResourceExistsError: If the volume already exists
         Exception: For other errors during volume creation
     """
 
-    # Validate input parameters
+    # Retrieve config details from config file
+    try:
+        config = _retrieve_anf_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+
+    # Resolve parameters from function arguments or config
+    try:
+        resolved_subscription_id = get_config_value('subscription_id', subscription_id, config, print_output)
+        resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
+        resolved_account_name = get_config_value('account_name', account_name, config, print_output)
+        resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
+        resolved_location = get_config_value('location', location, config, print_output)
+        resolved_virtual_network_name = get_config_value('virtual_network_name', virtual_network_name, config, print_output)
+        resolved_subnet_name = get_config_value('subnet_name', subnet_name, config, print_output) if subnet_name is not None else config.get('subnetName', 'default')
+        resolved_protocol_types = get_config_value('protocol_types', protocol_types, config, print_output) if protocol_types is not None else config.get('protocolTypes', ["NFSv3"])
+    except InvalidConfigError:
+        raise
+
+    # Validate input parameters (now using resolved values)
     validate_required_params(
-        resource_group_name=resource_group_name,
-        account_name=account_name,
-        pool_name=pool_name,
+        resource_group_name=resolved_resource_group_name,
+        account_name=resolved_account_name,
+        pool_name=resolved_pool_name,
         volume_name=volume_name,
-        location=location,
+        location=resolved_location,
         creation_token=creation_token,
         usage_threshold=usage_threshold,
-        protocol_types=protocol_types,
-        virtual_network_name=virtual_network_name
+        protocol_types=resolved_protocol_types,
+        virtual_network_name=resolved_virtual_network_name
     )
 
     try:
-        # Get ANF client and subscription ID (if not provided, will use environment variable)
-        client, subscription_id = get_anf_client(subscription_id, print_output=print_output)
+        # Get ANF client and subscription ID (using resolved value)
+        client, final_subscription_id = get_anf_client(resolved_subscription_id, print_output=print_output)
 
-        # Construct subnet ID from provided parameters
-        subnet_id = f"/subscriptions/{subscription_id}/resourceGroups/{resource_group_name}/providers/Microsoft.Network/virtualNetworks/{virtual_network_name}/subnets/{subnet_name}"
+        # Construct subnet ID from resolved parameters
+        subnet_id = f"/subscriptions/{final_subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.Network/virtualNetworks/{resolved_virtual_network_name}/subnets/{resolved_subnet_name}"
         
         # Construct export policy from provided list or create default for NFS
         export_policy = None
@@ -219,8 +240,8 @@ def create_volume(
                     'unix_read_only': rule_dict.get('unix_read_only', False),
                     'unix_read_write': rule_dict.get('unix_read_write', True),
                     'cifs': rule_dict.get('cifs', False),
-                    'nfsv3': rule_dict.get('nfsv3', "NFSv3" in protocol_types),
-                    'nfsv41': rule_dict.get('nfsv41', "NFSv4.1" in protocol_types),
+                    'nfsv3': rule_dict.get('nfsv3', "NFSv3" in resolved_protocol_types),
+                    'nfsv41': rule_dict.get('nfsv41', "NFSv4.1" in resolved_protocol_types),
                     'allowed_clients': rule_dict.get('allowed_clients', '0.0.0.0/0'),
                     'has_root_access': rule_dict.get('has_root_access', True),
                     'kerberos5_read_only': rule_dict.get('kerberos5_read_only', False),
@@ -235,7 +256,7 @@ def create_volume(
             
             export_policy = VolumePropertiesExportPolicy(rules=export_rules)
             
-        elif any(proto in protocol_types for proto in ["NFSv3", "NFSv4.1"]):
+        elif any(proto in resolved_protocol_types for proto in ["NFSv3", "NFSv4.1"]):
             # Create default export policy for NFS volumes
             export_policy = VolumePropertiesExportPolicy(
                 rules=[
@@ -244,8 +265,8 @@ def create_volume(
                         unix_read_only=False,
                         unix_read_write=True,
                         cifs=False,
-                        nfsv3="NFSv3" in protocol_types,
-                        nfsv41="NFSv4.1" in protocol_types,
+                        nfsv3="NFSv3" in resolved_protocol_types,
+                        nfsv41="NFSv4.1" in resolved_protocol_types,
                         allowed_clients="0.0.0.0/0",
                         has_root_access=True,
                         kerberos5_read_only=False,
@@ -259,14 +280,14 @@ def create_volume(
                 ]
             )
 
-        # Build volume properties
+        # Build volume properties (using resolved values)
         volume_properties = {
-            'location': location,
+            'location': resolved_location,
             'creation_token': creation_token,
             'subnet_id': subnet_id,
             'usage_threshold': usage_threshold,
             'service_level': service_level,
-            'protocol_types': protocol_types,
+            'protocol_types': resolved_protocol_types,
             'security_style': security_style,
             'smb_encryption': smb_encryption,
             'smb_continuously_available': smb_continuously_available,
@@ -305,11 +326,11 @@ def create_volume(
         # Create the volume object
         volume = Volume(**volume_properties)
         
-        # Create the volume
+        # Create the volume (using resolved values)
         poller = client.volumes.begin_create_or_update(
-            resource_group_name=resource_group_name,
-            account_name=account_name,
-            pool_name=pool_name,
+            resource_group_name=resolved_resource_group_name,
+            account_name=resolved_account_name,
+            pool_name=resolved_pool_name,
             volume_name=volume_name,
             body=volume
         )
@@ -336,16 +357,16 @@ def create_volume(
 
 
 def clone_volume(
-    resource_group_name: str,
-    account_name: str,
-    pool_name: str,
     source_volume_name: str,
     volume_name: str,
-    location: str,
     creation_token: str,
     snapshot_name: str,
-    virtual_network_name: str,
-    subnet_name: str = "default",
+    resource_group_name: str = None,
+    account_name: str = None,
+    pool_name: str = None,
+    location: str = None,
+    virtual_network_name: str = None,
+    subnet_name: str = None,
     service_level: str = None,
     protocol_types: list = None,
     tags: dict = None,
@@ -378,31 +399,32 @@ def clone_volume(
     Clone an existing Azure NetApp Files volume from a snapshot.
     
     Args:
-        resource_group_name (str):
-            Required. The name of the resource group.
-        account_name (str):
-            Required. The name of the NetApp account.
-        pool_name (str):
-            Required. The name of the capacity pool.
+        source_volume_name (str):
+            Required. The name of the source volume to clone from.
         volume_name (str):
             Required. The name of the new clone volume.
-        location (str):
-            Required. Azure region (e.g., "eastus").
         creation_token (str):
             Required. A unique file path for the volume. Used when creating mount targets.
         snapshot_name (str):
             Required. Name of the snapshot to clone from.
+        resource_group_name (str):
+            Optional. The name of the resource group. Will use config default if not provided.
+        account_name (str):
+            Optional. The name of the NetApp account. Will use config default if not provided.
+        pool_name (str):
+            Optional. The name of the capacity pool. Will use config default if not provided.
+        location (str):
+            Optional. Azure region (e.g., "eastus"). Will use config default if not provided.
         virtual_network_name (str):
-            Required. The name of the virtual network to which the volume will be connected.
+            Optional. The name of the virtual network to which the volume will be connected. Will use config default if not provided.
         subnet_name (str):
             Optional. The name of a delegated Azure subnet to construct the Azure Resource ID for a delegated subnet.
-            If not provided, the default subnet will be used.
+            Will use config default if not provided, otherwise defaults to "default".
         service_level (str):
             Optional. Service level (Standard, Premium, Ultra, StandardZRS, Flexible).
             Defaults to Premium.
         protocol_types (List[str]):
-            Optional. List of protocol types (NFSv3, NFSv4.1, CIFS).
-            Defaults to ["NFSv3"] if not provided.
+            Optional. List of protocol types (NFSv3, NFSv4.1, CIFS). Will use config default if not provided.
         tags (Dict[str, str]):
             Optional. Resource tags.
             Defaults to None.
@@ -490,7 +512,7 @@ def clone_volume(
             Optional. Flag indicating whether subvolume operations are enabled on the volume. Known values are: "Enabled" and "Disabled".
             Defaults to Disabled.
         subscription_id (str):
-            Optional. Azure subscription ID.
+            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -499,50 +521,70 @@ def clone_volume(
         Dictionary with status and volume details
 
     Raises:
+        InvalidConfigError: If required parameters are missing from both function call and config
         ResourceExistsError: If the volume already exists
         Exception: For other errors during volume cloning
     """
 
-    # Validate input parameters
+    # Retrieve config details from config file
+    try:
+        config = _retrieve_anf_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+
+    # Resolve parameters from function arguments or config
+    try:
+        resolved_subscription_id = get_config_value('subscription_id', subscription_id, config, print_output)
+        resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
+        resolved_account_name = get_config_value('account_name', account_name, config, print_output)
+        resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
+        resolved_location = get_config_value('location', location, config, print_output)
+        resolved_virtual_network_name = get_config_value('virtual_network_name', virtual_network_name, config, print_output)
+        resolved_subnet_name = get_config_value('subnet_name', subnet_name, config, print_output) if subnet_name is not None else config.get('subnetName', 'default')
+        resolved_protocol_types = get_config_value('protocol_types', protocol_types, config, print_output) if protocol_types is not None else config.get('protocolTypes', ["NFSv3"])
+    except InvalidConfigError:
+        raise
+
+    # Validate input parameters (now using resolved values)
     validate_required_params(
-        resource_group_name=resource_group_name,
-        account_name=account_name,
-        pool_name=pool_name,
+        resource_group_name=resolved_resource_group_name,
+        account_name=resolved_account_name,
+        pool_name=resolved_pool_name,
         source_volume_name=source_volume_name,
         volume_name=volume_name,
-        location=location,
+        location=resolved_location,
         creation_token=creation_token,
         snapshot_name=snapshot_name,
-        virtual_network_name=virtual_network_name
+        virtual_network_name=resolved_virtual_network_name
     )
 
     try:
-        # Get ANF client and subscription ID (if not provided, will use environment variable)
-        client, subscription_id = get_anf_client(subscription_id, print_output=print_output)
+        # Get ANF client and subscription ID (using resolved value)
+        client, final_subscription_id = get_anf_client(resolved_subscription_id, print_output=print_output)
 
-        # Construct subnet ID from provided parameters
-        subnet_id = f"/subscriptions/{subscription_id}/resourceGroups/{resource_group_name}/providers/Microsoft.Network/virtualNetworks/{virtual_network_name}/subnets/{subnet_name}"
+        # Construct subnet ID from resolved parameters
+        subnet_id = f"/subscriptions/{final_subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.Network/virtualNetworks/{resolved_virtual_network_name}/subnets/{resolved_subnet_name}"
 
-        # Construct snapshot ID from provided parameters
-        snapshot_id = f"/subscriptions/{subscription_id}/resourceGroups/{resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{account_name}/capacityPools/{pool_name}/volumes/{source_volume_name}/snapshots/{snapshot_name}"
+        # Construct snapshot ID from resolved parameters
+        snapshot_id = f"/subscriptions/{final_subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{resolved_account_name}/capacityPools/{resolved_pool_name}/volumes/{source_volume_name}/snapshots/{snapshot_name}"
 
         # Set default protocol types and get usage_threshold from source volume if not provided
         usage_threshold = None
-        if protocol_types is None:
+        if resolved_protocol_types is None or resolved_protocol_types == config.get('protocolTypes', ["NFSv3"]):
             # Try to get protocol types and usage_threshold from the source volume
             try:
                 source_volume = client.volumes.get(
-                    resource_group_name=resource_group_name,
-                    account_name=account_name,
-                    pool_name=pool_name,
+                    resource_group_name=resolved_resource_group_name,
+                    account_name=resolved_account_name,
+                    pool_name=resolved_pool_name,
                     volume_name=source_volume_name
                 )
                 if hasattr(source_volume, 'protocol_types') and source_volume.protocol_types:
-                    protocol_types = source_volume.protocol_types
-                    logger.info(f"Retrieved protocol types from source volume '{source_volume_name}': {protocol_types}")
+                    resolved_protocol_types = source_volume.protocol_types
+                    logger.info(f"Retrieved protocol types from source volume '{source_volume_name}': {resolved_protocol_types}")
                 else:
-                    logger.warning(f"No protocol types found for source volume '{source_volume_name}', using default NFSv3")
-                    protocol_types = ["NFSv3"]
+                    logger.warning(f"No protocol types found for source volume '{source_volume_name}', using config default")
+                    # Keep the resolved protocol types from config
                 
                 # Get usage_threshold from source volume
                 if hasattr(source_volume, 'usage_threshold') and source_volume.usage_threshold:
@@ -554,15 +596,15 @@ def clone_volume(
                     
             except Exception as e:
                 logger.warning(f"Failed to get details from source volume '{source_volume_name}': {str(e)}, using defaults")
-                protocol_types = ["NFSv3"]
+                # Keep the resolved protocol types from config
                 usage_threshold = 107374182400  # 100 GiB default
         else:
             # If protocol_types are provided, still need to get usage_threshold from source volume
             try:
                 source_volume = client.volumes.get(
-                    resource_group_name=resource_group_name,
-                    account_name=account_name,
-                    pool_name=pool_name,
+                    resource_group_name=resolved_resource_group_name,
+                    account_name=resolved_account_name,
+                    pool_name=resolved_pool_name,
                     volume_name=source_volume_name
                 )
                 if hasattr(source_volume, 'usage_threshold') and source_volume.usage_threshold:
@@ -587,8 +629,8 @@ def clone_volume(
                     'unix_read_only': rule_dict.get('unix_read_only', False),
                     'unix_read_write': rule_dict.get('unix_read_write', True),
                     'cifs': rule_dict.get('cifs', False),
-                    'nfsv3': rule_dict.get('nfsv3', "NFSv3" in protocol_types),
-                    'nfsv41': rule_dict.get('nfsv41', "NFSv4.1" in protocol_types),
+                    'nfsv3': rule_dict.get('nfsv3', "NFSv3" in resolved_protocol_types),
+                    'nfsv41': rule_dict.get('nfsv41', "NFSv4.1" in resolved_protocol_types),
                     'allowed_clients': rule_dict.get('allowed_clients', '0.0.0.0/0'),
                     'has_root_access': rule_dict.get('has_root_access', True),
                     'kerberos5_read_only': rule_dict.get('kerberos5_read_only', False),
@@ -603,7 +645,7 @@ def clone_volume(
             
             export_policy = VolumePropertiesExportPolicy(rules=export_rules)
             
-        elif any(proto in protocol_types for proto in ["NFSv3", "NFSv4.1"]):
+        elif any(proto in resolved_protocol_types for proto in ["NFSv3", "NFSv4.1"]):
             # Create default export policy for NFS volumes
             export_policy = VolumePropertiesExportPolicy(
                 rules=[
@@ -612,8 +654,8 @@ def clone_volume(
                         unix_read_only=False,
                         unix_read_write=True,
                         cifs=False,
-                        nfsv3="NFSv3" in protocol_types,
-                        nfsv41="NFSv4.1" in protocol_types,
+                        nfsv3="NFSv3" in resolved_protocol_types,
+                        nfsv41="NFSv4.1" in resolved_protocol_types,
                         allowed_clients="0.0.0.0/0",
                         has_root_access=True,
                         kerberos5_read_only=False,
@@ -627,14 +669,14 @@ def clone_volume(
                 ]
             )
         
-        # Build volume properties
+        # Build volume properties (using resolved values)
         volume_properties = {
-            'location': location,
+            'location': resolved_location,
             'creation_token': creation_token,
             'subnet_id': subnet_id,
             'usage_threshold': usage_threshold,
             'service_level': service_level,
-            'protocol_types': protocol_types,
+            'protocol_types': resolved_protocol_types,
             'security_style': security_style,
             'smb_encryption': smb_encryption,
             'smb_continuously_available': smb_continuously_available,
@@ -679,11 +721,11 @@ def clone_volume(
         # Create the volume object
         volume = Volume(**volume_properties)
         
-        # Create the clone volume
+        # Create the clone volume (using resolved values)
         poller = client.volumes.begin_create_or_update(
-            resource_group_name=resource_group_name,
-            account_name=account_name,
-            pool_name=pool_name,
+            resource_group_name=resolved_resource_group_name,
+            account_name=resolved_account_name,
+            pool_name=resolved_pool_name,
             volume_name=volume_name,
             body=volume
         )
@@ -710,10 +752,10 @@ def clone_volume(
 
 
 def delete_volume(
-    resource_group_name: str,
-    account_name: str,
-    pool_name: str,
     volume_name: str,
+    resource_group_name: str = None,
+    account_name: str = None,
+    pool_name: str = None,
     force_delete: bool = None,
     subscription_id: str = None,
     print_output: bool = False
@@ -722,20 +764,20 @@ def delete_volume(
     Delete an Azure NetApp Files volume.
     
     Args:
-        resource_group_name (str):
-            Required. The name of the resource group.
-        account_name (str):
-            Required. The name of the NetApp account.
-        pool_name (str):
-            Required. The name of the capacity pool.
         volume_name (str):
             Required. The name of the volume.
+        resource_group_name (str):
+            Optional. The name of the resource group. Will use config default if not provided.
+        account_name (str):
+            Optional. The name of the NetApp account. Will use config default if not provided.
+        pool_name (str):
+            Optional. The name of the capacity pool. Will use config default if not provided.
         force_delete (bool):
             Optional. An option to force delete the volume. 
             Will cleanup resources connected to the particular volume.
             Default value is None.
         subscription_id (str):
-            Optional. Azure subscription ID.
+            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -744,35 +786,51 @@ def delete_volume(
         Dictionary with status and operation details
 
     Raises:
+        InvalidConfigError: If required parameters are missing from both function call and config
         ResourceNotFoundError: If the volume does not exist
         Exception: For other errors during volume deletion
     """
-    # Validate input parameters
+    # Retrieve config details from config file
+    try:
+        config = _retrieve_anf_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+
+    # Resolve parameters from function arguments or config
+    try:
+        resolved_subscription_id = get_config_value('subscription_id', subscription_id, config, print_output)
+        resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
+        resolved_account_name = get_config_value('account_name', account_name, config, print_output)
+        resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
+    except InvalidConfigError:
+        raise
+
+    # Validate input parameters (now using resolved values)
     validate_required_params(
-        resource_group_name=resource_group_name,
-        account_name=account_name,
-        pool_name=pool_name,
+        resource_group_name=resolved_resource_group_name,
+        account_name=resolved_account_name,
+        pool_name=resolved_pool_name,
         volume_name=volume_name
     )
 
     try:
-        # Get ANF client and subscription ID (if not provided, will use environment variable)
-        client, subscription_id = get_anf_client(subscription_id, print_output=print_output)
+        # Get ANF client and subscription ID (using resolved value)
+        client, final_subscription_id = get_anf_client(resolved_subscription_id, print_output=print_output)
 
-        # Delete the volume
+        # Delete the volume (using resolved values)
         if force_delete is not None:
             poller = client.volumes.begin_delete(
-                resource_group_name=resource_group_name,
-                account_name=account_name,
-                pool_name=pool_name,
+                resource_group_name=resolved_resource_group_name,
+                account_name=resolved_account_name,
+                pool_name=resolved_pool_name,
                 volume_name=volume_name,
                 force_delete=force_delete
             )
         else:
             poller = client.volumes.begin_delete(
-                resource_group_name=resource_group_name,
-                account_name=account_name,
-                pool_name=pool_name,
+                resource_group_name=resolved_resource_group_name,
+                account_name=resolved_account_name,
+                pool_name=resolved_pool_name,
                 volume_name=volume_name
             )
 
@@ -798,9 +856,9 @@ def delete_volume(
 
 
 def list_volumes(
-    resource_group_name: str,
-    account_name: str,
-    pool_name: str,
+    resource_group_name: str = None,
+    account_name: str = None,
+    pool_name: str = None,
     subscription_id: Optional[str] = None,
     print_output: bool = False
 ) -> Dict[str, Any]:
@@ -809,13 +867,13 @@ def list_volumes(
     
     Args:
         resource_group_name (str):
-            Required. The name of the resource group.
+            Optional. The name of the resource group. Will use config default if not provided.
         account_name (str):
-            Required. The name of the NetApp account.
+            Optional. The name of the NetApp account. Will use config default if not provided.
         pool_name (str):
-            Required. The name of the capacity pool.
+            Optional. The name of the capacity pool. Will use config default if not provided.
         subscription_id (str):
-            Optional. Azure subscription ID.
+            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -824,24 +882,40 @@ def list_volumes(
         Dictionary with status and list of volumes
 
     Raises:
+        InvalidConfigError: If required parameters are missing from both function call and config
         Exception: For errors during volume listing
     """
-    # Validate input parameters
+    # Retrieve config details from config file
+    try:
+        config = _retrieve_anf_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+
+    # Resolve parameters from function arguments or config
+    try:
+        resolved_subscription_id = get_config_value('subscription_id', subscription_id, config, print_output)
+        resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
+        resolved_account_name = get_config_value('account_name', account_name, config, print_output)
+        resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
+    except InvalidConfigError:
+        raise
+
+    # Validate input parameters (now using resolved values)
     validate_required_params(
-        resource_group_name=resource_group_name,
-        account_name=account_name,
-        pool_name=pool_name
+        resource_group_name=resolved_resource_group_name,
+        account_name=resolved_account_name,
+        pool_name=resolved_pool_name
     )
 
     try:
-        # Get ANF client and subscription ID (if not provided, will use environment variable)
-        client, subscription_id = get_anf_client(subscription_id, print_output=print_output)
+        # Get ANF client and subscription ID (using resolved value)
+        client, final_subscription_id = get_anf_client(resolved_subscription_id, print_output=print_output)
 
-        # List all volumes in the pool
+        # List all volumes in the pool (using resolved values)
         volumes = client.volumes.list(
-            resource_group_name=resource_group_name,
-            account_name=account_name,
-            pool_name=pool_name
+            resource_group_name=resolved_resource_group_name,
+            account_name=resolved_account_name,
+            pool_name=resolved_pool_name
         )
 
         if print_output:

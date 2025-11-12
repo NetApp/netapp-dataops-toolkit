@@ -14,18 +14,19 @@ from netapp_dataops.traditional.anf import client
 def test_get_anf_client_success():
     """Test successful ANF client creation"""
     with patch('netapp_dataops.traditional.anf.client.NetAppManagementClient') as mock_client_class:
-        with patch('netapp_dataops.traditional.anf.client.DefaultAzureCredential') as mock_credential:
+        with patch.object(client.ANFClientManager, '_get_credential') as mock_get_credential:
             with patch('netapp_dataops.traditional.anf.client.ANFClientManager._instance', None):  # Reset singleton
-                mock_credential.return_value = MagicMock()
-                mock_client = MagicMock()
-                mock_client_class.return_value = mock_client
-                
-                result_client, result_sub_id = client.get_anf_client(subscription_id='test-sub-id')
-                
-                assert result_client is not None
-                assert result_sub_id == 'test-sub-id'
-                mock_client_class.assert_called_once()
-                mock_credential.assert_called_once()
+                with patch('netapp_dataops.traditional.anf.client.ANFClientManager._client', None):  # Reset client
+                    mock_get_credential.return_value = MagicMock()
+                    mock_client = MagicMock()
+                    mock_client_class.return_value = mock_client
+                    
+                    result_client, result_sub_id = client.get_anf_client(subscription_id='test-sub-id')
+                    
+                    assert result_client is not None
+                    assert result_sub_id == 'test-sub-id'
+                    mock_client_class.assert_called_once()
+                    mock_get_credential.assert_called_once()
 
 
 def test_get_anf_client_with_environment_subscription():
@@ -471,38 +472,46 @@ def test_get_anf_client_with_service_principal():
 def test_get_anf_client_authentication_timeout():
     """Test ANF client creation with authentication timeout"""
     with patch('netapp_dataops.traditional.anf.client.NetAppManagementClient') as mock_client_class:
-        with patch('netapp_dataops.traditional.anf.client.DefaultAzureCredential') as mock_credential:
+        with patch.object(client.ANFClientManager, '_get_credential') as mock_get_credential:
             with patch('netapp_dataops.traditional.anf.client.ANFClientManager._instance', None):
-                mock_credential.side_effect = Exception("Authentication timeout")
-                
-                with pytest.raises(Exception) as exc_info:
-                    client.get_anf_client(subscription_id='test-sub-id')
-                
-                assert "timeout" in str(exc_info.value).lower()
+                with patch('netapp_dataops.traditional.anf.client.ANFClientManager._client', None):
+                    mock_get_credential.return_value = MagicMock()
+                    mock_client_class.side_effect = Exception("Authentication timeout")
+                    
+                    with pytest.raises(ClientAuthenticationError) as exc_info:
+                        client.get_anf_client(subscription_id='test-sub-id')
+                    
+                    assert "Failed to authenticate with Azure" in str(exc_info.value)
 
 
 def test_get_anf_client_invalid_credentials():
     """Test ANF client creation with invalid credentials"""
     with patch('netapp_dataops.traditional.anf.client.NetAppManagementClient') as mock_client_class:
-        with patch('netapp_dataops.traditional.anf.client.DefaultAzureCredential') as mock_credential:
+        with patch.object(client.ANFClientManager, '_get_credential') as mock_get_credential:
             with patch('netapp_dataops.traditional.anf.client.ANFClientManager._instance', None):
-                mock_credential.side_effect = ClientAuthenticationError("Invalid credentials")
-                
-                with pytest.raises(ClientAuthenticationError):
-                    client.get_anf_client(subscription_id='test-sub-id')
+                with patch('netapp_dataops.traditional.anf.client.ANFClientManager._client', None):
+                    mock_get_credential.return_value = MagicMock()
+                    mock_client_class.side_effect = Exception("Invalid credentials")
+                    
+                    with pytest.raises(ClientAuthenticationError) as exc_info:
+                        client.get_anf_client(subscription_id='test-sub-id')
+                    
+                    assert "Failed to authenticate with Azure" in str(exc_info.value)
 
 
 def test_get_anf_client_network_error():
     """Test ANF client creation with network connectivity issues"""
     with patch('netapp_dataops.traditional.anf.client.NetAppManagementClient') as mock_client_class:
-        with patch('netapp_dataops.traditional.anf.client.DefaultAzureCredential') as mock_credential:
+        with patch.object(client.ANFClientManager, '_get_credential') as mock_get_credential:
             with patch('netapp_dataops.traditional.anf.client.ANFClientManager._instance', None):
-                mock_credential.side_effect = Exception("Network unreachable")
-                
-                with pytest.raises(Exception) as exc_info:
-                    client.get_anf_client(subscription_id='test-sub-id')
-                
-                assert "network" in str(exc_info.value).lower()
+                with patch('netapp_dataops.traditional.anf.client.ANFClientManager._client', None):
+                    mock_get_credential.return_value = MagicMock()
+                    mock_client_class.side_effect = Exception("Network unreachable")
+                    
+                    with pytest.raises(ClientAuthenticationError) as exc_info:
+                        client.get_anf_client(subscription_id='test-sub-id')
+                    
+                    assert "Failed to authenticate with Azure" in str(exc_info.value)
 
 # =============================================================================
 # ADVANCED CLIENT CONFIGURATION TESTS
@@ -645,26 +654,28 @@ def test_anf_client_memory_cleanup():
 def test_anf_client_error_recovery():
     """Test ANF client error recovery and state management"""
     with patch('netapp_dataops.traditional.anf.client.NetAppManagementClient') as mock_client_class:
-        with patch('netapp_dataops.traditional.anf.client.DefaultAzureCredential') as mock_credential:
+        with patch.object(client.ANFClientManager, '_get_credential') as mock_get_credential:
             with patch('netapp_dataops.traditional.anf.client.ANFClientManager._instance', None):
-                # First call fails
-                mock_credential.side_effect = [Exception("First failure"), MagicMock()]
-                mock_client = MagicMock()
-                mock_client_class.return_value = mock_client
-                
-                # First attempt should fail
-                with pytest.raises(Exception):
-                    client.get_anf_client(subscription_id='error-recovery-test')
-                
-                # Reset the side effect for second attempt
-                with patch('netapp_dataops.traditional.anf.client.ANFClientManager._instance', None):
-                    mock_credential.side_effect = None
-                    mock_credential.return_value = MagicMock()
+                with patch('netapp_dataops.traditional.anf.client.ANFClientManager._client', None):
+                    # First call fails
+                    mock_get_credential.return_value = MagicMock()
+                    mock_client_class.side_effect = [Exception("First failure"), MagicMock()]
                     
-                    # Second attempt should succeed
-                    result_client, result_sub_id = client.get_anf_client(subscription_id='error-recovery-test')
-                    assert result_client is not None
-                    assert result_sub_id == 'error-recovery-test'
+                    # First attempt should fail
+                    with pytest.raises(ClientAuthenticationError):
+                        client.get_anf_client(subscription_id='error-recovery-test')
+                    
+                    # Reset the side effect for second attempt
+                    with patch('netapp_dataops.traditional.anf.client.ANFClientManager._instance', None):
+                        with patch('netapp_dataops.traditional.anf.client.ANFClientManager._client', None):
+                            mock_client = MagicMock()
+                            mock_client_class.side_effect = None
+                            mock_client_class.return_value = mock_client
+                            
+                            # Second attempt should succeed
+                            result_client, result_sub_id = client.get_anf_client(subscription_id='error-recovery-test')
+                            assert result_client is not None
+                            assert result_sub_id == 'error-recovery-test'
 
 # =============================================================================
 # AZURE CLOUD ENVIRONMENT TESTS

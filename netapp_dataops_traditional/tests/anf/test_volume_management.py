@@ -2,9 +2,29 @@ import pytest
 from unittest.mock import patch, MagicMock, Mock
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 from netapp_dataops.traditional.anf import volume_management
+from netapp_dataops.traditional.anf.config import InvalidConfigError
 
-# Required arguments for create volume testing
+# Sample config for testing
+SAMPLE_CONFIG = {
+    "subscriptionId": "test-subscription-id",
+    "resourceGroupName": "test-rg",
+    "accountName": "test-account",
+    "poolName": "test-pool",
+    "location": "centralus",
+    "virtualNetworkName": "test-vnet",
+    "subnetName": "default",
+    "protocolTypes": ["NFSv3"]
+}
+
+# Required arguments for create volume testing (new config-based style)
 CREATE_REQUIRED_ARGS = dict(
+    volume_name='test-volume',
+    creation_token='test-token',
+    usage_threshold=107374182400,  # 100 GiB
+)
+
+# Required arguments with explicit overrides (old style for backwards compatibility)
+CREATE_REQUIRED_ARGS_EXPLICIT = dict(
     resource_group_name='test-rg',
     account_name='test-account',
     pool_name='test-pool',
@@ -17,30 +37,76 @@ CREATE_REQUIRED_ARGS = dict(
     subnet_name='default'
 )
 
-# Required arguments for clone volume testing
-CLONE_REQUIRED_ARGS = dict(
-    resource_group_name='test-rg',
-    account_name='test-account',
-    pool_name='test-pool',
-    source_volume_name='test-source-volume',
-    volume_name='test-clone-volume',
-    location='eastus',
-    creation_token='test-clone-token',
-    snapshot_name='test-snapshot',
-    virtual_network_name='test-vnet',
-    subnet_name='default'
+# Required arguments for clone volume testing (new config-based style)
+# Clone volume test arguments
+CLONE_REQUIRED_ARGS = {
+    'source_volume_name': 'source-volume',
+    'volume_name': 'cloned-volume',
+    'creation_token': 'cloned-volume-token',
+    'snapshot_name': 'snapshot-1'
+}
+
+CLONE_REQUIRED_ARGS_EXPLICIT = CLONE_REQUIRED_ARGS.copy()
+CLONE_REQUIRED_ARGS_EXPLICIT.update({
+    'subscription_id': 'test-subscription-id',
+    'resource_group_name': 'test-resource-group',
+    'account_name': 'test-account',
+    'pool_name': 'test-pool'
+})
+
+# List volumes test arguments  
+LIST_REQUIRED_ARGS = {}
+
+LIST_REQUIRED_ARGS_EXPLICIT = {
+    'subscription_id': 'test-subscription-id',
+    'resource_group_name': 'test-resource-group',
+    'account_name': 'test-account',
+    'pool_name': 'test-pool'
+}
+
+# Delete volume test arguments
+DELETE_REQUIRED_ARGS = {
+    'volume_name': 'test-volume'
+}
+
+DELETE_REQUIRED_ARGS_EXPLICIT = DELETE_REQUIRED_ARGS.copy()
+DELETE_REQUIRED_ARGS_EXPLICIT.update({
+    'subscription_id': 'test-subscription-id',
+    'resource_group_name': 'test-resource-group', 
+    'account_name': 'test-account',
+    'pool_name': 'test-pool'
+})
+
+# Required arguments for clone volume with explicit overrides
+CLONE_REQUIRED_ARGS_EXPLICIT = {
+    'source_volume_name': 'test-source-volume',
+    'volume_name': 'test-clone-volume',
+    'creation_token': 'test-clone-token',
+    'snapshot_name': 'snapshot-1',
+    'resource_group_name': 'test-rg',
+    'account_name': 'test-account',
+    'pool_name': 'test-pool',
+    'subscription_id': 'test-subscription-id'
+}
+
+# Required arguments for delete volume testing (new config-based style)
+DELETE_REQUIRED_ARGS = dict(
+    volume_name='test-volume'
 )
 
-# Required arguments for delete volume testing
-DELETE_REQUIRED_ARGS = dict(
+# Required arguments for delete volume with explicit overrides
+DELETE_REQUIRED_ARGS_EXPLICIT = dict(
     resource_group_name='test-rg',
     account_name='test-account',
     pool_name='test-pool',
     volume_name='test-volume'
 )
 
-# Required arguments for list volumes testing
-LIST_REQUIRED_ARGS = dict(
+# Required arguments for list volumes testing (new config-based style - no required args)
+LIST_REQUIRED_ARGS = dict()
+
+# Required arguments for list volumes with explicit overrides
+LIST_REQUIRED_ARGS_EXPLICIT = dict(
     resource_group_name='test-rg',
     account_name='test-account',
     pool_name='test-pool'
@@ -51,19 +117,48 @@ LIST_REQUIRED_ARGS = dict(
 # =============================================================================
 
 # -----------------------------------------------------------------------------
-# Success Cases
+# Success Cases - Config-based
 # -----------------------------------------------------------------------------
+def test_create_volume_success_with_config():
+    """Test successful volume creation with config-based parameters"""
+    with patch('netapp_dataops.traditional.anf.volume_management._retrieve_anf_config') as mock_config:
+        with patch('netapp_dataops.traditional.anf.volume_management.get_anf_client') as mock_client_func:
+            mock_config.return_value = SAMPLE_CONFIG
+            mock_client = MagicMock()
+            mock_client_func.return_value = (mock_client, 'test-subscription')
+            mock_client.volumes.begin_create_or_update.return_value.result.return_value = MagicMock()
+            result = volume_management.create_volume(**CREATE_REQUIRED_ARGS)
+            assert result['status'] == 'success'
+
 def test_create_volume_success():
-    """Test successful volume creation with minimal required parameters"""
-    with patch('netapp_dataops.traditional.anf.volume_management.get_anf_client') as mock_client_func:
-        mock_client = MagicMock()
-        mock_client_func.return_value = (mock_client, 'test-subscription')
-        mock_client.volumes.begin_create_or_update.return_value.result.return_value = MagicMock()
-        result = volume_management.create_volume(**CREATE_REQUIRED_ARGS)
-        assert result['status'] == 'success'
+    """Test successful volume creation with explicit parameters (backwards compatibility)"""
+    with patch('netapp_dataops.traditional.anf.volume_management._retrieve_anf_config') as mock_config:
+        with patch('netapp_dataops.traditional.anf.volume_management.get_anf_client') as mock_client_func:
+            mock_config.return_value = SAMPLE_CONFIG
+            mock_client = MagicMock()
+            mock_client_func.return_value = (mock_client, 'test-subscription')
+            mock_client.volumes.begin_create_or_update.return_value.result.return_value = MagicMock()
+            result = volume_management.create_volume(**CREATE_REQUIRED_ARGS_EXPLICIT)
+            assert result['status'] == 'success'
+
+def test_create_volume_config_override():
+    """Test volume creation with config defaults and parameter overrides"""
+    args = CREATE_REQUIRED_ARGS.copy()
+    args.update({
+        'location': 'westus',  # Override config location
+        'protocol_types': ['NFSv4.1']  # Override config protocol
+    })
+    with patch('netapp_dataops.traditional.anf.volume_management._retrieve_anf_config') as mock_config:
+        with patch('netapp_dataops.traditional.anf.volume_management.get_anf_client') as mock_client_func:
+            mock_config.return_value = SAMPLE_CONFIG
+            mock_client = MagicMock()
+            mock_client_func.return_value = (mock_client, 'test-subscription')
+            mock_client.volumes.begin_create_or_update.return_value.result.return_value = MagicMock()
+            result = volume_management.create_volume(**args)
+            assert result['status'] == 'success'
 
 def test_create_volume_optional_args():
-    """Test volume creation with optional parameters"""
+    """Test volume creation with optional parameters using config"""
     args = CREATE_REQUIRED_ARGS.copy()
     args.update({
         'service_level': 'Premium',
@@ -73,12 +168,14 @@ def test_create_volume_optional_args():
         'throughput_mibps': 16.0,
         'unix_permissions': '0755'
     })
-    with patch('netapp_dataops.traditional.anf.volume_management.get_anf_client') as mock_client_func:
-        mock_client = MagicMock()
-        mock_client_func.return_value = (mock_client, 'test-subscription')
-        mock_client.volumes.begin_create_or_update.return_value.result.return_value = MagicMock()
-        result = volume_management.create_volume(**args)
-        assert result['status'] == 'success'
+    with patch('netapp_dataops.traditional.anf.volume_management._retrieve_anf_config') as mock_config:
+        with patch('netapp_dataops.traditional.anf.volume_management.get_anf_client') as mock_client_func:
+            mock_config.return_value = SAMPLE_CONFIG
+            mock_client = MagicMock()
+            mock_client_func.return_value = (mock_client, 'test-subscription')
+            mock_client.volumes.begin_create_or_update.return_value.result.return_value = MagicMock()
+            result = volume_management.create_volume(**args)
+            assert result['status'] == 'success'
 
 def test_create_volume_with_all_optional_params():
     """Test create volume with comprehensive optional parameters"""
@@ -162,11 +259,18 @@ def test_create_volume_client_exception():
 # -----------------------------------------------------------------------------
 def test_create_volume_missing_required_params():
     """Test volume creation with missing required parameters"""
-    args = CREATE_REQUIRED_ARGS.copy()
-    del args['resource_group_name']
-    # Python raises TypeError for missing required positional arguments
-    with pytest.raises(TypeError, match="missing 1 required positional argument"):
-        volume_management.create_volume(**args)
+    with pytest.raises(TypeError) as exc_info:
+        volume_management.create_volume(volume_name='test-volume')  # Missing creation_token and usage_threshold
+    assert "missing" in str(exc_info.value).lower() and "required" in str(exc_info.value).lower()
+
+@patch('netapp_dataops.traditional.anf.config._retrieve_anf_config')
+def test_create_volume_config_missing_required_params(mock_config):
+    """Test volume creation when config is missing required parameters"""
+    # Mock a config with missing required fields
+    mock_config.return_value = {'subscriptionId': 'test-sub'}  # Missing other required fields
+    with pytest.raises(TypeError) as exc_info:
+        volume_management.create_volume(volume_name='test-volume', usage_threshold=107374182400)  # Missing creation_token
+    assert "missing" in str(exc_info.value).lower() and "required" in str(exc_info.value).lower()
 
 def test_create_volume_invalid_usage_threshold():
     """Test volume creation with invalid usage threshold"""
@@ -664,8 +768,10 @@ def test_create_volume_concurrent_requests():
 # -----------------------------------------------------------------------------
 # Success Cases
 # -----------------------------------------------------------------------------
-def test_clone_volume_success():
-    """Test successful volume cloning"""
+@patch('netapp_dataops.traditional.anf.config._retrieve_anf_config')
+def test_clone_volume_success_with_config(mock_config):
+    """Test successful volume cloning using config"""
+    mock_config.return_value = SAMPLE_CONFIG
     with patch('netapp_dataops.traditional.anf.volume_management.get_anf_client') as mock_client_func:
         mock_client = MagicMock()
         mock_client_func.return_value = (mock_client, 'test-subscription')
@@ -673,9 +779,32 @@ def test_clone_volume_success():
         result = volume_management.clone_volume(**CLONE_REQUIRED_ARGS)
         assert result['status'] == 'success'
 
+def test_clone_volume_success():
+    """Test successful volume cloning with explicit parameters"""
+    with patch('netapp_dataops.traditional.anf.volume_management.get_anf_client') as mock_client_func:
+        mock_client = MagicMock()
+        mock_client_func.return_value = (mock_client, 'test-subscription')
+        mock_client.volumes.begin_create_or_update.return_value.result.return_value = MagicMock()
+        result = volume_management.clone_volume(**CLONE_REQUIRED_ARGS_EXPLICIT)
+        assert result['status'] == 'success'
+
+@patch('netapp_dataops.traditional.anf.config._retrieve_anf_config')
+def test_clone_volume_config_override(mock_config):
+    """Test volume cloning with config parameter override"""
+    mock_config.return_value = SAMPLE_CONFIG
+    args = CLONE_REQUIRED_ARGS.copy()
+    args['account_name'] = 'override-account'
+    
+    with patch('netapp_dataops.traditional.anf.volume_management.get_anf_client') as mock_client_func:
+        mock_client = MagicMock()
+        mock_client_func.return_value = (mock_client, 'test-subscription')
+        mock_client.volumes.begin_create_or_update.return_value.result.return_value = MagicMock()
+        result = volume_management.clone_volume(**args)
+        assert result['status'] == 'success'
+
 def test_clone_volume_with_different_snapshot():
     """Test volume cloning with a different snapshot name"""
-    args = CLONE_REQUIRED_ARGS.copy()
+    args = CLONE_REQUIRED_ARGS_EXPLICIT.copy()
     args['snapshot_name'] = 'different-snapshot'
     with patch('netapp_dataops.traditional.anf.volume_management.get_anf_client') as mock_client_func:
         mock_client = MagicMock()
@@ -693,7 +822,7 @@ def test_clone_volume_source_not_found():
         mock_client = MagicMock()
         mock_client_func.return_value = (mock_client, 'test-subscription')
         mock_client.volumes.begin_create_or_update.side_effect = ResourceNotFoundError("Source volume not found")
-        result = volume_management.clone_volume(**CLONE_REQUIRED_ARGS)
+        result = volume_management.clone_volume(**CLONE_REQUIRED_ARGS_EXPLICIT)
         assert result['status'] == 'error'
         assert 'not found' in result['details'].lower()
 
@@ -702,7 +831,7 @@ def test_clone_volume_source_not_found():
 # -----------------------------------------------------------------------------
 def test_clone_volume_missing_source():
     """Test volume cloning with missing source volume name"""
-    args = CLONE_REQUIRED_ARGS.copy()
+    args = CLONE_REQUIRED_ARGS_EXPLICIT.copy()
     del args['source_volume_name']
     # Python raises TypeError for missing required positional arguments
     with pytest.raises(TypeError, match="missing 1 required positional argument"):
@@ -715,8 +844,10 @@ def test_clone_volume_missing_source():
 # -----------------------------------------------------------------------------
 # Success Cases
 # -----------------------------------------------------------------------------
-def test_list_volumes_success():
-    """Test successful listing of volumes"""
+@patch('netapp_dataops.traditional.anf.config._retrieve_anf_config')
+def test_list_volumes_success_with_config(mock_config):
+    """Test successful listing of volumes using config"""
+    mock_config.return_value = SAMPLE_CONFIG
     with patch('netapp_dataops.traditional.anf.volume_management.get_anf_client') as mock_client_func:
         mock_client = MagicMock()
         mock_client_func.return_value = (mock_client, 'test-subscription')
@@ -727,13 +858,41 @@ def test_list_volumes_success():
         assert result['status'] == 'success'
         assert len(result['details']) == 1
 
+def test_list_volumes_success():
+    """Test successful listing of volumes with explicit parameters"""
+    with patch('netapp_dataops.traditional.anf.volume_management.get_anf_client') as mock_client_func:
+        mock_client = MagicMock()
+        mock_client_func.return_value = (mock_client, 'test-subscription')
+        mock_volume = MagicMock()
+        mock_volume.name = 'test-volume'
+        mock_client.volumes.list.return_value = [mock_volume]
+        result = volume_management.list_volumes(**LIST_REQUIRED_ARGS_EXPLICIT)
+        assert result['status'] == 'success'
+        assert len(result['details']) == 1
+
+@patch('netapp_dataops.traditional.anf.config._retrieve_anf_config')
+def test_list_volumes_config_override(mock_config):
+    """Test volume listing with config parameter override"""
+    mock_config.return_value = SAMPLE_CONFIG
+    args = LIST_REQUIRED_ARGS.copy()
+    args['pool_name'] = 'override-pool'
+    
+    with patch('netapp_dataops.traditional.anf.volume_management.get_anf_client') as mock_client_func:
+        mock_client = MagicMock()
+        mock_client_func.return_value = (mock_client, 'test-subscription')
+        mock_volume = MagicMock()
+        mock_volume.name = 'test-volume'
+        mock_client.volumes.list.return_value = [mock_volume]
+        result = volume_management.list_volumes(**args)
+        assert result['status'] == 'success'
+
 def test_list_volumes_empty():
     """Test listing volumes when no volumes exist"""
     with patch('netapp_dataops.traditional.anf.volume_management.get_anf_client') as mock_client_func:
         mock_client = MagicMock()
         mock_client_func.return_value = (mock_client, 'test-subscription')
         mock_client.volumes.list.return_value = []
-        result = volume_management.list_volumes(**LIST_REQUIRED_ARGS)
+        result = volume_management.list_volumes(**LIST_REQUIRED_ARGS_EXPLICIT)
         assert result['status'] == 'success'
         assert len(result['details']) == 0
 
@@ -746,21 +905,13 @@ def test_list_volumes_client_exception():
         mock_client = MagicMock()
         mock_client_func.return_value = (mock_client, 'test-subscription')
         mock_client.volumes.list.side_effect = Exception("Client error")
-        result = volume_management.list_volumes(**LIST_REQUIRED_ARGS)
+        result = volume_management.list_volumes(**LIST_REQUIRED_ARGS_EXPLICIT)
         assert result['status'] == 'error'
         assert 'Client error' in result['details']
 
 # -----------------------------------------------------------------------------
 # Input Validation
 # -----------------------------------------------------------------------------
-def test_list_volumes_missing_required_params():
-    """Test listing volumes with missing required parameters"""
-    args = LIST_REQUIRED_ARGS.copy()
-    del args['resource_group_name']
-    # Python raises TypeError for missing required positional arguments
-    with pytest.raises(TypeError, match="missing 1 required positional argument"):
-        volume_management.list_volumes(**args)
-
 def test_list_volumes_large_result_set():
     """Test list volumes with large number of volumes"""
     mock_volumes = []
@@ -775,7 +926,7 @@ def test_list_volumes_large_result_set():
         mock_client_func.return_value = (mock_client, 'test-subscription')
         mock_client.volumes.list.return_value = mock_volumes
         
-        result = volume_management.list_volumes(**LIST_REQUIRED_ARGS)
+        result = volume_management.list_volumes(**LIST_REQUIRED_ARGS_EXPLICIT)
         assert result['status'] == 'success'
         assert len(result['details']) == 100
 
@@ -786,13 +937,38 @@ def test_list_volumes_large_result_set():
 # -----------------------------------------------------------------------------
 # Success Cases
 # -----------------------------------------------------------------------------
-def test_delete_volume_success():
-    """Test successful volume deletion"""
+@patch('netapp_dataops.traditional.anf.config._retrieve_anf_config')
+def test_delete_volume_success_with_config(mock_config):
+    """Test successful volume deletion using config"""
+    mock_config.return_value = SAMPLE_CONFIG
     with patch('netapp_dataops.traditional.anf.volume_management.get_anf_client') as mock_client_func:
         mock_client = MagicMock()
         mock_client_func.return_value = (mock_client, 'test-subscription')
         mock_client.volumes.begin_delete.return_value.result.return_value = None
         result = volume_management.delete_volume(**DELETE_REQUIRED_ARGS)
+        assert result['status'] == 'success'
+
+def test_delete_volume_success():
+    """Test successful volume deletion with explicit parameters"""
+    with patch('netapp_dataops.traditional.anf.volume_management.get_anf_client') as mock_client_func:
+        mock_client = MagicMock()
+        mock_client_func.return_value = (mock_client, 'test-subscription')
+        mock_client.volumes.begin_delete.return_value.result.return_value = None
+        result = volume_management.delete_volume(**DELETE_REQUIRED_ARGS_EXPLICIT)
+        assert result['status'] == 'success'
+
+@patch('netapp_dataops.traditional.anf.config._retrieve_anf_config')
+def test_delete_volume_config_override(mock_config):
+    """Test volume deletion with config parameter override"""
+    mock_config.return_value = SAMPLE_CONFIG
+    args = DELETE_REQUIRED_ARGS.copy()
+    args['resource_group_name'] = 'override-rg'
+    
+    with patch('netapp_dataops.traditional.anf.volume_management.get_anf_client') as mock_client_func:
+        mock_client = MagicMock()
+        mock_client_func.return_value = (mock_client, 'test-subscription')
+        mock_client.volumes.begin_delete.return_value.result.return_value = None
+        result = volume_management.delete_volume(**args)
         assert result['status'] == 'success'
 
 # -----------------------------------------------------------------------------
@@ -804,7 +980,7 @@ def test_delete_volume_not_found():
         mock_client = MagicMock()
         mock_client_func.return_value = (mock_client, 'test-subscription')
         mock_client.volumes.begin_delete.side_effect = ResourceNotFoundError("Volume not found")
-        result = volume_management.delete_volume(**DELETE_REQUIRED_ARGS)
+        result = volume_management.delete_volume(**DELETE_REQUIRED_ARGS_EXPLICIT)
         assert result['status'] == 'error'
         assert 'not found' in result['details'].lower()
 
@@ -814,7 +990,7 @@ def test_delete_volume_client_exception():
         mock_client = MagicMock()
         mock_client_func.return_value = (mock_client, 'test-subscription')
         mock_client.volumes.begin_delete.side_effect = Exception("Client error")
-        result = volume_management.delete_volume(**DELETE_REQUIRED_ARGS)
+        result = volume_management.delete_volume(**DELETE_REQUIRED_ARGS_EXPLICIT)
         assert result['status'] == 'error'
         assert 'Client error' in result['details']
 
@@ -823,7 +999,7 @@ def test_delete_volume_client_exception():
 # -----------------------------------------------------------------------------
 def test_delete_volume_missing_required_params():
     """Test volume deletion with missing required parameters"""
-    args = DELETE_REQUIRED_ARGS.copy()
+    args = DELETE_REQUIRED_ARGS_EXPLICIT.copy()
     del args['volume_name']
     # Python raises TypeError for missing required positional arguments
     with pytest.raises(TypeError, match="missing 1 required positional argument"):
@@ -836,7 +1012,7 @@ def test_delete_volume_with_snapshots():
         mock_client_func.return_value = (mock_client, 'test-subscription')
         mock_client.volumes.begin_delete.side_effect = Exception("Volume has snapshots")
         
-        result = volume_management.delete_volume(**DELETE_REQUIRED_ARGS)
+        result = volume_management.delete_volume(**DELETE_REQUIRED_ARGS_EXPLICIT)
         assert result['status'] == 'error'
         assert 'snapshot' in result['details'].lower() or 'failed to delete' in result['details'].lower()
 
@@ -848,7 +1024,7 @@ def test_delete_volume_in_replication():
         mock_client_func.return_value = (mock_client, 'test-subscription')
         mock_client.volumes.begin_delete.side_effect = Exception("Volume in replication")
         
-        result = volume_management.delete_volume(**DELETE_REQUIRED_ARGS)
+        result = volume_management.delete_volume(**DELETE_REQUIRED_ARGS_EXPLICIT)
         assert result['status'] == 'error'
         assert 'replication' in result['details'].lower() or 'failed to delete' in result['details'].lower()
 
@@ -871,16 +1047,16 @@ def test_volume_lifecycle_integration():
         mock_client.volumes.begin_delete.return_value.result.return_value = None
         
         # Test create
-        create_result = volume_management.create_volume(**CREATE_REQUIRED_ARGS)
+        create_result = volume_management.create_volume(**CREATE_REQUIRED_ARGS_EXPLICIT)
         assert create_result['status'] == 'success'
         
         # Test list
-        list_result = volume_management.list_volumes(**LIST_REQUIRED_ARGS)
+        list_result = volume_management.list_volumes(**LIST_REQUIRED_ARGS_EXPLICIT)
         assert list_result['status'] == 'success'
         assert len(list_result['details']) == 1
         
         # Test delete
-        delete_result = volume_management.delete_volume(**DELETE_REQUIRED_ARGS)
+        delete_result = volume_management.delete_volume(**DELETE_REQUIRED_ARGS_EXPLICIT)
         assert delete_result['status'] == 'success'
 
 
@@ -892,7 +1068,7 @@ def test_volume_lifecycle_workflow():
         
         # Mock volume creation
         mock_volume = MagicMock()
-        mock_volume.name = CREATE_REQUIRED_ARGS['volume_name']
+        mock_volume.name = CREATE_REQUIRED_ARGS_EXPLICIT['volume_name']
         mock_client.volumes.begin_create_or_update.return_value.result.return_value = mock_volume
         
         # Mock volume listing
@@ -900,35 +1076,35 @@ def test_volume_lifecycle_workflow():
         
         # Mock volume cloning
         mock_clone = MagicMock()
-        mock_clone.name = CLONE_REQUIRED_ARGS['volume_name']
+        mock_clone.name = CLONE_REQUIRED_ARGS_EXPLICIT['volume_name']
         
         # Mock volume deletion
         mock_client.volumes.begin_delete.return_value.result.return_value = None
         
         # Step 1: Create volume
-        create_result = volume_management.create_volume(**CREATE_REQUIRED_ARGS)
+        create_result = volume_management.create_volume(**CREATE_REQUIRED_ARGS_EXPLICIT)
         assert create_result['status'] == 'success'
         
         # Step 2: List volumes
-        list_result = volume_management.list_volumes(**LIST_REQUIRED_ARGS)
+        list_result = volume_management.list_volumes(**LIST_REQUIRED_ARGS_EXPLICIT)
         assert list_result['status'] == 'success'
         assert len(list_result['details']) == 1
         
         # Step 3: Clone volume (if function exists)
         try:
-            clone_result = volume_management.clone_volume(**CLONE_REQUIRED_ARGS)
+            clone_result = volume_management.clone_volume(**CLONE_REQUIRED_ARGS_EXPLICIT)
             assert clone_result['status'] == 'success'
         except AttributeError:
             pass  # Function may not exist
         
         # Step 4: Delete volume
-        delete_result = volume_management.delete_volume(**DELETE_REQUIRED_ARGS)
+        delete_result = volume_management.delete_volume(**DELETE_REQUIRED_ARGS_EXPLICIT)
         assert delete_result['status'] == 'success'
 
 
 def test_volume_multi_tenant_environment():
     """Test volume creation in multi-tenant environment"""
-    tenant_args = CREATE_REQUIRED_ARGS.copy()
+    tenant_args = CREATE_REQUIRED_ARGS_EXPLICIT.copy()
     tenant_args.update({
         'tags': {
             'tenant': 'tenant-a',

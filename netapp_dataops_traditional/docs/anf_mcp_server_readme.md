@@ -88,6 +88,92 @@ Before the MCP server can be used to perform ANF operations, you must authentica
    export AZURE_SUBSCRIPTION_ID="your-subscription-id"
    ```
 
+### ANF Configuration (Optional)
+
+The MCP server supports an **optional configuration file** that simplifies ANF operations by storing common Azure infrastructure details. This reduces the complexity of tool usage and provides consistent defaults.
+
+#### Setting up ANF Configuration
+
+**Option 1: Interactive Setup (Recommended)**
+
+```python
+# Run this once to set up your ANF infrastructure defaults
+from netapp_dataops.traditional.anf.config import create_anf_config
+create_anf_config()
+```
+
+This interactive setup will prompt you for:
+- Azure Subscription ID
+- Resource Group Name
+- NetApp Account Name
+- Capacity Pool Name
+- Azure Region/Location
+- Virtual Network Name
+- Subnet Name
+- Default Protocol Types (NFSv3, NFSv4.1, SMB)
+
+The configuration file will be automatically created at `~/.netapp_dataops/anf_config.json`.
+
+#### Configuration File Location and Format
+
+The configuration file is stored at `~/.netapp_dataops/anf_config.json` and contains your Azure NetApp Files infrastructure defaults. This file is automatically created by the interactive setup or can be manually created.
+
+**Configuration File Structure:**
+
+```json
+{
+  "subscriptionId": "your-azure-subscription-id",
+  "resourceGroupName": "your-resource-group",
+  "accountName": "your-netapp-account", 
+  "poolName": "your-capacity-pool",
+  "location": "eastus",
+  "virtualNetworkName": "your-vnet",
+  "subnetName": "default",
+  "protocolTypes": ["NFSv3"]
+}
+```
+
+#### Configuration Benefits and Usage
+
+**Simplified Tool Usage:**
+
+**Without Configuration:**
+```
+Create a volume in my-resource-group using my-netapp-account in the premium-pool located in eastus with virtual network my-vnet and subnet netapp-subnet. Name it data-volume with creation token data-vol-001 and size 500 GiB using NFSv3 protocol.
+```
+
+**With Configuration:**  
+```
+Create a volume named data-volume with creation token data-vol-001 and size 500 GiB.
+```
+
+The MCP server automatically uses configuration defaults for:
+- Resource group name
+- NetApp account name  
+- Capacity pool name
+- Azure region/location
+- Virtual network name
+- Subnet name
+- Default protocol types
+
+#### Parameter Precedence Rules
+
+The MCP server uses the following precedence for parameter resolution:
+
+1. **Tool parameters** (highest priority) - Parameters explicitly provided in tool calls
+2. **Configuration file values** - Defaults from `~/.netapp_dataops/anf_config.json`
+3. **Error** if required parameter missing from both sources
+
+**Example Parameter Resolution:**
+- If you specify `resource_group_name` in a tool call, it overrides the config file value
+- If you don't specify it in the tool call, the config file value is used  
+- If it's missing from both, an error is returned
+
+This allows you to:
+- Set common defaults in the configuration file
+- Override specific parameters on a per-operation basis
+- Maintain flexibility while reducing repetitive parameter entry
+
 ### Example JSON Config
 
 To use the MCP server with an MCP client, you need to configure the client to use the server. For many clients (such as [VS Code](https://code.visualstudio.com/docs/copilot/chat/mcp-servers), [Claude Desktop](https://modelcontextprotocol.io/quickstart/user), and [AnythingLLM](https://docs.anythingllm.com/mcp-compatibility/overview)), this requires editing a config file that is in JSON format. Below is an example. Refer to the documentation for your MCP client for specific formatting details.
@@ -227,13 +313,22 @@ Set up disaster recovery:
    - Check that Capacity Pool has available space
    - Ensure delegated subnet is properly configured
 
-5. **Module Not Found**: 
+5. **Configuration File Issues**:
+   - Run the interactive setup to recreate the configuration:
+   ```python
+   from netapp_dataops.traditional.anf.config import create_anf_config
+   create_anf_config()
+   ```
+   - Verify the configuration file format and location (`~/.netapp_dataops/anf_config.json`)
+   - Check file permissions and ensure the directory is writable
+
+6. **Module Not Found**: 
    - Ensure the package is properly installed with Azure extras
    ```bash
    pip install 'netapp-dataops-traditional[azure]'
    ```
 
-6. **Network Configuration Issues**:
+7. **Network Configuration Issues**:
    - Verify virtual network and subnet exist in the target region
    - Check that subnet is properly delegated to Microsoft.NetApp/volumes
    - Ensure network security groups allow required traffic
@@ -267,6 +362,12 @@ az netappfiles pool list --resource-group YOUR_RG --account-name YOUR_ACCOUNT
 
 # Verify subnet delegation
 az network vnet subnet show --resource-group YOUR_RG --vnet-name YOUR_VNET --name YOUR_SUBNET
+
+# Test ANF configuration (if using config file)
+python -c "
+from netapp_dataops.traditional.anf.config import get_config_value
+print('Config test:', get_config_value('subscriptionId'))
+"
 ```
 
 ## Limitations and Considerations

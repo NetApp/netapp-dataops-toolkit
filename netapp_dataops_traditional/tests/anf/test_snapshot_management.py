@@ -2,8 +2,35 @@ import pytest
 from unittest.mock import patch, MagicMock, Mock
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 from netapp_dataops.traditional.anf import snapshot_management
+from netapp_dataops.traditional.anf.config import InvalidConfigError
 
-# Required arguments for testing
+# Mock config data that simulates a valid ANF configuration
+SAMPLE_CONFIG = {
+    'subscriptionId': 'test-subscription-id',
+    'resourceGroupName': 'test-resource-group',
+    'accountName': 'test-account',
+    'poolName': 'test-pool',
+    'location': 'eastus',
+    'virtualNetworkName': 'test-vnet',
+    'subnetName': 'test-subnet',
+    'protocolTypes': ['NFSv3']
+}
+
+# Create snapshot test arguments  
+CREATE_SNAPSHOT_REQUIRED_ARGS = {
+    'volume_name': 'test-volume',
+    'snapshot_name': 'test-snapshot'
+}
+
+CREATE_SNAPSHOT_REQUIRED_ARGS_EXPLICIT = CREATE_SNAPSHOT_REQUIRED_ARGS.copy()
+CREATE_SNAPSHOT_REQUIRED_ARGS_EXPLICIT.update({
+    'subscription_id': 'test-subscription-id',
+    'resource_group_name': 'test-resource-group',
+    'account_name': 'test-account',
+    'pool_name': 'test-pool'
+})
+
+# Required arguments for testing (backward compatibility)
 REQUIRED_ARGS = {
     'resource_group_name': 'test-rg',
     'account_name': 'test-account',
@@ -13,6 +40,19 @@ REQUIRED_ARGS = {
     'location': 'eastus'
 }
 
+# List snapshots test arguments
+LIST_SNAPSHOTS_REQUIRED_ARGS = {
+    'volume_name': 'test-volume'
+}
+
+LIST_SNAPSHOTS_REQUIRED_ARGS_EXPLICIT = LIST_SNAPSHOTS_REQUIRED_ARGS.copy()
+LIST_SNAPSHOTS_REQUIRED_ARGS_EXPLICIT.update({
+    'subscription_id': 'test-subscription-id',
+    'resource_group_name': 'test-resource-group',
+    'account_name': 'test-account',
+    'pool_name': 'test-pool'
+})
+
 # Required arguments for delete snapshots testing (no location needed)
 DELETE_REQUIRED_ARGS = {
     'resource_group_name': 'test-rg',
@@ -21,6 +61,20 @@ DELETE_REQUIRED_ARGS = {
     'volume_name': 'test-volume',
     'snapshot_name': 'test-snapshot'
 }
+
+# Delete snapshot test arguments
+DELETE_SNAPSHOT_REQUIRED_ARGS = {
+    'volume_name': 'test-volume',
+    'snapshot_name': 'test-snapshot'
+}
+
+DELETE_SNAPSHOT_REQUIRED_ARGS_EXPLICIT = DELETE_SNAPSHOT_REQUIRED_ARGS.copy()
+DELETE_SNAPSHOT_REQUIRED_ARGS_EXPLICIT.update({
+    'subscription_id': 'test-subscription-id',
+    'resource_group_name': 'test-resource-group',
+    'account_name': 'test-account',
+    'pool_name': 'test-pool'
+})
 
 # Required arguments for list snapshots testing
 LIST_REQUIRED_ARGS = {
@@ -38,6 +92,17 @@ LIST_REQUIRED_ARGS = {
 # Success Cases
 # -----------------------------------------------------------------------------
 
+@patch('netapp_dataops.traditional.anf.config._retrieve_anf_config')
+def test_create_snapshot_success_with_config(mock_config):
+    """Test successful snapshot creation using config"""
+    mock_config.return_value = SAMPLE_CONFIG
+    with patch('netapp_dataops.traditional.anf.snapshot_management.get_anf_client') as mock_client_func:
+        mock_client = MagicMock()
+        mock_client_func.return_value = (mock_client, 'test-subscription')
+        mock_client.snapshots.begin_create.return_value.result.return_value = MagicMock()
+        result = snapshot_management.create_snapshot(**CREATE_SNAPSHOT_REQUIRED_ARGS)
+        assert result['status'] == 'success'
+
 def test_create_snapshot_success():
     """Test successful snapshot creation with minimal required parameters"""
     with patch('netapp_dataops.traditional.anf.snapshot_management.get_anf_client') as mock_client_func:
@@ -45,6 +110,29 @@ def test_create_snapshot_success():
         mock_client_func.return_value = (mock_client, 'test-subscription')
         mock_client.snapshots.begin_create.return_value.result.return_value = MagicMock()
         result = snapshot_management.create_snapshot(**REQUIRED_ARGS)
+        assert result['status'] == 'success'
+
+def test_create_snapshot_success_explicit():
+    """Test successful snapshot creation with explicit parameters"""
+    with patch('netapp_dataops.traditional.anf.snapshot_management.get_anf_client') as mock_client_func:
+        mock_client = MagicMock()
+        mock_client_func.return_value = (mock_client, 'test-subscription')
+        mock_client.snapshots.begin_create.return_value.result.return_value = MagicMock()
+        result = snapshot_management.create_snapshot(**CREATE_SNAPSHOT_REQUIRED_ARGS_EXPLICIT)
+        assert result['status'] == 'success'
+
+@patch('netapp_dataops.traditional.anf.config._retrieve_anf_config')
+def test_create_snapshot_config_override(mock_config):
+    """Test snapshot creation with config parameter override"""
+    mock_config.return_value = SAMPLE_CONFIG
+    args = CREATE_SNAPSHOT_REQUIRED_ARGS.copy()
+    args['pool_name'] = 'override-pool'
+    
+    with patch('netapp_dataops.traditional.anf.snapshot_management.get_anf_client') as mock_client_func:
+        mock_client = MagicMock()
+        mock_client_func.return_value = (mock_client, 'test-subscription')
+        mock_client.snapshots.begin_create.return_value.result.return_value = MagicMock()
+        result = snapshot_management.create_snapshot(**args)
         assert result['status'] == 'success'
 
 
@@ -147,13 +235,6 @@ def test_create_snapshot_empty_snapshot_name():
     with pytest.raises(ValueError, match="The following required parameters are missing"):
         snapshot_management.create_snapshot(**args)
 
-
-def test_create_snapshot_none_resource_group():
-    """Test snapshot creation with None resource group"""
-    args = REQUIRED_ARGS.copy()
-    args['resource_group_name'] = None
-    with pytest.raises(ValueError, match="The following required parameters are missing"):
-        snapshot_management.create_snapshot(**args)
 
 # -----------------------------------------------------------------------------
 # Edge Cases
@@ -316,14 +397,6 @@ def test_delete_snapshot_client_exception():
 # -----------------------------------------------------------------------------
 # Input Validation
 # -----------------------------------------------------------------------------
-
-def test_delete_snapshot_missing_required_params():
-    """Test snapshot deletion with missing required parameters"""
-    args = DELETE_REQUIRED_ARGS.copy()
-    del args['pool_name']
-    with pytest.raises(TypeError, match="missing 1 required positional argument"):
-        snapshot_management.delete_snapshot(**args)
-
 
 # =============================================================================
 # INTEGRATION TESTS

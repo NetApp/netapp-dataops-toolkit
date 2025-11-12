@@ -12,9 +12,9 @@ This directory contains comprehensive unit tests for the NetApp DataOps Toolkit'
 
 This test suite provides comprehensive coverage of Azure NetApp Files (ANF) and Model Context Protocol (MCP) functionality:
 
-- **ANF Tests**: 212 tests covering volume management, snapshot operations, replication management, client functionality, and base utilities
+- **ANF Tests**: 236 tests covering volume management, snapshot operations, replication management, client functionality, configuration management, and base utilities
 - **MCP Tests**: 23 tests covering MCP server integration for ANF operations
-- **Total**: 235 tests
+- **Total**: 259 tests
 
 All tests are designed to be self-contained and can be run independently or as part of the complete suite.
 
@@ -23,6 +23,7 @@ All tests are designed to be self-contained and can be run independently or as p
 ### ANF Traditional Module Tests (`tests/anf/` directory)
 - `tests/anf/test_base.py`: Tests utility functions including parameter validation, serialization, and error handling for Azure SDK objects
 - `tests/anf/test_client.py`: Comprehensive tests for Azure client authentication, singleton pattern, and connection management
+- `tests/anf/test_config.py`: Complete configuration management testing including interactive setup, file operations, and parameter resolution
 - `tests/anf/test_volume_management.py`: Complete volume operations testing with professional formatting and boundary conditions
 - `tests/anf/test_snapshot_management.py`: Enhanced snapshot test suite covering all snapshot operations with Azure-specific scenarios
 - `tests/anf/test_replication_management.py`: Cross-region replication tests including data protection volume creation and authorization
@@ -118,6 +119,7 @@ python3 -m pytest tests/anf/ -v
 
 # Specific ANF module tests
 python3 -m pytest tests/anf/test_client.py -v
+python3 -m pytest tests/anf/test_config.py -v
 python3 -m pytest tests/anf/test_volume_management.py -v
 python3 -m pytest tests/anf/test_snapshot_management.py -v
 python3 -m pytest tests/anf/test_replication_management.py -v
@@ -157,6 +159,52 @@ The ANF test suite includes comprehensive testing of Azure authentication patter
 - **Managed Identity**: Simulates Azure resource-based authentication
 - **Environment Variables**: Tests credential configuration via environment variables
 - **Credential Caching**: Tests the singleton client management pattern
+
+### Configuration Management Testing
+The test suite includes comprehensive testing of the ANF configuration system in `tests/anf/test_config.py`:
+
+#### Configuration Creation Tests
+- **Interactive Configuration**: Tests the `create_anf_config()` interactive setup process
+- **Config File Creation**: Validates JSON config file generation with proper formatting
+- **Parameter Validation**: Tests validation of Azure infrastructure parameters during setup
+- **Directory Creation**: Tests automatic creation of config directories (`~/.netapp_dataops/`)
+- **File Overwrite Handling**: Tests behavior when configuration files already exist
+- **Error Handling**: Tests failure scenarios (permission denied, disk full, invalid input)
+
+#### Configuration Loading Tests  
+- **Successful Loading**: Tests `_retrieve_anf_config()` with valid configuration files
+- **Missing Config Files**: Tests error handling when config files don't exist
+- **Invalid JSON**: Tests handling of corrupted or malformed configuration files
+- **Missing Required Fields**: Tests validation of incomplete configuration files
+- **Print Output**: Tests debug/verbose output during configuration operations
+
+#### Configuration Usage Tests
+- **Parameter Precedence**: Tests that function parameters override config file values
+- **Config Value Resolution**: Tests `get_config_value()` parameter resolution logic
+- **Missing Parameters**: Tests error handling when parameters are missing from both function calls and config
+- **Config Key Mapping**: Tests mapping between function parameter names and config file keys
+
+**Example Configuration Test:**
+```python
+def test_create_anf_config_success():
+    """Test successful config creation"""
+    with patch('os.path.isfile', return_value=False):
+        with patch('builtins.input', side_effect=[
+            'test-subscription-id', 'test-rg', 'test-account',
+            'test-pool', 'centralus', 'test-vnet', 'default', 'NFSv3'
+        ]):
+            with patch('os.makedirs') as mock_makedirs:
+                with patch('json.dump') as mock_json_dump:
+                    create_anf_config()
+                    mock_makedirs.assert_called_once()
+                    mock_json_dump.assert_called_once()
+```
+
+**Configuration Test Benefits:**
+- **Setup Validation**: Ensures configuration setup works across different environments
+- **Parameter Handling**: Validates precedence rules and parameter resolution
+- **Error Recovery**: Tests graceful handling of configuration errors
+- **User Experience**: Tests interactive prompts and user input validation
 
 ### Azure Resource Hierarchy Testing
 Tests validate the complete ANF resource hierarchy:
@@ -224,14 +272,15 @@ This approach allows comprehensive testing of:
 tests/
 ├── anf_tests_readme.md                # This file - comprehensive ANF test documentation
 ├── requirements.txt                   # Test dependencies
-├── anf/                               # ANF traditional module tests (214 tests)
+├── anf/                               # ANF traditional module tests (236 tests)
 │   ├── test_base.py                   # Base utility function tests (36 tests)
 │   ├── test_client.py                 # Azure client management tests (35 tests)
+│   ├── test_config.py                 # Configuration management tests (15 tests)
 │   ├── test_volume_management.py      # Volume operation tests (59 tests)
-│   ├── test_snapshot_management.py    # Snapshot operation tests (48 tests)
-│   └── test_replication_management.py # Replication tests (36 tests)
-└── mcp/                               # MCP server integration tests (28 tests)
-    └── test_anf_mcp.py                # ANF MCP server tests (28 tests)
+│   ├── test_snapshot_management.py    # Snapshot operation tests (51 tests)
+│   └── test_replication_management.py # Replication tests (40 tests)
+└── mcp/                               # MCP server integration tests (23 tests)
+    └── test_anf_mcp.py                # ANF MCP server tests (23 tests)
 ```
 
 ## ANF Module Coverage Details
@@ -242,6 +291,13 @@ tests/
 - **Configuration Testing**: Subscription handling, retry policies, logging integration
 - **Error Scenarios**: Authentication failures, network errors, invalid configurations
 
+### Configuration Management (`test_config.py`) - 15 tests
+- **Interactive Setup**: Tests `create_anf_config()` interactive configuration creation
+- **File Operations**: Config file creation, directory creation, JSON formatting
+- **Parameter Resolution**: Tests `get_config_value()` and parameter precedence rules
+- **Error Handling**: Missing files, invalid JSON, permission errors
+- **User Experience**: Input validation and interactive prompts
+
 ### Volume Management (`test_volume_management.py`) - 59 tests
 - **Create Operations**: All service levels, protocols (NFS/SMB), zones, optional parameters
 - **Clone Operations**: Source volume validation, snapshot-based cloning, cross-pool cloning
@@ -249,14 +305,14 @@ tests/
 - **Delete Operations**: Volume deletion, dependency checking, force deletion scenarios
 - **Integration**: Full volume lifecycle from creation to deletion
 
-### Snapshot Management (`test_snapshot_management.py`) - 48 tests
+### Snapshot Management (`test_snapshot_management.py`) - 51 tests
 - **Create Operations**: Manual snapshots, optional labels, name validation
 - **List Operations**: Volume-specific listing, filtering, empty results
 - **Delete Operations**: Snapshot removal, dependency validation
 - **Integration**: Snapshot lifecycle with volume integration and backup workflows
 - **Edge Cases**: Special characters, long names, Unicode support
 
-### Replication Management (`test_replication_management.py`) - 36 tests
+### Replication Management (`test_replication_management.py`) - 40 tests
 - **Cross-Region Setup**: Data protection volume creation, replication authorization
 - **Configuration Options**: Service levels, zones, subscription handling
 - **Error Scenarios**: Source volume not found, destination conflicts, authorization failures
@@ -298,21 +354,21 @@ tests/
 - `mcp`: Core MCP types and utilities - **Optional**
 - `asyncio`: For async function testing (MCP server tests)
 
-**Note**: The `fastmcp` and `mcp` packages are only required for MCP server tests. ANF traditional module tests (214 tests) will run without these dependencies.
+**Note**: The `fastmcp` and `mcp` packages are only required for MCP server tests. ANF traditional module tests (236 tests) will run without these dependencies.
 
 ### Test Requirements
 All test dependencies are defined in `requirements.txt` in the parent tests directory
 
 ## Notes
 
-- **Fast Execution**: All 242 tests typically complete in under 90 seconds
+- **Fast Execution**: All 259 tests typically complete in under 90 seconds
 - **No External Dependencies**: Tests run completely offline with mocked Azure APIs and MCP components
 - **Cross-Platform**: Compatible with macOS, Linux, and Windows development environments
 - **CI/CD Ready**: Designed for integration with continuous integration pipelines
 - **Azure-Specific**: Comprehensive coverage of Azure NetApp Files service patterns and behaviors
 - **Singleton Pattern**: Special handling for ANF client singleton pattern with proper test isolation
 - **MCP Framework Testing**: Specialized approach for testing FastMCP decorated functions through business logic validation
-- **MCP Dependencies**: MCP tests require `fastmcp` and `mcp` packages. If these aren't installed, MCP tests will fail but ANF tests will continue to work
+- **MCP Dependencies**: MCP tests require `fastmcp` and `mcp` packages. If these aren't installed, MCP tests will fail but ANF tests will continue to work MCP tests will fail but ANF tests will continue to work
 - **Authentication Mocking**: All Azure authentication scenarios are thoroughly mocked to prevent real credential usage
 - **Resource Hierarchy**: Tests respect and validate Azure NetApp Files resource hierarchy and dependencies
 - **Dependency Warnings**: Some harmless Marshmallow warnings may appear from NetApp ONTAP library dependencies (these can be safely ignored)
