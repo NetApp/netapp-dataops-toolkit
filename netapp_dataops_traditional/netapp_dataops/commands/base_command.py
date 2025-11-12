@@ -1,28 +1,27 @@
-"""
-Base command class for NetApp DataOps Toolkit CLI commands.
-
-This provides a common interface and shared functionality for all command modules.
-"""
+"""Base command class for NetApp DataOps Toolkit CLI commands."""
 
 import sys
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import List, NoReturn
+
+from netapp_dataops.logging_utils import setup_logger
+
+# Module-level logger for all commands
+logger = setup_logger(__name__)
 
 
 class BaseCommand(ABC):
-    """
-    Abstract base class for CLI commands.
+    """Abstract base class implementing the Command Pattern.
     
-    Implements the Command Pattern with a consistent interface for all command types.
-    Each command subclass handles its specific logic while maintaining a standard API.
+    Provides common interface and functionality for all CLI commands.
+    Each subclass implements specific command logic via the execute() method.
     """
     
-    def __init__(self, action: str, args: List[str]):
-        """
-        Initialize the command with action and arguments.
+    def __init__(self, action: str, args: List[str]) -> None:
+        """Initialize the command.
         
         Args:
-            action: The primary command action (e.g., 'clone', 'create', etc.)
+            action: Primary command action (e.g., 'clone', 'create')
             args: Command line arguments (sys.argv)
         """
         self.action = action
@@ -30,23 +29,20 @@ class BaseCommand(ABC):
     
     @abstractmethod
     def execute(self) -> None:
-        """
-        Execute the command.
+        """Execute the command.
         
-        This method must be implemented by each command subclass to define
-        the specific behavior for that command type.
+        Must be implemented by subclasses to define specific command behavior.
         """
         pass
     
     def get_target(self) -> str:
-        """
-        Extract the target from command line arguments.
+        """Extract target from command arguments.
         
-        Most commands follow the pattern: command target [options]
-        For example: clone volume, create snapshot, list volumes
+        Most commands follow: command target [options]
+        Example: clone volume, create snapshot, list volumes
         
         Returns:
-            The target string (e.g., 'volume', 'snapshot')
+            Target string (e.g., 'volume', 'snapshot')
             
         Raises:
             SystemExit: If target is missing
@@ -56,40 +52,26 @@ class BaseCommand(ABC):
         except IndexError:
             self.handle_invalid_command()
     
-    def handle_invalid_command(self, help_text: str = None, invalid_opt_arg: bool = False) -> None:
-        """
-        Handle invalid command scenarios and exit.
+    def handle_invalid_command(
+        self, 
+        help_text: str = None, 
+        invalid_opt_arg: bool = False
+    ) -> NoReturn:
+        """Handle invalid command and exit.
         
         Args:
-            help_text: Custom help text to display
-            invalid_opt_arg: Whether the error is due to invalid option/argument
+            help_text: Custom help text to display (optional)
+            invalid_opt_arg: True if error is invalid option/argument
         """
         if invalid_opt_arg:
-            print("Error: Invalid option/argument.")
+            logger.error("Error: Invalid option/argument.")
         else:
-            print("Error: Invalid command.")
+            logger.error("Error: Invalid command.")
         
         if help_text:
-            print(help_text)
+            logger.error(help_text)
         else:
-            # Import here to avoid circular imports
             from netapp_dataops.help_text import HELP_TEXT_STANDARD
-            print(HELP_TEXT_STANDARD)
+            logger.error(HELP_TEXT_STANDARD)
         
         sys.exit(1)
-    
-    def check_help_flag(self, help_text: str) -> bool:
-        """
-        Check if help flag is present and display help if needed.
-        
-        Args:
-            help_text: The help text to display
-            
-        Returns:
-            True if help was displayed (and program should exit)
-            False if no help flag found
-        """
-        if len(self.args) > 2 and self.args[2] in ("-h", "--help"):
-            print(help_text)
-            sys.exit(0)
-        return False

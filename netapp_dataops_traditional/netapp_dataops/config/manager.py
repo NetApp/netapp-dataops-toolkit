@@ -2,15 +2,21 @@
 Configuration Manager for NetApp DataOps Toolkit.
 
 This module provides the ConfigManager class for handling configuration
-lifecycle operations including creation, loading, saving, and validation.
+lifecy        hostname = self._prompt_required("ONTAP hostname or IP address")
+        svm = self._prompt_required("SVM name")
+        data_lif = self._prompt_required("Data LIF hostname or IP address")
+        username = self._prompt_required("Admin username")
+        password = self._prompt_password("Admin password")perations including creation, loading, saving, and validation.
 """
 
 import json
 import base64
 import getpass
+import logging
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
+from netapp_dataops.logging_utils import setup_logger
 from .models import NetAppDataOpsConfig, ONTAPConfig, S3Config, CloudSyncConfig
 from .exceptions import (
     ConfigError, 
@@ -18,6 +24,8 @@ from .exceptions import (
     ConfigFileError, 
     ConfigCreationError
 )
+
+logger = setup_logger(__name__)
 
 
 class ConfigManager:
@@ -99,7 +107,7 @@ class ConfigManager:
             ConfigCreationError: If configuration creation fails
         """
         try:
-            print("\n=== NetApp DataOps Toolkit Configuration ===\n")
+            logger.info("Configuring NetApp DataOps Toolkit\n")
             
             # Create ONTAP configuration
             ontap_config = self._create_ontap_config()
@@ -125,30 +133,30 @@ class ConfigManager:
     
     def _create_ontap_config(self) -> ONTAPConfig:
         """Create ONTAP configuration through interactive prompts."""
-        print("--- ONTAP Connection Settings ---")
+        logger.info("ONTAP Connection Settings:")
         
-        hostname = self._prompt_required("ONTAP management or data LIF hostname or IP address")
+        hostname = self._prompt_required("ONTAP hostname or IP address")
         svm = self._prompt_required("SVM (Storage Virtual Machine) name")
         data_lif = self._prompt_required("Data LIF hostname or IP address")
         username = self._prompt_required("ONTAP admin username")
         password = self._prompt_password("ONTAP admin password")
         
-        verify_ssl = self._prompt_yes_no("Verify SSL certificate?", default=True)
+        verify_ssl = self._prompt_yes_no("Verify SSL certificate", default=True)
         
-        print("\n--- Default Volume Settings ---")
+        logger.info("\nVolume Defaults:")
         
         volume_type = self._prompt_choice(
-            "Default volume type",
+            "Volume type",
             choices=["flexgroup", "flexvol"],
             default="flexgroup"
         )
         
-        export_policy = self._prompt_with_default("Default export policy", "default")
-        snapshot_policy = self._prompt_with_default("Default snapshot policy", "none")
-        unix_uid = self._prompt_with_default("Default Unix UID", "0")
-        unix_gid = self._prompt_with_default("Default Unix GID", "0")
-        unix_permissions = self._prompt_with_default("Default Unix permissions", "0777")
-        default_aggregate = self._prompt_with_default("Default aggregate (leave empty for auto)", "")
+        export_policy = self._prompt_with_default("Export policy", "default")
+        snapshot_policy = self._prompt_with_default("Snapshot policy", "none")
+        unix_uid = self._prompt_with_default("Unix UID", "0")
+        unix_gid = self._prompt_with_default("Unix GID", "0")
+        unix_permissions = self._prompt_with_default("Unix permissions", "0777")
+        default_aggregate = self._prompt_with_default("Aggregate (optional)", "")
         
         return ONTAPConfig(
             hostname=hostname,
@@ -168,14 +176,14 @@ class ConfigManager:
     
     def _create_s3_config(self) -> S3Config:
         """Create S3 configuration through interactive prompts."""
-        print("\n--- S3 Settings ---")
+        logger.info("\nS3 Configuration:")
         
         endpoint = self._prompt_required("S3 endpoint URL")
         access_key_id = self._prompt_required("S3 access key ID")
         secret_access_key = self._prompt_password("S3 secret access key")
         
-        verify_ssl = self._prompt_yes_no("Verify S3 SSL certificate?", default=True)
-        ca_cert_bundle = self._prompt_with_default("CA certificate bundle path (optional)", "")
+        verify_ssl = self._prompt_yes_no("Verify SSL certificate", default=True)
+        ca_cert_bundle = self._prompt_with_default("CA certificate bundle (optional)", "")
         
         return S3Config(
             endpoint=endpoint,
@@ -187,7 +195,7 @@ class ConfigManager:
     
     def _create_cloud_sync_config(self) -> CloudSyncConfig:
         """Create Cloud Sync configuration through interactive prompts."""
-        print("\n--- Cloud Sync Settings ---")
+        logger.info("\nCloud Sync Configuration:")
         
         refresh_token = self._prompt_password("Cloud Central refresh token")
         
@@ -198,30 +206,30 @@ class ConfigManager:
     def _prompt_required(self, prompt: str) -> str:
         """Prompt for required input with validation."""
         while True:
-            value = input(f"{prompt}: ").strip()
+            value = input(f"  {prompt}: ").strip()
             if value:
                 return value
-            print("This field is required. Please enter a value.")
+            logger.info("  Error: This field is required.")
     
     def _prompt_with_default(self, prompt: str, default: str) -> str:
         """Prompt with default value."""
-        value = input(f"{prompt} [{default}]: ").strip()
+        value = input(f"  {prompt} [{default}]: ").strip()
         return value if value else default
     
     def _prompt_password(self, prompt: str) -> str:
         """Prompt for password input (hidden)."""
         while True:
-            password = getpass.getpass(f"{prompt}: ")
+            password = getpass.getpass(f"  {prompt}: ")
             if password:
                 return password
-            print("Password cannot be empty. Please enter a password.")
+            logger.info("  Error: Password cannot be empty.")
     
     def _prompt_yes_no(self, prompt: str, default: bool = False) -> bool:
         """Prompt for yes/no input."""
         default_str = "Y/n" if default else "y/N"
         
         while True:
-            value = input(f"{prompt} [{default_str}]: ").strip().lower()
+            value = input(f"  {prompt} [{default_str}]: ").strip().lower()
             
             if not value:
                 return default
@@ -230,23 +238,23 @@ class ConfigManager:
             elif value in ['n', 'no']:
                 return False
             else:
-                print("Please enter 'y' for yes or 'n' for no.")
+                logger.info("  Error: Please enter 'y' or 'n'.")
     
-    def _prompt_choice(self, prompt: str, choices: list, default: str = None) -> str:
+    def _prompt_choice(self, prompt: str, choices: List[str], default: Optional[str] = None) -> str:
         """Prompt for choice from list of options."""
         choices_str = "/".join(choices)
         if default:
             choices_str = choices_str.replace(default, default.upper())
             
         while True:
-            value = input(f"{prompt} [{choices_str}]: ").strip().lower()
+            value = input(f"  {prompt} [{choices_str}]: ").strip().lower()
             
             if not value and default:
                 return default
             elif value in choices:
                 return value
             else:
-                print(f"Please choose from: {', '.join(choices)}")
+                logger.info(f"  Error: Choose from {', '.join(choices)}.")
     
     def get_config_summary(self, config: NetAppDataOpsConfig) -> str:
         """
@@ -259,18 +267,17 @@ class ConfigManager:
             str: Configuration summary
         """
         summary = []
-        summary.append("Configuration Summary:")
+        summary.append("\nConfiguration Summary:")
         summary.append(f"  ONTAP Host: {config.ontap.hostname}")
         summary.append(f"  SVM: {config.ontap.svm}")
         summary.append(f"  Data LIF: {config.ontap.data_lif}")
         summary.append(f"  Username: {config.ontap.username}")
-        summary.append(f"  Default Volume Type: {config.ontap.default_volume_type}")
+        summary.append(f"  Volume Type: {config.ontap.default_volume_type}")
         
         if config.s3:
             summary.append(f"  S3 Endpoint: {config.s3.endpoint}")
-            summary.append(f"  S3 Access Key: {config.s3.access_key_id}")
         
         if config.cloud_sync:
-            summary.append("  Cloud Sync: Configured")
+            summary.append("  Cloud Sync: Enabled")
         
         return "\n".join(summary)
