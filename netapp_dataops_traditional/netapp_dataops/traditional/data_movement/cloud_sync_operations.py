@@ -1,39 +1,36 @@
-"""
-Cloud Sync operations for NetApp DataOps traditional environments.
-
-This module contains all Cloud Sync-related operations including list relationships,
-sync operations, and access token management.
-"""
+"""Cloud Sync operations for NetApp DataOps traditional environments."""
 
 import base64
 import json
 import time
+from typing import List, Dict, Any, Tuple
 
 import requests
 import yaml
 
+from netapp_dataops.logging_utils import setup_logger
 from ..exceptions import (
     InvalidConfigError, 
     APIConnectionError,
     CloudSyncSyncOperationError
 )
 from ..core import (
-    _retrieve_config, 
-    _print_invalid_config_error,
-    _retrieve_cloud_central_refresh_token
+    _retrieve_cloud_central_refresh_token,
+    deprecated
 )
 
+logger = setup_logger(__name__)
 
-def _print_api_response(response: requests.Response):
-    print("API Response:")
-    print("Status Code: ", response.status_code)
-    print("Header: ", response.headers)
+
+def _print_api_response(response: requests.Response) -> None:
+    logger.info("API Response:")
+    logger.info("Status Code: %s", response.status_code)
+    logger.info("Header: %s", response.headers)
     if response.text:
-        print("Body: ", response.text)
+        logger.info("Body: %s", response.text)
 
 
 def _get_cloud_central_access_token(refreshToken: str, print_output: bool = False) -> str:
-    # Define parameters for API call
     url = "https://netapp-cloud-account.auth0.com/oauth/token"
     headers = {
         "Content-Type": "application/json"
@@ -44,72 +41,59 @@ def _get_cloud_central_access_token(refreshToken: str, print_output: bool = Fals
         "client_id": "Mu0V1ywgYteI6w1MbD15fKfVIUrNXGWC"
     }
 
-    # Call API to optain access token
     response = requests.post(url=url, headers=headers, data=json.dumps(data))
 
-    # Parse response to retrieve access token
     try:
         responseBody = json.loads(response.text)
         accessToken = responseBody["access_token"]
-    except:
+    except (KeyError, json.JSONDecodeError):
         errorMessage = "Error obtaining access token from Cloud Sync API"
         if print_output:
-            print("Error:", errorMessage)
+            logger.error("Error: %s", errorMessage)
             _print_api_response(response)
         raise APIConnectionError(errorMessage, response)
 
     return accessToken
 
 
-def _get_cloud_sync_access_parameters(refreshToken: str, print_output: bool = False) -> tuple[str, str]:
+def _get_cloud_sync_access_parameters(refreshToken: str, print_output: bool = False) -> Tuple[str, str]:
     try:
         accessToken = _get_cloud_central_access_token(refreshToken=refreshToken, print_output=print_output)
     except APIConnectionError:
         raise
 
-    # Define parameters for API call
     url = "https://cloudsync.netapp.com/api/accounts"
     headers = {
         "Content-Type": "application/json",
         "Authorization": "Bearer " + accessToken
     }
 
-    # Call API to obtain account ID
     response = requests.get(url=url, headers=headers)
 
-    # Parse response to retrieve account ID
     try:
         responseBody = json.loads(response.text)
         accountId = responseBody[0]["accountId"]
-    except:
+    except (KeyError, IndexError, json.JSONDecodeError):
         errorMessage = "Error obtaining account ID from Cloud Sync API"
         if print_output:
-            print("Error:", errorMessage)
+            logger.error("Error: %s", errorMessage)
             _print_api_response(response)
         raise APIConnectionError(errorMessage, response)
 
-    # Return access token and account ID
     return accessToken, accountId
 
 
-def list_cloud_sync_relationships(print_output: bool = False) -> list:
-    # Step 1: Obtain access token and account ID for accessing Cloud Sync API
-
-    # Retrieve refresh token
+def list_cloud_sync_relationships(print_output: bool = False) -> List[Dict[str, Any]]:
     try:
         refreshToken = _retrieve_cloud_central_refresh_token(print_output=print_output)
     except InvalidConfigError:
         raise
 
-    # Obtain access token and account ID
     try:
         accessToken, accountId = _get_cloud_sync_access_parameters(refreshToken=refreshToken, print_output=print_output)
     except APIConnectionError:
         raise
 
-    # Step 2: Retrieve list of relationships
-
-    # Define parameters for API call
     url = "https://cloudsync.netapp.com/api/relationships-v2"
     headers = {
         "Accept": "application/json",
@@ -117,18 +101,15 @@ def list_cloud_sync_relationships(print_output: bool = False) -> list:
         "Authorization": "Bearer " + accessToken
     }
 
-    # Call API to retrieve list of relationships
-    response = requests.get(url = url, headers = headers)
+    response = requests.get(url=url, headers=headers)
 
-    # Check for API response status code of 200; if not 200, raise error
     if response.status_code != 200:
         errorMessage = "Error calling Cloud Sync API to retrieve list of relationships."
         if print_output:
-            print("Error:", errorMessage)
+            logger.error("Error: %s", errorMessage)
             _print_api_response(response)
         raise APIConnectionError(errorMessage, response)
 
-    # Constrict list of relationships
     relationships = json.loads(response.text)
     relationshipsList = list()
     for relationship in relationships:
@@ -138,31 +119,23 @@ def list_cloud_sync_relationships(print_output: bool = False) -> list:
         relationshipDetails["target"] = relationship["target"]
         relationshipsList.append(relationshipDetails)
 
-    # Print list of relationships
     if print_output:
-        print(yaml.dump(relationshipsList))
+        logger.info("\n%s", yaml.dump(relationshipsList))
 
     return relationshipsList
 
 
-def sync_cloud_sync_relationship(relationship_id: str, wait_until_complete: bool = False, print_output: bool = False):
-    # Step 1: Obtain access token and account ID for accessing Cloud Sync API
-
-    # Retrieve refresh token
+def sync_cloud_sync_relationship(relationship_id: str, wait_until_complete: bool = False, print_output: bool = False) -> None:
     try:
         refreshToken = _retrieve_cloud_central_refresh_token(print_output=print_output)
     except InvalidConfigError:
         raise
 
-    # Obtain access token and account ID
     try:
         accessToken, accountId = _get_cloud_sync_access_parameters(refreshToken=refreshToken, print_output=print_output)
     except APIConnectionError:
         raise
 
-    # Step 2: Trigger Cloud Sync sync
-
-    # Define parameters for API call
     url = "https://cloudsync.netapp.com/api/relationships/%s/sync" % relationship_id
     headers = {
         "Content-Type": "application/json",
@@ -171,27 +144,22 @@ def sync_cloud_sync_relationship(relationship_id: str, wait_until_complete: bool
         "Authorization": "Bearer " + accessToken
     }
 
-    # Call API to trigger sync
     if print_output:
-        print("Triggering sync operation for Cloud Sync relationship (ID = " + relationship_id + ").")
-    response = requests.put(url = url, headers = headers)
+        logger.info("Triggering sync operation for Cloud Sync relationship (ID = %s).", relationship_id)
+    response = requests.put(url=url, headers=headers)
 
-    # Check for API response status code of 202; if not 202, raise error
     if response.status_code != 202:
         errorMessage = "Error calling Cloud Sync API to trigger sync operation."
         if print_output:
-            print("Error:", errorMessage)
+            logger.error("Error: %s", errorMessage)
             _print_api_response(response)
         raise APIConnectionError(errorMessage, response)
 
     if print_output:
-        print("Sync operation successfully triggered.")
-
-    # Step 3: Obtain status of the sync operation; keep checking until the sync operation has completed
+        logger.info("Sync operation successfully triggered.")
 
     if wait_until_complete:
         while True:
-            # Define parameters for API call
             url = "https://cloudsync.netapp.com/api/relationships-v2/%s" % relationship_id
             headers = {
                 "Accept": "application/json",
@@ -199,51 +167,47 @@ def sync_cloud_sync_relationship(relationship_id: str, wait_until_complete: bool
                 "Authorization": "Bearer " + accessToken
             }
 
-            # Call API to obtain status of sync operation
-            response = requests.get(url = url, headers = headers)
+            response = requests.get(url=url, headers=headers)
 
-            # Parse response to retrieve status of sync operation
             try:
                 responseBody = json.loads(response.text)
                 latestActivityType = responseBody["activity"]["type"]
                 latestActivityStatus = responseBody["activity"]["status"]
-            except:
+            except (KeyError, json.JSONDecodeError):
                 errorMessage = "Error obtaining status of sync operation from Cloud Sync API."
                 if print_output:
-                    print("Error:", errorMessage)
+                    logger.error("Error: %s", errorMessage)
                     _print_api_response(response)
                 raise APIConnectionError(errorMessage, response)
 
-            # End execution if the latest update is complete
             if latestActivityType == "Sync":
                 if latestActivityStatus == "DONE":
                     if print_output:
-                        print("Success: Sync operation is complete.")
+                        logger.info("Success: Sync operation is complete.")
                     break
                 elif latestActivityStatus == "FAILED":
                     if print_output:
                         failureMessage = responseBody["activity"]["failureMessage"]
-                        print("Error: Sync operation failed.")
-                        print("Message:", failureMessage)
+                        logger.error("Error: Sync operation failed.")
+                        logger.error("Message: %s", failureMessage)
                     raise CloudSyncSyncOperationError(latestActivityStatus, failureMessage)
                 elif latestActivityStatus == "RUNNING":
-                    # Print message re: progress
                     if print_output:
-                        print("Sync operation is not yet complete. Status:", latestActivityStatus)
-                        print("Checking again in 60 seconds...")
+                        logger.info("Sync operation is not yet complete. Status: %s", latestActivityStatus)
+                        logger.info("Checking again in 60 seconds...")
                 else:
                     if print_output:
-                        print ("Error: Unknown sync operation status (" + latestActivityStatus + ") returned by Cloud Sync API.")
+                        logger.error("Error: Unknown sync operation status (%s) returned by Cloud Sync API.", latestActivityStatus)
                     raise CloudSyncSyncOperationError(latestActivityStatus)
 
-            # Sleep for 60 seconds before checking progress again
             time.sleep(60)
 
 
-# Deprecated functions for backward compatibility  
+@deprecated
 def listCloudSyncRelationships(printOutput: bool = False) -> list:
     return list_cloud_sync_relationships(print_output=printOutput)
 
 
+@deprecated
 def syncCloudSyncRelationship(relationshipID: str, waitUntilComplete: bool = False, printOutput: bool = False):
     sync_cloud_sync_relationship(relationship_id=relationshipID, wait_until_complete=waitUntilComplete, print_output=printOutput)
