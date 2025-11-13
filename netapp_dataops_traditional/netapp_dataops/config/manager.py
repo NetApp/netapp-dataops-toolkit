@@ -2,24 +2,18 @@
 Configuration Manager for NetApp DataOps Toolkit.
 
 This module provides the ConfigManager class for handling configuration
-lifecy        hostname = self._prompt_required("ONTAP hostname or IP address")
-        svm = self._prompt_required("SVM name")
-        data_lif = self._prompt_required("Data LIF hostname or IP address")
-        username = self._prompt_required("Admin username")
-        password = self._prompt_password("Admin password")perations including creation, loading, saving, and validation.
+lifecycle operations including creation, loading, saving, and validation.
 """
 
 import json
 import base64
 import getpass
-import logging
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, List
 
 from netapp_dataops.logging_utils import setup_logger
 from .models import NetAppDataOpsConfig, ONTAPConfig, S3Config, CloudSyncConfig
 from .exceptions import (
-    ConfigError, 
     ConfigValidationError, 
     ConfigFileError, 
     ConfigCreationError
@@ -66,7 +60,7 @@ class ConfigManager:
             raise ConfigFileError(f"Configuration file '{self.config_file}' not found")
         
         try:
-            with open(self.config_file, 'r') as f:
+            with open(self.config_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             
             return NetAppDataOpsConfig.from_dict(data)
@@ -90,7 +84,7 @@ class ConfigManager:
             # Ensure parent directory exists
             self.config_file.parent.mkdir(parents=True, exist_ok=True)
             
-            with open(self.config_file, 'w') as f:
+            with open(self.config_file, 'w', encoding='utf-8') as f:
                 json.dump(config.to_dict(), f, indent=4)
                 
         except IOError as e:
@@ -132,7 +126,12 @@ class ConfigManager:
             raise ConfigCreationError(f"Failed to create configuration: {e}")
     
     def _create_ontap_config(self) -> ONTAPConfig:
-        """Create ONTAP configuration through interactive prompts."""
+        """
+        Create ONTAP configuration through interactive prompts.
+        
+        Returns:
+            ONTAPConfig: Configured ONTAP settings
+        """
         logger.info("ONTAP Connection Settings:")
         
         hostname = self._prompt_required("ONTAP hostname or IP address")
@@ -175,7 +174,12 @@ class ConfigManager:
         )
     
     def _create_s3_config(self) -> S3Config:
-        """Create S3 configuration through interactive prompts."""
+        """
+        Create S3 configuration through interactive prompts.
+        
+        Returns:
+            S3Config: Configured S3 settings
+        """
         logger.info("\nS3 Configuration:")
         
         endpoint = self._prompt_required("S3 endpoint URL")
@@ -194,7 +198,12 @@ class ConfigManager:
         )
     
     def _create_cloud_sync_config(self) -> CloudSyncConfig:
-        """Create Cloud Sync configuration through interactive prompts."""
+        """
+        Create Cloud Sync configuration through interactive prompts.
+        
+        Returns:
+            CloudSyncConfig: Configured Cloud Sync settings
+        """
         logger.info("\nCloud Sync Configuration:")
         
         refresh_token = self._prompt_password("Cloud Central refresh token")
@@ -204,7 +213,15 @@ class ConfigManager:
         )
     
     def _prompt_required(self, prompt: str) -> str:
-        """Prompt for required input with validation."""
+        """
+        Prompt for required input with validation.
+        
+        Args:
+            prompt: The prompt message to display to the user
+            
+        Returns:
+            str: The validated user input
+        """
         while True:
             value = input(f"  {prompt}: ").strip()
             if value:
@@ -212,12 +229,29 @@ class ConfigManager:
             logger.info("  Error: This field is required.")
     
     def _prompt_with_default(self, prompt: str, default: str) -> str:
-        """Prompt with default value."""
+        """
+        Prompt with default value.
+        
+        Args:
+            prompt: The prompt message to display to the user
+            default: The default value to use if user provides no input
+            
+        Returns:
+            str: The user input or default value
+        """
         value = input(f"  {prompt} [{default}]: ").strip()
         return value if value else default
     
     def _prompt_password(self, prompt: str) -> str:
-        """Prompt for password input (hidden)."""
+        """
+        Prompt for password input (hidden).
+        
+        Args:
+            prompt: The prompt message to display to the user
+            
+        Returns:
+            str: The password entered by the user
+        """
         while True:
             password = getpass.getpass(f"  {prompt}: ")
             if password:
@@ -225,7 +259,16 @@ class ConfigManager:
             logger.info("  Error: Password cannot be empty.")
     
     def _prompt_yes_no(self, prompt: str, default: bool = False) -> bool:
-        """Prompt for yes/no input."""
+        """
+        Prompt for yes/no input.
+        
+        Args:
+            prompt: The prompt message to display to the user
+            default: The default value to use if user provides no input
+            
+        Returns:
+            bool: True for yes, False for no
+        """
         default_str = "Y/n" if default else "y/N"
         
         while True:
@@ -241,7 +284,17 @@ class ConfigManager:
                 logger.info("  Error: Please enter 'y' or 'n'.")
     
     def _prompt_choice(self, prompt: str, choices: List[str], default: Optional[str] = None) -> str:
-        """Prompt for choice from list of options."""
+        """
+        Prompt for choice from list of options.
+        
+        Args:
+            prompt: The prompt message to display to the user
+            choices: List of valid choices
+            default: The default choice if user provides no input
+            
+        Returns:
+            str: The selected choice
+        """
         choices_str = "/".join(choices)
         if default:
             choices_str = choices_str.replace(default, default.upper())

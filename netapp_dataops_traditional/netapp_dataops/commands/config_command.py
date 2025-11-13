@@ -1,4 +1,4 @@
-"""Config command for NetApp DataOps Toolkit CLI configuration setup."""
+"""Config command for NetApp DataOps Toolkit CLI configuration setup"""
 
 import sys
 from pathlib import Path
@@ -29,14 +29,11 @@ class ConfigCommand(BaseCommand):
             config_dir = home_dir / ".netapp_dataops"
             config_file = config_dir / "config.json"
             
-            # Create config manager
             config_manager = ConfigManager(str(config_file))
             
-            # Check if config already exists and handle overwrite
             if config_manager.config_exists():
                 logger.info("You already have an existing config file. Creating a new config file will overwrite this existing config.")
                 
-                # Prompt user to confirm overwrite
                 while True:
                     proceed = input("Are you sure that you want to proceed? (yes/no): ")
                     if proceed.lower() in ("yes", "y"):
@@ -46,14 +43,11 @@ class ConfigCommand(BaseCommand):
                     else:
                         logger.info("Invalid value. Must enter 'yes' or 'no'.")
             
-            # Create configuration interactively
             logger.info("Creating NetApp DataOps Toolkit configuration...")
             config = config_manager.create_interactive_config()
             
-            # Save configuration
             config_manager.save_config(config)
             
-            # Display configuration summary
             summary = config_manager.get_config_summary(config)
             logger.info(summary)
             

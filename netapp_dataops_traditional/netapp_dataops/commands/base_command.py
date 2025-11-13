@@ -1,4 +1,4 @@
-"""Base command class for NetApp DataOps Toolkit CLI commands."""
+"""Base command class for NetApp DataOps Toolkit CLI commands"""
 
 import sys
 from abc import ABC, abstractmethod
@@ -6,7 +6,6 @@ from typing import List, NoReturn
 
 from netapp_dataops.logging_utils import setup_logger
 
-# Module-level logger for all commands
 logger = setup_logger(__name__)
 
 

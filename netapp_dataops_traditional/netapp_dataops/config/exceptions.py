@@ -1,8 +1,4 @@
-"""
-Configuration-related exceptions for NetApp DataOps Toolkit.
-
-This module defines custom exceptions for configuration management operations.
-"""
+"""Configuration-related exceptions for NetApp DataOps Toolkit"""
 
 from typing import Optional
 

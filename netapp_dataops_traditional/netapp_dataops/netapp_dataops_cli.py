@@ -1,41 +1,27 @@
-#!/usr/bin/env python3
+"""CLI entry point for NetApp DataOps Toolkit."""
 
 import sys
 
-# Only import what's needed for the main CLI
+from netapp_dataops.commands import CommandFactory
 from netapp_dataops.help_text import HELP_TEXT_STANDARD
+from netapp_dataops.logging_utils import setup_logger
+
+logger = setup_logger(__name__)
 
 
-def handleInvalidCommand(helpText: str = HELP_TEXT_STANDARD, invalidOptArg: bool = False):
-    """Handle invalid command scenarios and exit."""
-    if invalidOptArg:
-        logger.error("Error: Invalid option/argument.")
-    else:
-        logger.error("Error: Invalid command.")
-    logger.error(helpText)
-    sys.exit(1)
-
-
-## Main function
 if __name__ == '__main__':
-    # Get desired action from command line args
     try:
         action = sys.argv[1]
-    except:
-        handleInvalidCommand()
-
-    # Used Command Pattern and Factory Pattern
-    try:
-        from netapp_dataops.commands import CommandFactory
-        
-        # Create command instance using factory
-        command = CommandFactory.create_command(action, sys.argv)
-        
-        if command:
-            command.execute()
-        else:
-            handleInvalidCommand()
-            
-    except ImportError:
-        handleInvalidCommand()
-
+    except IndexError:
+        logger.error("Error: Invalid command.")
+        logger.error(HELP_TEXT_STANDARD)
+        sys.exit(1)
+    
+    command = CommandFactory.create_command(action, sys.argv)
+    
+    if command:
+        command.execute()
+    else:
+        logger.error("Error: Invalid command.")
+        logger.error(HELP_TEXT_STANDARD)
+        sys.exit(1)

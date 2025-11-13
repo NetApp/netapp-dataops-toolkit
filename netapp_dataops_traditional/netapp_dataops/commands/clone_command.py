@@ -1,6 +1,4 @@
-"""
-Clone command module for NetApp DataOps Toolkit CLI.
-"""
+"""Clone command module for NetApp DataOps Toolkit CLI"""
 
 import getopt
 from .base_command import BaseCommand
@@ -20,7 +18,6 @@ class CloneCommand(BaseCommand):
     
     def execute(self) -> None:
         """Execute clone command for volumes."""
-        # Get desired target from command line args
         target = self.get_target()
         
         # Invoke desired action based on target

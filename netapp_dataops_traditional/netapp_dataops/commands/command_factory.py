@@ -1,4 +1,4 @@
-"""Command factory for NetApp DataOps Toolkit CLI."""
+"""Command factory for NetApp DataOps Toolkit CLI"""
 
 from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 
