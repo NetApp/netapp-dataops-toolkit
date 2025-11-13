@@ -11,6 +11,7 @@ netapp_dataops/traditional/anf/
 ├── __init__.py                    # Package initialization and exports
 ├── base.py                        # Common utilities and helper functions
 ├── client.py                      # Azure client authentication and management
+├── config.py                      # Configuration management functions
 ├── volume_management.py           # Volume management functions
 ├── snapshot_management.py         # Snapshot management functions
 └── replication_management.py      # Replication management functions
@@ -26,44 +27,51 @@ from netapp_dataops.traditional import anf
 
 # Use functions with module prefix
 result = anf.create_volume(...)
+clone = anf.clone_volume(...)
+volumes = anf.list_volumes(...)
 snapshots = anf.list_snapshots(...)
-replications = anf.create_replication(...)
+replication = anf.create_replication(...)
 ```
 
 Or import specific functions:
 ```python
-from netapp_dataops.traditional.anf import create_volume, list_volumes
-from netapp_dataops.traditional.anf import create_snapshot, delete_snapshot
+from netapp_dataops.traditional.anf import create_volume, clone_volume, list_volumes
+from netapp_dataops.traditional.anf import create_snapshot, delete_snapshot, list_snapshots
 
 # Use functions directly
-result = create_volume(...)
-snapshots = list_volumes(...)
+volume = create_volume(...)
+clone = clone_volume(...)
+volumes = list_volumes(...)
+snapshots = list_snapshots(...)
 ```
 
 Or import from specific modules:
 ```python
 from netapp_dataops.traditional.anf.volume_management import create_volume, clone_volume
-from netapp_dataops.traditional.anf.snapshot_management import create_snapshot
+from netapp_dataops.traditional.anf.snapshot_management import create_snapshot, list_snapshots
 
 # Use functions directly
-result = create_volume(...)
-snapshot_result = create_snapshot(...)
+volume = create_volume(...)
+clone = clone_volume(...)
+snapshot = create_snapshot(...)
+snapshots = list_snapshots(...)
 ```
 
 ## Benefits
 
 1. **Better Organization**: Functions are grouped by domain (volumes, snapshots, replications)
 2. **Reduced Code Duplication**: Common patterns centralized in `base.py`
-3. **Easier Maintenance**: Smaller, focused files
-4. **Cleaner Imports**: Import only what you need
-5. **Backward Compatibility**: Existing code continues to work
-6. **No Changes to Main Package**: The main `__init__.py` remains untouched
+3. **Easier Maintenance**: Smaller, focused files with clear separation of concerns
+4. **Cleaner Imports**: Import only what you need for your specific use case
+5. **Backward Compatibility**: Existing code continues to work without modifications
+6. **Configuration Management**: Streamlined setup with interactive configuration and parameter precedence
+7. **No Changes to Main Package**: The main `__init__.py` remains untouched
 
 ## API Reference
 
 ### Volume Operations
 - `create_volume()` - Create new Azure NetApp Files volumes
-- `clone_volume()` - Clone existing volumes from snapshots  
+- `clone_volume()` - Clone existing volumes from snapshots
 - `delete_volume()` - Delete volumes
 - `list_volumes()` - List all volumes in a capacity pool
 
@@ -74,12 +82,16 @@ snapshot_result = create_snapshot(...)
 
 ### Replication Operations
 - `create_replication()` - Create cross-region volume replications
-- `create_data_protection_volume()` - Create data protection volumes for replication
 
 ### Client Management
 - `get_anf_client()` - Get authenticated Azure NetApp Files client
 - `ANFClientManager` - Singleton class for managing client connections
 - `reset_client()` - Clear cached client connections
+
+### Configuration Management
+- `create_anf_config()` - Interactive setup to create configuration file
+- `_retrieve_anf_config()` - Load configuration from file
+- `get_config_value()` - Resolve parameter values with precedence handling
 
 ### Utilities
 - `_serialize()` - Convert Azure SDK objects to JSON-serializable structures
@@ -94,7 +106,7 @@ The ANF module supports two configuration approaches for streamlined usage:
 Create a configuration file with your Azure infrastructure details to simplify function calls:
 
 ```python
-from netapp_dataops.traditional.anf.config import create_anf_config
+from netapp_dataops.traditional.anf import create_anf_config
 
 # Run interactive configuration setup
 create_anf_config()
@@ -108,7 +120,7 @@ This will prompt you for:
 - Azure region (location)
 - Virtual network name
 - Subnet name
-- Default protocol types (NFSv3, NFSv4.1, CIFS)
+- Default protocol types (NFSv3, NFSv4.1, SMB)
 
 The configuration is saved to `~/.netapp_dataops/anf_config.json` and allows you to call functions with minimal parameters:
 
@@ -128,13 +140,13 @@ You can still pass all parameters explicitly to each function call:
 
 ```python
 volume = anf.create_volume(
+    volume_name="my-volume",
+    creation_token="my-vol-001",
+    usage_threshold=107374182400,
     resource_group_name="my-rg",
     account_name="my-account", 
     pool_name="my-pool",
-    volume_name="my-volume",
     location="eastus",
-    creation_token="my-vol-001",
-    usage_threshold=107374182400,
     protocol_types=["NFSv3"],
     virtual_network_name="my-vnet",
     subscription_id="your-subscription-id"
@@ -175,21 +187,20 @@ export AZURE_TENANT_ID="your-tenant-id"
 export AZURE_SUBSCRIPTION_ID="your-subscription-id"  # Optional default
 ```
 
-**Alternative Authentication:**
+**Alternative Authentication Methods:**
 - Azure CLI: `az login`
-- Managed Identity (when running on Azure)
-- Visual Studio Code Azure Account
-- Azure PowerShell
+- Managed Identity (when running on Azure resources)
+- Visual Studio Code Azure Account extension
+- Azure PowerShell authentication
 
 ### Complete Usage Examples
 
 #### Basic Volume Management with Configuration
 ```python
 from netapp_dataops.traditional import anf
-from netapp_dataops.traditional.anf.config import create_anf_config
 
 # First-time setup: create configuration
-create_anf_config()
+anf.create_anf_config()
 
 # After configuration, simplified usage
 volume = anf.create_volume(
@@ -202,8 +213,8 @@ volume = anf.create_volume(
 
 # Create a snapshot
 snapshot = anf.create_snapshot(
-    volume_name="data-volume",
-    snapshot_name="backup-001"
+    snapshot_name="backup-001",
+    volume_name="data-volume"
     # location, resource_group_name, account_name, pool_name from config
 )
 
@@ -223,23 +234,23 @@ from netapp_dataops.traditional import anf
 
 # Manual parameter specification
 volume = anf.create_volume(
+    volume_name="data-volume",
+    creation_token="data-vol-01",
+    usage_threshold=107374182400,  # 100 GiB
     resource_group_name="my-rg",
     account_name="my-account",
     pool_name="my-pool",
-    volume_name="data-volume",
     location="eastus",
-    creation_token="data-vol-01",
-    usage_threshold=107374182400,  # 100 GiB
     protocol_types=["NFSv3"],
     virtual_network_name="my-vnet"
 )
 
 snapshot = anf.create_snapshot(
+    snapshot_name="backup-001",
+    volume_name="data-volume",
     resource_group_name="my-rg",
     account_name="my-account",
     pool_name="my-pool",
-    volume_name="data-volume",
-    snapshot_name="backup-001",
     location="eastus"
 )
 ```
@@ -250,37 +261,37 @@ from netapp_dataops.traditional import anf
 
 # Create a new volume
 volume = anf.create_volume(
+    volume_name="data-volume",
+    creation_token="data-vol-01",
+    usage_threshold=107374182400,  # 100 GiB
     resource_group_name="my-rg",
     account_name="my-account",
     pool_name="my-pool",
-    volume_name="data-volume",
     location="eastus",
-    creation_token="data-vol-01",
-    usage_threshold=107374182400,  # 100 GiB
     protocol_types=["NFSv3"],
     virtual_network_name="my-vnet"
 )
 
 # Create a snapshot
 snapshot = anf.create_snapshot(
+    snapshot_name="backup-001",
+    volume_name="data-volume",
     resource_group_name="my-rg",
     account_name="my-account",
     pool_name="my-pool",
-    volume_name="data-volume",
-    snapshot_name="backup-001",
     location="eastus"
 )
 
 # Clone the volume
 clone = anf.clone_volume(
+    source_volume_name="data-volume",
+    volume_name="data-clone",
+    creation_token="data-clone-01",
+    snapshot_name="backup-001",
     resource_group_name="my-rg",
     account_name="my-account",
     pool_name="my-pool",
-    source_volume_name="data-volume",
-    volume_name="data-clone",
     location="eastus",
-    creation_token="data-clone-01",
-    snapshot_name="backup-001",
     virtual_network_name="my-vnet"
 )
 ```
@@ -289,19 +300,23 @@ clone = anf.clone_volume(
 ```python
 # Set up disaster recovery replication
 replication = anf.create_replication(
-    # Source (East US)
-    resource_group_name="prod-eastus-rg",
-    account_name="prod-account",
-    pool_name="prod-pool",
+    # Source volume (required)
     volume_name="critical-data",
     
-    # Destination (West US) - will be created
+    # Destination volume parameters (required)
     destination_resource_group_name="dr-westus-rg",
     destination_account_name="dr-account",
     destination_pool_name="dr-pool",
     destination_volume_name="critical-data-replica",
     destination_location="westus",
     destination_creation_token="critical-data-dr",
-    destination_virtual_network_name="dr-vnet"
+    destination_usage_threshold=107374182400,  # 100 GiB
+    destination_protocol_types=["NFSv3"],
+    destination_virtual_network_name="dr-vnet",
+    
+    # Source volume parameters (optional - can use config)
+    resource_group_name="prod-eastus-rg",
+    account_name="prod-account",
+    pool_name="prod-pool"
 )
 ```

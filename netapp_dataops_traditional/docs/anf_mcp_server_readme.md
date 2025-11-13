@@ -248,16 +248,16 @@ The MCP server exposes Azure NetApp Files operations through tools. Here are som
 
 ```
 Create a 500 GiB Premium NFS volume:
+- Volume Name: "data-volume-001"
+- Creation Token: "data-vol-001"
+- Size: 536870912000 bytes (500 GiB)
 - Resource Group: "my-resource-group"
 - Account: "my-netapp-account"
 - Pool: "premium-pool"
-- Volume Name: "data-volume-001"
 - Location: "eastus"
-- Creation Token: "data-vol-001"
+- Protocol: "NFSv3"
 - Virtual Network: "my-vnet"
 - Subnet: "netapp-subnet"
-- Size: 536870912000 bytes (500 GiB)
-- Protocol: "NFSv3"
 ```
 
 ### Cloning a Volume
@@ -266,6 +266,7 @@ Create a 500 GiB Premium NFS volume:
 Clone from an existing snapshot:
 - Source Volume: "production-data"
 - Clone Name: "dev-environment"
+- Creation Token: "dev-env-001"
 - Snapshot: "daily-backup-001"
 - Size can be larger than source volume
 ```
@@ -274,10 +275,17 @@ Clone from an existing snapshot:
 
 ```
 Set up disaster recovery:
-- Source: eastus region
-- Destination: westus region
-- Automatic destination volume creation
-- Continuous data synchronization
+- Source Volume: "critical-data"
+- Destination Resource Group: "dr-westus-rg"
+- Destination Account: "dr-account"
+- Destination Pool: "dr-pool"
+- Destination Volume: "critical-data-replica"
+- Destination Location: "westus"
+- Destination Creation Token: "critical-data-dr"
+- Destination Size: 536870912000 bytes (500 GiB)
+- Destination Protocol: "NFSv3"
+- Destination Virtual Network: "dr-vnet"
+- Source details (optional - can use config defaults)
 ```
 
 ## Troubleshooting
