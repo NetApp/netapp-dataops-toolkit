@@ -643,8 +643,8 @@ async def create_replication_tool(
     destination_protocol_types: list,
     destination_virtual_network_name: str,
     destination_subnet_name: str = "default",
-    destination_service_level: str = None,
-    destination_zones: list = None,
+    destination_service_level: Optional[str] = None,
+    destination_zones: Optional[list] = None,
     # Source volume parameters (optional - will use config defaults)
     resource_group_name: Optional[str] = None,
     account_name: Optional[str] = None,
