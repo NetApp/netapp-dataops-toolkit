@@ -30,16 +30,16 @@ Built on the [Azure NetApp Files Python SDK](https://docs.microsoft.com/en-us/py
 - [1. Configuration Management](#1-configuration-management)
   - [Create ANF Configuration](#create-anf-configuration)
 - [2. Volume Management](#2-volume-management)
-  - [Create a volume](#create-a-volume)
-  - [Clone a volume](#clone-a-volume)
-  - [List volumes](#list-volumes)
-  - [Delete a volume](#delete-a-volume)
+  - [🚀 Create a volume](#create-a-volume)
+  - [🔄 Clone a volume](#clone-a-volume)
+  - [📋 List volumes](#list-volumes)
+  - [🗑️ Delete a volume](#delete-a-volume)
 - [3. Snapshot Management](#3-snapshot-management)
-  - [Create a snapshot](#create-a-snapshot)
-  - [List snapshots](#list-snapshots)
-  - [Delete a snapshot](#delete-a-snapshot)
+  - [📸 Create a snapshot](#create-a-snapshot)
+  - [📋 List snapshots](#list-snapshots)
+  - [🗑️ Delete a snapshot](#delete-a-snapshot)
 - [4. Replication Management](#4-replication-management)
-  - [Create replication](#create-replication)
+  - [🔗 Create replication](#create-replication)
 - [Reference Links](#reference-links)
 - [Support](#support)
 
@@ -48,10 +48,10 @@ Built on the [Azure NetApp Files Python SDK](https://docs.microsoft.com/en-us/py
 ## Overview
 
 This module simplifies programmatic interaction with Azure NetApp Files, designed for:
-- **Automation pipelines**
-- **ML workflows**
-- **CI/CD systems**
-- **Multi-cloud data strategies**
+- 🤖 **Automation pipelines**
+- 🧠 **ML workflows**
+- 🔄 **CI/CD systems**
+- ☁️ **Multi-cloud data strategies**
 
 <a name="key-capabilities"></a>
 
@@ -77,10 +77,10 @@ Before getting started, ensure you have:
 
 | Requirement | Details |
 |-------------|---------|
-| **Python** | Version ≥3.9, <3.13 |
-| **Azure CLI** | [Install and authenticate](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) |
-| **ANF Resources** | NetApp Account, Capacity Pool, and delegated subnet |
-| **IAM Permissions** | NetApp Contributor role or custom permissions |
+| **🐍 Python** | Version ≥3.9, <3.13 |
+| **☁️ Azure CLI** | [Install and authenticate](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) |
+| **📦 ANF Resources** | NetApp Account, Capacity Pool, and delegated subnet |
+| **🔐 IAM Permissions** | NetApp Contributor role or custom permissions |
 
 <a name="installation-instructions"></a>
 
@@ -93,13 +93,13 @@ Installs the toolkit **with Azure NetApp Files integration** (installs `azure-mg
 python3 -m pip install 'netapp-dataops-traditional[azure]'
 ```
 
-> **Note:** The `[azure]` extra is required for ANF functionality and will install `azure-mgmt-netapp`, `azure-identity`, and `azure-core`.
+> **📝 Note:** The `[azure]` extra is required for ANF functionality and will install `azure-mgmt-netapp`, `azure-identity`, and `azure-core`.
 
 **Benefits:**
-- Faster installations – Download only what you need
-- Smaller base package – Core functionality remains lightweight
-- Flexible deployment – Choose cloud integrations per environment
-- Compatible with pip and uv
+- ⚡ Faster installations – Download only what you need
+- 📦 Smaller base package – Core functionality remains lightweight
+- 🎯 Flexible deployment – Choose cloud integrations per environment
+- 🛠️ Compatible with pip and uv
 
 <a name="authentication"></a>
 
@@ -155,7 +155,7 @@ export AZURE_CLIENT_ID="your-client-id"
 export AZURE_CLIENT_SECRET="your-client-secret"
 ```
 
-> **Tip:** For production environments, use Option 2 with a dedicated service principal.
+> **💡 Tip:** For production environments, use Option 2 with a dedicated service principal.
 
 ## Configuration
 
@@ -183,10 +183,10 @@ create_anf_config()
 - Default protocol types (defaults to "NFSv3")
 
 **Benefits:**
-- **Simplified function calls** - Pass only unique parameters
-- **Consistent defaults** - Reuse infrastructure settings across operations
-- **Reduced errors** - Pre-validated configuration values
-- **Version control friendly** - Config file can be shared across teams
+- ⚡ **Simplified function calls** - Pass only unique parameters
+- 🎯 **Consistent defaults** - Reuse infrastructure settings across operations
+- 🛡️ **Reduced errors** - Pre-validated configuration values
+- 📝 **Version control friendly** - Config file can be shared across teams
 
 ### Configuration File Location
 
@@ -290,25 +290,25 @@ from netapp_dataops.traditional.anf import (
 )
 ```
 
-> **Note:** All prerequisite authentication steps must be completed before using these functions.
+> **📝 Note:** All prerequisite authentication steps must be completed before using these functions.
 
 <a name="function-categories"></a>
 
 ### Function Categories
 
 1. [Configuration Management](#1-configuration-management)
-    - [Create ANF Configuration](#create-anf-configuration)
+    - [⚙️ Create ANF Configuration](#create-anf-configuration)
 2. [Volume Management](#2-volume-management)
-    - [Create a New Data Volume](#create-a-new-data-volume)
-    - [Clone an Existing Data Volume](#clone-an-existing-data-volume)
-    - [Delete an Existing Data Volume](#delete-an-existing-data-volume)
-    - [List All Data Volumes](#list-all-data-volumes)
+    - [🚀 Create a New Data Volume](#create-a-new-data-volume)
+    - [🔄 Clone an Existing Data Volume](#clone-an-existing-data-volume)
+    - [🗑️ Delete an Existing Data Volume](#delete-an-existing-data-volume)
+    - [📋 List All Data Volumes](#list-all-data-volumes)
 3. [Snapshot Management](#3-snapshot-management)
-    - [Create a New Snapshot for a Data Volume](#create-a-new-snapshot-for-a-data-volume)
-    - [Delete an Existing Snapshot for a Data Volume](#delete-an-existing-snapshot-for-a-data-volume)
-    - [List All Snapshots for a Data Volume](#list-all-snapshots-for-a-data-volume)
+    - [📸 Create a New Snapshot for a Data Volume](#create-a-new-snapshot-for-a-data-volume)
+    - [🗑️ Delete an Existing Snapshot for a Data Volume](#delete-an-existing-snapshot-for-a-data-volume)
+    - [📋 List All Snapshots for a Data Volume](#list-all-snapshots-for-a-data-volume)
 4. [Replication Management](#4-replication-management)
-    - [Create a Cross-Region Replication](#create-a-cross-region-replication)
+    - [🔗 Create a Cross-Region Replication](#create-a-cross-region-replication)
 
 <a name="api-reference"></a>
 
@@ -513,7 +513,7 @@ The wizard will detect existing configuration and offer to update it.
 
 <a name="create-a-new-data-volume"></a>
 
-### Create a New Data Volume
+### 🚀 Create a New Data Volume
 
 Provision new Azure NetApp Files volumes with comprehensive configuration options including protocols (NFS/SMB), performance tiers, export policies, and advanced features.
 
@@ -618,7 +618,7 @@ response = anf.create_volume(
 
 <a name="clone-an-existing-data-volume"></a>
 
-### Clone an Existing Data Volume
+### 🔄 Clone an Existing Data Volume
 
 Create a new volume as a clone of an existing volume using a specific snapshot. This is ideal for rapid environment duplication, testing, and development workflows.
 
@@ -726,7 +726,7 @@ clone_result = anf.clone_volume(
 
 <a name="delete-an-existing-data-volume"></a>
 
-### Delete an Existing Data Volume
+### 🗑️ Delete an Existing Data Volume
 
 Remove Azure NetApp Files volumes with options for forced deletion when necessary.
 
@@ -791,7 +791,7 @@ delete_result = anf.delete_volume(
 
 <a name="list-all-data-volumes"></a>
 
-### List All Data Volumes
+### 📋 List All Data Volumes
 
 Retrieve all volumes within a specific capacity pool.
 
@@ -875,7 +875,7 @@ for volume in volumes['details']:
 
 <a name="create-a-new-snapshot-for-a-data-volume"></a>
 
-### Create a New Snapshot for a Data Volume
+### 📸 Create a New Snapshot for a Data Volume
 
 Create point-in-time snapshots of Azure NetApp Files volumes for backup, recovery, and cloning operations.
 
@@ -953,7 +953,7 @@ snapshot_result = anf.create_snapshot(
 
 <a name="delete-an-existing-snapshot-for-a-data-volume"></a>
 
-### Delete an Existing Snapshot for a Data Volume
+### 🗑️ Delete an Existing Snapshot for a Data Volume
 
 Remove snapshots when they are no longer needed for space management and cleanup.
 
@@ -1019,7 +1019,7 @@ delete_snap = anf.delete_snapshot(
 
 <a name="list-all-snapshots-for-a-data-volume"></a>
 
-### List All Snapshots for a Data Volume
+### 📋 List All Snapshots for a Data Volume
 
 Enumerate all snapshots associated with a specific Azure NetApp Files volume.
 
@@ -1094,120 +1094,13 @@ for snapshot in snapshots['details']:
 }
 ```
 
-<a name="1-configuration-management"></a>
-
-## 1. Configuration Management
-
-<a name="create-anf-configuration"></a>
-
-### Create ANF Configuration
-
-Create an ANF configuration file through interactive prompts to simplify subsequent function calls by storing common Azure infrastructure details.
-
-#### Function Definition
-```python
-def create_anf_config(
-    config_dir_path: str = "~/.netapp_dataops",        # Optional. Directory path for config file.
-    config_filename: str = "anf_config.json"           # Optional. Config file name.
-) -> None:
-```
-
-#### Return Values
-```python
-None: Function creates config file and prints confirmation messages
-```
-
-#### Error Handling
-
-If an error is encountered, the function will raise an exception of one of the following types:
-```python
-InvalidConfigError    # If there's an error creating the config file
-OSError               # If there are permission issues with file/directory creation
-Exception             # If there is an error during the configuration process
-```
-
-#### Example Usage
-
-Create an ANF configuration file interactively:
-
-```python
-from netapp_dataops.traditional.anf import create_anf_config
-
-# Create configuration file through interactive prompts
-create_anf_config()
-```
-
-**Interactive Prompts:**
-```
-=== ANF Infrastructure Configuration ===
-Enter Azure subscription ID: 12345678-1234-1234-1234-123456789abc
-Enter resource group name: my-production-rg
-Enter NetApp account name: my-netapp-account
-Enter capacity pool name: premium-pool
-Enter Azure region (e.g., 'eastus'): eastus
-Enter virtual network name: production-vnet
-Enter subnet name [default]: netapp-subnet
-
-=== Default Protocol Configuration ===
-Enter default protocol types (NFSv3, NFSv4.1, CIFS) [NFSv3]: NFSv3,NFSv4.1
-```
-
-**Generated Configuration File (`~/.netapp_dataops/anf_config.json`):**
-```json
-{
-  "subscriptionId": "12345678-1234-1234-1234-123456789abc",
-  "resourceGroupName": "my-production-rg",
-  "accountName": "my-netapp-account",
-  "poolName": "premium-pool",
-  "location": "eastus",
-  "virtualNetworkName": "production-vnet",
-  "subnetName": "netapp-subnet",
-  "protocolTypes": ["NFSv3", "NFSv4.1"]
-}
-```
-
-#### Benefits
-
-- **Simplified Function Calls**: Use the config file to avoid specifying common parameters repeatedly
-- **Consistency**: Ensure all operations use the same infrastructure settings
-- **Team Sharing**: Share configuration files across development teams
-- **Parameter Precedence**: Function parameters override config file values when specified
-
-#### Usage After Configuration
-
-Once created, all other ANF functions can use the configuration file defaults:
-
-```python
-# Before configuration - must specify all parameters
-volume = create_volume(
-    volume_name="data-volume",
-    creation_token="data-vol-001", 
-    usage_threshold=107374182400,
-    resource_group_name="my-production-rg",
-    account_name="my-netapp-account", 
-    pool_name="premium-pool",
-    location="eastus",
-    protocol_types=["NFSv3"],
-    virtual_network_name="production-vnet",
-    subnet_name="netapp-subnet"
-)
-
-# After configuration - specify only unique parameters
-volume = create_volume(
-    volume_name="data-volume",
-    creation_token="data-vol-001",
-    usage_threshold=107374182400
-    # All other values loaded from config file automatically
-)
-```
-
 <a name="4-replication-management"></a>
 
 ## 4. Replication Management
 
 <a name="create-a-cross-region-replication"></a>
 
-### Create a Cross-Region Replication
+### 🔗 Create a Cross-Region Replication
 
 Set up cross-region replication relationships between Azure NetApp Files volumes for disaster recovery and high availability. This function can either create a new data protection volume or use an existing one.
 
@@ -1312,11 +1205,11 @@ replication_result = anf.create_replication(
 
 | Resource | Description |
 |----------|-------------|
-| [Azure NetApp Files REST API Documentation](https://docs.microsoft.com/en-us/rest/api/netapp/) | Official Azure NetApp Files API reference |
-| [Azure NetApp Files Python SDK](https://docs.microsoft.com/en-us/python/api/azure-mgmt-netapp/) | Azure NetApp Files management client library |
-| [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/) | Command-line tools for Azure |
-| [Azure NetApp Files Architecture](https://docs.microsoft.com/en-us/azure/azure-netapp-files/azure-netapp-files-solution-architectures) | Solution architectures and best practices |
-| [Azure Identity Documentation](https://docs.microsoft.com/en-us/python/api/azure-identity/) | Azure authentication methods |
+| 📚 [Azure NetApp Files REST API Documentation](https://docs.microsoft.com/en-us/rest/api/netapp/) | Official Azure NetApp Files API reference |
+| 🐍 [Azure NetApp Files Python SDK](https://docs.microsoft.com/en-us/python/api/azure-mgmt-netapp/) | Azure NetApp Files management client library |
+| 🔧 [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/) | Command-line tools for Azure |
+| 🏗️ [Azure NetApp Files Architecture](https://docs.microsoft.com/en-us/azure/azure-netapp-files/azure-netapp-files-solution-architectures) | Solution architectures and best practices |
+| 🔐 [Azure Identity Documentation](https://docs.microsoft.com/en-us/python/api/azure-identity/) | Azure authentication methods |
 
 ---
 
