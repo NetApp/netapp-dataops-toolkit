@@ -30,6 +30,7 @@ def test_create_anf_config_success():
     """Test successful config creation"""
     with patch('os.path.isfile', return_value=False):  # No existing config file
         with patch('builtins.input', side_effect=[
+            '',  # Press Enter to continue
             'test-subscription-id',
             'test-rg',
             'test-account',
@@ -37,7 +38,8 @@ def test_create_anf_config_success():
             'centralus',
             'test-vnet',
             'default',
-            'NFSv3'
+            'NFSv3',
+            'y'  # Save confirmation
         ]):
             with patch('os.makedirs') as mock_makedirs:
                 with patch('builtins.open', mock_open()) as mock_file:
@@ -50,6 +52,7 @@ def test_create_anf_config_with_parameters():
     """Test config creation with custom path and filename"""
     with patch('os.path.isfile', return_value=False):  # No existing config file
         with patch('builtins.input', side_effect=[
+            '',  # Press Enter to continue
             'test-subscription-id',
             'test-rg',
             'test-account',
@@ -57,7 +60,8 @@ def test_create_anf_config_with_parameters():
             'centralus',
             'test-vnet',
             'default',
-            'NFSv3'
+            'NFSv3',
+            'y'  # Save confirmation
         ]):
             with patch('os.makedirs') as mock_makedirs:
                 with patch('builtins.open', mock_open()) as mock_file:
@@ -72,7 +76,18 @@ def test_create_anf_config_with_parameters():
 def test_create_anf_config_overwrite_existing():
     """Test config creation when existing config file exists"""
     with patch('os.path.isfile', return_value=True):
-        with patch('builtins.input', side_effect=['yes', 'test-subscription-id', 'test-rg', 'test-account', 'test-pool', 'centralus', 'test-vnet', 'default', 'NFSv3']):
+        with patch('builtins.input', side_effect=[
+            'yes',  # Proceed with overwrite
+            'test-subscription-id',
+            'test-rg',
+            'test-account',
+            'test-pool',
+            'centralus',
+            'test-vnet',
+            'default',
+            'NFSv3',
+            'y'  # Save confirmation
+        ]):
             with patch('os.makedirs'):
                 with patch('builtins.open', mock_open()):
                     with patch('json.dump'):
@@ -157,14 +172,16 @@ def test_create_anf_config_directory_creation_fails():
     """Test config creation when directory creation fails"""
     with patch('os.path.isfile', return_value=False):  # No existing config file
         with patch('builtins.input', side_effect=[
+            '',  # Press Enter to continue
             'test-subscription-id',
-            'test-rg', 
+            'test-rg',
             'test-account',
             'test-pool',
             'centralus',
             'test-vnet',
             'default',
-            'NFSv3'
+            'NFSv3',
+            'y'  # Save confirmation
         ]):
             with patch('os.makedirs', side_effect=OSError("Permission denied")):
                 with pytest.raises(InvalidConfigError) as exc_info:
@@ -175,14 +192,16 @@ def test_create_anf_config_file_write_fails():
     """Test config creation when file writing fails"""
     with patch('os.path.isfile', return_value=False):  # No existing config file
         with patch('builtins.input', side_effect=[
+            '',  # Press Enter to continue
             'test-subscription-id',
             'test-rg',
-            'test-account', 
+            'test-account',
             'test-pool',
             'centralus',
             'test-vnet',
             'default',
-            'NFSv3'
+            'NFSv3',
+            'y'  # Save confirmation
         ]):
             with patch('os.makedirs'):
                 with patch('builtins.open', side_effect=IOError("Disk full")):
