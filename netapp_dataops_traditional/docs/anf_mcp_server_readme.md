@@ -7,13 +7,13 @@ The NetApp DataOps Toolkit MCP Server for Azure NetApp Files (ANF) is an open-so
 
 ## Tools
 
-- **Create ANF Volume**: Rapidly provision new Azure NetApp Files volumes with comprehensive configuration options including protocols (NFS/SMB), performance tiers, export policies, and advanced features like encryption and tiering.
-- **Clone ANF Volume**: Create near-instantaneous, space-efficient clones of existing volumes from snapshots using NetApp's FlexClone technology.
-- **List ANF Volumes**: Retrieve a list of all existing data volumes in a specified capacity pool within your Azure NetApp Files account.
-- **Create ANF Snapshot**: Create space-efficient, read-only point-in-time copies of data volumes for versioning, backup, and recovery scenarios.
-- **List ANF Snapshots**: Retrieve a list of all snapshots for a specific Azure NetApp Files volume.
-- **Create ANF Replication**: Set up cross-region replication relationships for disaster recovery and high availability between Azure regions.
-- **Create ANF Data Protection Volume**: Create destination volumes specifically configured for cross-region replication scenarios.
+- **Create Volume**: Rapidly provision new Azure NetApp Files volumes with comprehensive configuration options including protocols (NFS/SMB), performance tiers, export policies, and advanced features like encryption and tiering.
+- **Clone Volume**: Create near-instantaneous, space-efficient clones of existing volumes from snapshots using NetApp's FlexClone technology.
+- **List Volumes**: Retrieve a list of all existing data volumes in a specified capacity pool within your Azure NetApp Files account.
+- **Create Snapshot**: Create space-efficient, read-only point-in-time copies of data volumes for versioning, backup, and recovery scenarios.
+- **List Snapshots**: Retrieve a list of all snapshots for a specific Azure NetApp Files volume.
+- **Create Replication**: Set up cross-region replication relationships for disaster recovery and high availability between Azure regions.
+- **Create ANF Config**: Create an ANF configuration file to avoid repetitive parameters and simplify tool usage.
 
 ## Prerequisites
 
@@ -239,10 +239,6 @@ You can optionally set these environment variables for authentication:
 - `AZURE_CLIENT_SECRET`: Service principal password/secret
 - `AZURE_TENANT_ID`: Azure Active Directory tenant ID
 - `AZURE_SUBSCRIPTION_ID`: Azure subscription ID
-
-### Alternative Authentication Methods
-- `AZURE_USERNAME`: Azure username (for username/password auth)
-- `AZURE_PASSWORD`: Azure password (for username/password auth)
 
 ## Tool Examples
 

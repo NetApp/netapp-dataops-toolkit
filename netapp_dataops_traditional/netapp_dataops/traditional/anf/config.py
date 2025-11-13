@@ -35,35 +35,65 @@ def create_anf_config(config_dir_path: str = "~/.netapp_dataops", config_filenam
     config_dir_path = os.path.expanduser(config_dir_path)
     config_file_path = os.path.join(config_dir_path, config_filename)
     
+    # Print welcome banner
+    print("\n" + "=" * 60)
+    print("=== NetApp DataOps Toolkit - ANF Configuration Setup ===")
+    print("=" * 60)
+    print("\nThis wizard will help you create a configuration file for Azure NetApp Files.")
+    print(f"The configuration will be saved to: {config_file_path}")
+    
     if os.path.isfile(config_file_path):
-        logger.warning("You already have an existing ANF config file. Creating a new config file will overwrite this existing config.")
+        print(f"\nWARNING: An existing config file was found at {config_file_path}")
+        print("Creating a new config file will overwrite the existing configuration.")
+        
         # If existing config file is present, ask user if they want to proceed
         while True:
-            proceed = input("Are you sure that you want to proceed? (yes/no): ").lower()
+            proceed = input("\nAre you sure that you want to proceed? (yes/no): ").lower()
             if proceed == "yes":
                 break
             elif proceed == "no":
+                print("Configuration setup cancelled.")
                 sys.exit(0)
             else:
-                logger.error("Invalid value. Must enter 'yes' or 'no'.")
+                print("Invalid value. Must enter 'yes' or 'no'.")
+    else:
+        input("\nPress Enter to continue or Ctrl+C to cancel...")
 
     # Instantiate dict for storing connection details
     config = dict()
 
+    # Prompt user to enter Azure subscription details
+    print("\n" + "=" * 40)
+    print("=== Azure Subscription Configuration ===")
+    print("=" * 40)
+    config["subscriptionId"] = input("Enter your Azure subscription ID: ")
+
     # Prompt user to enter infrastructure config details
-    print("\n=== ANF Infrastructure Configuration ===")
-    config["subscriptionId"] = input("Enter Azure subscription ID: ")
+    print("\n" + "=" * 35)
+    print("=== Infrastructure Configuration ===")
+    print("=" * 35)
     config["resourceGroupName"] = input("Enter resource group name: ")
     config["accountName"] = input("Enter NetApp account name: ")
     config["poolName"] = input("Enter capacity pool name: ")
-    config["location"] = input("Enter Azure region (e.g., 'eastus'): ")
+    config["location"] = input("Enter Azure region (e.g., 'eastus', 'westus2'): ")
+
+    # Prompt user to enter network configuration
+    print("\n" + "=" * 30)
+    print("=== Network Configuration ===")
+    print("=" * 30)
     config["virtualNetworkName"] = input("Enter virtual network name: ")
     config["subnetName"] = input("Enter subnet name [default]: ") or "default"
 
     # Prompt user to enter default protocol types
-    print("\n=== Default Protocol Configuration ===")
+    print("\n" + "=" * 30)
+    print("=== Protocol Configuration ===")
+    print("=" * 30)
+    print("Enter default protocol types (comma-separated):")
+    print("  Available options: NFSv3, NFSv4.1, CIFS")
+    print("  Example: NFSv3,NFSv4.1")
+    
     while True:
-        protocol_input = input("Enter default protocol types (NFSv3, NFSv4.1, CIFS) [NFSv3]: ") or "NFSv3"
+        protocol_input = input("  Default [NFSv3]: ") or "NFSv3"
         # Parse comma-separated input
         protocol_types = [p.strip() for p in protocol_input.split(',')]
         
@@ -72,10 +102,39 @@ def create_anf_config(config_dir_path: str = "~/.netapp_dataops", config_filenam
         invalid_protocols = [p for p in protocol_types if p not in valid_protocols]
         
         if invalid_protocols:
-            logger.error(f"Invalid protocol types: {invalid_protocols}. Valid options are: {valid_protocols}")
+            print(f"Error: Invalid protocol types: {invalid_protocols}")
+            print(f"Valid options are: {valid_protocols}")
         else:
             config["protocolTypes"] = protocol_types
             break
+
+    # Display configuration summary
+    print("\n" + "=" * 35)
+    print("=== Configuration Summary ===")
+    print("=" * 35)
+    
+    # Mask subscription ID for display
+    masked_subscription = config["subscriptionId"][:8] + "-****-****-****-********" + config["subscriptionId"][-4:]
+    
+    print(f"Subscription ID: {masked_subscription}")
+    print(f"Resource Group: {config['resourceGroupName']}")
+    print(f"NetApp Account: {config['accountName']}")
+    print(f"Capacity Pool: {config['poolName']}")
+    print(f"Location: {config['location']}")
+    print(f"Virtual Network: {config['virtualNetworkName']}")
+    print(f"Subnet: {config['subnetName']}")
+    print(f"Protocol Types: {config['protocolTypes']}")
+
+    # Confirm before saving
+    while True:
+        save_config = input("\nSave this configuration? [y/N]: ").lower()
+        if save_config in ['y', 'yes']:
+            break
+        elif save_config in ['n', 'no', '']:
+            print("Configuration setup cancelled.")
+            sys.exit(0)
+        else:
+            print("Please enter 'y' for yes or 'n' for no.")
 
     # Create config dir if it doesn't already exist
     try:
@@ -92,10 +151,34 @@ def create_anf_config(config_dir_path: str = "~/.netapp_dataops", config_filenam
         logger.error(f"Failed to write config file '{config_file_path}': {str(e)}")
         raise InvalidConfigError(f"Failed to write config file: {str(e)}")
 
+    print(f"\nConfiguration saved successfully to: {config_file_path}")
+    
+    # Display next steps
+    print("\n" + "=" * 20)
+    print("=== Next Steps ===")
+    print("=" * 20)
+    print("You can now use simplified function calls:")
+    print("  ")
+    print("  # Before config - specify all parameters")
+    print("  create_volume(")
+    print('      volume_name="my-volume",')
+    print('      creation_token="my-vol-001",')
+    print('      usage_threshold=107374182400,')
+    print(f'      resource_group_name="{config["resourceGroupName"]}",')
+    print(f'      account_name="{config["accountName"]}",')
+    print("      # ... many more parameters")
+    print("  )")
+    print("  ")
+    print("  # After config - specify only unique parameters  ")
+    print("  create_volume(")
+    print('      volume_name="my-volume",')
+    print('      creation_token="my-vol-001",')
+    print('      usage_threshold=107374182400')
+    print("      # All infrastructure parameters loaded from config!")
+    print("  )")
+    print("\nConfiguration setup complete!")
+
     logger.info(f"Created ANF config file: {config_file_path}")
-    print(f"\nANF configuration saved successfully!")
-    print(f"Config file location: {config_file_path}")
-    print(f"You can now use ANF functions with simplified parameters.")
 
 
 def _retrieve_anf_config(config_dir_path: str = "~/.netapp_dataops", config_filename: str = "anf_config.json", 
