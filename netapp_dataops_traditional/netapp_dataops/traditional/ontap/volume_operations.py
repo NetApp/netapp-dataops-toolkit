@@ -867,99 +867,100 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
                         volumeFields += ",space"
                     volume.get(fields=volumeFields)
                 print(volume)
+                print(volume.size)
 
                 # Retrieve volume export path; handle case where volume is not exported
-                # if hasattr(volume, "nas"):
-                #     volumeExportPath = volume.nas.path
-                # else:
-                #     volumeExportPath = None
+                if hasattr(volume, "nas"):
+                    volumeExportPath = volume.nas.path
+                else:
+                    volumeExportPath = None
 
                 # # Include all vols except for SVM root vol
-                # if volumeExportPath != "/":
-                #     # Determine volume type
-                #     type = volume.style
+                if volumeExportPath != "/":
+                    # Determine volume type
+                    type = volume.style
 
-                #     # Construct NFS mount target
-                #     if not volumeExportPath :
-                #         nfsMountTarget = None
-                #     else :
-                #         nfsMountTarget = config["dataLif"]+":"+volume.nas.path
-                #         if svmname != config["svm"]:
-                #             nfsMountTarget = svmname+":"+volume.nas.path
+                    # Construct NFS mount target
+                    if not volumeExportPath :
+                        nfsMountTarget = None
+                    else :
+                        nfsMountTarget = config["dataLif"]+":"+volume.nas.path
+                        if svmname != config["svm"]:
+                            nfsMountTarget = svmname+":"+volume.nas.path
 
 
-                #     # Construct clone source
-                #     clone = "no"
-                #     cloneParentSvm = ""
-                #     cloneParentVolume = ""
-                #     cloneParentSnapshot = ""
+                    # Construct clone source
+                    clone = "no"
+                    cloneParentSvm = ""
+                    cloneParentVolume = ""
+                    cloneParentSnapshot = ""
 
-                #     try:
-                #         cloneParentSvm = volume.clone.parent_svm.name
-                #         cloneParentVolume = volume.clone.parent_volume.name
-                #         cloneParentSnapshot = volume.clone.parent_snapshot.name
-                #         clone = "yes"
-                #     except KeyError:
-                #         pass
+                    try:
+                        cloneParentSvm = volume.clone.parent_svm.name
+                        cloneParentVolume = volume.clone.parent_volume.name
+                        cloneParentSnapshot = volume.clone.parent_snapshot.name
+                        clone = "yes"
+                    except KeyError:
+                        pass
 
-                #     # Determine if FlexCache
-                #     if volume.flexcache_endpoint_type == "cache":
-                #         flexcache = "yes"
-                #     else:
-                #         flexcache = "no"
+                    # Determine if FlexCache
+                    if volume.flexcache_endpoint_type == "cache":
+                        flexcache = "yes"
+                    else:
+                        flexcache = "no"
 
-                #     # Convert size in bytes to "pretty" size (size in KB, MB, GB, or TB)
-                #     prettySize = _convert_bytes_to_pretty_size(size_in_bytes=volume.size)
-                #     if include_space_usage_details :
-                #         try :
-                #             snapshotReserve = str(volume.space.snapshot.reserve_percent) + "%"
-                #             logicalCapacity = float(volume.space.size) * (1 - float(volume.space.snapshot.reserve_percent)/100)
-                #             prettyLogicalCapacity = _convert_bytes_to_pretty_size(size_in_bytes=logicalCapacity)
-                #             logicalUsage = float(volume.space.used)
-                #             prettyLogicalUsage = _convert_bytes_to_pretty_size(size_in_bytes=logicalUsage)
-                #         except :
-                #             snapshotReserve = "Unknown"
-                #             prettyLogicalCapacity = "Unknown"
-                #             prettyLogicalUsage = "Unknown"
-                #         try :
-                #             if type == "flexgroup" :
-                #                 totalFootprint: float = 0.0
-                #                 for constituentVolume in volume.constituents :
-                #                     totalFootprint += float(constituentVolume["space"]["total_footprint"])
-                #             else :
-                #                 totalFootprint = float(volume.space.footprint) + float(volume.space.metadata)
-                #             prettyFootprint = _convert_bytes_to_pretty_size(size_in_bytes=totalFootprint)
-                #         except :
-                #             prettyFootprint = "Unknown"
+                    # Convert size in bytes to "pretty" size (size in KB, MB, GB, or TB)
+                    prettySize = _convert_bytes_to_pretty_size(size_in_bytes=volume.size)
+                    if include_space_usage_details :
+                        try :
+                            snapshotReserve = str(volume.space.snapshot.reserve_percent) + "%"
+                            logicalCapacity = float(volume.space.size) * (1 - float(volume.space.snapshot.reserve_percent)/100)
+                            prettyLogicalCapacity = _convert_bytes_to_pretty_size(size_in_bytes=logicalCapacity)
+                            logicalUsage = float(volume.space.used)
+                            prettyLogicalUsage = _convert_bytes_to_pretty_size(size_in_bytes=logicalUsage)
+                        except :
+                            snapshotReserve = "Unknown"
+                            prettyLogicalCapacity = "Unknown"
+                            prettyLogicalUsage = "Unknown"
+                        try :
+                            if type == "flexgroup" :
+                                totalFootprint: float = 0.0
+                                for constituentVolume in volume.constituents :
+                                    totalFootprint += float(constituentVolume["space"]["total_footprint"])
+                            else :
+                                totalFootprint = float(volume.space.footprint) + float(volume.space.metadata)
+                            prettyFootprint = _convert_bytes_to_pretty_size(size_in_bytes=totalFootprint)
+                        except :
+                            prettyFootprint = "Unknown"
 
-                #     # Construct dict containing volume details; optionally include local mountpoint
-                #     volumeDict = {
-                #         "Volume Name": volume.name,
-                #         "Size": prettySize
-                #     }
-                #     if include_space_usage_details :
-                #         volumeDict["Snap Reserve"] = snapshotReserve
-                #         volumeDict["Capacity"] = prettyLogicalCapacity
-                #         volumeDict["Usage"] = prettyLogicalUsage
-                #         volumeDict["Footprint"] = prettyFootprint
-                #     volumeDict["Type"] = volume.style
-                #     volumeDict["NFS Mount Target"] = nfsMountTarget
-                #     if check_local_mounts:
-                #         localMountpoint = ""
-                #         if nfsMountTarget:
-                #             for mount in mounts.split("\n") :
-                #                 mountDetails = mount.split(" ")
-                #                 if mountDetails[0].strip() == nfsMountTarget.strip() :
-                #                     localMountpoint = mountDetails[2]
-                #         volumeDict["Local Mountpoint"] = localMountpoint
-                #     volumeDict["FlexCache"] = flexcache
-                #     volumeDict["Clone"] = clone
-                #     volumeDict["Source SVM"] = cloneParentSvm
-                #     volumeDict["Source Volume"] = cloneParentVolume
-                #     volumeDict["Source Snapshot"] = cloneParentSnapshot
+                    # Construct dict containing volume details; optionally include local mountpoint
+                    volumeDict = {
+                        "Volume Name": volume.name,
+                        "Size": prettySize
+                    }
+                    if include_space_usage_details :
+                        volumeDict["Snap Reserve"] = snapshotReserve
+                        volumeDict["Capacity"] = prettyLogicalCapacity
+                        volumeDict["Usage"] = prettyLogicalUsage
+                        volumeDict["Footprint"] = prettyFootprint
+                    volumeDict["Type"] = volume.style
+                    volumeDict["NFS Mount Target"] = nfsMountTarget
+                    if check_local_mounts:
+                        localMountpoint = ""
+                        if nfsMountTarget:
+                            for mount in mounts.split("\n") :
+                                mountDetails = mount.split(" ")
+                                if mountDetails[0].strip() == nfsMountTarget.strip() :
+                                    localMountpoint = mountDetails[2]
+                        volumeDict["Local Mountpoint"] = localMountpoint
+                    volumeDict["FlexCache"] = flexcache
+                    volumeDict["Clone"] = clone
+                    volumeDict["Source SVM"] = cloneParentSvm
+                    volumeDict["Source Volume"] = cloneParentVolume
+                    volumeDict["Source Snapshot"] = cloneParentSnapshot
 
-                #     # Append dict to list of volumes
-                #     volumesList.append(volumeDict)
+                    # Append dict to list of volumes
+                    volumesList.append(volumeDict)
 
         except NetAppRestError as err:
             if print_output :
