@@ -855,7 +855,6 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
             # Construct list of volumes; do not include SVM root volume
             volumesList = list()
             for volume in volumes:
-                print(volume)
                 baseVolumeFields = "nas.path,size,style,clone,flexcache_endpoint_type"
                 try :
                     volumeFields = baseVolumeFields
@@ -867,6 +866,7 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
                     if include_space_usage_details :
                         volumeFields += ",space"
                     volume.get(fields=volumeFields)
+                print(volume)
 
                 # Retrieve volume export path; handle case where volume is not exported
                 # if hasattr(volume, "nas"):
