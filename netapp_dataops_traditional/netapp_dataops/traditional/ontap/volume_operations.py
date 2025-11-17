@@ -866,8 +866,6 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
                     if include_space_usage_details :
                         volumeFields += ",space"
                     volume.get(fields=volumeFields)
-                print(volume)
-                print(volume.size)
 
                 # Retrieve volume export path; handle case where volume is not exported
                 if hasattr(volume, "nas"):
@@ -900,7 +898,7 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
                         cloneParentVolume = volume.clone.parent_volume.name
                         cloneParentSnapshot = volume.clone.parent_snapshot.name
                         clone = "yes"
-                    except KeyError:
+                    except (AttributeError, KeyError):
                         pass
 
                     # Determine if FlexCache
