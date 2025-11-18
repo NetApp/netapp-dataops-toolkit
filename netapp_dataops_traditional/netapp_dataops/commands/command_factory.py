@@ -1,98 +1,75 @@
-"""
-Command factory for NetApp DataOps Toolkit CLI.
+"""Command factory for NetApp DataOps Toolkit CLI"""
 
-This factory implements the Factory Pattern to create appropriate command instances
-based on the provided action string.
-"""
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 
-from typing import List, Optional
-from .base_command import BaseCommand
-from .clone_command import CloneCommand
-from .config_command import ConfigCommand
-from .create_command import CreateCommand
-from .delete_command import DeleteCommand
-from .get_command import GetCommand
-from .list_command import ListCommand
-from .mount_command import MountCommand
-from .unmount_command import UnmountCommand
-from .prepopulate_command import PrepopulateCommand
-from .s3_command import S3Command
-from .restore_command import RestoreCommand
-from .sync_command import SyncCommand
-from .help_command import HelpCommand
-from .version_command import VersionCommand
+if TYPE_CHECKING:
+    from .base_command import BaseCommand
 
 
 class CommandFactory:
-    """
-    Factory class for creating command instances.
+    """Factory for creating command instances using lazy loading."""
     
-    Implements the Factory Pattern to encapsulate command creation logic
-    and provide a clean interface for the main CLI dispatcher.
-    """
-    
-    # Command mapping using a dictionary for O(1) lookup
-    _command_map = {
+    # Maps command aliases to (module_name, class_name) for lazy import
+    _command_modules: Dict[str, Tuple[str, str]] = {
         # Clone commands
-        "clone": CloneCommand,
+        "clone": ("clone_command", "CloneCommand"),
         
         # Configuration commands
-        "config": ConfigCommand,
-        "setup": ConfigCommand,
+        "config": ("config_command", "ConfigCommand"),
+        "setup": ("config_command", "ConfigCommand"),
         
         # Create commands
-        "create": CreateCommand,
+        "create": ("create_command", "CreateCommand"),
         
         # Delete commands
-        "delete": DeleteCommand,
-        "del": DeleteCommand,
-        "rm": DeleteCommand,
+        "delete": ("delete_command", "DeleteCommand"),
+        "del": ("delete_command", "DeleteCommand"),
+        "rm": ("delete_command", "DeleteCommand"),
         
         # Get commands
-        "get": GetCommand,
+        "get": ("get_command", "GetCommand"),
         
         # List commands
-        "list": ListCommand,
-        "ls": ListCommand,
+        "list": ("list_command", "ListCommand"),
+        "ls": ("list_command", "ListCommand"),
         
         # Mount/unmount commands
-        "mount": MountCommand,
-        "unmount": UnmountCommand,
+        "mount": ("mount_command", "MountCommand"),
+        "unmount": ("unmount_command", "UnmountCommand"),
         
         # Prepopulate commands
-        "prepopulate": PrepopulateCommand,
+        "prepopulate": ("prepopulate_command", "PrepopulateCommand"),
         
         # S3 commands
-        "pull-from-s3": S3Command,
-        "pull-s3": S3Command,
-        "s3-pull": S3Command,
-        "push-to-s3": S3Command,
-        "push-s3": S3Command,
-        "s3-push": S3Command,
+        "pull-from-s3": ("s3_command", "S3Command"),
+        "pull-s3": ("s3_command", "S3Command"),
+        "s3-pull": ("s3_command", "S3Command"),
+        "push-to-s3": ("s3_command", "S3Command"),
+        "push-s3": ("s3_command", "S3Command"),
+        "s3-push": ("s3_command", "S3Command"),
         
         # Restore commands
-        "restore": RestoreCommand,
+        "restore": ("restore_command", "RestoreCommand"),
         
         # Sync commands
-        "sync": SyncCommand,
+        "sync": ("sync_command", "SyncCommand"),
         
         # Help commands
-        "help": HelpCommand,
-        "h": HelpCommand,
-        "-h": HelpCommand,
-        "--help": HelpCommand,
+        "help": ("help_command", "HelpCommand"),
+        "h": ("help_command", "HelpCommand"),
+        "-h": ("help_command", "HelpCommand"),
+        "--help": ("help_command", "HelpCommand"),
         
         # Version commands
-        "version": VersionCommand,
-        "v": VersionCommand,
-        "-v": VersionCommand,
-        "--version": VersionCommand,
+        "version": ("version_command", "VersionCommand"),
+        "v": ("version_command", "VersionCommand"),
+        "-v": ("version_command", "VersionCommand"),
+        "--version": ("version_command", "VersionCommand"),
     }
     
     @classmethod
-    def create_command(cls, action: str, args: List[str]) -> Optional[BaseCommand]:
-        """
-        Create a command instance based on the action.
+    def create_command(cls, action: str, args: List[str]) -> Optional['BaseCommand']:
+        """Create a command instance for the given action.
         
         Args:
             action: The command action string
@@ -101,17 +78,10 @@ class CommandFactory:
         Returns:
             Command instance or None if action not found
         """
-        command_class = cls._command_map.get(action)
-        if command_class:
+        command_info = cls._command_modules.get(action)
+        if command_info:
+            module_name, class_name = command_info
+            module = __import__(f"netapp_dataops.commands.{module_name}", fromlist=[class_name])
+            command_class = getattr(module, class_name)
             return command_class(action, args)
         return None
-    
-    @classmethod
-    def get_supported_commands(cls) -> List[str]:
-        """
-        Get list of all supported commands.
-        
-        Returns:
-            List of supported command strings
-        """
-        return list(cls._command_map.keys())

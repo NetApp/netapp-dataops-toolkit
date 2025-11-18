@@ -1,9 +1,8 @@
-"""
-S3 command module for NetApp DataOps Toolkit CLI.
-"""
+"""S3 command module for NetApp DataOps Toolkit CLI."""
 
 import getopt
-from .base_command import BaseCommand
+import sys
+from .base_command import BaseCommand, logger
 from netapp_dataops.help_text import (
     HELP_TEXT_PULL_FROM_S3_BUCKET,
     HELP_TEXT_PULL_FROM_S3_OBJECT,
@@ -60,21 +59,19 @@ class S3Command(BaseCommand):
         s3_object_key_prefix = ""
         local_directory = None
         
-        # Get command line options
         try:
-            opts, args = getopt.getopt(
+            opts, _ = getopt.getopt(
                 self.args[3:], 
                 "hb:p:d:e:", 
                 ["help", "bucket=", "key-prefix=", "directory="]
             )
         except Exception as err:
-            print(err)
+            logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_PULL_FROM_S3_BUCKET, invalid_opt_arg=True)
         
-        # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print(HELP_TEXT_PULL_FROM_S3_BUCKET)
+                logger.info(HELP_TEXT_PULL_FROM_S3_BUCKET)
                 return
             elif opt in ("-b", "--bucket"):
                 s3_bucket = arg
@@ -83,11 +80,9 @@ class S3Command(BaseCommand):
             elif opt in ("-d", "--directory"):
                 local_directory = arg
         
-        # Check for required options
         if not s3_bucket or not local_directory:
             self.handle_invalid_command(help_text=HELP_TEXT_PULL_FROM_S3_BUCKET, invalid_opt_arg=True)
         
-        # Pull bucket from S3
         try:
             pull_bucket_from_s3(
                 s3_bucket=s3_bucket, 
@@ -96,7 +91,6 @@ class S3Command(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError):
-            import sys
             sys.exit(1)
     
     def _pull_object_from_s3(self) -> None:
@@ -105,21 +99,19 @@ class S3Command(BaseCommand):
         s3_object_key = None
         local_file = None
         
-        # Get command line options
         try:
-            opts, args = getopt.getopt(
+            opts, _ = getopt.getopt(
                 self.args[3:], 
                 "hb:k:f:", 
                 ["help", "bucket=", "key=", "file=", "extra-args="]
             )
         except Exception as err:
-            print(err)
+            logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_PULL_FROM_S3_OBJECT, invalid_opt_arg=True)
         
-        # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print(HELP_TEXT_PULL_FROM_S3_OBJECT)
+                logger.info(HELP_TEXT_PULL_FROM_S3_OBJECT)
                 return
             elif opt in ("-b", "--bucket"):
                 s3_bucket = arg
@@ -128,11 +120,9 @@ class S3Command(BaseCommand):
             elif opt in ("-f", "--file"):
                 local_file = arg
         
-        # Check for required options
         if not s3_bucket or not s3_object_key:
             self.handle_invalid_command(help_text=HELP_TEXT_PULL_FROM_S3_OBJECT, invalid_opt_arg=True)
         
-        # Pull object from S3
         try:
             pull_object_from_s3(
                 s3_bucket=s3_bucket, 
@@ -141,7 +131,6 @@ class S3Command(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError):
-            import sys
             sys.exit(1)
     
     def _push_directory_to_s3(self) -> None:
@@ -151,21 +140,19 @@ class S3Command(BaseCommand):
         local_directory = None
         s3_extra_args = None
         
-        # Get command line options
         try:
-            opts, args = getopt.getopt(
+            opts, _ = getopt.getopt(
                 self.args[3:], 
                 "hb:p:d:e:", 
                 ["help", "bucket=", "key-prefix=", "directory=", "extra-args="]
             )
         except Exception as err:
-            print(err)
+            logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_PUSH_TO_S3_DIRECTORY, invalid_opt_arg=True)
         
-        # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print(HELP_TEXT_PUSH_TO_S3_DIRECTORY)
+                logger.info(HELP_TEXT_PUSH_TO_S3_DIRECTORY)
                 return
             elif opt in ("-b", "--bucket"):
                 s3_bucket = arg
@@ -176,11 +163,9 @@ class S3Command(BaseCommand):
             elif opt in ("-e", "--extra-args"):
                 s3_extra_args = arg
         
-        # Check for required options
         if not s3_bucket or not local_directory:
             self.handle_invalid_command(help_text=HELP_TEXT_PUSH_TO_S3_DIRECTORY, invalid_opt_arg=True)
         
-        # Push directory to S3
         try:
             push_directory_to_s3(
                 s3_bucket=s3_bucket, 
@@ -190,7 +175,6 @@ class S3Command(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError):
-            import sys
             sys.exit(1)
     
     def _push_file_to_s3(self) -> None:
@@ -200,21 +184,19 @@ class S3Command(BaseCommand):
         local_file = None
         s3_extra_args = None
         
-        # Get command line options
         try:
-            opts, args = getopt.getopt(
+            opts, _ = getopt.getopt(
                 self.args[3:], 
                 "hb:k:f:e:", 
                 ["help", "bucket=", "key=", "file=", "extra-args="]
             )
         except Exception as err:
-            print(err)
+            logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_PUSH_TO_S3_FILE, invalid_opt_arg=True)
         
-        # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print(HELP_TEXT_PUSH_TO_S3_FILE)
+                logger.info(HELP_TEXT_PUSH_TO_S3_FILE)
                 return
             elif opt in ("-b", "--bucket"):
                 s3_bucket = arg
@@ -225,11 +207,9 @@ class S3Command(BaseCommand):
             elif opt in ("-e", "--extra-args"):
                 s3_extra_args = arg
         
-        # Check for required options
         if not s3_bucket or not local_file:
             self.handle_invalid_command(help_text=HELP_TEXT_PUSH_TO_S3_FILE, invalid_opt_arg=True)
         
-        # Push file to S3
         try:
             push_file_to_s3(
                 s3_bucket=s3_bucket, 
@@ -239,5 +219,4 @@ class S3Command(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError):
-            import sys
             sys.exit(1)

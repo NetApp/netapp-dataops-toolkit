@@ -1,12 +1,7 @@
-"""
-Configuration data models for NetApp DataOps Toolkit.
-
-This module defines dataclasses and Pydantic models for configuration validation
-and type safety. Each configuration section has its own model with validation.
-"""
+"""Configuration data models for NetApp DataOps Toolkit"""
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional, Dict, Any
 
 from .exceptions import ConfigValidationError
@@ -40,7 +35,7 @@ class ONTAPConfig:
         self._validate_unix_permissions()
         self._validate_unix_ids()
     
-    def _validate_required_fields(self):
+    def _validate_required_fields(self) -> None:
         """Validate that required fields are not empty."""
         required_fields = ['hostname', 'svm', 'data_lif', 'username', 'password']
         for field_name in required_fields:
@@ -51,7 +46,7 @@ class ONTAPConfig:
                     field=field_name
                 )
     
-    def _validate_volume_type(self):
+    def _validate_volume_type(self) -> None:
         """Validate volume type is valid."""
         valid_types = ["flexgroup", "flexvol"]
         if self.default_volume_type not in valid_types:
@@ -60,7 +55,7 @@ class ONTAPConfig:
                 field="default_volume_type"
             )
     
-    def _validate_unix_permissions(self):
+    def _validate_unix_permissions(self) -> None:
         """Validate Unix permissions format."""
         if not re.match(r"^0[0-7]{3}$", self.default_unix_permissions):
             raise ConfigValidationError(
@@ -68,23 +63,23 @@ class ONTAPConfig:
                 field="default_unix_permissions"
             )
     
-    def _validate_unix_ids(self):
+    def _validate_unix_ids(self) -> None:
         """Validate Unix UID and GID are integers."""
         try:
             int(self.default_unix_uid)
-        except ValueError:
+        except ValueError as e:
             raise ConfigValidationError(
                 f"Invalid Unix UID '{self.default_unix_uid}'. Must be an integer",
                 field="default_unix_uid"
-            )
+            ) from e
         
         try:
             int(self.default_unix_gid)
-        except ValueError:
+        except ValueError as e:
             raise ConfigValidationError(
                 f"Invalid Unix GID '{self.default_unix_gid}'. Must be an integer",
                 field="default_unix_gid"
-            )
+            ) from e
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -139,7 +134,7 @@ class S3Config:
         """Validate configuration after initialization."""
         self._validate_required_fields()
     
-    def _validate_required_fields(self):
+    def _validate_required_fields(self) -> None:
         """Validate that required fields are not empty."""
         required_fields = ['endpoint', 'access_key_id', 'secret_access_key']
         for field_name in required_fields:
@@ -182,7 +177,7 @@ class CloudSyncConfig:
         """Validate configuration after initialization."""
         self._validate_required_fields()
     
-    def _validate_required_fields(self):
+    def _validate_required_fields(self) -> None:
         """Validate that required fields are not empty."""
         if not self.refresh_token or not self.refresh_token.strip():
             raise ConfigValidationError(

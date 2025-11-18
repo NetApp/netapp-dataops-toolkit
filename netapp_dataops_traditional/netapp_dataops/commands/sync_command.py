@@ -1,9 +1,8 @@
-"""
-Sync command module for NetApp DataOps Toolkit CLI.
-"""
+"""Sync command module for NetApp DataOps Toolkit CLI."""
 
 import getopt
-from .base_command import BaseCommand
+import sys
+from .base_command import BaseCommand, logger
 from netapp_dataops.help_text import (
     HELP_TEXT_SYNC_CLOUD_SYNC_RELATIONSHIP,
     HELP_TEXT_SYNC_SNAPMIRROR_RELATIONSHIP
@@ -24,7 +23,6 @@ class SyncCommand(BaseCommand):
     
     def execute(self) -> None:
         """Execute sync command for various relationships."""
-        # Get desired target from command line args
         target = self.get_target()
         
         if target in ("cloud-sync-relationship", "cloud-sync"):
@@ -39,32 +37,28 @@ class SyncCommand(BaseCommand):
         relationship_id = None
         wait_until_complete = False
         
-        # Get command line options
         try:
-            opts, args = getopt.getopt(
+            opts, _ = getopt.getopt(
                 self.args[3:], 
                 "hi:w", 
                 ["help", "id=", "wait"]
             )
         except Exception as err:
-            print(err)
+            logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_SYNC_CLOUD_SYNC_RELATIONSHIP, invalid_opt_arg=True)
         
-        # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print(HELP_TEXT_SYNC_CLOUD_SYNC_RELATIONSHIP)
+                logger.info(HELP_TEXT_SYNC_CLOUD_SYNC_RELATIONSHIP)
                 return
             elif opt in ("-i", "--id"):
                 relationship_id = arg
             elif opt in ("-w", "--wait"):
                 wait_until_complete = True
         
-        # Check for required options
         if not relationship_id:
             self.handle_invalid_command(help_text=HELP_TEXT_SYNC_CLOUD_SYNC_RELATIONSHIP, invalid_opt_arg=True)
         
-        # Update cloud sync relationship
         try:
             sync_cloud_sync_relationship(
                 relationship_id=relationship_id, 
@@ -72,7 +66,6 @@ class SyncCommand(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError, CloudSyncSyncOperationError):
-            import sys
             sys.exit(1)
     
     def _sync_snapmirror_relationship(self) -> None:
@@ -83,21 +76,19 @@ class SyncCommand(BaseCommand):
         cluster_name = None
         wait_until_complete = False
         
-        # Get command line options
         try:
-            opts, args = getopt.getopt(
+            opts, _ = getopt.getopt(
                 self.args[3:], 
                 "hi:wn:u:v:", 
                 ["help", "cluster-name=", "svm=", "name=", "uuid=", "wait"]
             )
         except Exception as err:
-            print(err)
+            logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_SYNC_SNAPMIRROR_RELATIONSHIP, invalid_opt_arg=True)
         
-        # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print(HELP_TEXT_SYNC_SNAPMIRROR_RELATIONSHIP)
+                logger.info(HELP_TEXT_SYNC_SNAPMIRROR_RELATIONSHIP)
                 return
             elif opt in ("-v", "--svm"):
                 svm_name = arg
@@ -110,14 +101,12 @@ class SyncCommand(BaseCommand):
             elif opt in ("-w", "--wait"):
                 wait_until_complete = True
         
-        # Check for required options
         if not uuid and not volume_name:
             self.handle_invalid_command(help_text=HELP_TEXT_SYNC_SNAPMIRROR_RELATIONSHIP, invalid_opt_arg=True)
         
         if uuid and volume_name:
             self.handle_invalid_command(help_text=HELP_TEXT_SYNC_SNAPMIRROR_RELATIONSHIP, invalid_opt_arg=True)
         
-        # Update SnapMirror relationship
         try:
             sync_snap_mirror_relationship(
                 uuid=uuid, 
@@ -128,5 +117,4 @@ class SyncCommand(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError, InvalidSnapMirrorParameterError, SnapMirrorSyncOperationError):
-            import sys
             sys.exit(1)

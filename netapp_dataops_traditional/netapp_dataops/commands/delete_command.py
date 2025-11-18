@@ -1,9 +1,8 @@
-"""
-Delete command module for NetApp DataOps Toolkit CLI.
-"""
+"""Delete command module for NetApp DataOps Toolkit CLI."""
 
 import getopt
-from .base_command import BaseCommand
+import sys
+from .base_command import BaseCommand, logger
 from netapp_dataops.help_text import (
     HELP_TEXT_DELETE_SNAPSHOT,
     HELP_TEXT_DELETE_VOLUME
@@ -23,10 +22,8 @@ class DeleteCommand(BaseCommand):
     
     def execute(self) -> None:
         """Execute delete command for various targets."""
-        # Get desired target from command line args
         target = self.get_target()
         
-        # Route to appropriate handler based on target
         if target in ("snapshot", "snap"):
             self._delete_snapshot()
         elif target in ("volume", "vol"):
@@ -36,27 +33,24 @@ class DeleteCommand(BaseCommand):
     
     def _delete_snapshot(self) -> None:
         """Handle snapshot deletion."""
-        # Initialize variables
         volume_name = None
         snapshot_name = None
         svm_name = None
         cluster_name = None
         
-        # Get command line options
         try:
-            opts, args = getopt.getopt(
+            opts, _ = getopt.getopt(
                 self.args[3:], 
                 "hn:v:s:u:", 
                 ["cluster-name=", "help", "svm=", "name=", "volume="]
             )
         except Exception as err:
-            print(err)
+            logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_DELETE_SNAPSHOT, invalid_opt_arg=True)
         
-        # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print(HELP_TEXT_DELETE_SNAPSHOT)
+                logger.info(HELP_TEXT_DELETE_SNAPSHOT)
                 return
             elif opt in ("-n", "--name"):
                 snapshot_name = arg
@@ -67,11 +61,9 @@ class DeleteCommand(BaseCommand):
             elif opt in ("-v", "--volume"):
                 volume_name = arg
         
-        # Check for required options
         if not volume_name or not snapshot_name:
             self.handle_invalid_command(help_text=HELP_TEXT_DELETE_SNAPSHOT, invalid_opt_arg=True)
         
-        # Delete snapshot
         try:
             delete_snapshot(
                 volume_name=volume_name, 
@@ -81,12 +73,10 @@ class DeleteCommand(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError):
-            import sys
             sys.exit(1)
     
     def _delete_volume(self) -> None:
         """Handle volume deletion."""
-        # Initialize variables
         volume_name = None
         svm_name = None
         cluster_name = None
@@ -94,21 +84,19 @@ class DeleteCommand(BaseCommand):
         delete_mirror = False
         delete_non_clone = False
         
-        # Get command line options
         try:
-            opts, args = getopt.getopt(
+            opts, _ = getopt.getopt(
                 self.args[3:], 
                 "hfv:n:u:m", 
                 ["cluster-name=", "help", "svm=", "name=", "force", "delete-non-clone", "delete-mirror"]
             )
         except Exception as err:
-            print(err)
+            logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_DELETE_VOLUME, invalid_opt_arg=True)
         
-        # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print(HELP_TEXT_DELETE_VOLUME)
+                logger.info(HELP_TEXT_DELETE_VOLUME)
                 return
             elif opt in ("-v", "--svm"):
                 svm_name = arg
@@ -123,24 +111,20 @@ class DeleteCommand(BaseCommand):
             elif opt in ("--delete-non-clone",):
                 delete_non_clone = True
         
-        # Check for required options
         if not volume_name:
             self.handle_invalid_command(help_text=HELP_TEXT_DELETE_VOLUME, invalid_opt_arg=True)
         
-        # Confirm delete operation
         if not force:
-            print("Warning: All data and snapshots associated with the volume will be permanently deleted.")
+            logger.info("Warning: All data and snapshots associated with the volume will be permanently deleted.")
             while True:
                 proceed = input("Are you sure that you want to proceed? (yes/no): ")
                 if proceed in ("yes", "Yes", "YES"):
                     break
                 elif proceed in ("no", "No", "NO"):
-                    import sys
                     sys.exit(0)
                 else:
-                    print("Invalid value. Must enter 'yes' or 'no'.")
+                    logger.info("Invalid value. Must enter 'yes' or 'no'.")
         
-        # Delete volume
         try:
             delete_volume(
                 volume_name=volume_name, 
@@ -151,5 +135,4 @@ class DeleteCommand(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
-            import sys
             sys.exit(1)
