@@ -45,12 +45,6 @@ Note: The toolkit requires an ONTAP account with API access. The toolkit will us
 > **Note: Keyring Service Configuration**
 > 
 > The toolkit stores ONTAP credentials securely using your system's keyring service. By default, it uses the service name `netapp:dataops:ontap` to store and retrieve credentials. 
-> 
-> If you need to use a different service name, you can override this by setting the `KEYRING_SERVICE_NAME` environment variable:
-> 
-> ```sh
-> export KEYRING_SERVICE_NAME=my-custom-service-name
-> ```
 
 #### Example Usage
 
