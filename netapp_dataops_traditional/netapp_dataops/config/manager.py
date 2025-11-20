@@ -110,12 +110,12 @@ class ConfigManager:
             
             # Optional S3 configuration
             s3_config = None
-            if self._prompt_yes_no("Do you want to configure S3 settings?"):
+            if self._prompt_yes_no("Do you intend to use this toolkit to push/pull from S3?"):
                 s3_config = self._create_s3_config()
             
             # Optional Cloud Sync configuration
             cloud_sync_config = None
-            if self._prompt_yes_no("Do you want to configure Cloud Sync settings?"):
+            if self._prompt_yes_no("Do you intend to use this toolkit to trigger Cloud Sync operations?"):
                 cloud_sync_config = self._create_cloud_sync_config()
             
             return NetAppDataOpsConfig(
@@ -136,11 +136,11 @@ class ConfigManager:
         """
         logger.info("ONTAP Connection Settings:")
         
-        hostname = self._prompt_required("ONTAP hostname or IP address")
-        svm = self._prompt_required("SVM (Storage Virtual Machine) name")
-        data_lif = self._prompt_required("Data LIF hostname or IP address")
-        username = self._prompt_required("ONTAP admin username")
-        passwordString = self._prompt_password("ONTAP admin password")
+        hostname = self._prompt_required("Enter ONTAP management LIF hostname or IP address (Recommendation: Use SVM management interface)")
+        svm = self._prompt_required("Enter SVM (Storage VM) name")
+        data_lif = self._prompt_required("Enter SVM NFS data LIF hostname or IP address")
+        username = self._prompt_required("Enter ONTAP API username (Recommendation: Use SVM account)")
+        passwordString = self._prompt_password("Enter ONTAP API password (Recommendation: Use SVM account)")
 
         # Store the password securely using keyring
         if username is not None:
@@ -148,22 +148,22 @@ class ConfigManager:
         if passwordString is not None:
             keyring.set_password(KEYRING_SERVICE_NAME, "password", passwordString)
 
-        verify_ssl = self._prompt_yes_no("Verify SSL certificate", default=True)
+        verify_ssl = self._prompt_yes_no("Verify SSL certificate when calling ONTAP API", default=True)
         
         logger.info("\nVolume Defaults:")
         
         volume_type = self._prompt_choice(
-            "Volume type",
+            "Enter default volume type to use when creating new volumes",
             choices=["flexgroup", "flexvol"],
             default="flexgroup"
         )
         
-        export_policy = self._prompt_with_default("Export policy", "default")
-        snapshot_policy = self._prompt_with_default("Snapshot policy", "none")
-        unix_uid = self._prompt_with_default("Unix UID", "0")
-        unix_gid = self._prompt_with_default("Unix GID", "0")
-        unix_permissions = self._prompt_with_default("Unix permissions", "0777")
-        default_aggregate = self._prompt_with_default("Aggregate (optional)", "")
+        export_policy = self._prompt_with_default("Enter export policy to use by default when creating new volumes", "default")
+        snapshot_policy = self._prompt_with_default("Enter snapshot policy to use by default when creating new volumes", "none")
+        unix_uid = self._prompt_with_default("Enter unix filesystem user id (uid) to apply by default when creating new volumes (ex. '0' for root user)", "0")
+        unix_gid = self._prompt_with_default("Enter unix filesystem group id (gid) to apply by default when creating new volumes (ex. '0' for root group)", "0")
+        unix_permissions = self._prompt_with_default("Enter unix filesystem permissions to apply by default when creating new volumes (ex. '0777' for full read/write permissions for all users and groups)", "0777")
+        default_aggregate = self._prompt_with_default("Enter aggregate to use by default when creating new FlexVol volumes", "")
         
         return ONTAPConfig(
             hostname=hostname,
