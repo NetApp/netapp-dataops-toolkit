@@ -330,8 +330,8 @@ class ConfigManager:
         summary.append(f"  ONTAP Host: {config.ontap.hostname}")
         summary.append(f"  SVM: {config.ontap.svm}")
         summary.append(f"  Data LIF: {config.ontap.data_lif}")
-        summary.append(f"  Username: {config.ontap.username}")
         summary.append(f"  Volume Type: {config.ontap.default_volume_type}")
+        summary.append("  Credentials: Stored securely in system keyring")
         
         if config.s3:
             summary.append(f"  S3 Endpoint: {config.s3.endpoint}")
