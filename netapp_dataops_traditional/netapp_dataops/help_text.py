@@ -184,6 +184,24 @@ Examples:
 \tnetapp_dataops_cli.py list volumes --include-space-usage-details
 '''
 
+HELP_TEXT_LIST_FLEXCACHE = '''
+Command: list flexcache
+
+List all FlexCache volumes with their origin information.
+
+No options/arguments are required.
+
+Optional Options/Arguments:
+\t-u, --cluster-name=\tnon default hosting cluster
+\t-v, --svm=\t\tlist FlexCache on non default svm
+\t-h, --help\t\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py list flexcache
+\tnetapp_dataops_cli.py list flexcache --svm=svm1
+\tnetapp_dataops_cli.py list flexcache -v svm1 -u cluster1
+'''
+
 HELP_TEXT_MOUNT_VOLUME = '''
 Command: mount volume
 

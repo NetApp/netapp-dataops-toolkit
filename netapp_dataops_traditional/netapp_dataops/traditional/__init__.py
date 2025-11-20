@@ -53,7 +53,9 @@ from .data_movement.s3_operations import (
 )
 
 from .ontap.flexcache_operations import (
-    prepopulate_flex_cache
+    prepopulate_flex_cache,
+    list_flexcache_origins,
+    create_flexcache
 )
 
 __all__ = [
@@ -87,6 +89,8 @@ __all__ = [
     'push_directory_to_s3',
     'push_file_to_s3',
     'prepopulate_flex_cache',
+    'list_flexcache_origins',
+    'create_flexcache',
 ]
 
 _lazy_modules = {}

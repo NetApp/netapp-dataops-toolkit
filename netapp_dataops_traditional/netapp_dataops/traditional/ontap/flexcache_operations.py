@@ -1,6 +1,6 @@
 """FlexCache operations for NetApp DataOps traditional environments."""
 
-from typing import List
+from typing import List, Dict, Any, Optional
 import re
 
 from netapp_ontap.error import NetAppRestError
@@ -19,6 +19,7 @@ from ..core import (
     _retrieve_config,
     _instantiate_connection,
     _print_invalid_config_error,
+    _convert_bytes_to_pretty_size,
     deprecated
 )
 from .volume_operations import mount_volume
@@ -88,6 +89,155 @@ def prepopulate_flex_cache(volume_name: str, paths: List[str], print_output: boo
 
     else:
         raise ConnectionTypeError()
+
+
+def list_flexcache_origins(cluster_name: str = None, svm_name: str = None, 
+                           print_output: bool = False) -> List[Dict[str, Any]]:
+    """List all FlexCache volumes with their origin information.
+    
+    This function retrieves details for all FlexCache volumes in the cluster/SVM, including
+    the origin SVM, volume name, cluster information, IP address, size, and state.
+    
+    Args:
+        cluster_name: Name of the cluster to query. If not specified, uses configured cluster.
+        svm_name: Name of the SVM to query. If not specified, uses configured SVM.
+        print_output: If True, print detailed output to console in a formatted table.
+        
+    Returns:
+        List of dictionaries containing FlexCache information. Each dictionary includes:
+            - FlexCache Name: Name of the FlexCache volume
+            - FlexCache SVM: Name of the SVM containing the FlexCache
+            - Size: Size of the FlexCache volume (pretty formatted)
+            - Origin Volume: Name of the origin volume
+            - Origin SVM: Name of the origin SVM
+            - Origin Cluster: Name of the origin cluster (if available)
+            - Origin IP: IP address of the origin (if available)
+            - Origin Size: Size of the origin volume (pretty formatted, if available)
+            - Origin State: State of the origin volume (if available)
+        
+    Raises:
+        InvalidConfigError: If configuration is invalid
+        ConnectionTypeError: If connection type is not ONTAP
+        APIConnectionError: If ONTAP API call fails
+        
+    """
+    try:
+        config = _retrieve_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+        
+    try:
+        connectionType = config["connectionType"]
+    except KeyError:
+        if print_output:
+            _print_invalid_config_error()
+        raise InvalidConfigError()
+
+    if cluster_name:
+        config["hostname"] = cluster_name
+
+    if connectionType == "ONTAP":
+        try:
+            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
+        except InvalidConfigError:
+            raise
+
+        try:
+            svmname = config["svm"]
+            if svm_name:
+                svmname = svm_name
+
+            # Retrieve all FlexCache volumes for SVM
+            flexcaches = NetAppFlexCache.get_collection(**{"svm.name": svmname})
+            
+            # Construct list of FlexCache volumes with their origins
+            flexcachesList = []
+            for flexcache in flexcaches:
+                # Get detailed information including origins
+                try:
+                    flexcache.get(fields="name,uuid,svm.name,svm.uuid,size,origins")
+                except NetAppRestError as err:
+                    if print_output:
+                        logger.error("Error retrieving FlexCache details: %s", err)
+                    continue
+                
+                # Convert size in bytes to "pretty" size (size in KB, MB, GB, or TB)
+                prettySize = _convert_bytes_to_pretty_size(size_in_bytes=flexcache.size) if hasattr(flexcache, 'size') else "Unknown"
+                
+                # Process origin information
+                if hasattr(flexcache, 'origins') and flexcache.origins:
+                    for origin in flexcache.origins:
+                        # Extract volume information
+                        originVolumeName = origin.volume.name if (hasattr(origin, 'volume') and hasattr(origin.volume, 'name')) else "N/A"
+                        
+                        # Extract SVM information
+                        originSvmName = origin.svm.name if (hasattr(origin, 'svm') and hasattr(origin.svm, 'name')) else "N/A"
+                        
+                        # Extract cluster information
+                        originClusterName = origin.cluster.name if (hasattr(origin, 'cluster') and hasattr(origin.cluster, 'name')) else ""
+                        
+                        # Extract IP address
+                        originIpAddress = origin.ip_address if hasattr(origin, 'ip_address') else ""
+                        
+                        # Extract and format origin size
+                        originSize = ""
+                        if hasattr(origin, 'size'):
+                            originSize = _convert_bytes_to_pretty_size(size_in_bytes=origin.size)
+                        
+                        # Extract origin state
+                        originState = origin.state if hasattr(origin, 'state') else ""
+                        
+                        # Construct dict containing FlexCache details
+                        flexcacheDict = {
+                            "FlexCache Name": flexcache.name,
+                            "FlexCache SVM": flexcache.svm.name if hasattr(flexcache, 'svm') else "N/A",
+                            "Size": prettySize,
+                            "Origin Volume": originVolumeName,
+                            "Origin SVM": originSvmName,
+                            "Origin Cluster": originClusterName,
+                            "Origin IP": originIpAddress,
+                            "Origin Size": originSize,
+                            "Origin State": originState
+                        }
+                        
+                        # Append dict to list of FlexCaches
+                        flexcachesList.append(flexcacheDict)
+                else:
+                    # FlexCache with no origin information
+                    flexcacheDict = {
+                        "FlexCache Name": flexcache.name,
+                        "FlexCache SVM": flexcache.svm.name if hasattr(flexcache, 'svm') else "N/A",
+                        "Size": prettySize,
+                        "Origin Volume": "N/A",
+                        "Origin SVM": "N/A",
+                        "Origin Cluster": "",
+                        "Origin IP": "",
+                        "Origin Size": "",
+                        "Origin State": ""
+                    }
+                    flexcachesList.append(flexcacheDict)
+
+        except NetAppRestError as err:
+            if print_output:
+                logger.error("Error: ONTAP Rest API Error: %s", err)
+            raise APIConnectionError(err)
+
+        if print_output:
+            try:
+                import pandas as pd
+                from tabulate import tabulate
+                flexcachesDF = pd.DataFrame.from_dict(flexcachesList, dtype="string")
+                logger.info("\n%s", tabulate(flexcachesDF, showindex=False, headers=flexcachesDF.columns))
+            except ImportError:
+                logger.info("FlexCache volumes retrieved successfully")
+                for fc in flexcachesList:
+                    logger.info(fc)
+            
+        return flexcachesList
+
+    else:
+        raise ConnectionTypeError()
+
 
 def create_flexcache(source_vol: str, source_svm: str, flexcache_vol: str, flexcache_svm: str = None, cluster_name: str = None, flexcache_size: str = None, 
                      junction: str = None, export_policy: str = "default", mountpoint: str = None, readonly: bool = False, print_output: bool = False):
