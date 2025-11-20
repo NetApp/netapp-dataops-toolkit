@@ -8,6 +8,7 @@ lifecycle operations including creation, loading, saving, and validation.
 import json
 import base64
 import getpass
+import keyring
 from pathlib import Path
 from typing import Optional, List
 
@@ -18,6 +19,7 @@ from .exceptions import (
     ConfigFileError, 
     ConfigCreationError
 )
+from netapp_dataops.constants import KEYRING_SERVICE_NAME
 
 logger = setup_logger(__name__)
 
@@ -138,8 +140,14 @@ class ConfigManager:
         svm = self._prompt_required("SVM (Storage Virtual Machine) name")
         data_lif = self._prompt_required("Data LIF hostname or IP address")
         username = self._prompt_required("ONTAP admin username")
-        password = self._prompt_password("ONTAP admin password")
-        
+        passwordString = self._prompt_password("ONTAP admin password")
+
+        # Store the password securely using keyring
+        if username is not None:
+            keyring.set_password(KEYRING_SERVICE_NAME, "username", username)
+        if passwordString is not None:
+            keyring.set_password(KEYRING_SERVICE_NAME, "password", passwordString)
+
         verify_ssl = self._prompt_yes_no("Verify SSL certificate", default=True)
         
         logger.info("\nVolume Defaults:")

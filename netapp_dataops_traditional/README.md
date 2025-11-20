@@ -42,6 +42,10 @@ netapp_dataops_cli.py config
 
 Note: The toolkit requires an ONTAP account with API access. The toolkit will use this account to access the ONTAP API. NetApp recommends using an SVM-level account. Usage of a cluster admin account should be avoided for security reasons.
 
+> **Note: Keyring Service Configuration**
+> 
+> The toolkit stores ONTAP credentials securely using your system's keyring service. By default, it uses the service name `netapp:dataops:ontap` to store and retrieve credentials. 
+
 #### Example Usage
 
 ```sh
