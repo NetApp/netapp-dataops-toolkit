@@ -145,6 +145,33 @@ Examples (advanced usage):
 \tnetapp_dataops_cli.py create volume --name=project1 --size=100GB --snaplock-type=compliance
 '''
 
+HELP_TEXT_CREATE_FLEXCACHE = '''
+Command: create flexcache
+
+Create a new FlexCache volume from an origin volume.
+
+Required Options/Arguments:
+\t-n, --name=\t\tName of FlexCache volume to be created.
+\t-v, --source-volume=\tName of the source/origin volume.
+\t-o, --source-svm=\tName of the source/origin SVM.
+
+Optional Options/Arguments:
+\t-s, --size=\t\tSize of the FlexCache volume. Format: '1024MB', '100GB', '10TB', etc. Default is 10% of origin volume size.
+\t-t, --target-svm=\tName of the target SVM for FlexCache (defaults to config SVM).
+\t-u, --cluster-name=\tnon default hosting cluster
+\t-j, --junction=\t\tJunction path for the FlexCache volume export.
+\t-e, --export-policy=\tNFS export policy to use (default: 'default').
+\t-m, --mountpoint=\tLocal mountpoint to mount the FlexCache after creation (requires root).
+\t-x, --readonly\t\tMount the FlexCache as read-only.
+\t-h, --help\t\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py create flexcache --name=cache1 --source-volume=vol1 --source-svm=svm1
+\tnetapp_dataops_cli.py create flexcache -n cache1 -v vol1 -o svm1 -s 100GB
+\tnetapp_dataops_cli.py create flexcache -n cache1 -v vol1 -o svm1 -t svm2 -e custom_policy
+\tsudo -E netapp_dataops_cli.py create flexcache -n cache1 -v vol1 -o svm1 -m /mnt/cache1
+'''
+
 HELP_TEXT_DELETE_VOLUME = '''
 Command: delete volume
 
