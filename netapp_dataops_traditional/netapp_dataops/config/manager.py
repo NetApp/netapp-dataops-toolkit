@@ -169,8 +169,6 @@ class ConfigManager:
             hostname=hostname,
             svm=svm,
             data_lif=data_lif,
-            username=username,
-            password=base64.b64encode(password.encode()).decode(),
             verify_ssl_cert=verify_ssl,
             default_volume_type=volume_type,
             default_export_policy=export_policy,
