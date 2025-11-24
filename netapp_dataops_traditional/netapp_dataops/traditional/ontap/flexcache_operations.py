@@ -262,8 +262,6 @@ def get_flexcache_origin(uuid: str, cluster_name: str = None, print_output: bool
             - Size: Size of the origin volume (pretty formatted)
             - State: State of the origin volume
             - Create Time: Creation timestamp
-            - FlexCache Name: Name of the FlexCache volume
-            - FlexCache SVM: Name of the FlexCache SVM
         
     Raises:
         InvalidConfigError: If configuration is invalid
@@ -349,9 +347,7 @@ def get_flexcache_origin(uuid: str, cluster_name: str = None, print_output: bool
                         "IP Address": originIpAddress,
                         "Size": originSize,
                         "State": originState,
-                        "Create Time": createTime,
-                        "FlexCache Name": flexcacheName,
-                        "FlexCache SVM": flexcacheSvm
+                        "Create Time": createTime
                     }
                     
                     # Append dict to list of origins
@@ -367,7 +363,6 @@ def get_flexcache_origin(uuid: str, cluster_name: str = None, print_output: bool
 
         if print_output:
             logger.info("FlexCache Volume: %s (SVM: %s)", flexcacheName, flexcacheSvm)
-            logger.info("Number of origins: %d", len(originsList))
             if originsList:
                 logger.info("\nOrigin Details:")
                 try:
