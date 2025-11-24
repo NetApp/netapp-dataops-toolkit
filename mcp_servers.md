@@ -16,6 +16,20 @@ The [NetApp DataOps Toolkit MCP Server for ONTAP](netapp_dataops_traditional/doc
 - **List Snapshots**: Retrieve a list of all snapshots for a specific volume.
 - **Create SnapMirror Relationship**: Set up SnapMirror relationships for efficient data replication.
 - **List SnapMirror Relationships**: Retrieve a list of all SnapMirror relationships on the storage system.
+- **Create FlexCache Volume**: Create FlexCache volumes for efficient data access and caching.
+
+## NetApp DataOps Toolkit MCP Server for Google Cloud NetApp Volumes
+
+The [NetApp DataOps Toolkit MCP Server for Google Cloud NetApp Volumes](netapp_dataops_traditional/docs/gcnv_mcp_server_readme.md) is an MCP Server that enables AI agents to manage volumes and snapshots using Google Cloud NetApp Volumes.
+
+### Available Tools
+
+- **Create Volume:** Rapidly provision new NetApp volumes in Google Cloud with customizable configurations including protocols, security settings, and backup policies.
+- **Clone Volume:** Create near-instantaneous, space-efficient clones of existing volumes from snapshots using NetApp technology.
+- **List Volumes:** Retrieve a list of all existing data volumes in a specified project and location.
+- **Create Snapshot:** Create space-efficient, read-only copies of data volumes for versioning and traceability.
+- **List Snapshots:** Retrieve a list of all snapshots for a specific volume.
+- **Create Replication:** Set up replication relationships for efficient data replication and disaster recovery between volumes.
 
 ## NetApp DataOps Toolkit for Kubernetes MCP Server
 
@@ -40,3 +54,4 @@ This MCP Server provides the following tools for managing JupyterLab workspaces 
 - **ListVolumes**: List all volumes.
 - **CreateVolumeSnapshot**: Create a snapshot of a volume.
 - **ListVolumeSnapshots**: List all snapshots of volumes.
+- **CreateFlexCache**: Create a FlexCache volume.
