@@ -1,7 +1,7 @@
 NetApp DataOps Toolkit for Traditional Environments
 =========
 
-The NetApp DataOps Toolkit for Traditional Environments is a Python library that makes it simple for developers, data scientists, DevOps engineers, and data engineers to perform various data management tasks, such as provisioning a new data volume, near-instantaneously cloning a data volume, and near-instantaneously snapshotting a data volume for traceability/baselining. This Python library can function as either a [command line utility](#command-line-functionality) or a [library of functions](#library-of-functions) that can be imported into any Python program or Jupyter Notebook. The toolkit also includes an [MCP Server](docs/mcp_server.md) that exposes many of the capabilities as "tools" that can be utilized by AI agents.
+The NetApp DataOps Toolkit for Traditional Environments is a Python library that makes it simple for developers, data scientists, DevOps engineers, and data engineers to perform various data management tasks, such as provisioning a new data volume, near-instantaneously cloning a data volume, and near-instantaneously snapshotting a data volume for traceability/baselining. This Python library can function as either a command line utility or a library of functions that can be imported into any Python program or Jupyter Notebook. The toolkit also includes [MCP Servers](../mcp_servers.md) that expose many of the capabilities as "tools" that can be utilized by AI agents.
 
 ## Compatibility
 
