@@ -546,3 +546,58 @@ Examples:
 \tnetapp_dataops_cli.py prepopulate flexcache --name=project1 --paths=/datasets/project1,/datasets/project2
 \tnetapp_dataops_cli.py prepopulate flexcache -n test1 -p /datasets/project1,/datasets/project2
 '''
+
+HELP_TEXT_GET_FLEXCACHE_ORIGIN = '''
+Command: get flexcache-origin
+
+Retrieve attributes of a specific FlexCache origin volume by UUID.
+
+Required Options/Arguments:
+\t-i, --uuid=\tUUID of the FlexCache origin volume.
+
+Optional Options/Arguments:
+\t-u, --cluster-name=\tNon default hosting cluster.
+\t-h, --help\t\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py get flexcache-origin --uuid=12345678-1234-1234-1234-123456789012
+\tnetapp_dataops_cli.py get flexcache-origin -i 12345678-1234-1234-1234-123456789012
+\tnetapp_dataops_cli.py get flexcache-origin -i 12345678-1234-1234-1234-123456789012 -u cluster1
+'''
+
+# Qtree operations help text
+HELP_TEXT_GET_QTREE = '''
+Command: get qtree
+
+Get attributes of a specific qtree.
+
+Required Options/Arguments:
+\t-v, --volume-uuid=\tUUID of the volume containing the qtree.
+\t-i, --id=\t\tID of the qtree.
+
+Optional Options/Arguments:
+\t-u, --cluster-name=\tNon default hosting cluster.
+\t-h, --help\t\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py get qtree --volume-uuid=12345678-1234-1234-1234-123456789012 --id=1
+\tnetapp_dataops_cli.py get qtree -v 12345678-1234-1234-1234-123456789012 -i 1
+'''
+
+HELP_TEXT_GET_QTREE_METRICS = '''
+Command: get qtree-metrics
+
+Get metrics for a specific qtree.
+
+Required Options/Arguments:
+\t-v, --volume-uuid=\tUUID of the volume containing the qtree.
+\t-i, --id=\t\tID of the qtree.
+
+Optional Options/Arguments:
+\t-u, --cluster-name=\tNon default hosting cluster.
+\t-h, --help\t\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py get qtree-metrics --volume-uuid=12345678-1234-1234-1234-123456789012 --id=1
+\tnetapp_dataops_cli.py get qtree-metrics -v 12345678-1234-1234-1234-123456789012 -i 1
+'''

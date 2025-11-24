@@ -5,6 +5,7 @@ import re
 
 from netapp_ontap.error import NetAppRestError
 from netapp_ontap.resources import Flexcache as NetAppFlexCache
+from netapp_ontap.resources import FlexcacheOrigin
 
 from netapp_dataops.logging_utils import setup_logger
 
@@ -234,6 +235,118 @@ def list_flexcache_origins(cluster_name: str = None, svm_name: str = None,
                     logger.info(fc)
             
         return flexcachesList
+
+    else:
+        raise ConnectionTypeError()
+
+
+def get_flexcache_origin(uuid: str, cluster_name: str = None, print_output: bool = False) -> Dict[str, Any]:
+    """Retrieve attributes of a specific FlexCache origin volume by UUID.
+    
+    This function retrieves detailed information about a FlexCache origin volume,
+    including all FlexCache volumes that are using this origin.
+    
+    Args:
+        uuid: UUID of the FlexCache origin volume (required).
+        cluster_name: Name of the cluster to query. If not specified, uses configured cluster.
+        print_output: If True, print detailed output to console.
+        
+    Returns:
+        Dictionary containing FlexCache origin information:
+            - UUID: Origin volume UUID
+            - Name: Origin volume name
+            - SVM Name: Name of the SVM containing the origin volume
+            - SVM UUID: UUID of the SVM
+            - Block Level Invalidation: Whether block-level invalidation is enabled
+            - Global File Locking: Whether global file locking is enabled
+            - FlexCaches: List of dictionaries containing information about FlexCache volumes
+              using this origin, each with:
+                - Name: FlexCache volume name
+                - SVM Name: FlexCache SVM name
+                - SVM UUID: FlexCache SVM UUID
+                - Cluster Name: FlexCache cluster name
+                - Cluster UUID: FlexCache cluster UUID
+                - IP Address: IP address of FlexCache
+                - Size: Size of FlexCache volume (pretty formatted)
+                - State: State of FlexCache volume
+                - Create Time: Creation timestamp
+        
+    Raises:
+        InvalidConfigError: If configuration is invalid
+        ConnectionTypeError: If connection type is not ONTAP
+        APIConnectionError: If ONTAP API call fails
+    """
+    try:
+        config = _retrieve_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+        
+    try:
+        connectionType = config["connectionType"]
+    except KeyError:
+        if print_output:
+            _print_invalid_config_error()
+        raise InvalidConfigError()
+
+    if cluster_name:
+        config["hostname"] = cluster_name
+
+    if connectionType == "ONTAP":
+        try:
+            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
+        except InvalidConfigError:
+            raise
+
+        try:
+            # Retrieve FlexCache origin by UUID
+            origin = FlexcacheOrigin(uuid=uuid)
+            origin.get(fields="name,uuid,svm.name,svm.uuid,block_level_invalidation,global_file_locking_enabled,flexcaches")
+            
+            # Construct dictionary with origin details
+            originDict = {
+                "UUID": origin.uuid if hasattr(origin, 'uuid') else "N/A",
+                "Name": origin.name if hasattr(origin, 'name') else "N/A",
+                "SVM Name": origin.svm.name if (hasattr(origin, 'svm') and hasattr(origin.svm, 'name')) else "N/A",
+                "SVM UUID": origin.svm.uuid if (hasattr(origin, 'svm') and hasattr(origin.svm, 'uuid')) else "N/A",
+                "Block Level Invalidation": origin.block_level_invalidation if hasattr(origin, 'block_level_invalidation') else False,
+                "Global File Locking": origin.global_file_locking_enabled if hasattr(origin, 'global_file_locking_enabled') else False,
+                "FlexCaches": []
+            }
+            
+            # Process FlexCache relationships
+            if hasattr(origin, 'flexcaches') and origin.flexcaches:
+                for flexcache in origin.flexcaches:
+                    flexcacheInfo = {
+                        "Name": flexcache.volume.name if (hasattr(flexcache, 'volume') and hasattr(flexcache.volume, 'name')) else "N/A",
+                        "SVM Name": flexcache.svm.name if (hasattr(flexcache, 'svm') and hasattr(flexcache.svm, 'name')) else "N/A",
+                        "SVM UUID": flexcache.svm.uuid if (hasattr(flexcache, 'svm') and hasattr(flexcache.svm, 'uuid')) else "",
+                        "Cluster Name": flexcache.cluster.name if (hasattr(flexcache, 'cluster') and hasattr(flexcache.cluster, 'name')) else "",
+                        "Cluster UUID": flexcache.cluster.uuid if (hasattr(flexcache, 'cluster') and hasattr(flexcache.cluster, 'uuid')) else "",
+                        "IP Address": flexcache.ip_address if hasattr(flexcache, 'ip_address') else "",
+                        "Size": _convert_bytes_to_pretty_size(size_in_bytes=flexcache.size) if hasattr(flexcache, 'size') else "",
+                        "State": flexcache.state if hasattr(flexcache, 'state') else "",
+                        "Create Time": str(flexcache.create_time) if hasattr(flexcache, 'create_time') else ""
+                    }
+                    originDict["FlexCaches"].append(flexcacheInfo)
+
+        except NetAppRestError as err:
+            if print_output:
+                logger.error("Error: ONTAP Rest API Error: %s", err)
+            raise APIConnectionError(err)
+
+        if print_output:
+            logger.info("Origin Volume: %s (UUID: %s)", originDict["Name"], originDict["UUID"])
+            logger.info("SVM: %s (UUID: %s)", originDict["SVM Name"], originDict["SVM UUID"])
+            logger.info("Block Level Invalidation: %s", originDict["Block Level Invalidation"])
+            logger.info("Global File Locking: %s", originDict["Global File Locking"])
+            logger.info("Number of FlexCache volumes: %d", len(originDict["FlexCaches"]))
+            if originDict["FlexCaches"]:
+                logger.info("\nFlexCache Volumes:")
+                for idx, fc in enumerate(originDict["FlexCaches"], 1):
+                    logger.info("  %d. %s (SVM: %s, Cluster: %s, State: %s, Size: %s)", 
+                              idx, fc["Name"], fc["SVM Name"], fc["Cluster Name"], fc["State"], fc["Size"])
+            
+        return originDict
 
     else:
         raise ConnectionTypeError()
