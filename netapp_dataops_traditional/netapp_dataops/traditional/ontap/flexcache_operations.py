@@ -5,7 +5,6 @@ import re
 
 from netapp_ontap.error import NetAppRestError
 from netapp_ontap.resources import Flexcache as NetAppFlexCache
-from netapp_ontap.resources import FlexcacheOrigin
 
 from netapp_dataops.logging_utils import setup_logger
 
@@ -240,41 +239,37 @@ def list_flexcache_origins(cluster_name: str = None, svm_name: str = None,
         raise ConnectionTypeError()
 
 
-def get_flexcache_origin(uuid: str, cluster_name: str = None, print_output: bool = False) -> Dict[str, Any]:
-    """Retrieve attributes of a specific FlexCache origin volume by UUID.
+def get_flexcache_origin(uuid: str, cluster_name: str = None, print_output: bool = False) -> List[Dict[str, Any]]:
+    """Retrieve origin details for a specific FlexCache volume by UUID.
     
-    This function retrieves detailed information about a FlexCache origin volume,
-    including all FlexCache volumes that are using this origin.
+    This function retrieves detailed information about the origin volumes of a FlexCache volume,
+    using the FlexCache volume's UUID.
     
     Args:
-        uuid: UUID of the FlexCache origin volume (required).
+        uuid: UUID of the FlexCache volume (required).
         cluster_name: Name of the cluster to query. If not specified, uses configured cluster.
         print_output: If True, print detailed output to console.
         
     Returns:
-        Dictionary containing FlexCache origin information:
-            - UUID: Origin volume UUID
-            - Name: Origin volume name
-            - SVM Name: Name of the SVM containing the origin volume
-            - SVM UUID: UUID of the SVM
-            - Block Level Invalidation: Whether block-level invalidation is enabled
-            - Global File Locking: Whether global file locking is enabled
-            - FlexCaches: List of dictionaries containing information about FlexCache volumes
-              using this origin, each with:
-                - Name: FlexCache volume name
-                - SVM Name: FlexCache SVM name
-                - SVM UUID: FlexCache SVM UUID
-                - Cluster Name: FlexCache cluster name
-                - Cluster UUID: FlexCache cluster UUID
-                - IP Address: IP address of FlexCache
-                - Size: Size of FlexCache volume (pretty formatted)
-                - State: State of FlexCache volume
-                - Create Time: Creation timestamp
+        List of dictionaries containing origin information for the FlexCache. Each dictionary includes:
+            - Origin Volume: Name of the origin volume
+            - Origin UUID: UUID of the origin volume
+            - Origin SVM: Name of the origin SVM
+            - Origin SVM UUID: UUID of the origin SVM
+            - Origin Cluster: Name of the origin cluster
+            - Origin Cluster UUID: UUID of the origin cluster
+            - IP Address: IP address of the origin
+            - Size: Size of the origin volume (pretty formatted)
+            - State: State of the origin volume
+            - Create Time: Creation timestamp
+            - FlexCache Name: Name of the FlexCache volume
+            - FlexCache SVM: Name of the FlexCache SVM
         
     Raises:
         InvalidConfigError: If configuration is invalid
         ConnectionTypeError: If connection type is not ONTAP
         APIConnectionError: If ONTAP API call fails
+        InvalidVolumeParameterError: If FlexCache UUID is invalid
     """
     try:
         config = _retrieve_config(print_output=print_output)
@@ -298,36 +293,72 @@ def get_flexcache_origin(uuid: str, cluster_name: str = None, print_output: bool
             raise
 
         try:
-            # Retrieve FlexCache origin by UUID
-            origin = FlexcacheOrigin(uuid=uuid)
-            origin.get(fields="name,uuid,svm.name,svm.uuid,block_level_invalidation,global_file_locking_enabled,flexcaches")
+            # Retrieve FlexCache volume by UUID
+            flexcache = NetAppFlexCache(uuid=uuid)
+            flexcache.get(fields="name,uuid,svm.name,svm.uuid,origins")
             
-            # Construct dictionary with origin details
-            originDict = {
-                "UUID": origin.uuid if hasattr(origin, 'uuid') else "N/A",
-                "Name": origin.name if hasattr(origin, 'name') else "N/A",
-                "SVM Name": origin.svm.name if (hasattr(origin, 'svm') and hasattr(origin.svm, 'name')) else "N/A",
-                "SVM UUID": origin.svm.uuid if (hasattr(origin, 'svm') and hasattr(origin.svm, 'uuid')) else "N/A",
-                "Block Level Invalidation": origin.block_level_invalidation if hasattr(origin, 'block_level_invalidation') else False,
-                "Global File Locking": origin.global_file_locking_enabled if hasattr(origin, 'global_file_locking_enabled') else False,
-                "FlexCaches": []
-            }
+            if not hasattr(flexcache, 'name'):
+                if print_output:
+                    logger.error("Error: Invalid FlexCache UUID.")
+                raise InvalidVolumeParameterError("uuid")
             
-            # Process FlexCache relationships
-            if hasattr(origin, 'flexcaches') and origin.flexcaches:
-                for flexcache in origin.flexcaches:
-                    flexcacheInfo = {
-                        "Name": flexcache.volume.name if (hasattr(flexcache, 'volume') and hasattr(flexcache.volume, 'name')) else "N/A",
-                        "SVM Name": flexcache.svm.name if (hasattr(flexcache, 'svm') and hasattr(flexcache.svm, 'name')) else "N/A",
-                        "SVM UUID": flexcache.svm.uuid if (hasattr(flexcache, 'svm') and hasattr(flexcache.svm, 'uuid')) else "",
-                        "Cluster Name": flexcache.cluster.name if (hasattr(flexcache, 'cluster') and hasattr(flexcache.cluster, 'name')) else "",
-                        "Cluster UUID": flexcache.cluster.uuid if (hasattr(flexcache, 'cluster') and hasattr(flexcache.cluster, 'uuid')) else "",
-                        "IP Address": flexcache.ip_address if hasattr(flexcache, 'ip_address') else "",
-                        "Size": _convert_bytes_to_pretty_size(size_in_bytes=flexcache.size) if hasattr(flexcache, 'size') else "",
-                        "State": flexcache.state if hasattr(flexcache, 'state') else "",
-                        "Create Time": str(flexcache.create_time) if hasattr(flexcache, 'create_time') else ""
+            # Extract FlexCache information
+            flexcacheName = flexcache.name if hasattr(flexcache, 'name') else "N/A"
+            flexcacheSvm = flexcache.svm.name if (hasattr(flexcache, 'svm') and hasattr(flexcache.svm, 'name')) else "N/A"
+            
+            # Construct list of origin details
+            originsList = []
+            
+            # Process origin information
+            if hasattr(flexcache, 'origins') and flexcache.origins:
+                for origin in flexcache.origins:
+                    # Extract volume information
+                    originVolumeName = origin.volume.name if (hasattr(origin, 'volume') and hasattr(origin.volume, 'name')) else "N/A"
+                    originVolumeUuid = origin.volume.uuid if (hasattr(origin, 'volume') and hasattr(origin.volume, 'uuid')) else ""
+                    
+                    # Extract SVM information
+                    originSvmName = origin.svm.name if (hasattr(origin, 'svm') and hasattr(origin.svm, 'name')) else "N/A"
+                    originSvmUuid = origin.svm.uuid if (hasattr(origin, 'svm') and hasattr(origin.svm, 'uuid')) else ""
+                    
+                    # Extract cluster information
+                    originClusterName = origin.cluster.name if (hasattr(origin, 'cluster') and hasattr(origin.cluster, 'name')) else ""
+                    originClusterUuid = origin.cluster.uuid if (hasattr(origin, 'cluster') and hasattr(origin.cluster, 'uuid')) else ""
+                    
+                    # Extract IP address
+                    originIpAddress = origin.ip_address if hasattr(origin, 'ip_address') else ""
+                    
+                    # Extract and format origin size
+                    originSize = ""
+                    if hasattr(origin, 'size'):
+                        originSize = _convert_bytes_to_pretty_size(size_in_bytes=origin.size)
+                    
+                    # Extract origin state
+                    originState = origin.state if hasattr(origin, 'state') else ""
+                    
+                    # Extract create time
+                    createTime = str(origin.create_time) if hasattr(origin, 'create_time') else ""
+                    
+                    # Construct dict containing origin details
+                    originDict = {
+                        "Origin Volume": originVolumeName,
+                        "Origin UUID": originVolumeUuid,
+                        "Origin SVM": originSvmName,
+                        "Origin SVM UUID": originSvmUuid,
+                        "Origin Cluster": originClusterName,
+                        "Origin Cluster UUID": originClusterUuid,
+                        "IP Address": originIpAddress,
+                        "Size": originSize,
+                        "State": originState,
+                        "Create Time": createTime,
+                        "FlexCache Name": flexcacheName,
+                        "FlexCache SVM": flexcacheSvm
                     }
-                    originDict["FlexCaches"].append(flexcacheInfo)
+                    
+                    # Append dict to list of origins
+                    originsList.append(originDict)
+            else:
+                if print_output:
+                    logger.warning("Warning: FlexCache '%s' has no origin information.", flexcacheName)
 
         except NetAppRestError as err:
             if print_output:
@@ -335,18 +366,22 @@ def get_flexcache_origin(uuid: str, cluster_name: str = None, print_output: bool
             raise APIConnectionError(err)
 
         if print_output:
-            logger.info("Origin Volume: %s (UUID: %s)", originDict["Name"], originDict["UUID"])
-            logger.info("SVM: %s (UUID: %s)", originDict["SVM Name"], originDict["SVM UUID"])
-            logger.info("Block Level Invalidation: %s", originDict["Block Level Invalidation"])
-            logger.info("Global File Locking: %s", originDict["Global File Locking"])
-            logger.info("Number of FlexCache volumes: %d", len(originDict["FlexCaches"]))
-            if originDict["FlexCaches"]:
-                logger.info("\nFlexCache Volumes:")
-                for idx, fc in enumerate(originDict["FlexCaches"], 1):
-                    logger.info("  %d. %s (SVM: %s, Cluster: %s, State: %s, Size: %s)", 
-                              idx, fc["Name"], fc["SVM Name"], fc["Cluster Name"], fc["State"], fc["Size"])
+            logger.info("FlexCache Volume: %s (SVM: %s)", flexcacheName, flexcacheSvm)
+            logger.info("Number of origins: %d", len(originsList))
+            if originsList:
+                logger.info("\nOrigin Details:")
+                try:
+                    import pandas as pd
+                    from tabulate import tabulate
+                    originsDF = pd.DataFrame.from_dict(originsList, dtype="string")
+                    logger.info("\n%s", tabulate(originsDF, showindex=False, headers=originsDF.columns))
+                except ImportError:
+                    for idx, origin in enumerate(originsList, 1):
+                        logger.info("  %d. %s:%s (Cluster: %s, State: %s, Size: %s)", 
+                                  idx, origin["Origin SVM"], origin["Origin Volume"], 
+                                  origin["Origin Cluster"], origin["State"], origin["Size"])
             
-        return originDict
+        return originsList
 
     else:
         raise ConnectionTypeError()
