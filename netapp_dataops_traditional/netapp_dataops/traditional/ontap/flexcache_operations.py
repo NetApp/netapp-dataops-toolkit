@@ -382,6 +382,170 @@ def get_flexcache_origin(uuid: str, cluster_name: str = None, print_output: bool
         raise ConnectionTypeError()
 
 
+def update_flexcache(uuid: str = None, volume_name: str = None, svm_name: str = None, 
+                     cluster_name: str = None, prepopulate_paths: List[str] = None, 
+                     prepopulate_exclude_paths: List[str] = None, writeback_enabled: bool = None,
+                     relative_size_enabled: bool = None, relative_size_percentage: int = None,
+                     atime_scrub_enabled: bool = None, atime_scrub_period: int = None,
+                     cifs_change_notify_enabled: bool = None, print_output: bool = False) -> None:
+    """Update properties of a FlexCache volume.
+    
+    This function updates the configuration of a FlexCache volume. You can specify the FlexCache
+    either by UUID or by volume name and SVM name.
+    
+    Args:
+        uuid: UUID of the FlexCache volume. If provided, volume_name and svm_name are ignored.
+        volume_name: Name of the FlexCache volume (used if uuid is not provided).
+        svm_name: Name of the SVM containing the FlexCache (used if uuid is not provided).
+        cluster_name: Name of the cluster to query. If not specified, uses configured cluster.
+        prepopulate_paths: List of directory paths to prepopulate in the FlexCache.
+        prepopulate_exclude_paths: List of directory paths to exclude from prepopulation.
+        writeback_enabled: Enable or disable writeback for the FlexCache volume.
+        relative_size_enabled: Enable or disable relative sizing for the FlexCache volume.
+        relative_size_percentage: Percentage size of FlexCache relative to origin (1-100).
+        atime_scrub_enabled: Enable or disable atime-based scrubbing of inactive files.
+        atime_scrub_period: Duration in days after which inactive files can be scrubbed (1-365).
+        cifs_change_notify_enabled: Enable or disable CIFS change notification.
+        print_output: If True, print status messages to console.
+        
+    Raises:
+        InvalidConfigError: If configuration is invalid
+        ConnectionTypeError: If connection type is not ONTAP
+        InvalidVolumeParameterError: If volume identifiers or parameters are invalid
+        APIConnectionError: If ONTAP API call fails
+    """
+    try:
+        config = _retrieve_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+        
+    try:
+        connectionType = config["connectionType"]
+    except KeyError:
+        if print_output:
+            _print_invalid_config_error()
+        raise InvalidConfigError()
+
+    if cluster_name:
+        config["hostname"] = cluster_name
+
+    if connectionType == "ONTAP":
+        try:
+            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
+        except InvalidConfigError:
+            raise
+
+        try:
+            # Determine FlexCache UUID
+            flexcache_uuid = uuid
+            
+            if not flexcache_uuid:
+                # Find FlexCache by name and SVM
+                if not volume_name:
+                    if print_output:
+                        logger.error("Error: Either uuid or volume_name must be provided.")
+                    raise InvalidVolumeParameterError("uuid or volume_name")
+                
+                svmname = config["svm"]
+                if svm_name:
+                    svmname = svm_name
+                
+                # Find the FlexCache volume
+                flexcache = NetAppFlexCache.find(name=volume_name, **{"svm.name": svmname})
+                if not flexcache:
+                    if print_output:
+                        logger.error("Error: FlexCache volume '%s' not found in SVM '%s'.", volume_name, svmname)
+                    raise InvalidVolumeParameterError("volume_name")
+                
+                flexcache_uuid = flexcache.uuid
+            else:
+                # Validate that the FlexCache exists for the given UUID
+                try:
+                    flexcache_check = NetAppFlexCache(uuid=flexcache_uuid)
+                    flexcache_check.get(fields="name")
+                    if not hasattr(flexcache_check, 'name'):
+                        if print_output:
+                            logger.error("Error: FlexCache volume with UUID '%s' does not exist.", flexcache_uuid)
+                        raise InvalidVolumeParameterError("uuid")
+                except NetAppRestError as err:
+                    if print_output:
+                        logger.error("Error: FlexCache volume with UUID '%s' does not exist or is invalid. API Error: %s", flexcache_uuid, err)
+                    raise InvalidVolumeParameterError("uuid")
+            
+            # Build update dictionary with only provided parameters
+            update_dict = {}
+            
+            # Prepopulate configuration
+            if prepopulate_paths is not None or prepopulate_exclude_paths is not None:
+                prepopulate_config = {}
+                if prepopulate_paths is not None:
+                    prepopulate_config["dir_paths"] = prepopulate_paths
+                if prepopulate_exclude_paths is not None:
+                    prepopulate_config["exclude_dir_paths"] = prepopulate_exclude_paths
+                update_dict["prepopulate"] = prepopulate_config
+            
+            # Writeback configuration
+            if writeback_enabled is not None:
+                update_dict["writeback"] = {"enabled": writeback_enabled}
+            
+            # Relative size configuration
+            if relative_size_enabled is not None or relative_size_percentage is not None:
+                relative_size_config = {}
+                if relative_size_enabled is not None:
+                    relative_size_config["enabled"] = relative_size_enabled
+                if relative_size_percentage is not None:
+                    if not (1 <= relative_size_percentage <= 100):
+                        if print_output:
+                            logger.error("Error: relative_size_percentage must be between 1 and 100.")
+                        raise InvalidVolumeParameterError("relative_size_percentage")
+                    relative_size_config["percentage"] = relative_size_percentage
+                update_dict["relative_size"] = relative_size_config
+            
+            # Atime scrub configuration
+            if atime_scrub_enabled is not None or atime_scrub_period is not None:
+                atime_scrub_config = {}
+                if atime_scrub_enabled is not None:
+                    atime_scrub_config["enabled"] = atime_scrub_enabled
+                if atime_scrub_period is not None:
+                    if not (1 <= atime_scrub_period <= 365):
+                        if print_output:
+                            logger.error("Error: atime_scrub_period must be between 1 and 365 days.")
+                        raise InvalidVolumeParameterError("atime_scrub_period")
+                    atime_scrub_config["period"] = atime_scrub_period
+                update_dict["atime_scrub"] = atime_scrub_config
+            
+            # CIFS change notify configuration
+            if cifs_change_notify_enabled is not None:
+                update_dict["cifs_change_notify"] = {"enabled": cifs_change_notify_enabled}
+            
+            # Check if there are any updates to apply
+            if not update_dict:
+                if print_output:
+                    logger.warning("Warning: No update parameters provided.")
+                return
+            
+            if print_output:
+                logger.info("Updating FlexCache volume (UUID: %s)...", flexcache_uuid)
+            
+            # Apply the updates
+            flexcache = NetAppFlexCache(uuid=flexcache_uuid)
+            for key, value in update_dict.items():
+                setattr(flexcache, key, value)
+            
+            flexcache.patch(poll=True, poll_timeout=120)
+            
+            if print_output:
+                logger.info("FlexCache volume updated successfully.")
+
+        except NetAppRestError as err:
+            if print_output:
+                logger.error("Error: ONTAP Rest API Error: %s", err)
+            raise APIConnectionError(err)
+
+    else:
+        raise ConnectionTypeError()
+
+
 def create_flexcache(source_vol: str, source_svm: str, flexcache_vol: str, flexcache_svm: str = None, cluster_name: str = None, flexcache_size: str = None, 
                      junction: str = None, export_policy: str = "default", mountpoint: str = None, readonly: bool = False, print_output: bool = False):
     """

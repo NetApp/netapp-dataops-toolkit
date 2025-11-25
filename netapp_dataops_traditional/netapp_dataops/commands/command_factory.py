@@ -54,6 +54,9 @@ class CommandFactory:
         # Sync commands
         "sync": ("sync_command", "SyncCommand"),
         
+        # Update commands
+        "update": ("update_command", "UpdateCommand"),
+        
         # Help commands
         "help": ("help_command", "HelpCommand"),
         "h": ("help_command", "HelpCommand"),

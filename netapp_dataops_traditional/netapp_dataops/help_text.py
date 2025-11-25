@@ -172,6 +172,45 @@ Examples:
 \tsudo -E netapp_dataops_cli.py create flexcache -n cache1 -v vol1 -o svm1 -m /mnt/cache1
 '''
 
+HELP_TEXT_UPDATE_FLEXCACHE = '''
+Command: update flexcache
+
+Update configuration properties of an existing FlexCache volume.
+
+Required Options/Arguments (one of):
+\t-i, --uuid=\t\t\tUUID of the FlexCache volume to update.
+\t-n, --name=\t\t\tName of FlexCache volume to update (requires --svm if not using --uuid).
+
+Optional Options/Arguments:
+\t-v, --svm=\t\t\tSVM name (required when using --name instead of --uuid).
+\t-u, --cluster-name=\t\tNon-default hosting cluster.
+\t-p, --prepopulate-paths=\tComma-separated list of directory paths to prepopulate.
+\t-x, --prepopulate-exclude-paths=Comma-separated list of directory paths to exclude from prepopulation.
+\t-w, --writeback-enabled=\tEnable or disable writeback (true/false).
+\t-r, --relative-size-enabled=\tEnable or disable relative sizing (true/false).
+\t    --relative-size-percentage=\tPercentage size relative to origin (1-100).
+\t-a, --atime-scrub-enabled=\tEnable or disable atime-based scrubbing (true/false).
+\t    --atime-scrub-period=\tDuration in days for atime scrub (1-365).
+\t-c, --cifs-change-notify-enabled=Enable or disable CIFS change notification (true/false).
+\t-h, --help\t\t\tPrint help text.
+
+Examples:
+\t# Update FlexCache by UUID with prepopulate paths
+\tnetapp_dataops_cli.py update flexcache --uuid=ec774932-0f3c-11e9-8b2b-0050568e0b79 --prepopulate-paths=/dir1,/dir2
+
+\t# Update FlexCache by name and enable writeback
+\tnetapp_dataops_cli.py update flexcache --name=cache1 --svm=svm1 --writeback-enabled=true
+
+\t# Enable relative sizing with 50% of origin size
+\tnetapp_dataops_cli.py update flexcache -i ec774932-0f3c-11e9-8b2b-0050568e0b79 -r true --relative-size-percentage=50
+
+\t# Enable atime scrubbing with 30 day period
+\tnetapp_dataops_cli.py update flexcache -n cache1 -v svm1 -a true --atime-scrub-period=30
+
+\t# Update multiple properties
+\tnetapp_dataops_cli.py update flexcache -i ec774932-0f3c-11e9-8b2b-0050568e0b79 -w true -c true -p /data,/logs
+'''
+
 HELP_TEXT_DELETE_VOLUME = '''
 Command: delete volume
 
