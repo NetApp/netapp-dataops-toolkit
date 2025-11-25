@@ -56,7 +56,8 @@ from .ontap.flexcache_operations import (
     prepopulate_flex_cache,
     list_flexcache_origins,
     get_flexcache_origin,
-    create_flexcache
+    create_flexcache,
+    update_flexcache
 )
 
 __all__ = [
@@ -93,6 +94,7 @@ __all__ = [
     'list_flexcache_origins',
     'get_flexcache_origin',
     'create_flexcache',
+    'update_flexcache',
 ]
 
 _lazy_modules = {}
