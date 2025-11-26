@@ -17,6 +17,10 @@ The [NetApp DataOps Toolkit MCP Server for ONTAP](netapp_dataops_traditional/doc
 - **Create SnapMirror Relationship**: Set up SnapMirror relationships for efficient data replication.
 - **List SnapMirror Relationships**: Retrieve a list of all SnapMirror relationships on the storage system.
 - **Create FlexCache Volume**: Create FlexCache volumes for efficient data access and caching.
+- **Create Qtree**: Create a new qtree within an existing volume for data organization and quota management.
+- **List Qtrees**: Retrieve a list of qtrees in a volume or across all volumes in an SVM.
+- **Get Qtree**: Retrieve detailed properties for a specific qtree including security settings and permissions.
+- **Get Qtree Metrics**: Retrieve historical performance metrics for a qtree including IOPS, latency, and throughput.
 
 ## NetApp DataOps Toolkit for Kubernetes MCP Server
 
