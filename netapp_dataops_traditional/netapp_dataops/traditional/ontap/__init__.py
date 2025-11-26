@@ -27,6 +27,13 @@ from .flexcache_operations import (
     create_flexcache
 )
 
+from .qtree_operations import (
+    create_qtree,
+    list_qtrees,
+    get_qtree,
+    get_qtree_metrics
+)
+
 __all__ = [
     # Volume operations
     'create_volume',
@@ -47,4 +54,9 @@ __all__ = [
     # FlexCache operations
     'prepopulate_flex_cache',
     'create_flexcache',
+    # Qtree operations
+    'create_qtree',
+    'list_qtrees',
+    'get_qtree',
+    'get_qtree_metrics',
 ]
