@@ -109,6 +109,9 @@ Data fabric operations:
 
 Advanced data fabric operations:
 - [Prepopulate specific files/directories on a FlexCache volume (ONTAP 9.8 and above ONLY).](#cli-prepopulate-flexcache)
+- [List all FlexCache volumes with their origin information.](#cli-list-flexcache-origins)
+- [Get origin details for a specific FlexCache volume.](#cli-get-flexcache-origin)
+- [Update FlexCache volume properties.](#cli-update-flexcache)
 - [List all SnapMirror relationships.](#cli-list-snapmirror-relationships)
 - [Trigger a sync operation for an existing SnapMirror relationship.](#cli-sync-snapmirror-relationship)
 - [Create new SnapMirror relationship.](#cli-create-snapmirror-relationship)
@@ -885,6 +888,140 @@ FlexCache 'flexcache_cache' - Prepopulating paths:  ['/test2/misc', '/test2/test
 FlexCache prepopulated successfully.
 ```
 
+<a name="cli-list-flexcache-origins"></a>
+
+#### List All FlexCache Volumes with Origin Information
+
+The NetApp DataOps Toolkit can be used to print a list of all existing FlexCache volumes along with their origin volume information. This is useful for understanding the FlexCache topology in your environment. The command for listing all FlexCache volumes with their origins is `netapp_dataops_cli.py list flexcache-origins`.
+
+No options/arguments are required for this command.
+
+The following options/arguments are optional:
+
+```
+    -u, --cluster-name=     Non-default hosting cluster.
+    -s, --svm-name=         Non-default SVM name.
+    -h, --help              Print help text.
+```
+
+##### Example Usage
+
+List all FlexCache volumes in the default SVM:
+
+```sh
+netapp_dataops_cli.py list flexcache-origins
+FlexCache Name    FlexCache SVM    Size     Origin Volume    Origin SVM    Origin Cluster    Origin IP       Origin Size    Origin State
+----------------  ---------------  -------  ---------------  ------------  ----------------  --------------  -------------  --------------
+cache1            svm0             100.0GB  source1          svm1          cluster1          192.168.1.10    1.0TB          online
+test_flexcache3   svm0             50.0GB   testvol          svm0                            192.168.1.10    500.0GB        online
+```
+
+<a name="cli-get-flexcache-origin"></a>
+
+#### Get Origin Details for a Specific FlexCache Volume
+
+The NetApp DataOps Toolkit can be used to retrieve detailed origin information for a specific FlexCache volume. This command provides comprehensive details about the origin volume(s) associated with a FlexCache. The command for retrieving origin details is `netapp_dataops_cli.py get flexcache-origin`.
+
+The following options/arguments are required:
+
+```
+    -i, --uuid=             UUID of the FlexCache volume.
+```
+
+The following options/arguments are optional:
+
+```
+    -u, --cluster-name=     Non-default hosting cluster.
+    -h, --help              Print help text.
+```
+
+Tip: Run `netapp_dataops_cli.py list flexcache-origins` to obtain FlexCache UUIDs.
+
+##### Example Usage
+
+Get origin details for a FlexCache volume:
+
+```sh
+netapp_dataops_cli.py get flexcache-origin --uuid=d833e844-8189-11f0-9ec9-00a0b8c60547
+FlexCache Volume: test_flexcache3 (SVM: svm0)
+
+Origin Details:
+Origin Volume    Origin UUID                           Origin SVM    Origin SVM UUID                       Origin Cluster    Origin Cluster UUID                   IP Address       Size      State    Create Time
+---------------  ------------------------------------  ------------  ------------------------------------  ----------------  ------------------------------------  ---------------  --------  -------  -------------------------
+testvol          a1b2c3d4-1234-11f0-9ec9-00a0b8c60547  svm0          e5f6g7h8-5678-11f0-9ec9-00a0b8c60547                    i9j0k1l2-9012-11f0-9ec9-00a0b8c60547  192.168.102.198  500.0GB   online   2024-11-25 10:30:00+00:00
+```
+
+<a name="cli-update-flexcache"></a>
+
+#### Update FlexCache Volume Properties
+
+The NetApp DataOps Toolkit can be used to update the configuration and properties of an existing FlexCache volume. This includes operations like prepopulating specific paths, enabling writeback, configuring relative sizing, enabling atime scrubbing, and managing CIFS change notifications. The command for updating a FlexCache volume is `netapp_dataops_cli.py update flexcache`.
+
+One of the following options/arguments is required to identify the FlexCache:
+
+```
+    -i, --uuid=                         UUID of the FlexCache volume.
+    -n, --name=                         Name of the FlexCache volume (must be used with --svm-name if not using default SVM).
+```
+
+The following options/arguments are optional:
+
+```
+    -s, --svm-name=                     Name of the SVM containing the FlexCache (used with --name).
+    -u, --cluster-name=                 Non-default hosting cluster.
+    -p, --prepopulate-paths=            Comma-separated list of directory paths to prepopulate in the FlexCache.
+    -e, --prepopulate-exclude-paths=    Comma-separated list of directory paths to exclude from prepopulation.
+    -w, --writeback-enabled=            Enable or disable writeback (true/false).
+    -r, --relative-size-enabled=        Enable or disable relative sizing (true/false).
+    --relative-size-percentage=         Percentage size of FlexCache relative to origin (1-100).
+    -a, --atime-scrub-enabled=          Enable or disable atime-based scrubbing of inactive files (true/false).
+    --atime-scrub-period=               Duration in days after which inactive files can be scrubbed (1-365).
+    -c, --cifs-change-notify-enabled=   Enable or disable CIFS change notification (true/false).
+    -h, --help                          Print help text.
+```
+
+##### Example Usage
+
+Update by UUID with prepopulate paths:
+
+```sh
+netapp_dataops_cli.py update flexcache --uuid=d833e844-8189-11f0-9ec9-00a0b8c60547 --prepopulate-paths=/dir1,/dir2
+Updating FlexCache volume (UUID: d833e844-8189-11f0-9ec9-00a0b8c60547)...
+FlexCache volume updated successfully.
+```
+
+Update by name with writeback enabled:
+
+```sh
+netapp_dataops_cli.py update flexcache --name=test_flexcache3 --writeback-enabled=true
+Updating FlexCache volume (UUID: d833e844-8189-11f0-9ec9-00a0b8c60547)...
+FlexCache volume updated successfully.
+```
+
+Enable relative sizing with 80% of origin volume size:
+
+```sh
+netapp_dataops_cli.py update flexcache --name=cache1 --relative-size-enabled=true --relative-size-percentage=80
+Updating FlexCache volume (UUID: ec774932-0f3c-11e9-8b2b-0050568e0b79)...
+FlexCache volume updated successfully.
+```
+
+Enable atime scrubbing with a 30-day period:
+
+```sh
+netapp_dataops_cli.py update flexcache --name=cache1 --atime-scrub-enabled=true --atime-scrub-period=30
+Updating FlexCache volume (UUID: ec774932-0f3c-11e9-8b2b-0050568e0b79)...
+FlexCache volume updated successfully.
+```
+
+Update multiple properties at once:
+
+```sh
+netapp_dataops_cli.py update flexcache --uuid=ec774932-0f3c-11e9-8b2b-0050568e0b79 --prepopulate-paths=/data,/logs --writeback-enabled=true --cifs-change-notify-enabled=true
+Updating FlexCache volume (UUID: ec774932-0f3c-11e9-8b2b-0050568e0b79)...
+FlexCache volume updated successfully.
+```
+
 <a name="cli-list-snapmirror-relationships"></a>
 
 #### List All SnapMirror Relationships
@@ -989,7 +1126,7 @@ Setting state to snapmirrored, action:resync
 The NetApp DataOps Toolkit can also be utilized as a library of functions that can be imported into any Python program or Jupyter Notebook. In this manner, data scientists and data engineers can easily incorporate data management tasks into their existing projects, programs, and workflows. This functionality is only recommended for advanced users who are proficient in Python.
 
 ```py
-from netapp_dataops.traditional import clone_volume, create_volume, delete_volume, list_volumes, mount_volume, create_snapshot, delete_snapshot, list_snapshots, restore_snapshot, list_cloud_sync_relationships, sync_cloud_sync_relationship, list_snap_mirror_relationships, sync_snap_mirror_relationship, create_flexcache, prepopulate_flex_cache, push_directory_to_s3, push_file_to_s3, pull_bucket_from_s3, pull_object_from_s3
+from netapp_dataops.traditional import clone_volume, create_volume, delete_volume, list_volumes, mount_volume, create_snapshot, delete_snapshot, list_snapshots, restore_snapshot, list_cloud_sync_relationships, sync_cloud_sync_relationship, list_snap_mirror_relationships, sync_snap_mirror_relationship, create_flexcache, prepopulate_flex_cache, list_flexcache_origins, get_flexcache_origin, update_flexcache, push_directory_to_s3, push_file_to_s3, pull_bucket_from_s3, pull_object_from_s3
 ```
 
 Note: The prerequisite steps outlined in the [Getting Started](#getting-started) section still appy when the toolkit is being utilized as an importable library of functions.
@@ -1021,6 +1158,9 @@ Data fabric operations:
 
 Advanced data fabric operations:
 - [Prepopulate specific files/directories on a FlexCache volume (ONTAP 9.8 and above ONLY).](#lib-prepopulate-flexcache)
+- [List all FlexCache volumes with their origin information.](#lib-list-flexcache-origins)
+- [Get origin details for a specific FlexCache volume.](#lib-get-flexcache-origin)
+- [Update FlexCache volume properties.](#lib-update-flexcache)
 - [List all SnapMirror relationships.](#lib-list-snapmirror-relationships)
 - [Trigger a sync operation for an existing SnapMirror relationship.](#lib-sync-snapmirror-relationship)
 - [Create SnapMirror relationship.](#lib-create-snapmirror-relationship)
@@ -1684,6 +1824,143 @@ If an error is encountered, the function will raise an exception of one of the f
 InvalidConfigError              # Config file is missing or contains an invalid value.
 APIConnectionError              # The storage system/service API returned an error.
 InvalidVolumeParameterError     # An invalid parameter was specified.
+```
+
+<a name="lib-list-flexcache-origins"></a>
+
+#### List All FlexCache Volumes with Origin Information
+
+The NetApp DataOps Toolkit can be used to retrieve a list of all existing FlexCache volumes along with their origin volume information as part of any Python program or workflow.
+
+##### Function Definition
+
+```py
+def list_flexcache_origins(
+    cluster_name: str = None,    # Non-default cluster name (optional).
+    svm_name: str = None,        # Non-default SVM name (optional).
+    print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
+) -> list :
+```
+
+##### Return Value
+
+The function returns a list of all existing FlexCache volumes. Each item in the list will be a dictionary containing details regarding a specific FlexCache volume and its origin. The keys for the values in this dictionary are "FlexCache Name", "FlexCache SVM", "Size", "Origin Volume", "Origin SVM", "Origin Cluster", "Origin IP", "Origin Size", "Origin State".
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError              # Config file is missing or contains an invalid value.
+APIConnectionError              # The storage system/service API returned an error.
+```
+
+<a name="lib-get-flexcache-origin"></a>
+
+#### Get Origin Details for a Specific FlexCache Volume
+
+The NetApp DataOps Toolkit can be used to retrieve detailed origin information for a specific FlexCache volume as part of any Python program or workflow.
+
+##### Function Definition
+
+```py
+def get_flexcache_origin(
+    uuid: str,                   # UUID of the FlexCache volume (required).
+    cluster_name: str = None,    # Non-default cluster name (optional).
+    print_output: bool = False   # Denotes whether or not to print messages to the console during execution.
+) -> list :
+```
+
+##### Return Value
+
+The function returns a list of origin details for the specified FlexCache volume. Each item in the list will be a dictionary containing details regarding a specific origin. The keys for the values in this dictionary are "Origin Volume", "Origin UUID", "Origin SVM", "Origin SVM UUID", "Origin Cluster", "Origin Cluster UUID", "IP Address", "Size", "State", "Create Time".
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError              # Config file is missing or contains an invalid value.
+APIConnectionError              # The storage system/service API returned an error.
+InvalidVolumeParameterError     # An invalid parameter was specified.
+```
+
+<a name="lib-update-flexcache"></a>
+
+#### Update FlexCache Volume Properties
+
+The NetApp DataOps Toolkit can be used to update the configuration and properties of an existing FlexCache volume as part of any Python program or workflow. This includes operations like prepopulating specific paths, enabling writeback, configuring relative sizing, enabling atime scrubbing, and managing CIFS change notifications.
+
+##### Function Definition
+
+```py
+def update_flexcache(
+    uuid: str = None,                           # UUID of the FlexCache volume (required if volume_name not provided).
+    volume_name: str = None,                    # Name of the FlexCache volume (required if uuid not provided).
+    svm_name: str = None,                       # Name of the SVM containing the FlexCache (used with volume_name).
+    cluster_name: str = None,                   # Non-default cluster name (optional).
+    prepopulate_paths: list = None,             # List of directory paths to prepopulate in the FlexCache (optional).
+    prepopulate_exclude_paths: list = None,     # List of directory paths to exclude from prepopulation (optional).
+    writeback_enabled: bool = None,             # Enable or disable writeback for the FlexCache volume (optional).
+    relative_size_enabled: bool = None,         # Enable or disable relative sizing for the FlexCache volume (optional).
+    relative_size_percentage: int = None,       # Percentage size of FlexCache relative to origin, 1-100 (optional).
+    atime_scrub_enabled: bool = None,           # Enable or disable atime-based scrubbing of inactive files (optional).
+    atime_scrub_period: int = None,             # Duration in days after which inactive files can be scrubbed, 1-365 (optional).
+    cifs_change_notify_enabled: bool = None,    # Enable or disable CIFS change notification (optional).
+    print_output: bool = False                  # Denotes whether or not to print messages to the console during execution.
+) :
+```
+
+##### Return Value
+
+None
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError              # Config file is missing or contains an invalid value.
+APIConnectionError              # The storage system/service API returned an error.
+InvalidVolumeParameterError     # An invalid parameter was specified.
+```
+
+##### Example Usage
+
+```py
+from netapp_dataops.traditional import update_flexcache
+
+# Update FlexCache by UUID with prepopulate paths
+update_flexcache(
+    uuid="d833e844-8189-11f0-9ec9-00a0b8c60547",
+    prepopulate_paths=["/dir1", "/dir2"],
+    print_output=True
+)
+
+# Update FlexCache by name with writeback enabled
+update_flexcache(
+    volume_name="test_flexcache3",
+    svm_name="svm0",
+    writeback_enabled=True,
+    print_output=True
+)
+
+# Enable relative sizing with 80% of origin volume size
+update_flexcache(
+    volume_name="cache1",
+    relative_size_enabled=True,
+    relative_size_percentage=80,
+    print_output=True
+)
+
+# Update multiple properties at once
+update_flexcache(
+    uuid="ec774932-0f3c-11e9-8b2b-0050568e0b79",
+    prepopulate_paths=["/data", "/logs"],
+    writeback_enabled=True,
+    cifs_change_notify_enabled=True,
+    print_output=True
+)
 ```
 
 <a name="lib-list-snapmirror-relationships"></a>
