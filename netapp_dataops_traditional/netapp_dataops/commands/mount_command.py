@@ -1,9 +1,8 @@
-"""
-Mount command module for NetApp DataOps Toolkit CLI.
-"""
+"""Mount command module for NetApp DataOps Toolkit CLI."""
 
 import getopt
-from .base_command import BaseCommand
+import sys
+from .base_command import BaseCommand, logger
 from netapp_dataops.help_text import HELP_TEXT_MOUNT_VOLUME
 from netapp_dataops.traditional import (
     mount_volume,
@@ -19,7 +18,6 @@ class MountCommand(BaseCommand):
     
     def execute(self) -> None:
         """Execute mount command for volumes."""
-        # Get desired target from command line args
         target = self.get_target()
         
         if target in ("volume", "vol"):
@@ -29,7 +27,6 @@ class MountCommand(BaseCommand):
     
     def _mount_volume(self) -> None:
         """Handle volume mounting."""
-        # Initialize variables
         volume_name = None
         svm_name = None
         cluster_name = None
@@ -38,21 +35,19 @@ class MountCommand(BaseCommand):
         mount_options = None
         readonly = False
         
-        # Get command line options
         try:
-            opts, args = getopt.getopt(
+            opts, _ = getopt.getopt(
                 self.args[3:], 
                 "hv:n:l:m:u:o:x", 
                 ["cluster-name=", "help", "lif=", "svm=", "name=", "mountpoint=", "readonly", "options="]
             )
         except Exception as err:
-            print(err)
+            logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_MOUNT_VOLUME, invalid_opt_arg=True)
         
-        # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print(HELP_TEXT_MOUNT_VOLUME)
+                logger.info(HELP_TEXT_MOUNT_VOLUME)
                 return
             elif opt in ("-v", "--svm"):
                 svm_name = arg
@@ -69,14 +64,12 @@ class MountCommand(BaseCommand):
             elif opt in ("-x", "--readonly"):
                 readonly = True
         
-        # Check for required options
         if not volume_name:
             self.handle_invalid_command(help_text=HELP_TEXT_MOUNT_VOLUME, invalid_opt_arg=True)
         
         if not mountpoint:
             self.handle_invalid_command(help_text=HELP_TEXT_MOUNT_VOLUME, invalid_opt_arg=True)
         
-        # Mount volume
         try:
             mount_volume(
                 svm_name=svm_name, 
@@ -89,5 +82,4 @@ class MountCommand(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
-            import sys
             sys.exit(1)

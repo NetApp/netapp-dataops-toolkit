@@ -1,20 +1,14 @@
-"""
-Snapshot operations for NetApp DataOps traditional environments.
-
-This module contains all snapshot-related operations including create, delete,
-list, and restore functionality.
-"""
+"""Snapshot operations for NetApp DataOps traditional environments."""
 
 import datetime
 import re
-import warnings
+from typing import List, Dict, Any, Optional
 
 from netapp_ontap.error import NetAppRestError
 from netapp_ontap.resources import Volume as NetAppVolume
 from netapp_ontap.resources import Snapshot as NetAppSnapshot
-import pandas as pd
-from tabulate import tabulate
 
+from netapp_dataops.logging_utils import setup_logger
 from ..exceptions import (
     InvalidConfigError, 
     ConnectionTypeError, 
@@ -29,16 +23,19 @@ from ..core import (
     deprecated
 )
 
+logger = setup_logger(__name__)
 
-def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = None, snapshot_name: str = None, retention_count: int = 0, retention_days: bool = False, snapmirror_label: str = None, print_output: bool = False):
-    # Retrieve config details from config file
+
+def create_snapshot(volume_name: str, cluster_name: Optional[str] = None, svm_name: Optional[str] = None, 
+                   snapshot_name: Optional[str] = None, retention_count: int = 0, retention_days: bool = False, 
+                   snapmirror_label: Optional[str] = None, print_output: bool = False) -> None:
     try:
         config = _retrieve_config(print_output=print_output)
     except InvalidConfigError:
         raise
     try:
         connectionType = config["connectionType"]
-    except:
+    except KeyError:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -47,7 +44,6 @@ def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = 
         config["hostname"] = cluster_name
 
     if connectionType == "ONTAP":
-        # Instantiate connection to ONTAP cluster
         try:
             _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
         except InvalidConfigError:
@@ -56,53 +52,48 @@ def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = 
         if not snapshot_name:
             snapshot_name = "netapp_dataops"
 
-        # Retrieve svm from config file
         try:
             svm = config["svm"]
             if svm_name:
                 svm = svm_name
-        except:
+        except KeyError:
             if print_output:
                 _print_invalid_config_error()
             raise InvalidConfigError()
 
         snapshot_name_original = snapshot_name
-        # Set snapshot name if not passed into function or retention provided
         if not snapshot_name or int(retention_count) > 0:
             timestamp = '.'+datetime.datetime.today().strftime("%Y-%m-%d_%H%M%S")
             snapshot_name += timestamp
 
         if print_output:
-            print("Creating snapshot '" + snapshot_name + "'.")
+            logger.info("Creating snapshot '%s'.", snapshot_name)
 
         try:
-            # Retrieve volume
             volume = NetAppVolume.find(name=volume_name, svm=svm)
             if not volume:
                 if print_output:
-                    print("Error: Invalid volume name.")
+                    logger.error("Error: Invalid volume name.")
                 raise InvalidVolumeParameterError("name")
 
-            # create snapshot dict
             snapshotDict = {
                 'name': snapshot_name,
                 'volume': volume.to_dict()
             }
             if snapmirror_label:
                 if print_output:
-                    print("Setting snapmirror label as:"+snapmirror_label)
+                    logger.info("Setting snapmirror label as: %s", snapmirror_label)
                 snapshotDict['snapmirror_label'] = snapmirror_label
 
-            # Create snapshot
             snapshot = NetAppSnapshot.from_dict(snapshotDict)
             snapshot.post(poll=True)
 
             if print_output:
-                print("Snapshot created successfully.")
+                logger.info("Snapshot created successfully.")
 
         except NetAppRestError as err:
             if print_output:
-                print("Error: ONTAP Rest API Error: ", err)
+                logger.error("Error: ONTAP Rest API Error: %s", err)
             raise APIConnectionError(err)
 
         #delete snapshots exceeding retention count if provided
@@ -114,7 +105,7 @@ def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = 
                 volume = NetAppVolume.find(name=volume_name, svm=svm)
                 if not volume:
                     if print_output:
-                        print("Error: Invalid volume name.")
+                        logger.error("Error: Invalid volume name.")
                     raise InvalidVolumeParameterError("name")
 
                 if retention_days:
@@ -148,21 +139,21 @@ def create_snapshot(volume_name: str, cluster_name: str = None, svm_name: str = 
 
             except NetAppRestError as err:
                 if print_output:
-                    print("Error: ONTAP Rest API Error: ", err)
+                    logger.error("Error: ONTAP Rest API Error: %s", err)
                 raise APIConnectionError(err)
     else:
         raise ConnectionTypeError()
 
 
-def delete_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = None, svm_name: str = None, skip_owned: bool = False, print_output: bool = False):
-    # Retrieve config details from config file
+def delete_snapshot(volume_name: str, snapshot_name: str, cluster_name: Optional[str] = None, svm_name: Optional[str] = None, 
+                   skip_owned: bool = False, print_output: bool = False) -> None:
     try:
         config = _retrieve_config(print_output=print_output)
     except InvalidConfigError:
         raise
     try:
         connectionType = config["connectionType"]
-    except:
+    except KeyError:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -171,76 +162,69 @@ def delete_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = No
         config["hostname"] = cluster_name
 
     if connectionType == "ONTAP":
-        # Instantiate connection to ONTAP cluster
         try:
             _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
         except InvalidConfigError:
             raise
 
-        # Retrieve svm from config file
         try:
             svm = config["svm"]
             if svm_name:
                 svm = svm_name
-        except:
+        except KeyError:
             if print_output:
                 _print_invalid_config_error()
             raise InvalidConfigError()
 
         if print_output:
-            print("Deleting snapshot '" + snapshot_name + "'.")
+            logger.info("Deleting snapshot '%s'.", snapshot_name)
 
         try:
-            # Retrieve volume
             volume = NetAppVolume.find(name=volume_name, svm=svm)
             if not volume:
                 if print_output:
-                    print("Error: Invalid volume name.")
+                    logger.error("Error: Invalid volume name.")
                 raise InvalidVolumeParameterError("name")
 
-            # Retrieve snapshot
             snapshot = NetAppSnapshot.find(volume.uuid, name=snapshot_name)
 
             if not snapshot:
                 if print_output:
-                    print("Error: Invalid snapshot name.")
+                    logger.error("Error: Invalid snapshot name.")
                 raise InvalidSnapshotParameterError("name")
 
             if hasattr(snapshot,'owners'):
-
                 if not skip_owned:
                     if print_output:
-                        print('Error: Snapshot cannot be deleted since it has owners:'+','.join(snapshot.owners))
+                        logger.error('Error: Snapshot cannot be deleted since it has owners: %s', ','.join(snapshot.owners))
                     raise InvalidSnapshotParameterError("name")
                 else:
                     if print_output:
-                        print('Warning: Snapshot cannot be deleted since it has owners:'+','.join(snapshot.owners))
+                        logger.warning('Warning: Snapshot cannot be deleted since it has owners: %s', ','.join(snapshot.owners))
                     return
 
-            # Delete snapshot
             snapshot.delete(poll=True)
 
             if print_output:
-                print("Snapshot deleted successfully.")
+                logger.info("Snapshot deleted successfully.")
 
         except NetAppRestError as err :
             if print_output:
-                print("Error: ONTAP Rest API Error: ", err)
+                logger.error("Error: ONTAP Rest API Error: %s", err)
             raise APIConnectionError(err)
 
     else:
         raise ConnectionTypeError()
 
 
-def list_snapshots(volume_name: str, cluster_name: str = None, svm_name: str = None, print_output: bool = False) -> list:
-    # Retrieve config details from config file
+def list_snapshots(volume_name: str, cluster_name: Optional[str] = None, svm_name: Optional[str] = None, print_output: bool = False) -> List[Dict[str, Any]]:
     try:
         config = _retrieve_config(print_output=print_output)
     except InvalidConfigError:
         raise
     try:
         connectionType = config["connectionType"]
-    except:
+    except KeyError:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -249,53 +233,48 @@ def list_snapshots(volume_name: str, cluster_name: str = None, svm_name: str = N
         config["hostname"] = cluster_name
 
     if connectionType == "ONTAP":
-        # Instantiate connection to ONTAP cluster
         try:
             _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
         except InvalidConfigError:
             raise
 
-        # Retrieve svm from config file
         try:
             svm = config["svm"]
             if svm_name:
                 svm = svm_name
-        except:
+        except KeyError:
             if print_output:
                 _print_invalid_config_error()
             raise InvalidConfigError()
 
-        # Retrieve snapshots
         try:
-            # Retrieve volume
             volume = NetAppVolume.find(name=volume_name, svm=svm)
             if not volume:
                 if print_output:
-                    print("Error: Invalid volume name.")
+                    logger.error("Error: Invalid volume name.")
                 raise InvalidVolumeParameterError("name")
 
-            # Construct list of snapshots
             snapshotsList = list()
             for snapshot in NetAppSnapshot.get_collection(volume.uuid):
-                # Retrieve snapshot
                 snapshot.get()
-
-                # Construct dict of snapshot details
                 snapshotDict = {"Snapshot Name": snapshot.name, "Create Time": snapshot.create_time}
-
-                # Append dict to list of snapshots
                 snapshotsList.append(snapshotDict)
 
         except NetAppRestError as err:
             if print_output:
-                print("Error: ONTAP Rest API Error: ", err)
+                logger.error("Error: ONTAP Rest API Error: %s", err)
             raise APIConnectionError(err)
 
-        # Print list of snapshots
         if print_output:
-            # Convert snapshots array to Pandas DataFrame
-            snapshotsDF = pd.DataFrame.from_dict(snapshotsList, dtype="string")
-            print(tabulate(snapshotsDF, showindex=False, headers=snapshotsDF.columns))
+            try:
+                import pandas as pd
+                from tabulate import tabulate
+                snapshotsDF = pd.DataFrame.from_dict(snapshotsList, dtype="string")
+                logger.info("\n%s", tabulate(snapshotsDF, showindex=False, headers=snapshotsDF.columns))
+            except ImportError:
+                logger.info("Snapshots retrieved successfully")
+                for snap in snapshotsList:
+                    logger.info(snap)
 
         return snapshotsList
 
@@ -303,15 +282,14 @@ def list_snapshots(volume_name: str, cluster_name: str = None, svm_name: str = N
         raise ConnectionTypeError()
 
 
-def restore_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = None, svm_name : str = None, print_output: bool = False):
-    # Retrieve config details from config file
+def restore_snapshot(volume_name: str, snapshot_name: str, cluster_name: Optional[str] = None, svm_name: Optional[str] = None, print_output: bool = False) -> None:
     try:
         config = _retrieve_config(print_output=print_output)
     except InvalidConfigError:
         raise
     try:
         connectionType = config["connectionType"]
-    except:
+    except KeyError:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -320,55 +298,49 @@ def restore_snapshot(volume_name: str, snapshot_name: str, cluster_name: str = N
         config["hostname"] = cluster_name
 
     if connectionType == "ONTAP":
-        # Instantiate connection to ONTAP cluster
         try:
             _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
         except InvalidConfigError:
             raise
 
-        # Retrieve svm from config file
         try:
             svm = config["svm"]
             if svm_name:
                 svm = svm_name
-        except:
+        except KeyError:
             if print_output:
                 _print_invalid_config_error()
             raise InvalidConfigError()
 
         if print_output:
-            print("Restoring snapshot '" + snapshot_name + "'.")
+            logger.info("Restoring snapshot '%s'.", snapshot_name)
 
         try:
-            # Retrieve volume
             volume = NetAppVolume.find(name=volume_name, svm=svm)
             if not volume:
                 if print_output:
-                    print("Error: Invalid volume name.")
+                    logger.error("Error: Invalid volume name.")
                 raise InvalidVolumeParameterError("name")
 
-            # Retrieve snapshot
             snapshot = NetAppSnapshot.find(volume.uuid, name=snapshot_name)
             if not snapshot:
                 if print_output:
-                    print("Error: Invalid snapshot name.")
+                    logger.error("Error: Invalid snapshot name.")
                 raise InvalidSnapshotParameterError("name")
 
-            # Restore snapshot
             volume.patch(volume.uuid, **{"restore_to.snapshot.name": snapshot.name, "restore_to.snapshot.uuid": snapshot.uuid}, poll=True)
             if print_output:
-                print("Snapshot restored successfully.")
+                logger.info("Snapshot restored successfully.")
 
         except NetAppRestError as err:
             if print_output:
-                print("Error: ONTAP Rest API Error: ", err)
+                logger.error("Error: ONTAP Rest API Error: %s", err)
             raise APIConnectionError(err)
 
     else:
         raise ConnectionTypeError()
 
 
-# Deprecated functions for backward compatibility
 @deprecated
 def createSnapshot(volumeName: str, snapshotName: str = None, printOutput: bool = False):
     """Deprecated: Use create_snapshot() instead"""

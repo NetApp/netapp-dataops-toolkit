@@ -15,6 +15,7 @@ The NetApp DataOps Toolkit MCP Server for ONTAP is an open-source server compone
 - **List Snapshots**: Retrieve a list of all snapshots for a specific volume.
 - **Create SnapMirror Relationship**: Set up SnapMirror relationships for efficient data replication.
 - **List SnapMirror Relationships**: Retrieve a list of all SnapMirror relationships on the storage system.
+- **Create FlexCache Volume**: Create FlexCache volumes for efficient data access and caching.
 - **Create CIFS Share**: Create a new CIFS share on a specified SVM with optional ACLs and properties.
 - **List CIFS Shares**: Retrieve a list of all existing CIFS shares, with optional filtering by SVM and name pattern.
 - **Get CIFS Share**: Retrieve detailed information about a specific CIFS share.

@@ -1,26 +1,26 @@
-"""
-S3 operations for NetApp DataOps traditional environments.
-
-This module contains all S3-related operations including bucket and object
-upload/download functionality with multi-threading support.
-"""
+"""S3 operations for NetApp DataOps traditional environments."""
 
 import base64
 import json
 import os
 from concurrent.futures import ThreadPoolExecutor
+from typing import Tuple, Optional
 
 import boto3
 from botocore.client import Config as BotoConfig
 
+from netapp_dataops.logging_utils import setup_logger
 from ..exceptions import (
     InvalidConfigError, 
     APIConnectionError
 )
 from ..core import (
     _retrieve_config, 
-    _print_invalid_config_error
+    _print_invalid_config_error,
+    deprecated
 )
+
+logger = setup_logger(__name__)
 
 
 def _instantiate_s3_session(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s3VerifySSLCert: bool, s3CACertBundle: str, print_output: bool = False):
@@ -39,8 +39,7 @@ def _instantiate_s3_session(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessK
     return s3
 
 
-def _retrieve_s3_access_details(print_output: bool = False) -> tuple[str, str, str, bool, str]:
-    # Retrieve refresh token from config file
+def _retrieve_s3_access_details(print_output: bool = False) -> Tuple[str, str, str, bool, str]:
     try:
         config = _retrieve_config(print_output=print_output)
     except InvalidConfigError:
@@ -51,12 +50,11 @@ def _retrieve_s3_access_details(print_output: bool = False) -> tuple[str, str, s
         s3SecretAccessKeyBase64 = config["s3SecretAccessKey"]
         s3VerifySSLCert = config["s3VerifySSLCert"]
         s3CACertBundle = config["s3CACertBundle"]
-    except:
+    except KeyError:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
 
-    # Decode base64-encoded refresh token
     s3SecretAccessKeyBase64Bytes = s3SecretAccessKeyBase64.encode("ascii")
     s3SecretAccessKeyBytes = base64.b64decode(s3SecretAccessKeyBase64Bytes)
     s3SecretAccessKey = s3SecretAccessKeyBytes.decode("ascii")
@@ -73,12 +71,11 @@ def _download_from_s3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: st
                                   s3CACertBundle=s3CACertBundle, print_output=print_output)
     except Exception as err:
         if print_output:
-            print("Error: S3 API error: ", err)
+            logger.error("Error: S3 API error: %s", err)
         raise APIConnectionError(err)
 
     if print_output:
-        print(
-            "Downloading object '" + s3ObjectKey + "' from bucket '" + s3Bucket + "' and saving as '" + localFile + "'.")
+        logger.info("Downloading object '%s' from bucket '%s' and saving as '%s'.", s3ObjectKey, s3Bucket, localFile)
 
     # Create directories that don't exist
     if localFile.find(os.sep) != -1:
@@ -87,12 +84,11 @@ def _download_from_s3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: st
         if not os.path.exists(dirpath):
             os.makedirs(dirpath)
 
-    # Download the file
     try:
         s3.Object(s3Bucket, s3ObjectKey).download_file(localFile)
     except Exception as err:
         if print_output:
-            print("Error: S3 API error: ", err)
+            logger.error("Error: S3 API error: %s", err)
         raise APIConnectionError(err)
 
 
@@ -105,12 +101,11 @@ def _upload_to_s3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s
                                   s3CACertBundle=s3CACertBundle, print_output=print_output)
     except Exception as err:
         if print_output:
-            print("Error: S3 API error: ", err)
+            logger.error("Error: S3 API error: %s", err)
         raise APIConnectionError(err)
 
-    # Upload file
     if print_output:
-        print("Uploading file '" + localFile + "' to bucket '" + s3Bucket + "' and applying key '" + s3ObjectKey + "'.")
+        logger.info("Uploading file '%s' to bucket '%s' and applying key '%s'.", localFile, s3Bucket, s3ObjectKey)
 
     try:
         if s3ExtraArgs:
@@ -119,7 +114,7 @@ def _upload_to_s3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s
             s3.Object(s3Bucket, s3ObjectKey).upload_file(localFile)
     except Exception as err:
         if print_output:
-            print("Error: S3 API error: ", err)
+            logger.error("Error: S3 API error: %s", err)
         raise APIConnectionError(err)
 
 
@@ -150,10 +145,10 @@ def pull_bucket_from_s3(s3_bucket: str, local_directory: str, s3_object_key_pref
 
         except Exception as err:
             if print_output:
-                print("Error: S3 API error: ", err)
+                logger.error("Error: S3 API error: %s", err)
             raise APIConnectionError(err)
 
-    print("Download complete.")
+    logger.info("Download complete.")
 
 
 def pull_object_from_s3(s3_bucket: str, s3_object_key: str, local_file: str = None, print_output: bool = False):
@@ -173,7 +168,7 @@ def pull_object_from_s3(s3_bucket: str, s3_object_key: str, local_file: str = No
     except APIConnectionError:
         raise
 
-    print("Download complete.")
+    logger.info("Download complete.")
 
 
 def push_directory_to_s3(s3_bucket: str, local_directory: str, s3_object_key_prefix: str = "",
@@ -216,7 +211,7 @@ def push_directory_to_s3(s3_bucket: str, local_directory: str, s3_object_key_pre
                 except APIConnectionError:
                     raise
 
-    print("Upload complete.")
+    logger.info("Upload complete.")
 
 
 def push_file_to_s3(s3_bucket: str, local_file: str, s3_object_key: str = None, s3_extra_args: str = None, print_output: bool = False):
@@ -236,21 +231,24 @@ def push_file_to_s3(s3_bucket: str, local_file: str, s3_object_key: str = None, 
     except APIConnectionError:
         raise
 
-    print("Upload complete.")
+    logger.info("Upload complete.")
 
 
-# Deprecated functions for backward compatibility
+@deprecated
 def pullBucketFromS3(s3Bucket: str, localDirectory: str, s3ObjectKeyPrefix: str = "", printOutput: bool = False):
     pull_bucket_from_s3(s3_bucket=s3Bucket, local_directory=localDirectory, s3_object_key_prefix=s3ObjectKeyPrefix, print_output=printOutput)
 
 
+@deprecated
 def pullObjectFromS3(s3Bucket: str, s3ObjectKey: str, localFile: str = None, printOutput: bool = False):
     pull_object_from_s3(s3_bucket=s3Bucket, s3_object_key=s3ObjectKey, local_file=localFile, print_output=printOutput)
 
 
+@deprecated
 def pushDirectoryToS3(s3Bucket: str, localDirectory: str, s3ObjectKeyPrefix: str = "", s3ExtraArgs: str = None, printOutput: bool = False):
     push_directory_to_s3(s3_bucket=s3Bucket, local_directory=localDirectory, s3_object_key_prefix=s3ObjectKeyPrefix, s3_extra_args=s3ExtraArgs, print_output=printOutput)
 
 
+@deprecated
 def pushFileToS3(s3Bucket: str, localFile: str, s3ObjectKey: str = None, s3ExtraArgs: str = None, printOutput: bool = False):
     push_file_to_s3(s3_bucket=s3Bucket, s3_object_key=s3ObjectKey, local_file=localFile, s3_extra_args=s3ExtraArgs, print_output=printOutput)

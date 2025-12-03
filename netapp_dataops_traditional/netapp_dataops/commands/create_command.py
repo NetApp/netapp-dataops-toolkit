@@ -1,10 +1,9 @@
-"""
-Create command module for NetApp DataOps Toolkit CLI.
-"""
+"""Create command module for NetApp DataOps Toolkit CLI."""
 
 import getopt
 import re
-from .base_command import BaseCommand
+import sys
+from .base_command import BaseCommand, logger
 import json
 from netapp_dataops.help_text import (
     HELP_TEXT_CREATE_SNAPSHOT,
@@ -31,10 +30,8 @@ class CreateCommand(BaseCommand):
     
     def execute(self) -> None:
         """Execute create command for various targets."""
-        # Get desired target from command line args
         target = self.get_target()
         
-        # Route to appropriate handler based on target
         if target in ("snapshot", "snap"):
             self._create_snapshot()
         elif target in ("volume", "vol"):
@@ -48,7 +45,6 @@ class CreateCommand(BaseCommand):
     
     def _create_snapshot(self) -> None:
         """Handle snapshot creation."""
-        # Initialize variables
         volume_name = None
         snapshot_name = None
         cluster_name = None
@@ -57,21 +53,19 @@ class CreateCommand(BaseCommand):
         retention_days = False
         snapmirror_label = None
         
-        # Get command line options
         try:
-            opts, args = getopt.getopt(
+            opts, _ = getopt.getopt(
                 self.args[3:], 
                 "hn:v:s:r:u:l:", 
                 ["cluster-name=", "help", "svm=", "name=", "volume=", "retention=", "snapmirror-label="]
             )
         except Exception as err:
-            print(err)
+            logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_CREATE_SNAPSHOT, invalid_opt_arg=True)
         
-        # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print(HELP_TEXT_CREATE_SNAPSHOT)
+                logger.info(HELP_TEXT_CREATE_SNAPSHOT)
                 return
             elif opt in ("-n", "--name"):
                 snapshot_name = arg
@@ -86,7 +80,6 @@ class CreateCommand(BaseCommand):
             elif opt in ("-l", "--snapmirror-label"):
                 snapmirror_label = arg
         
-        # Check for required options
         if not volume_name:
             self.handle_invalid_command(help_text=HELP_TEXT_CREATE_SNAPSHOT, invalid_opt_arg=True)
         
@@ -99,7 +92,6 @@ class CreateCommand(BaseCommand):
                     retention_count = match_obj.group(1)
                     retention_days = True
         
-        # Create snapshot
         try:
             create_snapshot(
                 volume_name=volume_name, 
@@ -112,12 +104,10 @@ class CreateCommand(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
-            import sys
             sys.exit(1)
     
     def _create_volume(self) -> None:
         """Handle volume creation."""
-        # Initialize variables
         cluster_name = None
         svm_name = None
         volume_name = None
@@ -137,9 +127,8 @@ class CreateCommand(BaseCommand):
         tiering_policy = None
         vol_dp = False
         
-        # Get command line options
         try:
-            opts, args = getopt.getopt(
+            opts, _ = getopt.getopt(
                 self.args[3:], 
                 "l:hv:t:n:s:rt:p:u:g:e:d:m:a:j:xu:yw:", 
                 ["cluster-name=", "help", "svm=", "name=", "size=", "guarantee-space", 
@@ -148,13 +137,12 @@ class CreateCommand(BaseCommand):
                  "readonly", "tiering-policy=", "dp", "snaplock-type="]
             )
         except Exception as err:
-            print(err)
+            logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_CREATE_VOLUME, invalid_opt_arg=True)
         
-        # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print(HELP_TEXT_CREATE_VOLUME)
+                logger.info(HELP_TEXT_CREATE_VOLUME)
                 return
             elif opt in ("-v", "--svm"):
                 svm_name = arg
@@ -193,18 +181,16 @@ class CreateCommand(BaseCommand):
             elif opt in ("-w", "--snaplock-type"):
                 snaplock_type = arg
         
-        # Check for required options
         if not volume_name or not volume_size:
             self.handle_invalid_command(help_text=HELP_TEXT_CREATE_VOLUME, invalid_opt_arg=True)
         
         if (unix_uid and not unix_gid) or (unix_gid and not unix_uid):
-            print("Error: if either one of -u/--uid or -g/--gid is specified, then both must be specified.")
+            logger.error("Error: if either one of -u/--uid or -g/--gid is specified, then both must be specified.")
             self.handle_invalid_command(help_text=HELP_TEXT_CREATE_VOLUME, invalid_opt_arg=True)
         
         if vol_dp and (junction or mountpoint or snapshot_policy or export_policy):
             self.handle_invalid_command(help_text=HELP_TEXT_CREATE_VOLUME, invalid_opt_arg=True)
         
-        # Create volume
         try:
             create_volume(
                 svm_name=svm_name, 
@@ -228,12 +214,10 @@ class CreateCommand(BaseCommand):
                 snaplock_type=snaplock_type
             )
         except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
-            import sys
             sys.exit(1)
     
     def _create_snapmirror_relationship(self) -> None:
         """Handle SnapMirror relationship creation."""
-        # Initialize variables
         cluster_name = None
         source_svm = None
         target_svm = None
@@ -243,22 +227,20 @@ class CreateCommand(BaseCommand):
         schedule = "hourly"
         action = None
         
-        # Get command line options
         try:
-            opts, args = getopt.getopt(
+            opts, _ = getopt.getopt(
                 self.args[3:], 
                 "hn:t:s:v:u:y:c:p:a:h", 
                 ["cluster-name=", "help", "target-vol=", "target-svm=", "source-svm=", 
                  "source-vol=", "schedule=", "policy=", "action="]
             )
         except Exception as err:
-            print(err)
+            logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_CREATE_SNAPMIRROR_RELATIONSHIP, invalid_opt_arg=True)
         
-        # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print(HELP_TEXT_CREATE_SNAPMIRROR_RELATIONSHIP)
+                logger.info(HELP_TEXT_CREATE_SNAPMIRROR_RELATIONSHIP)
                 return
             elif opt in ("-t", "--target-svm"):
                 target_svm = arg
@@ -277,14 +259,12 @@ class CreateCommand(BaseCommand):
             elif opt in ("-a", "--action"):
                 action = arg
         
-        # Check for required options
         if not target_vol or not source_svm or not source_vol:
             self.handle_invalid_command(help_text=HELP_TEXT_CREATE_SNAPMIRROR_RELATIONSHIP, invalid_opt_arg=True)
         
         if action not in [None, 'resync', 'initialize']:
             self.handle_invalid_command(help_text=HELP_TEXT_CREATE_SNAPMIRROR_RELATIONSHIP, invalid_opt_arg=True)
         
-        # Create snapmirror
         try:
             create_snap_mirror_relationship(
                 source_svm=source_svm, 

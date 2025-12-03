@@ -17,7 +17,8 @@ from netapp_dataops.k8s import (
     clone_volume,
     list_volumes,
     create_volume_snapshot,
-    list_volume_snapshots
+    list_volume_snapshots,
+    create_flexcache
 )
 
 # Creates the FastMCP server instance
@@ -451,6 +452,62 @@ def list_volume_snapshots_tool(
         return snapshots_list
     except Exception as e:
         print(f"Error listing volume snapshots: {e}")
+        raise
+
+@mcp.tool(name="CreateFlexCache")
+def create_flexcache_tool(
+    source_vol: str,
+    source_svm: str,
+    flexcache_vol: str,
+    flexcache_size: str,
+    backend_name: str,
+    junction: Optional[str] = None,
+    namespace: str = "default",
+    trident_namespace: str = "trident",
+    print_output: bool = False
+) -> str:
+    """
+    Create a FlexCache volume in ONTAP and a corresponding PersistentVolume (PV) and PersistentVolumeClaim (PVC) in Kubernetes.
+
+    This function creates a FlexCache volume in ONTAP and then creates a PV and PVC representing the FlexCache in a specified Kubernetes namespace.
+
+    Parameters:
+    - source_vol (str): The name of the source volume in the source SVM that will be cached by the FlexCache volume.
+    - source_svm (str): The name of the source Storage Virtual Machine (SVM) that contains the origin volume to be cached.
+    - flexcache_vol (str): The name of the FlexCache volume to be created.
+    - flexcache_size (str): The size of the FlexCache volume to be created. The size must be specified in a format such as '1024Mi', '100Gi', '10Ti', etc. Note: The size must be at least 50Gi.
+    - backend_name (str): The name of the tridentbackendconfig.
+    - junction (str, optional): The junction path for the FlexCache volume. Default is None.
+    - namespace (str, optional): Kubernetes namespace to create the new PersistentVolumeClaim (PVC) in. Default is "default".
+    - trident_namespace (str, optional): Kubernetes namespace where Trident is installed. Default is "trident".
+    - print_output (bool, optional): Whether to print output messages. Default is False.
+
+    Returns:
+    - str: A message indicating the successful creation of the FlexCache volume and the associated PVC.
+
+    Raises:
+    - InvalidConfigError: If the Kubernetes configuration is invalid.
+    - APIConnectionError: If there is an error connecting to the Kubernetes API.
+    - InvalidVolumeParameterError: If the volume parameters are invalid.
+    - NetAppRestError: If there is an error with the NetApp REST API.
+    - ConnectionTypeError: If the connection type is invalid.
+    """
+    try:
+        result = create_flexcache(
+            source_vol=source_vol,
+            source_svm=source_svm,
+            flexcache_vol=flexcache_vol,
+            flexcache_size=flexcache_size,
+            backend_name=backend_name,
+            junction=junction,
+            namespace=namespace,
+            trident_namespace=trident_namespace,
+            print_output=print_output
+        )
+
+        return f"FlexCache volume '{result['ontap_flexcache']}' and PVC '{result['k8s_pvc']}' created successfully."
+    except Exception as e:
+        print(f"Error creating FlexCache volume: {e}")
         raise
 
 def main():

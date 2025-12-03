@@ -1,8 +1,6 @@
-"""
-Version command module for NetApp DataOps Toolkit CLI.
-"""
+"""Version command module for NetApp DataOps Toolkit CLI."""
 
-from .base_command import BaseCommand
+from .base_command import BaseCommand, logger
 from netapp_dataops import traditional
 
 
@@ -11,5 +9,5 @@ class VersionCommand(BaseCommand):
     
     def execute(self) -> None:
         """Display the toolkit version."""
-        print("NetApp DataOps Toolkit for Traditional Environments - version "
+        logger.info("NetApp DataOps Toolkit for Traditional Environments - version "
               + traditional.__version__)

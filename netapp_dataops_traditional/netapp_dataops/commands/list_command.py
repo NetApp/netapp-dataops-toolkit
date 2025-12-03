@@ -1,9 +1,8 @@
-"""
-List command module for NetApp DataOps Toolkit CLI.
-"""
+"""List command module for NetApp DataOps Toolkit CLI."""
 
 import getopt
-from .base_command import BaseCommand
+import sys
+from .base_command import BaseCommand, logger
 from netapp_dataops.help_text import (
     HELP_TEXT_LIST_CLOUD_SYNC_RELATIONSHIPS,
     HELP_TEXT_LIST_SNAPMIRROR_RELATIONSHIPS,
@@ -29,10 +28,8 @@ class ListCommand(BaseCommand):
     
     def execute(self) -> None:
         """Execute list command for various targets."""
-        # Get desired target from command line args
         target = self.get_target()
         
-        # Route to appropriate handler based on target
         if target in ("cloud-sync-relationship", "cloud-sync", "cloud-sync-relationships", "cloud-syncs"):
             self._list_cloud_sync_relationships()
         elif target in ("snapmirror-relationship", "snapmirror", "snapmirror-relationships", "snapmirrors", "sm"):
@@ -48,19 +45,16 @@ class ListCommand(BaseCommand):
     
     def _list_cloud_sync_relationships(self) -> None:
         """Handle cloud sync relationships listing."""
-        # Check command line options
         if len(self.args) > 3:
             if self.args[3] in ("-h", "--help"):
-                print(HELP_TEXT_LIST_CLOUD_SYNC_RELATIONSHIPS)
+                logger.info(HELP_TEXT_LIST_CLOUD_SYNC_RELATIONSHIPS)
                 return
             else:
                 self.handle_invalid_command(HELP_TEXT_LIST_CLOUD_SYNC_RELATIONSHIPS, invalid_opt_arg=True)
         
-        # List cloud sync relationships
         try:
             list_cloud_sync_relationships(print_output=True)
         except (InvalidConfigError, APIConnectionError):
-            import sys
             sys.exit(1)
     
     def _list_snapmirror_relationships(self) -> None:
@@ -68,32 +62,28 @@ class ListCommand(BaseCommand):
         svm_name = None
         cluster_name = None
         
-        # Get command line options
         try:
-            opts, args = getopt.getopt(
+            opts, _ = getopt.getopt(
                 self.args[3:], 
                 "hv:u:", 
                 ["cluster-name=", "help", "svm="]
             )
         except Exception as err:
-            print(err)
+            logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_LIST_SNAPMIRROR_RELATIONSHIPS, invalid_opt_arg=True)
         
-        # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print(HELP_TEXT_LIST_SNAPMIRROR_RELATIONSHIPS)
+                logger.info(HELP_TEXT_LIST_SNAPMIRROR_RELATIONSHIPS)
                 return
             elif opt in ("-v", "--svm"):
                 svm_name = arg
             elif opt in ("-u", "--cluster-name"):
                 cluster_name = arg
         
-        # List snapmirror relationships
         try:
             list_snap_mirror_relationships(print_output=True, cluster_name=cluster_name)
         except (InvalidConfigError, APIConnectionError):
-            import sys
             sys.exit(1)
     
     def _list_snapshots(self) -> None:
@@ -102,21 +92,19 @@ class ListCommand(BaseCommand):
         cluster_name = None
         svm_name = None
         
-        # Get command line options
         try:
-            opts, args = getopt.getopt(
+            opts, _ = getopt.getopt(
                 self.args[3:], 
                 "hv:s:u:", 
                 ["cluster-name=", "help", "volume=", "svm="]
             )
         except Exception as err:
-            print(err)
+            logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_LIST_SNAPSHOTS, invalid_opt_arg=True)
         
-        # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print(HELP_TEXT_LIST_SNAPSHOTS)
+                logger.info(HELP_TEXT_LIST_SNAPSHOTS)
                 return
             elif opt in ("-v", "--volume"):
                 volume_name = arg
@@ -125,11 +113,9 @@ class ListCommand(BaseCommand):
             elif opt in ("-u", "--cluster-name"):
                 cluster_name = arg
         
-        # Check for required options
         if not volume_name:
             self.handle_invalid_command(help_text=HELP_TEXT_LIST_SNAPSHOTS, invalid_opt_arg=True)
         
-        # List snapshots
         try:
             list_snapshots(
                 volume_name=volume_name, 
@@ -138,7 +124,6 @@ class ListCommand(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
-            import sys
             sys.exit(1)
     
     def _list_volumes(self) -> None:
@@ -147,21 +132,19 @@ class ListCommand(BaseCommand):
         svm_name = None
         cluster_name = None
         
-        # Get command line options
         try:
-            opts, args = getopt.getopt(
+            opts, _ = getopt.getopt(
                 self.args[3:], 
                 "hsv:u:", 
                 ["cluster-name=", "help", "include-space-usage-details", "svm="]
             )
         except Exception as err:
-            print(err)
+            logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_LIST_VOLUMES, invalid_opt_arg=True)
         
-        # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print(HELP_TEXT_LIST_VOLUMES)
+                logger.info(HELP_TEXT_LIST_VOLUMES)
                 return
             elif opt in ("-v", "--svm"):
                 svm_name = arg
@@ -170,7 +153,6 @@ class ListCommand(BaseCommand):
             elif opt in ("-u", "--cluster-name"):
                 cluster_name = arg
         
-        # List volumes
         try:
             list_volumes(
                 check_local_mounts=True, 
@@ -180,7 +162,6 @@ class ListCommand(BaseCommand):
                 cluster_name=cluster_name
             )
         except (InvalidConfigError, APIConnectionError):
-            import sys
             sys.exit(1)
 
     def _list_cifs_shares(self) -> None:

@@ -1,9 +1,8 @@
-"""
-Restore command module for NetApp DataOps Toolkit CLI.
-"""
+"""Restore command module for NetApp DataOps Toolkit CLI."""
 
 import getopt
-from .base_command import BaseCommand
+import sys
+from .base_command import BaseCommand, logger
 from netapp_dataops.help_text import HELP_TEXT_RESTORE_SNAPSHOT
 from netapp_dataops.traditional import (
     restore_snapshot,
@@ -19,7 +18,6 @@ class RestoreCommand(BaseCommand):
     
     def execute(self) -> None:
         """Execute restore command for snapshots."""
-        # Get desired target from command line args
         target = self.get_target()
         
         if target in ("snapshot", "snap"):
@@ -35,21 +33,19 @@ class RestoreCommand(BaseCommand):
         cluster_name = None
         force = False
         
-        # Get command line options
         try:
-            opts, args = getopt.getopt(
+            opts, _ = getopt.getopt(
                 self.args[3:], 
                 "hs:n:v:fu:", 
                 ["cluster-name=", "help", "svm=", "name=", "volume=", "force"]
             )
         except Exception as err:
-            print(err)
+            logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_RESTORE_SNAPSHOT, invalid_opt_arg=True)
         
-        # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print(HELP_TEXT_RESTORE_SNAPSHOT)
+                logger.info(HELP_TEXT_RESTORE_SNAPSHOT)
                 return
             elif opt in ("-n", "--name"):
                 snapshot_name = arg
@@ -62,24 +58,20 @@ class RestoreCommand(BaseCommand):
             elif opt in ("-f", "--force"):
                 force = True
         
-        # Check for required options
         if not volume_name or not snapshot_name:
             self.handle_invalid_command(help_text=HELP_TEXT_RESTORE_SNAPSHOT, invalid_opt_arg=True)
         
-        # Confirm restore operation
         if not force:
-            print("Warning: When you restore a snapshot, all subsequent snapshots are deleted.")
+            logger.info("Warning: When you restore a snapshot, all subsequent snapshots are deleted.")
             while True:
                 proceed = input("Are you sure that you want to proceed? (yes/no): ")
                 if proceed in ("yes", "Yes", "YES"):
                     break
                 elif proceed in ("no", "No", "NO"):
-                    import sys
                     sys.exit(0)
                 else:
-                    print("Invalid value. Must enter 'yes' or 'no'.")
+                    logger.info("Invalid value. Must enter 'yes' or 'no'.")
         
-        # Restore snapshot
         try:
             restore_snapshot(
                 volume_name=volume_name, 
@@ -89,5 +81,4 @@ class RestoreCommand(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError, InvalidSnapshotParameterError, InvalidVolumeParameterError):
-            import sys
             sys.exit(1)
