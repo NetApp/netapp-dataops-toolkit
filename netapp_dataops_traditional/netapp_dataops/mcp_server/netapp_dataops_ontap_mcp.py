@@ -3,7 +3,7 @@
 import logging
 import sys
 import asyncio
-from typing import Optional
+from typing import Dict, List, Optional
 from fastmcp import FastMCP
 from netapp_dataops.mcp_server.config import load_credentials
 from netapp_dataops.traditional import (
@@ -14,7 +14,10 @@ from netapp_dataops.traditional import (
     create_snapshot, 
     list_snapshots, 
     create_snap_mirror_relationship, 
-    list_snap_mirror_relationships
+    list_snap_mirror_relationships,
+    create_cifs_share,
+    list_cifs_shares,
+    get_cifs_share
 )
 
 mcp = FastMCP("NetApp DataOps Traditional Toolkit MCP")
@@ -419,6 +422,134 @@ async def list_snap_mirror_relationships_tool(
         print(f"Error listing snapmirror relationships: {e}")
         raise
 
+
+@mcp.tool(name="Create CIFS Share")
+async def create_cifs_share_tool(
+    name : str = None,
+    path : str = None,
+    svm : str = None,
+    comment: Optional[str] = None,
+    acls: Optional[List[Dict]] = None,
+    properties: Optional[List[str]] = None,
+    cluster_name: Optional[str] = None,
+    print_output: bool = False
+) -> None:
+    """
+    Use this tool to create a CIFS share on a specified SVM.
+
+    Args:
+        name (str): Name of the CIFS share (required).
+        path (str): Path to the volume or directory to be shared (required).
+        svm (str): Name of the SVM where the share will be created (required).
+        comment (str): Optional comment for the CIFS share. Defaults to None.
+        acls (List[Dict]): Optional list of ACLs to set on the CIFS share. Each ACL should be a dictionary with appropriate keys. Defaults to None.
+        properties (List[str]): Optional list of additional properties to set on the CIFS share. Defaults to None.
+        cluster_name (str): Non-default cluster name. Defaults to None.
+        print_output (bool): Denotes whether or not to print messages. Defaults to False.
+
+    Returns:
+        None
+    """
+    try:
+        
+        # Parse properties if provided
+        properties_list = None
+        if properties:
+            properties_list = [prop.strip() for prop in properties.split(',')]
+        
+        # Parse ACLs if provided
+        acls_list = None
+        if acls:
+            import json
+            acls_list = json.loads(acls)
+        
+        # Create the CIFS share
+        create_cifs_share(
+            name=name,
+            path=path,
+            svm=svm,
+            comment=comment,
+            acls=acls_list,
+            properties=properties_list,
+            cluster_name=cluster_name,
+            print_output=print_output
+        )
+
+    except Exception as e:
+        print(f"Error creating CIFS share: {e}")
+        raise
+
+
+@mcp.tool(name="List CIFS Shares")
+async def list_cifs_shares_tool(
+    svm : Optional[str] = None,
+    name_pattern : Optional[str] = None,
+    cluster_name: Optional[str] = None,
+    print_output: bool = False
+) -> list:
+    """
+    Use this tool to retrieve a list of all existing CIFS shares.
+
+    Args:
+        svm (str, optional): Name of the SVM to filter shares. Defaults to None.
+        name_pattern (str, optional): Pattern to filter share names. Defaults to None.
+        cluster_name (str, optional): Non default hosting cluster name. Defaults to None.
+        print_output (bool): Whether to print output messages. Defaults to False.
+
+    Returns:
+        A list of all existing CIFS share objects.
+    """
+    try:
+
+        shares = list_cifs_shares(
+            svm=svm,
+            name_pattern=name_pattern,
+            cluster_name=cluster_name,
+            print_output=print_output
+        )
+
+        if shares is None:
+            return []
+        
+        return shares
+    
+    except Exception as e:
+        print(f"Error listing CIFS shares: {e}")
+        raise
+
+
+@mcp.tool(name="Get CIFS Share")
+async def get_cifs_share_tool(
+    name : str = None,
+    svm : str = None,
+    cluster_name: Optional[str] = None,
+    print_output: bool = False
+) -> dict:
+    """
+    Use this tool to retrieve details of a specific CIFS share.
+
+    Args:
+        name (str): Name of the CIFS share (required).
+        svm (str): Name of the SVM where the share is located (required).
+        cluster_name (str): Non-default cluster name. Defaults to None.
+        print_output (bool): Denotes whether or not to print messages. Defaults to False.
+
+    Returns:
+        A dictionary containing details of the specified CIFS share.
+    """
+    try:
+
+        share_details = get_cifs_share(
+            name=name,
+            svm=svm,
+            cluster_name=cluster_name,
+            print_output=print_output
+        )
+        
+        return share_details
+    except Exception as e:
+        print(f"Error getting CIFS share: {e}")
+        raise
 
 
 if __name__ == "__main__":
