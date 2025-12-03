@@ -500,7 +500,21 @@ async def list_cifs_shares_tool(
         if shares is None:
             return []
         
-        return shares
+        # Convert NetAppCifsShare objects to dictionaries for JSON serialization
+        serializable_shares = []
+        for share in shares:
+            if hasattr(share, 'to_dict'):
+                serializable_shares.append(share.to_dict())
+            else:
+                # Fallback: extract key attributes manually
+                serializable_shares.append({
+                    'name': getattr(share, 'name', None),
+                    'path': getattr(share, 'path', None),
+                    'svm': getattr(share, 'svm', {}).get('name') if hasattr(getattr(share, 'svm', {}), 'get') else None,
+                    'comment': getattr(share, 'comment', None),
+                })
+        
+        return serializable_shares
     
     except Exception as e:
         print(f"Error listing CIFS shares: {e}")
