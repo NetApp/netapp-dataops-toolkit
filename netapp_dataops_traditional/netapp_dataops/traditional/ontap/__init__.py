@@ -27,6 +27,12 @@ from .flexcache_operations import (
     create_flexcache
 )
 
+from ..protocols.cifs_share_operations import (
+    create_cifs_share,
+    list_cifs_shares,
+    get_cifs_share
+)
+
 __all__ = [
     # Volume operations
     'create_volume',
@@ -47,4 +53,7 @@ __all__ = [
     # FlexCache operations
     'prepopulate_flex_cache',
     'create_flexcache',
+    'create_cifs_share',
+    'list_cifs_shares',
+    'get_cifs_share'
 ]
