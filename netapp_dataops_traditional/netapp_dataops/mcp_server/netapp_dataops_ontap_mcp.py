@@ -429,8 +429,8 @@ async def create_cifs_share_tool(
     path : str,
     svm : str,
     comment: Optional[str] = None,
-    acls: Optional[List[Any]] = None,
-    properties: Optional[List[str]] = None,
+    acls: List[Any] = [],
+    properties: List[str] = [],
     cluster_name: Optional[str] = None,
     print_output: bool = False
 ) -> None:
