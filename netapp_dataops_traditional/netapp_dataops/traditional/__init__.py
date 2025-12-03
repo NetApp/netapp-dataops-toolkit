@@ -46,6 +46,12 @@ from .data_movement.cloud_sync_operations import (
     sync_cloud_sync_relationship
 )
 
+from .protocols.cifs_share_operations import (
+    create_cifs_share,
+    list_cifs_shares,
+    get_cifs_share
+)
+
 from .data_movement.s3_operations import (
     pull_bucket_from_s3,
     pull_object_from_s3,
@@ -88,6 +94,9 @@ __all__ = [
     'push_directory_to_s3',
     'push_file_to_s3',
     'prepopulate_flex_cache',
+    'create_cifs_share',
+    'list_cifs_shares',
+    'get_cifs_share'
 ]
 
 _lazy_modules = {}
