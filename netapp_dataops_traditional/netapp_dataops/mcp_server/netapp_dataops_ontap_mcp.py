@@ -549,7 +549,21 @@ async def get_cifs_share_tool(
             print_output=print_output
         )
         
-        return share_details
+        if share_details is None:
+            return {}
+        
+        # Convert to dictionary if it's a NetApp API object
+        if hasattr(share_details, 'to_dict'):
+            return share_details.to_dict()
+        else:
+            # Fallback: extract key attributes manually
+            return {
+                'name': getattr(share_details, 'name', None),
+                'path': getattr(share_details, 'path', None),
+                'svm': getattr(share_details, 'svm', {}).get('name') if hasattr(getattr(share_details, 'svm', {}), 'get') else None,
+                'comment': getattr(share_details, 'comment', None),
+            }
+        
     except Exception as e:
         print(f"Error getting CIFS share: {e}")
         raise
