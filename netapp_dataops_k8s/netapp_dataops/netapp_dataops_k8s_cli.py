@@ -1161,6 +1161,54 @@ if __name__ == '__main__':
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
+        elif target == "flexcache":
+            namespace = "default"
+            junction = None
+            sourceSvm = None
+            sourceVol = None
+            flexCacheVol = None
+            flexCacheSize = None
+            backendName = None
+            tridentNamespace = "trident"
+
+            # Get command line options
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hn:f:z:v:s:b:n:c:t:", ["help", "flexcache-vol=", "flexcache-size=", "source-vol=", "source-svm=", "backend-name=", "namespace=", "junction=", "trident-namespace="])
+            except getopt.GetoptError:
+                handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    print(helpTextCreateFlexCache)
+                    sys.exit(0)
+                elif opt in ("-f", "--flexcache-vol"):
+                    flexCacheVol = arg
+                elif opt in ("-s", "--source-svm"):
+                    sourceSvm = arg
+                elif opt in ("-v", "--source-vol"):
+                    sourceVol = arg
+                elif opt in ("-z", "--flexcache-size"):
+                    flexCacheSize = arg
+                elif opt in ("-b", "--backend-name"):
+                    backendName = arg
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+                elif opt in ("-c", "--junction"):
+                    junction = arg
+                elif opt in ("-t", "--trident-namespace"):
+                    tridentNamespace = arg
+
+            # Check for required options
+            if not flexCacheVol or not sourceVol or not sourceSvm or not flexCacheSize or not backendName:
+                handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
+
+            # Create FlexCache volume
+            try:
+                create_flexcache(flexcache_vol=flexCacheVol, flexcache_size=flexCacheSize, source_vol=sourceVol, source_svm=sourceSvm, backend_name=backendName, namespace=namespace, junction=junction, trident_namespace=tridentNamespace, print_output=True)
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+        
         else:
             handleInvalidCommand()
 
