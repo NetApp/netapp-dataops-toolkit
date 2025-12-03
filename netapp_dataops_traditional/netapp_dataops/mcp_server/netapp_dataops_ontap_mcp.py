@@ -451,6 +451,10 @@ async def create_cifs_share_tool(
         None
     """
     try:
+
+        # Handle None values - convert empty lists/None to None explicitly
+        acls_list = acls if acls else None
+        properties_list = properties if properties else None
         
         # Create the CIFS share
         create_cifs_share(
@@ -458,8 +462,8 @@ async def create_cifs_share_tool(
             path=path,
             svm=svm,
             comment=comment,
-            acls=acls,
-            properties=properties,
+            acls=acls_list,
+            properties=properties_list,
             cluster_name=cluster_name,
             print_output=print_output
         )
