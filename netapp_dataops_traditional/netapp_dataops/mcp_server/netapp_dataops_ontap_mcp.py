@@ -425,9 +425,9 @@ async def list_snap_mirror_relationships_tool(
 
 @mcp.tool(name="Create CIFS Share")
 async def create_cifs_share_tool(
-    name : str = None,
-    path : str = None,
-    svm : str = None,
+    name : str,
+    path : str,
+    svm : str,
     comment: Optional[str] = None,
     acls: Optional[List[Dict]] = None,
     properties: Optional[List[str]] = None,
@@ -520,8 +520,8 @@ async def list_cifs_shares_tool(
 
 @mcp.tool(name="Get CIFS Share")
 async def get_cifs_share_tool(
-    name : str = None,
-    svm : str = None,
+    name : str,
+    svm : str,
     cluster_name: Optional[str] = None,
     print_output: bool = False
 ) -> dict:
