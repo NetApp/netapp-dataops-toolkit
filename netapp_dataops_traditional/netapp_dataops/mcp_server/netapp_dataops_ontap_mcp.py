@@ -3,7 +3,7 @@
 import logging
 import sys
 import asyncio
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from fastmcp import FastMCP
 from netapp_dataops.mcp_server.config import load_credentials
 from netapp_dataops.traditional import (
@@ -429,7 +429,7 @@ async def create_cifs_share_tool(
     path : str,
     svm : str,
     comment: Optional[str] = None,
-    acls: Optional[List[Dict]] = None,
+    acls: Optional[List[Any]] = None,
     properties: Optional[List[str]] = None,
     cluster_name: Optional[str] = None,
     print_output: bool = False
@@ -451,10 +451,6 @@ async def create_cifs_share_tool(
         None
     """
     try:
-
-        # Handle None values - convert empty lists/None to None explicitly
-        acls_list = acls if acls else None
-        properties_list = properties if properties else None
         
         # Create the CIFS share
         create_cifs_share(
@@ -462,8 +458,8 @@ async def create_cifs_share_tool(
             path=path,
             svm=svm,
             comment=comment,
-            acls=acls_list,
-            properties=properties_list,
+            acls=acls,
+            properties=properties,
             cluster_name=cluster_name,
             print_output=print_output
         )
