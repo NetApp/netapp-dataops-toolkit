@@ -452,25 +452,14 @@ async def create_cifs_share_tool(
     """
     try:
         
-        # Parse properties if provided
-        properties_list = None
-        if properties:
-            properties_list = [prop.strip() for prop in properties.split(',')]
-        
-        # Parse ACLs if provided
-        acls_list = None
-        if acls:
-            import json
-            acls_list = json.loads(acls)
-        
         # Create the CIFS share
         create_cifs_share(
             name=name,
             path=path,
             svm=svm,
             comment=comment,
-            acls=acls_list,
-            properties=properties_list,
+            acls=acls,
+            properties=properties,
             cluster_name=cluster_name,
             print_output=print_output
         )
