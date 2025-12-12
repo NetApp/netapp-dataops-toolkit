@@ -6,7 +6,7 @@ import asyncio
 from typing import Optional
 from fastmcp import FastMCP
 from netapp_dataops.mcp_server.config  import load_credentials
-from netapp_dataops.traditional import (
+from netapp_dataops.traditional.ontap import (
     create_volume, 
     clone_volume, 
     list_volumes, 
