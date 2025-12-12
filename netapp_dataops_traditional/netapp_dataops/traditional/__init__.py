@@ -40,7 +40,7 @@ from netapp_dataops.logging_utils import setup_logger
 logger = setup_logger(__name__)
 
 
-__version__ = "2.6.0"
+__version__ = "2.7.0"
 
 
 # Using this decorator in lieu of using a dependency to manage deprecation
