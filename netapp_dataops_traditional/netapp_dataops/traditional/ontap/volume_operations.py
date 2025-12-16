@@ -10,6 +10,7 @@ from netapp_ontap.resources import Snapshot as NetAppSnapshot
 from netapp_ontap.resources import ExportPolicy as NetAppExportPolicy
 from netapp_ontap.resources import SnapshotPolicy as NetAppSnapshotPolicy
 from netapp_ontap.resources import CLI as NetAppCLI
+from netapp_ontap.resources import Flexcache as NetAppFlexCache
 
 from netapp_dataops.logging_utils import setup_logger
 from ..exceptions import (
@@ -360,8 +361,8 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
 
 
 def create_volume(volume_name: str, volume_size: str, guarantee_space: bool = False, cluster_name: str = None, svm_name: str = None,
-                  volume_type: str = "flexvol", unix_permissions: str = "0777",
-                  unix_uid: str = "0", unix_gid: str = "0", export_policy: str = "default", snaplock_type: str = None,
+                  volume_type: str = None, unix_permissions: str = None,
+                  unix_uid: str = None, unix_gid: str = None, export_policy: str = None, snaplock_type: str = None,
                   snapshot_policy: str = None, aggregate: str = None, mountpoint: str = None, junction: str = None, readonly: bool = False,
                   print_output: bool = False, tiering_policy: str = None, vol_dp: bool = False):
     try:
@@ -587,7 +588,7 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
             
         try:
             # Retrieve volume
-            volume = NetAppVolume.find(name=volume_name, svm=svm)
+            volume = NetAppVolume.find(name=volume_name, svm=svm, fields="comment,flexcache_endpoint_type,nas.path")
             if not volume:
                 if print_output:
                     logger.error("Error: Invalid volume name.")
@@ -667,25 +668,48 @@ def delete_volume(volume_name: str, cluster_name: str = None, svm_name: str = No
            if print_output:
                 logger.error("Error: volume retrieval failed for unmount operation.")
                 raise
-
-        try:
-            if print_output:
-                logger.info("Deleting volume '" + svm+':'+volume_name + "'.")
-            # Delete volume
-            volume.delete(poll=True)
-
-            if print_output:
-                logger.info("Volume deleted successfully.")
-
-        except NetAppRestError as err:
-            if print_output:
-                if "You must delete the SnapMirror relationships before" in str(err):
-                    logger.error("Error: volume is snapmirror destination. add --delete-mirror to delete snapmirror relationship before deleting the volume")
-                elif "the source endpoint of one or more SnapMirror relationships" in str(err):
-                    logger.error("Error: volume is snapmirror source. add --delete-mirror to release snapmirror relationship before deleting the volume")
+        
+        if getattr(volume, "flexcache_endpoint_type", None) == "cache":
+            try:
+                if print_output:
+                    logger.info("Deleting flexcache volume '%s:%s'.", svm, volume_name)
+                
+                flexcache = NetAppFlexCache.find(name=volume_name, svm={"name": svm})
+                if flexcache:
+                    # Unmounting flexcache volume
+                    volume.nas.path = ""
+                    volume.patch()
+                    # Delete flexcache volume
+                    flexcache.delete(poll=True, poll_timeout=120)
                 else:
+                    if print_output:
+                        logger.error("Error: Could not find flexcache volume.")
+                    raise InvalidVolumeParameterError("name")
+                if print_output:
+                    logger.info("Flexcache volume deleted successfully.")
+            except NetAppRestError as err:
+                if print_output:
                     logger.error("Error: ONTAP Rest API Error: %s", err)
-            raise APIConnectionError(err)
+                raise APIConnectionError(err)
+        else:
+            try:
+                if print_output:
+                    logger.info("Deleting volume '" + svm+':'+volume_name + "'.")
+                # Delete volume
+                volume.delete(poll=True)
+
+                if print_output:
+                    logger.info("Volume deleted successfully.")
+
+            except NetAppRestError as err:
+                if print_output:
+                    if "You must delete the SnapMirror relationships before" in str(err):
+                        logger.error("Error: volume is snapmirror destination. add --delete-mirror to delete snapmirror relationship before deleting the volume")
+                    elif "the source endpoint of one or more SnapMirror relationships" in str(err):
+                        logger.error("Error: volume is snapmirror source. add --delete-mirror to release snapmirror relationship before deleting the volume")
+                    else:
+                        logger.error("Error: ONTAP Rest API Error: %s", err)
+                raise APIConnectionError(err)
 
     else:
         raise ConnectionTypeError()
@@ -900,12 +924,27 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
                         clone = "yes"
                     except (AttributeError, KeyError):
                         pass
-
+                    
+                    # Construct flexcache source
+                    flexcache = "no"
+                    flexcacheParentSvm = ""
+                    flexcacheParentVolume = ""
                     # Determine if FlexCache
-                    if volume.flexcache_endpoint_type == "cache":
+                    if getattr(volume, "flexcache_endpoint_type", None) == "cache":
                         flexcache = "yes"
-                    else:
-                        flexcache = "no"
+                        try:
+                            flexcache_relationships = NetAppFlexCache.get_collection(name=volume.name, **{"svm.name": svmname})
+                            flexcache_relationships = list(flexcache_relationships)
+                            if flexcache_relationships:
+                                relation = flexcache_relationships[0]
+                                relation.get()
+                                if relation.origins and len(relation.origins) > 0:
+                                    flexcacheParentSvm = getattr(relation.origins[0].svm, "name", "")
+                                    flexcacheParentVolume = getattr(relation.origins[0].volume, "name", "")
+                        except NetAppRestError as err:
+                            if print_output:
+                                logger.error("Error: ONTAP Rest API Error: %s", err)
+                            pass
 
                     # Convert size in bytes to "pretty" size (size in KB, MB, GB, or TB)
                     prettySize = _convert_bytes_to_pretty_size(size_in_bytes=volume.size)

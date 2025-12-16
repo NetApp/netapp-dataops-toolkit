@@ -15,8 +15,6 @@ class ONTAPConfig:
     hostname: str
     svm: str
     data_lif: str
-    username: str
-    password: str  # Base64 encoded
     verify_ssl_cert: bool = True
     
     # Default settings for volume operations
@@ -37,7 +35,7 @@ class ONTAPConfig:
     
     def _validate_required_fields(self) -> None:
         """Validate that required fields are not empty."""
-        required_fields = ['hostname', 'svm', 'data_lif', 'username', 'password']
+        required_fields = ['hostname', 'svm', 'data_lif']
         for field_name in required_fields:
             value = getattr(self, field_name)
             if not value or not value.strip():
@@ -88,8 +86,6 @@ class ONTAPConfig:
             "hostname": self.hostname,
             "svm": self.svm,
             "dataLif": self.data_lif,
-            "username": self.username,
-            "password": self.password,
             "verifySSLCert": self.verify_ssl_cert,
             "defaultVolumeType": self.default_volume_type,
             "defaultExportPolicy": self.default_export_policy,
@@ -107,8 +103,6 @@ class ONTAPConfig:
             hostname=data.get("hostname", ""),
             svm=data.get("svm", ""),
             data_lif=data.get("dataLif", ""),
-            username=data.get("username", ""),
-            password=data.get("password", ""),
             verify_ssl_cert=data.get("verifySSLCert", True),
             default_volume_type=data.get("defaultVolumeType", "flexgroup"),
             default_export_policy=data.get("defaultExportPolicy", "default"),
