@@ -56,6 +56,13 @@ from .ontap.flexcache_operations import (
     prepopulate_flex_cache
 )
 
+from .ontap.qtree_operations import (
+    create_qtree,
+    list_qtrees,
+    get_qtree,
+    get_qtree_metrics
+)
+
 __all__ = [
     '__version__',
     'InvalidConfigError',
@@ -87,6 +94,10 @@ __all__ = [
     'push_directory_to_s3',
     'push_file_to_s3',
     'prepopulate_flex_cache',
+    'create_qtree',
+    'list_qtrees',
+    'get_qtree',
+    'get_qtree_metrics',
 ]
 
 _lazy_modules = {}
@@ -125,22 +136,3 @@ def __getattr__(name):
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
-#
-# Qtree functions - Import from ontap.qtree_operations module
-#
-
-try:
-    from .ontap.qtree_operations import create_qtree, list_qtrees, get_qtree, get_qtree_metrics
-except ImportError:
-    # If qtree module is not available, define placeholder functions
-    def create_qtree(*args, **kwargs):
-        raise NotImplementedError("Qtree functionality is not available. Please ensure the qtree module is properly installed.")
-    
-    def list_qtrees(*args, **kwargs):
-        raise NotImplementedError("Qtree functionality is not available. Please ensure the qtree module is properly installed.")
-    
-    def get_qtree(*args, **kwargs):
-        raise NotImplementedError("Qtree functionality is not available. Please ensure the qtree module is properly installed.")
-    
-    def get_qtree_metrics(*args, **kwargs):
-        raise NotImplementedError("Qtree functionality is not available. Please ensure the qtree module is properly installed.")
