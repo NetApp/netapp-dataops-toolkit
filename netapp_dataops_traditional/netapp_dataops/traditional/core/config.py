@@ -3,10 +3,12 @@
 import base64
 import json
 import os
+import keyring
 from typing import Dict, Tuple
 
 from netapp_dataops.logging_utils import setup_logger
 from ..exceptions import InvalidConfigError
+from netapp_dataops.constants import KEYRING_SERVICE_NAME
 
 logger = setup_logger(__name__)
 
@@ -22,6 +24,23 @@ def _retrieve_config(configDirPath: str = "~/.netapp_dataops", configFilename: s
     try:
         with open(configFilePath, 'r') as configFile:
             config = json.load(configFile)
+        # Retrieve username and password from os-default credential manager
+        username = keyring.get_password(KEYRING_SERVICE_NAME, "username")
+        password = keyring.get_password(KEYRING_SERVICE_NAME, "password")
+
+        if username:
+            config["username"] = username
+        else:
+            if print_output:
+                logger.error("Error: Missing username in credential manager.")
+            raise InvalidConfigError()
+        
+        if password:
+            config["password"] = password
+        else:
+            if print_output:
+                logger.error("Error: Missing password in credential manager.")
+            raise InvalidConfigError()
     except (FileNotFoundError, json.JSONDecodeError):
         if print_output:
             _print_invalid_config_error()

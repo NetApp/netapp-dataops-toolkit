@@ -16,17 +16,13 @@ def _instantiate_connection(config: Dict[str, Any], connectionType: str = "ONTAP
         try:
             ontapClusterMgmtHostname = config["hostname"]
             ontapClusterAdminUsername = config["username"]
-            ontapClusterAdminPasswordBase64 = config["password"]
+            ontapClusterAdminPassword = config["password"]
             verifySSLCert = config["verifySSLCert"]
         except KeyError:
             if print_output:
                 from .config import _print_invalid_config_error
                 _print_invalid_config_error()
             raise InvalidConfigError()
-
-        ontapClusterAdminPasswordBase64Bytes = ontapClusterAdminPasswordBase64.encode("ascii")
-        ontapClusterAdminPasswordBytes = base64.b64decode(ontapClusterAdminPasswordBase64Bytes)
-        ontapClusterAdminPassword = ontapClusterAdminPasswordBytes.decode("ascii")
 
         netappConfig.CONNECTION = NetAppHostConnection(
             host=ontapClusterMgmtHostname,
