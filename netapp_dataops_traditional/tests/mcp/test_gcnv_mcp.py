@@ -57,7 +57,7 @@ REPLICATION_REQUIRED_ARGS = {
 
 def test_mcp_server_instance_exists():
     """Test that the MCP server instance is created correctly"""
-    from netapp_dataops.netapp_dataops_gcnv_mcp import mcp
+    from netapp_dataops.mcp_server.netapp_dataops_gcnv_mcp import mcp
     assert mcp is not None
     assert hasattr(mcp, 'name')
     assert mcp.name == "NetApp DataOps Traditional GCNV Toolkit MCP"
@@ -65,16 +65,16 @@ def test_mcp_server_instance_exists():
 
 def test_main_function():
     """Test the main entry point function"""
-    with patch('netapp_dataops.netapp_dataops_gcnv_mcp.asyncio.run') as mock_run:
-        with patch('netapp_dataops.netapp_dataops_gcnv_mcp.mcp.run') as mock_mcp_run:
-            from netapp_dataops.netapp_dataops_gcnv_mcp import main
+    with patch('netapp_dataops.mcp_server.netapp_dataops_gcnv_mcp.asyncio.run') as mock_run:
+        with patch('netapp_dataops.mcp_server.netapp_dataops_gcnv_mcp.mcp.run') as mock_mcp_run:
+            from netapp_dataops.mcp_server.netapp_dataops_gcnv_mcp import main
             main()
             mock_run.assert_called_once_with(mock_mcp_run.return_value)
 
 
 def test_imports_from_traditional_gcnv():
     """Test that the MCP server correctly imports from traditional GCNV module"""
-    import netapp_dataops.netapp_dataops_gcnv_mcp as mcp_module
+    import netapp_dataops.mcp_server.netapp_dataops_gcnv_mcp as mcp_module
     
     # Check that the required functions are imported
     assert hasattr(mcp_module, 'create_volume')
@@ -397,7 +397,7 @@ def test_error_message_patterns():
 
 def test_mcp_module_structure():
     """Test that the MCP module has expected structure"""
-    import netapp_dataops.netapp_dataops_gcnv_mcp as mcp_module
+    import netapp_dataops.mcp_server.netapp_dataops_gcnv_mcp as mcp_module
     
     # Check that key components exist
     assert hasattr(mcp_module, 'mcp')
@@ -417,7 +417,7 @@ def test_mcp_module_structure():
 def test_mcp_module_can_be_imported():
     """Test that the MCP module can be imported without errors"""
     try:
-        import netapp_dataops.netapp_dataops_gcnv_mcp
+        import netapp_dataops.mcp_server.netapp_dataops_gcnv_mcp
         # If we get here, import was successful
         assert True
     except ImportError as e:
@@ -426,7 +426,7 @@ def test_mcp_module_can_be_imported():
 
 def test_logging_configuration():
     """Test that logging is properly configured"""
-    import netapp_dataops.netapp_dataops_gcnv_mcp as mcp_module
+    import netapp_dataops.mcp_server.netapp_dataops_gcnv_mcp as mcp_module
     
     assert hasattr(mcp_module, 'logger')
     logger = mcp_module.logger
@@ -435,4 +435,4 @@ def test_logging_configuration():
     assert hasattr(logger, 'error')
     assert hasattr(logger, 'info')
     assert hasattr(logger, 'warning')
-    assert logger.name == 'netapp_dataops.netapp_dataops_gcnv_mcp'
+    assert logger.name == 'netapp_dataops.mcp_server.netapp_dataops_gcnv_mcp'

@@ -38,8 +38,6 @@ def load_credentials():
         'defaultUnixGID',
         'defaultUnixPermissions',
         'defaultAggregate',
-        'username',
-        'password',
         'verifySSLCert'
     ]
 

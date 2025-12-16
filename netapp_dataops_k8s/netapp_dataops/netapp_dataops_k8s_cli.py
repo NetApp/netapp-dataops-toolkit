@@ -1253,8 +1253,11 @@ if __name__ == '__main__':
                 handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
 
             # Create FlexCache volume
-            create_flexcache(flexcache_vol=flexCacheVol, flexcache_size=flexCacheSize, source_vol=sourceVol, source_svm=sourceSvm, backend_name=backendName, namespace=namespace, junction=junction, trident_namespace=tridentNamespace, print_output=True)
-
+            try:
+                create_flexcache(flexcache_vol=flexCacheVol, flexcache_size=flexCacheSize, source_vol=sourceVol, source_svm=sourceSvm, backend_name=backendName, namespace=namespace, junction=junction, trident_namespace=tridentNamespace, print_output=True)
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+        
         else:
             handleInvalidCommand()
 
