@@ -222,25 +222,31 @@ def list_qtrees(volume_name: str = None, cluster_name: str = None, svm_name: str
             # Print qtrees in tabular format if requested
             if print_output:
                 if qtrees_list:
-                    from tabulate import tabulate
-                    headers = [
-                        "ID", "Name", "Volume", "SVM", "Security Style", "UNIX Permissions", "Path", "NAS Path", "Export Policy", "QoS Policy"
-                    ]
-                    table = []
-                    for qtree in qtrees_list:
-                        table.append([
-                            qtree["id"],
-                            qtree["name"] if qtree["name"] else "<root>",
-                            qtree["volume"],
-                            qtree["svm"],
-                            qtree["security_style"],
-                            qtree["unix_permissions"],
-                            qtree["path"],
-                            qtree["nas_path"],
-                            qtree["export_policy"],
-                            qtree["qos_policy"]
-                        ])
-                    logger.info(tabulate(table, headers=headers, tablefmt="simple"))
+                    try:
+                        from tabulate import tabulate
+                    except ImportError:
+                        logger.error("Error: 'tabulate' is required to display qtree listings. Install via 'pip install tabulate'.")
+                        for qtree in qtrees_list:
+                            logger.info(qtree)
+                    else:
+                        headers = [
+                            "ID", "Name", "Volume", "SVM", "Security Style", "UNIX Permissions", "Path", "NAS Path", "Export Policy", "QoS Policy"
+                        ]
+                        table = []
+                        for qtree in qtrees_list:
+                            table.append([
+                                qtree["id"],
+                                qtree["name"] if qtree["name"] else "<root>",
+                                qtree["volume"],
+                                qtree["svm"],
+                                qtree["security_style"],
+                                qtree["unix_permissions"],
+                                qtree["path"],
+                                qtree["nas_path"],
+                                qtree["export_policy"],
+                                qtree["qos_policy"]
+                            ])
+                        logger.info(tabulate(table, headers=headers, tablefmt="simple"))
                 else:
                     logger.info("No qtrees found.")
 
