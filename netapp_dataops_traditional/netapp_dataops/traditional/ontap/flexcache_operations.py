@@ -151,7 +151,7 @@ def list_flexcaches(cluster_name: str = None, svm_name: str = None,
             flexcaches = NetAppFlexCache.get_collection(**{"svm.name": svmname})
             
             # Construct list of FlexCache volumes with their origins
-            flexcachesList = []
+            flexcaches_list = []
             for flexcache in flexcaches:
                 # Get detailed information including origins
                 try:
@@ -201,7 +201,7 @@ def list_flexcaches(cluster_name: str = None, svm_name: str = None,
                         }
                         
                         # Append dict to list of FlexCaches
-                        flexcachesList.append(flexcacheDict)
+                        flexcaches_list.append(flexcacheDict)
                 else:
                     # FlexCache with no origin information
                     flexcacheDict = {
@@ -215,7 +215,7 @@ def list_flexcaches(cluster_name: str = None, svm_name: str = None,
                         "Origin Size": "",
                         "Origin State": ""
                     }
-                    flexcachesList.append(flexcacheDict)
+                    flexcaches_list.append(flexcacheDict)
 
         except NetAppRestError as err:
             if print_output:
@@ -226,14 +226,14 @@ def list_flexcaches(cluster_name: str = None, svm_name: str = None,
             try:
                 import pandas as pd
                 from tabulate import tabulate
-                flexcachesDF = pd.DataFrame.from_dict(flexcachesList, dtype="string")
+                flexcachesDF = pd.DataFrame.from_dict(flexcaches_list, dtype="string")
                 logger.info("\n%s", tabulate(flexcachesDF, showindex=False, headers=flexcachesDF.columns))
             except ImportError:
                 logger.info("FlexCache volumes retrieved successfully")
-                for fc in flexcachesList:
+                for fc in flexcaches_list:
                     logger.info(fc)
             
-        return flexcachesList
+        return flexcaches_list
 
     else:
         raise ConnectionTypeError()
@@ -295,7 +295,7 @@ def get_flexcache_origin(volume_name: str, svm_name: str = None, cluster_name: s
             flexcacheName = flexcache.name if hasattr(flexcache, 'name') else "N/A"
             flexcacheSvm = flexcache.svm.name if (hasattr(flexcache, 'svm') and hasattr(flexcache.svm, 'name')) else "N/A"
 
-            originsList: List[Dict[str, Any]] = []
+            origins_list: List[Dict[str, Any]] = []
             if hasattr(flexcache, 'origins') and flexcache.origins:
                 for origin in flexcache.origins:
                     originVolumeName = origin.volume.name if (hasattr(origin, 'volume') and hasattr(origin.volume, 'name')) else "N/A"
@@ -309,7 +309,7 @@ def get_flexcache_origin(volume_name: str, svm_name: str = None, cluster_name: s
                     originState = origin.state if hasattr(origin, 'state') else ""
                     createTime = str(origin.create_time) if hasattr(origin, 'create_time') else ""
 
-                    originsList.append({
+                    origins_list.append({
                         "Origin Volume": originVolumeName,
                         "Origin UUID": originVolumeUuid,
                         "Origin SVM": originSvmName,
@@ -332,20 +332,20 @@ def get_flexcache_origin(volume_name: str, svm_name: str = None, cluster_name: s
 
         if print_output:
             logger.info("FlexCache Volume: %s (SVM: %s)", flexcacheName, flexcacheSvm)
-            if originsList:
+            if origins_list:
                 logger.info("\nOrigin Details:")
                 try:
                     import pandas as pd
                     from tabulate import tabulate
-                    originsDF = pd.DataFrame.from_dict(originsList, dtype="string")
+                    originsDF = pd.DataFrame.from_dict(origins_list, dtype="string")
                     logger.info("\n%s", tabulate(originsDF, showindex=False, headers=originsDF.columns))
                 except ImportError:
-                    for idx, origin in enumerate(originsList, 1):
+                    for idx, origin in enumerate(origins_list, 1):
                         logger.info("  %d. %s:%s (Cluster: %s, State: %s, Size: %s)",
                                     idx, origin["Origin SVM"], origin["Origin Volume"],
                                     origin["Origin Cluster"], origin["State"], origin["Size"])
 
-        return originsList
+        return origins_list
 
     else:
         raise ConnectionTypeError()
