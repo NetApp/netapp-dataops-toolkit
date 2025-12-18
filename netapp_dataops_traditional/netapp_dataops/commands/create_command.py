@@ -290,20 +290,20 @@ class CreateCommand(BaseCommand):
         
         # Get command line options
         try:
-            opts, args = getopt.getopt(
+            opts, _ = getopt.getopt(
                 self.args[3:], 
                 "hn:v:u:s:t:p:e:", 
                 ["help", "name=", "volume=", "cluster-name=", "svm=", 
                  "security-style=", "permissions=", "export-policy="]
             )
         except Exception as err:
-            print(err)
+            logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_CREATE_QTREE, invalid_opt_arg=True)
         
         # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print(HELP_TEXT_CREATE_QTREE)
+                logger.info(HELP_TEXT_CREATE_QTREE)
                 return
             elif opt in ("-n", "--name"):
                 qtree_name = arg
@@ -326,7 +326,7 @@ class CreateCommand(BaseCommand):
         
         # Validate security style if provided
         if security_style and security_style not in ["unix", "ntfs", "mixed"]:
-            print("Error: Security style must be one of: unix, ntfs, mixed")
+            logger.error("Error: Security style must be one of: unix, ntfs, mixed")
             self.handle_invalid_command(help_text=HELP_TEXT_CREATE_QTREE, invalid_opt_arg=True)
         
         # Create qtree
@@ -342,5 +342,4 @@ class CreateCommand(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
-            import sys
             sys.exit(1)

@@ -171,19 +171,19 @@ class ListCommand(BaseCommand):
         
         # Get command line options
         try:
-            opts, args = getopt.getopt(
+            opts, _ = getopt.getopt(
                 self.args[3:], 
                 "hv:s:u:", 
                 ["help", "volume=", "svm=", "cluster-name="]
             )
         except Exception as err:
-            print(err)
+            logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_LIST_QTREES, invalid_opt_arg=True)
         
         # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print(HELP_TEXT_LIST_QTREES)
+                logger.info(HELP_TEXT_LIST_QTREES)
                 return
             elif opt in ("-v", "--volume"):
                 volume_name = arg
@@ -201,5 +201,4 @@ class ListCommand(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
-            import sys
             sys.exit(1)

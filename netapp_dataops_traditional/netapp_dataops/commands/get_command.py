@@ -3,7 +3,7 @@ Get command module for NetApp DataOps Toolkit CLI.
 """
 
 import getopt
-from .base_command import BaseCommand
+from .base_command import BaseCommand, logger
 from netapp_dataops.help_text import (
     HELP_TEXT_GET_QTREE,
     HELP_TEXT_GET_QTREE_METRICS
@@ -47,13 +47,13 @@ class GetCommand(BaseCommand):
                 ["help", "volume-uuid=", "id=", "cluster-name="]
             )
         except Exception as err:
-            print(err)
+            logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_GET_QTREE, invalid_opt_arg=True)
         
         # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print(HELP_TEXT_GET_QTREE)
+                logger.info(HELP_TEXT_GET_QTREE)
                 return
             elif opt in ("-v", "--volume-uuid"):
                 volume_uuid = arg
@@ -61,7 +61,7 @@ class GetCommand(BaseCommand):
                 try:
                     qtree_id = int(arg)
                 except ValueError:
-                    print("Error: Qtree ID must be a valid integer.")
+                    logger.error("Error: Qtree ID must be a valid integer.")
                     self.handle_invalid_command(help_text=HELP_TEXT_GET_QTREE, invalid_opt_arg=True)
             elif opt in ("-u", "--cluster-name"):
                 cluster_name = arg
@@ -72,7 +72,7 @@ class GetCommand(BaseCommand):
         
         # Validate qtree_id is non-negative
         if qtree_id < 0:
-            print("Error: Qtree ID must be a non-negative integer.")
+            logger.error("Error: Qtree ID must be a non-negative integer.")
             self.handle_invalid_command(help_text=HELP_TEXT_GET_QTREE, invalid_opt_arg=True)
         
         # Get qtree
@@ -101,13 +101,13 @@ class GetCommand(BaseCommand):
                 ["help", "volume-uuid=", "id=", "cluster-name="]
             )
         except Exception as err:
-            print(err)
+            logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_GET_QTREE_METRICS, invalid_opt_arg=True)
         
         # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print(HELP_TEXT_GET_QTREE_METRICS)
+                logger.info(HELP_TEXT_GET_QTREE_METRICS)
                 return
             elif opt in ("-v", "--volume-uuid"):
                 volume_uuid = arg
@@ -115,8 +115,8 @@ class GetCommand(BaseCommand):
                 try:
                     qtree_id = int(arg)
                 except ValueError:
-                    print("Error: Qtree ID must be a valid integer.")
-                    self.handle_invalid_command(invalid_opt_arg=True)
+                    logger.error("Error: Qtree ID must be a valid integer.")
+                    self.handle_invalid_command(help_text=HELP_TEXT_GET_QTREE_METRICS, invalid_opt_arg=True)
             elif opt in ("-u", "--cluster-name"):
                 cluster_name = arg
         
@@ -126,7 +126,7 @@ class GetCommand(BaseCommand):
         
         # Validate qtree_id is non-negative
         if qtree_id < 0:
-            print("Error: Qtree ID must be a non-negative integer.")
+            logger.error("Error: Qtree ID must be a non-negative integer.")
             self.handle_invalid_command(help_text=HELP_TEXT_GET_QTREE_METRICS, invalid_opt_arg=True)
         
         # Get qtree metrics
