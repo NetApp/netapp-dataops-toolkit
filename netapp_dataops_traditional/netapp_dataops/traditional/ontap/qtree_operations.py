@@ -214,6 +214,7 @@ def list_qtrees(volume_name: str = None, cluster_name: str = None, svm_name: str
                     "security_style": qtree.security_style if hasattr(qtree, 'security_style') else None,
                     "unix_permissions": qtree.unix_permissions if hasattr(qtree, 'unix_permissions') else None,
                     "path": qtree.path if hasattr(qtree, 'path') else None,
+                    "nas_path": qtree.nas.path if hasattr(qtree, 'nas') and qtree.nas and hasattr(qtree.nas, 'path') else None,
                     "export_policy": qtree.export_policy.name if hasattr(qtree, 'export_policy') and qtree.export_policy else None,
                     "qos_policy": qtree.qos_policy.name if hasattr(qtree, 'qos_policy') and qtree.qos_policy else None
                 }
@@ -224,7 +225,7 @@ def list_qtrees(volume_name: str = None, cluster_name: str = None, svm_name: str
                 if qtrees_list:
                     from tabulate import tabulate
                     headers = [
-                        "ID", "Name", "Volume", "SVM", "Security Style", "UNIX Permissions", "Path", "Export Policy", "QoS Policy"
+                        "ID", "Name", "Volume", "SVM", "Security Style", "UNIX Permissions", "Path", "NAS Path", "Export Policy", "QoS Policy"
                     ]
                     table = []
                     for qtree in qtrees_list:
@@ -236,6 +237,7 @@ def list_qtrees(volume_name: str = None, cluster_name: str = None, svm_name: str
                             qtree["security_style"],
                             qtree["unix_permissions"],
                             qtree["path"],
+                            qtree["nas_path"],
                             qtree["export_policy"],
                             qtree["qos_policy"]
                         ])
@@ -318,6 +320,7 @@ def get_qtree(volume_uuid: str, qtree_id: int, cluster_name: str = None,
                 "security_style": qtree.security_style if hasattr(qtree, 'security_style') else None,
                 "unix_permissions": qtree.unix_permissions if hasattr(qtree, 'unix_permissions') else None,
                 "path": qtree.path if hasattr(qtree, 'path') else None,
+                "nas_path": qtree.nas.path if hasattr(qtree, 'nas') and qtree.nas and hasattr(qtree.nas, 'path') else None,
                 "export_policy": {
                     "id": qtree.export_policy.id if hasattr(qtree, 'export_policy') and qtree.export_policy and hasattr(qtree.export_policy, 'id') else None,
                     "name": qtree.export_policy.name if hasattr(qtree, 'export_policy') and qtree.export_policy and hasattr(qtree.export_policy, 'name') else None
@@ -345,6 +348,7 @@ def get_qtree(volume_uuid: str, qtree_id: int, cluster_name: str = None,
                 print("  Security Style: " + str(qtree_info["security_style"]))
                 print("  UNIX Permissions: " + str(qtree_info["unix_permissions"]))
                 print("  Path: " + str(qtree_info["path"]))
+                print("  NAS Path: " + str(qtree_info["nas_path"]))
                 if qtree_info["export_policy"]["name"]:
                     print("  Export Policy: " + str(qtree_info["export_policy"]["name"]))
                 if qtree_info["qos_policy"]["name"]:
