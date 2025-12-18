@@ -6,12 +6,8 @@ This module imports shared utilities and exceptions from the main traditional mo
 to avoid code duplication and ensure consistency across the toolkit.
 """
 
-import os
-import requests
-import json
-import base64
 from netapp_ontap.error import NetAppRestError
-from netapp_ontap.resources import Qtree as NetAppQtree
+from netapp_ontap.resources import Qtree as NetAppQtree, PerformanceQtreeMetric
 from netapp_ontap import HostConnection
 
 # Import shared functions and exceptions from the modular structure
@@ -429,124 +425,85 @@ def get_qtree_metrics(volume_uuid: str, qtree_id: int, cluster_name: str = None,
                     print("Error: Qtree not found.")
                 raise InvalidVolumeParameterError("Qtree not found")
 
-            # Use the config to construct the API request
-            hostname = config["hostname"]
-            username = config["username"]
-            password = config["password"]
-            verify_ssl = config.get("verifySslCert", False)
-            
-            # Decode base64 password if it's encoded
-            try:
-                # Try to decode the password as base64
-                decoded_password = base64.b64decode(password).decode('utf-8')
-                password = decoded_password
-            except Exception:
-                # If decoding fails, assume password is already in plain text
-                pass
-            
-            # Construct the metrics URL
-            metrics_url = f"https://{hostname}/api/storage/qtrees/{volume_uuid}/{qtree_id}/metrics"
-            
-            # Make the API request
-            response = requests.get(
-                metrics_url,
-                auth=(username, password),
-                verify=verify_ssl,
-                headers={'Accept': 'application/json'}
+            metrics = PerformanceQtreeMetric.get_collection(
+                **{"volume.uuid": volume_uuid, "qtree.id": qtree_id}
             )
-            
-            if response.status_code != 200:
-                if print_output:
-                    print(f"Error: Failed to retrieve qtree metrics. Status code: {response.status_code}")
-                    print(f"Response: {response.text}")
-                raise APIConnectionError(f"Failed to retrieve qtree metrics: {response.status_code}")
 
-            metrics_data = response.json()
-            
-            # Check if we actually got metrics data
-            if not metrics_data or ('records' in metrics_data and len(metrics_data['records']) == 0):
+            metrics_records = [metric.to_dict() for metric in metrics]
+            metrics_data = {"records": metrics_records}
+
+            if not metrics_records:
                 if print_output:
                     print("Warning: No metrics data available for this qtree.")
                 return {"records": [], "message": "No metrics data available"}
-            
-            # Print metrics
+
             if print_output:
                 print("Qtree Performance Metrics:")
                 print(f"  Volume UUID: {volume_uuid}")
                 print(f"  Qtree ID: {qtree_id}")
-                
-                if 'records' in metrics_data:
-                    print(f"  Number of data points: {len(metrics_data['records'])}")
-                    
-                    for i, record in enumerate(metrics_data['records'][:5]):  # Show first 5 records
-                        print(f"  Data point {i+1}:")
-                        if 'timestamp' in record:
-                            print(f"    Timestamp: {record['timestamp']}")
-                        if 'duration' in record:
-                            print(f"    Duration: {record['duration']}")
-                        if 'status' in record:
-                            print(f"    Status: {record['status']}")
-                        
-                        # Print qtree info from response
-                        if 'qtree' in record:
-                            qtree_info = record['qtree']
-                            print(f"    Qtree Name: {qtree_info.get('name', 'N/A')}")
-                        
-                        # Print SVM info from response
-                        if 'svm' in record:
-                            svm_info = record['svm']
-                            print(f"    SVM: {svm_info.get('name', 'N/A')} (UUID: {svm_info.get('uuid', 'N/A')})")
-                        
-                        # Print volume info from response
-                        if 'volume' in record:
-                            vol_info = record['volume']
-                            print(f"    Volume: {vol_info.get('name', 'N/A')} (UUID: {vol_info.get('uuid', 'N/A')})")
-                        
-                        # Print IOPS metrics
-                        if 'iops' in record:
-                            iops = record['iops']
-                            print(f"    IOPS:")
-                            if 'read' in iops:
-                                print(f"      Read: {iops['read']}")
-                            if 'write' in iops:
-                                print(f"      Write: {iops['write']}")
-                            if 'other' in iops:
-                                print(f"      Other: {iops['other']}")
-                            if 'total' in iops:
-                                print(f"      Total: {iops['total']}")
-                        
-                        # Print latency metrics
-                        if 'latency' in record:
-                            latency = record['latency']
-                            print(f"    Latency:")
-                            if 'read' in latency:
-                                print(f"      Read: {latency['read']}")
-                            if 'write' in latency:
-                                print(f"      Write: {latency['write']}")
-                            if 'other' in latency:
-                                print(f"      Other: {latency['other']}")
-                            if 'total' in latency:
-                                print(f"      Total: {latency['total']}")
-                        
-                        # Print throughput metrics
-                        if 'throughput' in record:
-                            throughput = record['throughput']
-                            print(f"    Throughput:")
-                            if 'read' in throughput:
-                                print(f"      Read: {throughput['read']}")
-                            if 'write' in throughput:
-                                print(f"      Write: {throughput['write']}")
-                            if 'other' in throughput:
-                                print(f"      Other: {throughput['other']}")
-                            if 'total' in throughput:
-                                print(f"      Total: {throughput['total']}")
-                        
-                        print()  # Empty line between records
-                    
-                    if len(metrics_data['records']) > 5:
-                        print(f"  ... and {len(metrics_data['records']) - 5} more data points")
-                else:
-                    print("  No metrics data available")
+                print(f"  Number of data points: {len(metrics_records)}")
+
+                for i, record in enumerate(metrics_records[:5]):  # Show first 5 records
+                    print(f"  Data point {i+1}:")
+                    if record.get('timestamp') is not None:
+                        print(f"    Timestamp: {record.get('timestamp')}")
+                    if record.get('duration') is not None:
+                        print(f"    Duration: {record.get('duration')}")
+                    if record.get('status') is not None:
+                        print(f"    Status: {record.get('status')}")
+
+                    qtree_info = record.get('qtree') or {}
+                    if qtree_info:
+                        print(f"    Qtree Name: {qtree_info.get('name', 'N/A')}")
+
+                    svm_info = record.get('svm') or {}
+                    if svm_info:
+                        print(f"    SVM: {svm_info.get('name', 'N/A')} (UUID: {svm_info.get('uuid', 'N/A')})")
+
+                    vol_info = record.get('volume') or {}
+                    if vol_info:
+                        print(f"    Volume: {vol_info.get('name', 'N/A')} (UUID: {vol_info.get('uuid', 'N/A')})")
+
+                    iops = record.get('iops') or {}
+                    if iops:
+                        print("    IOPS:")
+                        if iops.get('read') is not None:
+                            print(f"      Read: {iops.get('read')}")
+                        if iops.get('write') is not None:
+                            print(f"      Write: {iops.get('write')}")
+                        if iops.get('other') is not None:
+                            print(f"      Other: {iops.get('other')}")
+                        if iops.get('total') is not None:
+                            print(f"      Total: {iops.get('total')}")
+
+                    latency = record.get('latency') or {}
+                    if latency:
+                        print("    Latency:")
+                        if latency.get('read') is not None:
+                            print(f"      Read: {latency.get('read')}")
+                        if latency.get('write') is not None:
+                            print(f"      Write: {latency.get('write')}")
+                        if latency.get('other') is not None:
+                            print(f"      Other: {latency.get('other')}")
+                        if latency.get('total') is not None:
+                            print(f"      Total: {latency.get('total')}")
+
+                    throughput = record.get('throughput') or {}
+                    if throughput:
+                        print("    Throughput:")
+                        if throughput.get('read') is not None:
+                            print(f"      Read: {throughput.get('read')}")
+                        if throughput.get('write') is not None:
+                            print(f"      Write: {throughput.get('write')}")
+                        if throughput.get('other') is not None:
+                            print(f"      Other: {throughput.get('other')}")
+                        if throughput.get('total') is not None:
+                            print(f"      Total: {throughput.get('total')}")
+
+                    print()  # Empty line between records
+
+                if len(metrics_records) > 5:
+                    print(f"  ... and {len(metrics_records) - 5} more data points")
 
             return metrics_data
 
