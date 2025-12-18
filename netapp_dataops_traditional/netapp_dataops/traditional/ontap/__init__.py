@@ -24,7 +24,7 @@ from .snapmirror_operations import (
 
 from .flexcache_operations import (
     prepopulate_flex_cache,
-    list_flexcache_origins,
+    list_flexcaches,
     get_flexcache_origin,
     update_flexcache,
     create_flexcache
@@ -49,7 +49,7 @@ __all__ = [
     'sync_snap_mirror_relationship',
     # FlexCache operations
     'prepopulate_flex_cache',
-    'list_flexcache_origins',
+    'list_flexcaches',
     'get_flexcache_origin',
     'update_flexcache',
     'create_flexcache',

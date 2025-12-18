@@ -16,7 +16,7 @@ from netapp_dataops.traditional.ontap import (
     create_snap_mirror_relationship, 
     list_snap_mirror_relationships,
     create_flexcache,
-    list_flexcache_origins,
+    list_flexcaches,
     get_flexcache_origin,
     update_flexcache
 )
@@ -482,8 +482,8 @@ async def create_flexcache_tool(
         raise
 
 
-@mcp.tool(name="ListFlexCacheOrigins")
-async def list_flexcache_origins_tool(
+@mcp.tool(name="ListFlexCache")
+async def list_flexcaches_tool(
     cluster_name: Optional[str] = None,
     svm_name: Optional[str] = None,
     print_output: bool = False
@@ -505,7 +505,7 @@ async def list_flexcache_origins_tool(
         "Origin SVM", "Origin Cluster", "Origin IP", "Origin Size", "Origin State".
     """
     try:
-        return list_flexcache_origins(
+        return list_flexcaches(
             cluster_name=cluster_name,
             svm_name=svm_name,
             print_output=print_output

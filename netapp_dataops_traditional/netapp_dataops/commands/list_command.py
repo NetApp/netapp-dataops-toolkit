@@ -15,7 +15,7 @@ from netapp_dataops.traditional import (
     list_snap_mirror_relationships,
     list_snapshots,
     list_volumes,
-    list_flexcache_origins,
+    list_flexcaches,
     InvalidConfigError,
     APIConnectionError,
     InvalidVolumeParameterError
@@ -188,7 +188,7 @@ class ListCommand(BaseCommand):
                 cluster_name = arg
         
         try:
-            list_flexcache_origins(
+            list_flexcaches(
                 cluster_name=cluster_name, 
                 svm_name=svm_name, 
                 print_output=True

@@ -91,7 +91,7 @@ def prepopulate_flex_cache(volume_name: str, paths: List[str], print_output: boo
         raise ConnectionTypeError()
 
 
-def list_flexcache_origins(cluster_name: str = None, svm_name: str = None, 
+def list_flexcaches(cluster_name: str = None, svm_name: str = None, 
                            print_output: bool = False) -> List[Dict[str, Any]]:
     """List all FlexCache volumes with their origin information.
     
