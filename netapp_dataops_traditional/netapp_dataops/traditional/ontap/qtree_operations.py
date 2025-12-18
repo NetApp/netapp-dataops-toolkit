@@ -9,6 +9,7 @@ to avoid code duplication and ensure consistency across the toolkit.
 from netapp_ontap.error import NetAppRestError
 from netapp_ontap.resources import Qtree as NetAppQtree, PerformanceQtreeMetric
 from netapp_ontap import HostConnection
+from netapp_dataops.logging_utils import setup_logger
 
 # Import shared functions and exceptions from the modular structure
 from ..exceptions import (
@@ -19,6 +20,8 @@ from ..exceptions import (
 )
 from ..core.config import _retrieve_config
 from ..core.connection import _instantiate_connection
+
+logger = setup_logger(__name__)
 
 
 def create_qtree(qtree_name: str, volume_name: str, cluster_name: str = None, svm_name: str = None,
@@ -55,7 +58,7 @@ def create_qtree(qtree_name: str, volume_name: str, cluster_name: str = None, sv
         connectionType = config["connectionType"]
     except:
         if print_output:
-            print("Error: Missing 'connectionType' in config file.")
+            logger.error("Error: Missing 'connectionType' in config file.")
         raise InvalidConfigError()
 
     if cluster_name:
@@ -72,8 +75,8 @@ def create_qtree(qtree_name: str, volume_name: str, cluster_name: str = None, sv
                 svm_name = config["svm"]
         except Exception as e:
             if print_output:
-                print("Error: Missing required parameters (svm name) in config file.")
-                print("Exception: ", e)
+                logger.error("Error: Missing required parameters (svm name) in config file.")
+                logger.error("Exception: %s", e)
             raise InvalidConfigError()
 
         # Validate unix_permissions format
@@ -85,7 +88,7 @@ def create_qtree(qtree_name: str, volume_name: str, cluster_name: str = None, sv
                     raise ValueError("Permissions out of range")
             except ValueError:
                 if print_output:
-                    print("Error: Invalid UNIX permissions format. Use octal format (e.g., '0755').")
+                    logger.error("Error: Invalid UNIX permissions format. Use octal format (e.g., '0755').")
                 raise InvalidVolumeParameterError("Invalid UNIX permissions format")
 
         # Check if qtree already exists
@@ -94,17 +97,17 @@ def create_qtree(qtree_name: str, volume_name: str, cluster_name: str = None, sv
             existing_qtree_list = list(existing_qtrees)
             if existing_qtree_list:
                 if print_output:
-                    print("Error: Qtree '" + qtree_name + "' already exists in volume '" + volume_name + "'.")
+                    logger.error("Error: Qtree '%s' already exists in volume '%s'.", qtree_name, volume_name)
                 raise InvalidVolumeParameterError(f"Qtree '{qtree_name}' already exists")
         except NetAppRestError as err:
             if print_output:
-                print("Error: Error checking for existing qtree.")
-                print("API Error: ", err)
+                logger.error("Error: Error checking for existing qtree.")
+                logger.error("API Error: %s", err)
             raise APIConnectionError(err)
 
         # Create qtree
         if print_output:
-            print("Creating qtree '" + qtree_name + "' in volume '" + volume_name + "' on SVM '" + svm_name + "'.")
+            logger.info("Creating qtree '%s' in volume '%s' on SVM '%s'.", qtree_name, volume_name, svm_name)
 
         try:
             # Create NetApp Qtree resource
@@ -129,13 +132,13 @@ def create_qtree(qtree_name: str, volume_name: str, cluster_name: str = None, sv
             qtree.post(poll=True, poll_timeout=120)
             
             if print_output:
-                print("Qtree '" + qtree_name + "' created successfully.")
-                print("Qtree ID: " + str(qtree.id))
+                logger.info("Qtree '%s' created successfully.", qtree_name)
+                logger.info("Qtree ID: %s", str(qtree.id))
 
         except NetAppRestError as err:
             if print_output:
-                print("Error: Error creating qtree.")
-                print("API Error: ", err)
+                logger.error("Error: Error creating qtree.")
+                logger.error("API Error: %s", err)
             raise APIConnectionError(err)
 
     else:
@@ -169,7 +172,7 @@ def list_qtrees(volume_name: str = None, cluster_name: str = None, svm_name: str
         connectionType = config["connectionType"]
     except:
         if print_output:
-            print("Error: Missing 'connectionType' in config file.")
+            logger.error("Error: Missing 'connectionType' in config file.")
         raise InvalidConfigError()
 
     if cluster_name:
@@ -186,8 +189,8 @@ def list_qtrees(volume_name: str = None, cluster_name: str = None, svm_name: str
                 svm_name = config["svm"]
         except Exception as e:
             if print_output:
-                print("Error: Missing required parameters (svm name) in config file.")
-                print("Exception: ", e)
+                logger.error("Error: Missing required parameters (svm name) in config file.")
+                logger.error("Exception: %s", e)
             raise InvalidConfigError()
 
         try:
@@ -237,16 +240,16 @@ def list_qtrees(volume_name: str = None, cluster_name: str = None, svm_name: str
                             qtree["export_policy"],
                             qtree["qos_policy"]
                         ])
-                    print(tabulate(table, headers=headers, tablefmt="simple"))
+                    logger.info(tabulate(table, headers=headers, tablefmt="simple"))
                 else:
-                    print("No qtrees found.")
+                    logger.info("No qtrees found.")
 
             return qtrees_list
 
         except NetAppRestError as err:
             if print_output:
-                print("Error: Error retrieving qtrees.")
-                print("API Error: ", err)
+                logger.error("Error: Error retrieving qtrees.")
+                logger.error("API Error: %s", err)
             raise APIConnectionError(err)
 
     else:
@@ -282,7 +285,7 @@ def get_qtree(volume_uuid: str, qtree_id: int, cluster_name: str = None,
         connectionType = config["connectionType"]
     except:
         if print_output:
-            print("Error: Missing 'connectionType' in config file.")
+            logger.error("Error: Missing 'connectionType' in config file.")
         raise InvalidConfigError()
 
     if cluster_name:
@@ -336,35 +339,35 @@ def get_qtree(volume_uuid: str, qtree_id: int, cluster_name: str = None,
             # Print qtree details if requested
             if print_output:
                 qtree_name = qtree_info["name"] if qtree_info["name"] else "<root>"
-                print("Qtree Details:")
-                print("  ID: " + str(qtree_info["id"]))
-                print("  Name: " + qtree_name)
-                print("  Volume: " + str(qtree_info["volume"]["name"]) + " (UUID: " + str(qtree_info["volume"]["uuid"]) + ")")
-                print("  SVM: " + str(qtree_info["svm"]["name"]) + " (UUID: " + str(qtree_info["svm"]["uuid"]) + ")")
-                print("  Security Style: " + str(qtree_info["security_style"]))
-                print("  UNIX Permissions: " + str(qtree_info["unix_permissions"]))
-                print("  Path: " + str(qtree_info["path"]))
-                print("  NAS Path: " + str(qtree_info["nas_path"]))
+                logger.info("Qtree Details:")
+                logger.info("  ID: %s", str(qtree_info["id"]))
+                logger.info("  Name: %s", qtree_name)
+                logger.info("  Volume: %s (UUID: %s)", str(qtree_info["volume"]["name"]), str(qtree_info["volume"]["uuid"]))
+                logger.info("  SVM: %s (UUID: %s)", str(qtree_info["svm"]["name"]), str(qtree_info["svm"]["uuid"]))
+                logger.info("  Security Style: %s", str(qtree_info["security_style"]))
+                logger.info("  UNIX Permissions: %s", str(qtree_info["unix_permissions"]))
+                logger.info("  Path: %s", str(qtree_info["path"]))
+                logger.info("  NAS Path: %s", str(qtree_info["nas_path"]))
                 if qtree_info["export_policy"]["name"]:
-                    print("  Export Policy: " + str(qtree_info["export_policy"]["name"]))
+                    logger.info("  Export Policy: %s", str(qtree_info["export_policy"]["name"]))
                 if qtree_info["qos_policy"]["name"]:
-                    print("  QoS Policy: " + str(qtree_info["qos_policy"]["name"]))
+                    logger.info("  QoS Policy: %s", str(qtree_info["qos_policy"]["name"]))
                 if qtree_info["user"]["name"]:
-                    print("  User: " + str(qtree_info["user"]["name"]))
+                    logger.info("  User: %s", str(qtree_info["user"]["name"]))
                 if qtree_info["group"]["name"]:
-                    print("  Group: " + str(qtree_info["group"]["name"]))
+                    logger.info("  Group: %s", str(qtree_info["group"]["name"]))
 
             return qtree_info
 
         except NetAppRestError as err:
             if print_output:
-                print("Error: Error retrieving qtree.")
-                print("API Error: ", err)
+                logger.error("Error: Error retrieving qtree.")
+                logger.error("API Error: %s", err)
             raise APIConnectionError(err)
         except Exception as e:
             if print_output:
-                print("Error: Qtree with ID '" + str(qtree_id) + "' not found in volume '" + volume_uuid + "'.")
-                print("Exception: ", e)
+                logger.error("Error: Qtree with ID '%s' not found in volume '%s'.", str(qtree_id), volume_uuid)
+                logger.error("Exception: %s", e)
             raise InvalidVolumeParameterError(f"Qtree with ID '{qtree_id}' not found")
 
     else:
@@ -402,7 +405,7 @@ def get_qtree_metrics(volume_uuid: str, qtree_id: int, cluster_name: str = None,
         connectionType = config["connectionType"]
     except:
         if print_output:
-            print("Error: Missing 'connectionType' in config file.")
+            logger.error("Error: Missing 'connectionType' in config file.")
         raise InvalidConfigError()
 
     if cluster_name:
@@ -422,7 +425,7 @@ def get_qtree_metrics(volume_uuid: str, qtree_id: int, cluster_name: str = None,
             # Check if qtree exists
             if qtree.id is None:
                 if print_output:
-                    print("Error: Qtree not found.")
+                    logger.error("Error: Qtree not found.")
                 raise InvalidVolumeParameterError("Qtree not found")
 
             metrics = PerformanceQtreeMetric.get_collection(
@@ -434,88 +437,88 @@ def get_qtree_metrics(volume_uuid: str, qtree_id: int, cluster_name: str = None,
 
             if not metrics_records:
                 if print_output:
-                    print("Warning: No metrics data available for this qtree.")
+                    logger.warning("Warning: No metrics data available for this qtree.")
                 return {"records": [], "message": "No metrics data available"}
 
             if print_output:
-                print("Qtree Performance Metrics:")
-                print(f"  Volume UUID: {volume_uuid}")
-                print(f"  Qtree ID: {qtree_id}")
-                print(f"  Number of data points: {len(metrics_records)}")
+                logger.info("Qtree Performance Metrics:")
+                logger.info("  Volume UUID: %s", volume_uuid)
+                logger.info("  Qtree ID: %s", qtree_id)
+                logger.info("  Number of data points: %s", len(metrics_records))
 
                 for i, record in enumerate(metrics_records[:5]):  # Show first 5 records
-                    print(f"  Data point {i+1}:")
+                    logger.info("  Data point %s:", i + 1)
                     if record.get('timestamp') is not None:
-                        print(f"    Timestamp: {record.get('timestamp')}")
+                        logger.info("    Timestamp: %s", record.get('timestamp'))
                     if record.get('duration') is not None:
-                        print(f"    Duration: {record.get('duration')}")
+                        logger.info("    Duration: %s", record.get('duration'))
                     if record.get('status') is not None:
-                        print(f"    Status: {record.get('status')}")
+                        logger.info("    Status: %s", record.get('status'))
 
                     qtree_info = record.get('qtree') or {}
                     if qtree_info:
-                        print(f"    Qtree Name: {qtree_info.get('name', 'N/A')}")
+                        logger.info("    Qtree Name: %s", qtree_info.get('name', 'N/A'))
 
                     svm_info = record.get('svm') or {}
                     if svm_info:
-                        print(f"    SVM: {svm_info.get('name', 'N/A')} (UUID: {svm_info.get('uuid', 'N/A')})")
+                        logger.info("    SVM: %s (UUID: %s)", svm_info.get('name', 'N/A'), svm_info.get('uuid', 'N/A'))
 
                     vol_info = record.get('volume') or {}
                     if vol_info:
-                        print(f"    Volume: {vol_info.get('name', 'N/A')} (UUID: {vol_info.get('uuid', 'N/A')})")
+                        logger.info("    Volume: %s (UUID: %s)", vol_info.get('name', 'N/A'), vol_info.get('uuid', 'N/A'))
 
                     iops = record.get('iops') or {}
                     if iops:
-                        print("    IOPS:")
+                        logger.info("    IOPS:")
                         if iops.get('read') is not None:
-                            print(f"      Read: {iops.get('read')}")
+                            logger.info("      Read: %s", iops.get('read'))
                         if iops.get('write') is not None:
-                            print(f"      Write: {iops.get('write')}")
+                            logger.info("      Write: %s", iops.get('write'))
                         if iops.get('other') is not None:
-                            print(f"      Other: {iops.get('other')}")
+                            logger.info("      Other: %s", iops.get('other'))
                         if iops.get('total') is not None:
-                            print(f"      Total: {iops.get('total')}")
+                            logger.info("      Total: %s", iops.get('total'))
 
                     latency = record.get('latency') or {}
                     if latency:
-                        print("    Latency:")
+                        logger.info("    Latency:")
                         if latency.get('read') is not None:
-                            print(f"      Read: {latency.get('read')}")
+                            logger.info("      Read: %s", latency.get('read'))
                         if latency.get('write') is not None:
-                            print(f"      Write: {latency.get('write')}")
+                            logger.info("      Write: %s", latency.get('write'))
                         if latency.get('other') is not None:
-                            print(f"      Other: {latency.get('other')}")
+                            logger.info("      Other: %s", latency.get('other'))
                         if latency.get('total') is not None:
-                            print(f"      Total: {latency.get('total')}")
+                            logger.info("      Total: %s", latency.get('total'))
 
                     throughput = record.get('throughput') or {}
                     if throughput:
-                        print("    Throughput:")
+                        logger.info("    Throughput:")
                         if throughput.get('read') is not None:
-                            print(f"      Read: {throughput.get('read')}")
+                            logger.info("      Read: %s", throughput.get('read'))
                         if throughput.get('write') is not None:
-                            print(f"      Write: {throughput.get('write')}")
+                            logger.info("      Write: %s", throughput.get('write'))
                         if throughput.get('other') is not None:
-                            print(f"      Other: {throughput.get('other')}")
+                            logger.info("      Other: %s", throughput.get('other'))
                         if throughput.get('total') is not None:
-                            print(f"      Total: {throughput.get('total')}")
+                            logger.info("      Total: %s", throughput.get('total'))
 
-                    print()  # Empty line between records
+                    logger.info("")  # Blank line between records
 
                 if len(metrics_records) > 5:
-                    print(f"  ... and {len(metrics_records) - 5} more data points")
+                    logger.info("  ... and %s more data points", len(metrics_records) - 5)
 
             return metrics_data
 
         except NetAppRestError as err:
             if print_output:
-                print("Error: Error retrieving qtree metrics.")
-                print("API Error: ", err)
+                logger.error("Error: Error retrieving qtree metrics.")
+                logger.error("API Error: %s", err)
             raise APIConnectionError(err)
         except Exception as e:
             if print_output:
-                print("Error: Failed to retrieve qtree metrics.")
-                print("Exception: ", e)
+                logger.error("Error: Failed to retrieve qtree metrics.")
+                logger.error("Exception: %s", e)
             raise InvalidVolumeParameterError(f"Failed to retrieve metrics for qtree '{qtree_id}'")
 
     else:
