@@ -3,6 +3,7 @@ Get command module for NetApp DataOps Toolkit CLI.
 """
 
 import getopt
+import sys
 from .base_command import BaseCommand
 from netapp_dataops.help_text import (
     HELP_TEXT_GET_FLEXCACHE_ORIGIN
@@ -45,6 +46,7 @@ class GetCommand(BaseCommand):
         except Exception as err:
             print(err)
             self.handle_invalid_command(help_text=HELP_TEXT_GET_FLEXCACHE_ORIGIN, invalid_opt_arg=True)
+            return
         
         # Parse command line options
         for opt, arg in opts:
@@ -71,5 +73,4 @@ class GetCommand(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
-            import sys
             sys.exit(1)
