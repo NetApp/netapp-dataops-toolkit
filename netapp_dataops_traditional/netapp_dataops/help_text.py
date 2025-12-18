@@ -589,19 +589,20 @@ Examples:
 HELP_TEXT_GET_FLEXCACHE_ORIGIN = '''
 Command: get flexcache-origin
 
-Retrieve attributes of a specific FlexCache origin volume by UUID.
+Retrieve attributes of a specific FlexCache origin volume by name.
 
 Required Options/Arguments:
-\t-i, --uuid=\tUUID of the FlexCache origin volume.
+	-n, --name=\tName of the FlexCache volume.
 
 Optional Options/Arguments:
-\t-u, --cluster-name=\tNon default hosting cluster.
-\t-h, --help\t\tPrint help text.
+	-s, --svm=\t\tName of the SVM containing the FlexCache (defaults to configured SVM).
+	-u, --cluster-name=\tNon default hosting cluster.
+	-h, --help\t\tPrint help text.
 
 Examples:
-\tnetapp_dataops_cli.py get flexcache-origin --uuid=12345678-1234-1234-1234-123456789012
-\tnetapp_dataops_cli.py get flexcache-origin -i 12345678-1234-1234-1234-123456789012
-\tnetapp_dataops_cli.py get flexcache-origin -i 12345678-1234-1234-1234-123456789012 -u cluster1
+	netapp_dataops_cli.py get flexcache-origin --name=project1_cache
+	netapp_dataops_cli.py get flexcache-origin -n project1_cache -s svm1
+	netapp_dataops_cli.py get flexcache-origin -n project1_cache -s svm1 -u cluster1
 '''
 
 # Qtree operations help text

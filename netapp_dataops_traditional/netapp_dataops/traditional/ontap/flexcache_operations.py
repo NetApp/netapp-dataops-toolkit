@@ -239,41 +239,30 @@ def list_flexcaches(cluster_name: str = None, svm_name: str = None,
         raise ConnectionTypeError()
 
 
-def get_flexcache_origin(uuid: str, cluster_name: str = None, print_output: bool = False) -> List[Dict[str, Any]]:
-    """Retrieve origin details for a specific FlexCache volume by UUID.
-    
-    This function retrieves detailed information about the origin volumes of a FlexCache volume,
-    using the FlexCache volume's UUID.
-    
+def get_flexcache_origin(volume_name: str, svm_name: str = None, cluster_name: str = None,
+                         print_output: bool = False) -> List[Dict[str, Any]]:
+    """Retrieve origin details for a FlexCache volume by name.
+
     Args:
-        uuid: UUID of the FlexCache volume (required).
-        cluster_name: Name of the cluster to query. If not specified, uses configured cluster.
-        print_output: If True, print detailed output to console.
-        
+        volume_name: Name of the FlexCache volume to inspect (required).
+        svm_name: SVM containing the FlexCache; defaults to configured SVM if omitted.
+        cluster_name: Cluster hostname to query; uses configured cluster when not provided.
+        print_output: When True, prints a formatted table or log lines with origin details.
+
     Returns:
-        List of dictionaries containing origin information for the FlexCache. Each dictionary includes:
-            - Origin Volume: Name of the origin volume
-            - Origin UUID: UUID of the origin volume
-            - Origin SVM: Name of the origin SVM
-            - Origin SVM UUID: UUID of the origin SVM
-            - Origin Cluster: Name of the origin cluster
-            - Origin Cluster UUID: UUID of the origin cluster
-            - IP Address: IP address of the origin
-            - Size: Size of the origin volume (pretty formatted)
-            - State: State of the origin volume
-            - Create Time: Creation timestamp
-        
+        List of dictionaries describing each origin: volume/SVM/cluster identifiers, IP, size, state, and create time.
+
     Raises:
-        InvalidConfigError: If configuration is invalid
-        ConnectionTypeError: If connection type is not ONTAP
-        APIConnectionError: If ONTAP API call fails
-        InvalidVolumeParameterError: If FlexCache UUID is invalid
+        InvalidConfigError: Configuration missing/invalid.
+        ConnectionTypeError: Connection type is not ONTAP.
+        APIConnectionError: REST call to ONTAP fails.
+        InvalidVolumeParameterError: FlexCache volume name not found or invalid.
     """
     try:
         config = _retrieve_config(print_output=print_output)
     except InvalidConfigError:
         raise
-        
+
     try:
         connectionType = config["connectionType"]
     except KeyError:
@@ -291,53 +280,36 @@ def get_flexcache_origin(uuid: str, cluster_name: str = None, print_output: bool
             raise
 
         try:
-            # Retrieve FlexCache volume by UUID
-            flexcache = NetAppFlexCache(uuid=uuid)
-            flexcache.get(fields="name,uuid,svm.name,svm.uuid,origins")
-            
-            if not hasattr(flexcache, 'name'):
+            svmname = config["svm"]
+            if svm_name:
+                svmname = svm_name
+
+            flexcache = NetAppFlexCache.find(name=volume_name, **{"svm.name": svmname})
+            if not flexcache:
                 if print_output:
-                    logger.error("Error: Invalid FlexCache UUID.")
-                raise InvalidVolumeParameterError("uuid")
-            
-            # Extract FlexCache information
+                    logger.error("Error: FlexCache volume '%s' not found in SVM '%s'.", volume_name, svmname)
+                raise InvalidVolumeParameterError("volume_name")
+
+            flexcache.get(fields="name,uuid,svm.name,svm.uuid,origins")
+
             flexcacheName = flexcache.name if hasattr(flexcache, 'name') else "N/A"
             flexcacheSvm = flexcache.svm.name if (hasattr(flexcache, 'svm') and hasattr(flexcache.svm, 'name')) else "N/A"
-            
-            # Construct list of origin details
-            originsList = []
-            
-            # Process origin information
+
+            originsList: List[Dict[str, Any]] = []
             if hasattr(flexcache, 'origins') and flexcache.origins:
                 for origin in flexcache.origins:
-                    # Extract volume information
                     originVolumeName = origin.volume.name if (hasattr(origin, 'volume') and hasattr(origin.volume, 'name')) else "N/A"
                     originVolumeUuid = origin.volume.uuid if (hasattr(origin, 'volume') and hasattr(origin.volume, 'uuid')) else ""
-                    
-                    # Extract SVM information
                     originSvmName = origin.svm.name if (hasattr(origin, 'svm') and hasattr(origin.svm, 'name')) else "N/A"
                     originSvmUuid = origin.svm.uuid if (hasattr(origin, 'svm') and hasattr(origin.svm, 'uuid')) else ""
-                    
-                    # Extract cluster information
                     originClusterName = origin.cluster.name if (hasattr(origin, 'cluster') and hasattr(origin.cluster, 'name')) else ""
                     originClusterUuid = origin.cluster.uuid if (hasattr(origin, 'cluster') and hasattr(origin.cluster, 'uuid')) else ""
-                    
-                    # Extract IP address
                     originIpAddress = origin.ip_address if hasattr(origin, 'ip_address') else ""
-                    
-                    # Extract and format origin size
-                    originSize = ""
-                    if hasattr(origin, 'size'):
-                        originSize = _convert_bytes_to_pretty_size(size_in_bytes=origin.size)
-                    
-                    # Extract origin state
+                    originSize = _convert_bytes_to_pretty_size(size_in_bytes=origin.size) if hasattr(origin, 'size') else ""
                     originState = origin.state if hasattr(origin, 'state') else ""
-                    
-                    # Extract create time
                     createTime = str(origin.create_time) if hasattr(origin, 'create_time') else ""
-                    
-                    # Construct dict containing origin details
-                    originDict = {
+
+                    originsList.append({
                         "Origin Volume": originVolumeName,
                         "Origin UUID": originVolumeUuid,
                         "Origin SVM": originSvmName,
@@ -347,11 +319,8 @@ def get_flexcache_origin(uuid: str, cluster_name: str = None, print_output: bool
                         "IP Address": originIpAddress,
                         "Size": originSize,
                         "State": originState,
-                        "Create Time": createTime
-                    }
-                    
-                    # Append dict to list of origins
-                    originsList.append(originDict)
+                        "Create Time": createTime,
+                    })
             else:
                 if print_output:
                     logger.warning("Warning: FlexCache '%s' has no origin information.", flexcacheName)
@@ -372,10 +341,10 @@ def get_flexcache_origin(uuid: str, cluster_name: str = None, print_output: bool
                     logger.info("\n%s", tabulate(originsDF, showindex=False, headers=originsDF.columns))
                 except ImportError:
                     for idx, origin in enumerate(originsList, 1):
-                        logger.info("  %d. %s:%s (Cluster: %s, State: %s, Size: %s)", 
-                                  idx, origin["Origin SVM"], origin["Origin Volume"], 
-                                  origin["Origin Cluster"], origin["State"], origin["Size"])
-            
+                        logger.info("  %d. %s:%s (Cluster: %s, State: %s, Size: %s)",
+                                    idx, origin["Origin SVM"], origin["Origin Volume"],
+                                    origin["Origin Cluster"], origin["State"], origin["Size"])
+
         return originsList
 
     else:

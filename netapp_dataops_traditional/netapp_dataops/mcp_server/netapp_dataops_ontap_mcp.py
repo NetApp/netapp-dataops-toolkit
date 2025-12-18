@@ -517,7 +517,8 @@ async def list_flexcaches_tool(
 
 @mcp.tool(name="GetFlexCacheOrigin")
 async def get_flexcache_origin_tool(
-    uuid: str,
+    volume_name: str,
+    svm_name: Optional[str] = None,
     cluster_name: Optional[str] = None,
     print_output: bool = False
 ) -> list:
@@ -527,7 +528,8 @@ async def get_flexcache_origin_tool(
     This command provides comprehensive details about the origin volume(s) associated with a FlexCache.
 
     Args:
-        uuid (str): UUID of the FlexCache volume (required).
+        volume_name (str): Name of the FlexCache volume (required).
+        svm_name (str): Name of the SVM containing the FlexCache volume. Defaults to configured SVM if not provided.
         cluster_name (str): Non-default cluster name, same credentials as the default credentials should be used. Defaults to None.
         print_output (bool): Denotes whether or not to print messages to the console during execution. Defaults to False.
 
@@ -539,7 +541,8 @@ async def get_flexcache_origin_tool(
     """
     try:
         return get_flexcache_origin(
-            uuid=uuid,
+            volume_name=volume_name,
+            svm_name=svm_name,
             cluster_name=cluster_name,
             print_output=print_output
         )

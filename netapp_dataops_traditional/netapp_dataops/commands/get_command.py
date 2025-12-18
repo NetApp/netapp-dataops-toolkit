@@ -31,15 +31,16 @@ class GetCommand(BaseCommand):
     
     def _get_flexcache_origin(self) -> None:
         """Handle FlexCache origin retrieval."""
-        uuid = None
+        volume_name = None
+        svm_name = None
         cluster_name = None
         
         # Get command line options
         try:
             opts, args = getopt.getopt(
                 self.args[3:], 
-                "hi:u:", 
-                ["help", "uuid=", "cluster-name="]
+                "hn:s:u:", 
+                ["help", "name=", "svm=", "cluster-name="]
             )
         except Exception as err:
             print(err)
@@ -50,19 +51,22 @@ class GetCommand(BaseCommand):
             if opt in ("-h", "--help"):
                 print(HELP_TEXT_GET_FLEXCACHE_ORIGIN)
                 return
-            elif opt in ("-i", "--uuid"):
-                uuid = arg
+            elif opt in ("-n", "--name"):
+                volume_name = arg
+            elif opt in ("-s", "--svm"):
+                svm_name = arg
             elif opt in ("-u", "--cluster-name"):
                 cluster_name = arg
         
         # Check for required options
-        if not uuid:
+        if not volume_name:
             self.handle_invalid_command(help_text=HELP_TEXT_GET_FLEXCACHE_ORIGIN, invalid_opt_arg=True)
         
         # Get FlexCache origin
         try:
             get_flexcache_origin(
-                uuid=uuid,
+                volume_name=volume_name,
+                svm_name=svm_name,
                 cluster_name=cluster_name,
                 print_output=True
             )
