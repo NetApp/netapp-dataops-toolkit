@@ -124,16 +124,22 @@ def create_snapshot(
         return {"status": "success", "details": _serialize(result)}
         
     except ResourceExistsError as e:
+        error_message = f"Snapshot '{snapshot_name}' already exists: {str(e)}"
+        logger.error(error_message)
         if print_output:
-            logger.error(f"Snapshot '{snapshot_name}' already exists: {str(e)}")
+            print(error_message)
         return {"status": "error", "details": str(e)}
     except ResourceNotFoundError as e:
+        error_message = f"Source volume '{volume_name}' not found: {str(e)}"
+        logger.error(error_message)
         if print_output:
-            logger.error(f"Source volume '{volume_name}' not found: {str(e)}")
+            print(error_message)
         return {"status": "error", "details": str(e)}
     except Exception as e:
+        error_message = f"Failed to create snapshot: {str(e)}"
+        logger.error(error_message)
         if print_output:
-            logger.error(f"Failed to create snapshot: {str(e)}")
+            print(error_message)
         return {"status": "error", "details": str(e)}
 
 
@@ -224,12 +230,16 @@ def delete_snapshot(
         return {"status": "success", "details": f"Snapshot '{snapshot_name}' deleted successfully"}
 
     except ResourceNotFoundError as e:
+        error_message = f"Snapshot '{snapshot_name}' not found"
+        logger.error(error_message)
         if print_output:
-            logger.error(f"Snapshot '{snapshot_name}' not found")
+            print(error_message)
         return {"status": "error", "details": str(e)}
     except Exception as e:
+        error_message = f"Failed to delete snapshot: {str(e)}"
+        logger.error(error_message)
         if print_output:
-            logger.error(f"Failed to delete snapshot: {str(e)}")
+            print(error_message)
         return {"status": "error", "details": str(e)}
 
 
@@ -319,11 +329,15 @@ def list_snapshots(
         return {"status": "success", "details": serialized_snapshots}
 
     except ResourceNotFoundError as e:
+        error_message = f"Volume '{volume_name}' not found"
+        logger.error(error_message)
         if print_output:
-            logger.error(f"Volume '{volume_name}' not found")
+            print(error_message)
         return {"status": "error", "details": str(e)}
     except Exception as e:
+        error_message = f"Failed to list snapshots: {str(e)}"
+        logger.error(error_message)
         if print_output:
-            logger.error(f"Failed to list snapshots: {str(e)}")
+            print(error_message)
         return {"status": "error", "details": str(e)}
         

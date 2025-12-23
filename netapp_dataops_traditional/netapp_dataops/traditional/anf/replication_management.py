@@ -155,7 +155,7 @@ def create_replication(
             error_message = f"Invalid protocol types: {invalid_protocols}. Valid options are: {VALID_PROTOCOL_TYPES}"
             logger.error(error_message)
             if print_output:
-                logger.error(error_message)
+                print(error_message)
             return {"status": "error", "details": error_message}
         
         # Validate service level
@@ -163,7 +163,7 @@ def create_replication(
             error_message = f"Invalid service level: '{destination_service_level}'. Valid options are: {VALID_SERVICE_LEVELS}"
             logger.error(error_message)
             if print_output:
-                logger.error(error_message)
+                print(error_message)
             return {"status": "error", "details": error_message}
         
         # Get ANF client and subscription ID (using resolved value)
@@ -181,7 +181,7 @@ def create_replication(
                 error_message = "For new destination volume, destination_location, destination_creation_token, destination_virtual_network_name, and destination_subnet_name are required"
                 logger.error(error_message)
                 if print_output:
-                    logger.error(error_message)
+                    print(error_message)
                 return {"status": "error", "details": error_message}
             
             # Create the data protection volume
@@ -226,7 +226,7 @@ def create_replication(
                 error_message = f"Failed to create destination volume: {volume_result.get('details', 'Unknown error')}"
                 logger.error(error_message)
                 if print_output:
-                    logger.error(error_message)
+                    print(error_message)
                 return {"status": "error", "details": error_message}
             
             # Construct destination volume resource ID
@@ -237,7 +237,7 @@ def create_replication(
             error_message = "Destination volume resource ID could not be determined"
             logger.error(error_message)
             if print_output:
-                logger.error(error_message)
+                print(error_message)
             return {"status": "error", "details": error_message}
         
         
@@ -246,7 +246,7 @@ def create_replication(
             error_message = "A volume cannot be authorized for replication against itself"
             logger.error(error_message)
             if print_output:
-                logger.error(error_message)
+                print(error_message)
             return {"status": "error", "details": error_message}
         
         # Create the authorize request object
@@ -295,7 +295,7 @@ def create_replication(
         error_message = f"Volume '{volume_name}' not found: {str(e)}"
         logger.error(error_message)
         if print_output:
-            logger.error(error_message)
+            print(error_message)
         return {"status": "error", "details": error_message}
     except Exception as e:
         error_message = str(e)
@@ -312,5 +312,5 @@ def create_replication(
 
         logger.error(error_details)
         if print_output:
-            logger.error(error_details)
+            print(error_details)
         return {"status": "error", "details": error_details}
