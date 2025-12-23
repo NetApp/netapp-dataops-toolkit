@@ -230,12 +230,16 @@ async def create_volume_tool(
             print_output=print_output
         )
         if result['status'] == 'error':
+            error_message = f"Error creating ANF volume: {result.get('details', 'Unknown error')}"
+            logger.error(error_message)
             if print_output:
-                logger.error(f"Error creating ANF volume: {result.get('details', 'Unknown error')}")
+                print(error_message)
         return result
     except Exception as e:
+        error_message = f"Error creating ANF volume: {e}"
+        logger.error(error_message)
         if print_output:
-            logger.error(f"Error creating ANF volume: {e}")
+            print(error_message)
         return {"status": "error", "details": f"Error creating ANF volume: {e}"}
 
 
@@ -450,12 +454,16 @@ async def clone_volume_tool(
             print_output=print_output
         )
         if result['status'] == 'error':
+            error_message = f"Error cloning ANF volume: {result.get('details', 'Unknown error')}"
+            logger.error(error_message)
             if print_output:
-                logger.error(f"Error cloning ANF volume: {result.get('details', 'Unknown error')}")
+                print(error_message)
         return result
     except Exception as e:
+        error_message = f"Error cloning ANF volume: {e}"
+        logger.error(error_message)
         if print_output:
-            logger.error(f"Error cloning ANF volume: {e}")
+            print(error_message)
         return {"status": "error", "details": f"Error cloning ANF volume: {e}"}
 
 
@@ -499,12 +507,16 @@ async def list_volumes_tool(
             print_output=print_output
         )
         if result['status'] == 'error':
+            error_message = f"Error listing ANF volumes: {result.get('details', 'Unknown error')}"
+            logger.error(error_message)
             if print_output:
-                logger.error(f"Error listing ANF volumes: {result.get('details', 'Unknown error')}")
+                print(error_message)
         return result
     except Exception as e:
+        error_message = f"Error listing ANF volumes: {e}"
+        logger.error(error_message)
         if print_output:
-            logger.error(f"Error listing ANF volumes: {e}")
+            print(error_message)
         return {"status": "error", "details": f"Error listing ANF volumes: {e}"}
 
 
@@ -566,12 +578,16 @@ async def create_snapshot_tool(
             print_output=print_output
         )
         if result['status'] == 'error':
+            error_message = f"Error creating ANF snapshot: {result.get('details', 'Unknown error')}"
+            logger.error(error_message)
             if print_output:
-                logger.error(f"Error creating ANF snapshot: {result.get('details', 'Unknown error')}")
+                print(error_message)
         return result
     except Exception as e:
+        error_message = f"Error creating ANF snapshot: {e}"
+        logger.error(error_message)
         if print_output:
-            logger.error(f"Error creating ANF snapshot: {e}")
+            print(error_message)
         return {"status": "error", "details": f"Error creating ANF snapshot: {e}"}
 
 @mcp.tool(name="List Snapshots")
@@ -619,12 +635,16 @@ async def list_snapshots_tool(
             print_output=print_output
         )
         if result['status'] == 'error':
+            error_message = f"Error listing ANF snapshots: {result.get('details', 'Unknown error')}"
+            logger.error(error_message)
             if print_output:
-                logger.error(f"Error listing ANF snapshots: {result.get('details', 'Unknown error')}")
+                print(error_message)
         return result
     except Exception as e:
+        error_message = f"Error listing ANF snapshots: {e}"
+        logger.error(error_message)
         if print_output:
-            logger.error(f"Error listing ANF snapshots: {e}")
+            print(error_message)
         return {"status": "error", "details": f"Error listing ANF snapshots: {e}"}
 
 
@@ -738,12 +758,16 @@ async def create_replication_tool(
             print_output=print_output
         )
         if result['status'] == 'error':
+            error_message = f"Error creating ANF replication: {result.get('details', 'Unknown error')}"
+            logger.error(error_message)
             if print_output:
-                logger.error(f"Error creating ANF replication: {result.get('details', 'Unknown error')}")
+                print(error_message)
         return result
     except Exception as e:
+        error_message = f"Error creating ANF replication: {e}"
+        logger.error(error_message)
         if print_output:
-            logger.error(f"Error creating ANF replication: {e}")
+            print(error_message)
         return {"status": "error", "details": f"Error creating ANF replication: {e}"}
 
 @mcp.tool(name="Create ANF Config")
@@ -805,12 +829,16 @@ async def create_anf_config_tool(
             print_output=print_output
         )
         if result.get('status') == 'error':
+            error_message = f"Error creating ANF config: {result.get('details', 'Unknown error')}"
+            logger.error(error_message)
             if print_output:
-                logger.error(f"Error creating ANF config: {result.get('details', 'Unknown error')}")
+                print(error_message)
         return result
     except Exception as e:
+        error_message = f"Error creating ANF config: {e}"
+        logger.error(error_message)
         if print_output:
-            logger.error(f"Error creating ANF config: {e}")
+            print(error_message)
         return {"status": "error", "details": f"Error creating ANF config: {e}"}
 
 # Register the MCP instance to run the tools
