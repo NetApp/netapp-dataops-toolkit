@@ -4,7 +4,7 @@ NetApp DataOps Toolkit - Azure NetApp Files (ANF) Volume Management
 This module provides volume management operations for Azure NetApp Files.
 """
 
-from typing import Dict, Optional, Any
+from typing import Dict, List, Optional, Any
 from azure.mgmt.netapp.models import (
     Volume, 
     VolumePropertiesExportPolicy,
@@ -19,6 +19,26 @@ from netapp_dataops.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
 
+# Constants for default values and validation
+VALID_PROTOCOL_TYPES = ["NFSv3", "NFSv4.1", "CIFS"]
+VALID_SERVICE_LEVELS = ["Standard", "Premium", "Ultra", "StandardZRS", "Flexible"]
+VALID_SECURITY_STYLES = ["ntfs", "unix"]
+VALID_NETWORK_FEATURES = ["Basic", "Standard", "Basic_Standard", "Standard_Basic"]
+VALID_ENCRYPTION_KEY_SOURCES = ["Microsoft.NetApp", "Microsoft.KeyVault"]
+VALID_AVS_DATA_STORE = ["Enabled", "Disabled"]
+VALID_ENABLE_SUBVOLUMES = ["Enabled", "Disabled"]
+
+# Default values
+DEFAULT_SERVICE_LEVEL = "Premium"
+DEFAULT_SECURITY_STYLE = "unix"
+DEFAULT_UNIX_PERMISSIONS = "0770"
+DEFAULT_NETWORK_FEATURES = "Basic"
+DEFAULT_ENCRYPTION_KEY_SOURCE = "Microsoft.NetApp"
+DEFAULT_AVS_DATA_STORE = "Disabled"
+DEFAULT_ENABLE_SUBVOLUMES = "Disabled"
+DEFAULT_PROTOCOL_TYPES = ["NFSv3"]
+DEFAULT_SUBNET_NAME = "default"
+
 def create_volume(
     volume_name: str,
     creation_token: str,
@@ -27,19 +47,19 @@ def create_volume(
     account_name: str = None,
     pool_name: str = None,
     location: str = None,
-    protocol_types: list = None,
+    protocol_types: Optional[List[str]] = None,
     virtual_network_name: str = None,
     subnet_name: str = None,
     service_level: str = None,
-    tags: dict = None,
-    zones: list = None,
-    export_policy_rules: list = None,
+    tags: Optional[Dict[str, str]] = None,
+    zones: Optional[List[str]] = None,
+    export_policy_rules: Optional[List[Dict[str, Any]]] = None,
     security_style: str = None,
     smb_encryption: bool = None,
     smb_continuously_available: bool = None,
     throughput_mibps: float = None,
     volume_type: str = None,
-    data_protection: list = None,
+    data_protection: Optional[Dict[str, Any]] = None,
     is_default_quota_enabled: bool = None,
     default_user_quota_in_ki_bs: int = None,
     default_group_quota_in_ki_bs: int = None,
@@ -203,10 +223,26 @@ def create_volume(
         resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
         resolved_location = get_config_value('location', location, config, print_output)
         resolved_virtual_network_name = get_config_value('virtual_network_name', virtual_network_name, config, print_output)
-        resolved_subnet_name = get_config_value('subnet_name', subnet_name, config, print_output) if subnet_name is not None else config.get('subnetName', 'default')
-        resolved_protocol_types = get_config_value('protocol_types', protocol_types, config, print_output) if protocol_types is not None else config.get('protocolTypes', ["NFSv3"])
+        resolved_subnet_name = get_config_value('subnet_name', subnet_name, config, print_output) if subnet_name is not None else config.get('subnet_name', DEFAULT_SUBNET_NAME)
+        resolved_protocol_types = get_config_value('protocol_types', protocol_types, config, print_output) if protocol_types is not None else config.get('protocol_types', DEFAULT_PROTOCOL_TYPES)
     except InvalidConfigError:
         raise
+        
+    # Apply default values for parameters with documented defaults  
+    if service_level is None:
+        service_level = DEFAULT_SERVICE_LEVEL
+    if security_style is None:
+        security_style = DEFAULT_SECURITY_STYLE  
+    if unix_permissions is None:
+        unix_permissions = DEFAULT_UNIX_PERMISSIONS
+    if network_features is None:
+        network_features = DEFAULT_NETWORK_FEATURES
+    if encryption_key_source is None:
+        encryption_key_source = DEFAULT_ENCRYPTION_KEY_SOURCE
+    if avs_data_store is None:
+        avs_data_store = DEFAULT_AVS_DATA_STORE
+    if enable_subvolumes is None:
+        enable_subvolumes = DEFAULT_ENABLE_SUBVOLUMES
 
     # Validate input parameters (now using resolved values)
     validate_required_params(
@@ -228,57 +264,8 @@ def create_volume(
         # Construct subnet ID from resolved parameters
         subnet_id = f"/subscriptions/{final_subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.Network/virtualNetworks/{resolved_virtual_network_name}/subnets/{resolved_subnet_name}"
         
-        # Construct export policy from provided list or create default for NFS
-        export_policy = None
-        if export_policy_rules is not None:
-            # Construct export policy from provided list of rules
-            export_rules = []
-            for i, rule_dict in enumerate(export_policy_rules):
-                # Set default values if not provided in the rule dictionary
-                rule_params = {
-                    'rule_index': rule_dict.get('rule_index', i + 1),
-                    'unix_read_only': rule_dict.get('unix_read_only', False),
-                    'unix_read_write': rule_dict.get('unix_read_write', True),
-                    'cifs': rule_dict.get('cifs', False),
-                    'nfsv3': rule_dict.get('nfsv3', "NFSv3" in resolved_protocol_types),
-                    'nfsv41': rule_dict.get('nfsv41', "NFSv4.1" in resolved_protocol_types),
-                    'allowed_clients': rule_dict.get('allowed_clients', '0.0.0.0/0'),
-                    'has_root_access': rule_dict.get('has_root_access', True),
-                    'kerberos5_read_only': rule_dict.get('kerberos5_read_only', False),
-                    'kerberos5_read_write': rule_dict.get('kerberos5_read_write', False),
-                    'kerberos5_i_read_only': rule_dict.get('kerberos5_i_read_only', False),
-                    'kerberos5_i_read_write': rule_dict.get('kerberos5_i_read_write', False),
-                    'kerberos5_p_read_only': rule_dict.get('kerberos5_p_read_only', False),
-                    'kerberos5_p_read_write': rule_dict.get('kerberos5_p_read_write', False),
-                    'chown_mode': rule_dict.get('chown_mode', 'Restricted')
-                }
-                export_rules.append(ExportPolicyRule(**rule_params))
-            
-            export_policy = VolumePropertiesExportPolicy(rules=export_rules)
-            
-        elif any(proto in resolved_protocol_types for proto in ["NFSv3", "NFSv4.1"]):
-            # Create default export policy for NFS volumes
-            export_policy = VolumePropertiesExportPolicy(
-                rules=[
-                    ExportPolicyRule(
-                        rule_index=1,
-                        unix_read_only=False,
-                        unix_read_write=True,
-                        cifs=False,
-                        nfsv3="NFSv3" in resolved_protocol_types,
-                        nfsv41="NFSv4.1" in resolved_protocol_types,
-                        allowed_clients="0.0.0.0/0",
-                        has_root_access=True,
-                        kerberos5_read_only=False,
-                        kerberos5_read_write=False,
-                        kerberos5_i_read_only=False,
-                        kerberos5_i_read_write=False,
-                        kerberos5_p_read_only=False,
-                        kerberos5_p_read_write=False,
-                        chown_mode='Restricted'
-                    )
-                ]
-            )
+        # Create export policy using helper function
+        export_policy = _create_export_policy_rules(export_policy_rules, resolved_protocol_types)
 
         # Build volume properties (using resolved values)
         volume_properties = {
@@ -302,26 +289,19 @@ def create_volume(
             'snapshot_directory_visible': snapshot_directory_visible,
             'network_features': network_features,
             'encryption_key_source': encryption_key_source,
-            'enable_subvolumes': enable_subvolumes
+            'enable_subvolumes': enable_subvolumes,
+            'tags': tags,
+            'zones': zones,
+            'export_policy': export_policy,
+            'throughput_mibps': throughput_mibps,
+            'volume_type': volume_type,
+            'data_protection': data_protection,
+            'unix_permissions': unix_permissions,
+            'coolness_period': coolness_period
         }
         
-        # Add optional parameters if provided
-        if tags:
-            volume_properties['tags'] = tags
-        if zones:
-            volume_properties['zones'] = zones
-        if export_policy:
-            volume_properties['export_policy'] = export_policy
-        if throughput_mibps:
-            volume_properties['throughput_mibps'] = throughput_mibps
-        if volume_type:
-            volume_properties['volume_type'] = volume_type
-        if data_protection:
-            volume_properties['data_protection'] = data_protection
-        if unix_permissions:
-            volume_properties['unix_permissions'] = unix_permissions
-        if coolness_period:
-            volume_properties['coolness_period'] = coolness_period
+        # Filter out None values to avoid passing them to Azure SDK
+        volume_properties = _filter_none_values(volume_properties)
         
         # Create the volume object
         volume = Volume(**volume_properties)
@@ -368,16 +348,16 @@ def clone_volume(
     virtual_network_name: str = None,
     subnet_name: str = None,
     service_level: str = None,
-    protocol_types: list = None,
-    tags: dict = None,
-    zones: list = None,
-    export_policy_rules: list = None,
+    protocol_types: Optional[List[str]] = None,
+    tags: Optional[Dict[str, str]] = None,
+    zones: Optional[List[str]] = None,
+    export_policy_rules: Optional[List[Dict[str, Any]]] = None,
     security_style: str = None,
     smb_encryption: bool = None,
     smb_continuously_available: bool = None,
     throughput_mibps: float = None,
     volume_type: str = None,
-    data_protection: list = None,
+    data_protection: Optional[Dict[str, Any]] = None,
     is_default_quota_enabled: bool = None,
     default_user_quota_in_ki_bs: int = None,
     default_group_quota_in_ki_bs: int = None,
@@ -540,10 +520,26 @@ def clone_volume(
         resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
         resolved_location = get_config_value('location', location, config, print_output)
         resolved_virtual_network_name = get_config_value('virtual_network_name', virtual_network_name, config, print_output)
-        resolved_subnet_name = get_config_value('subnet_name', subnet_name, config, print_output) if subnet_name is not None else config.get('subnetName', 'default')
-        resolved_protocol_types = get_config_value('protocol_types', protocol_types, config, print_output) if protocol_types is not None else config.get('protocolTypes', ["NFSv3"])
+        resolved_subnet_name = get_config_value('subnet_name', subnet_name, config, print_output) if subnet_name is not None else config.get('subnet_name', DEFAULT_SUBNET_NAME)
+        resolved_protocol_types = get_config_value('protocol_types', protocol_types, config, print_output) if protocol_types is not None else config.get('protocol_types', DEFAULT_PROTOCOL_TYPES)
     except InvalidConfigError:
         raise
+        
+    # Apply default values for parameters with documented defaults  
+    if service_level is None:
+        service_level = DEFAULT_SERVICE_LEVEL
+    if security_style is None:
+        security_style = DEFAULT_SECURITY_STYLE  
+    if unix_permissions is None:
+        unix_permissions = "0777"  # clone_volume default is different
+    if network_features is None:
+        network_features = DEFAULT_NETWORK_FEATURES
+    if encryption_key_source is None:
+        encryption_key_source = DEFAULT_ENCRYPTION_KEY_SOURCE
+    if avs_data_store is None:
+        avs_data_store = DEFAULT_AVS_DATA_STORE
+    if enable_subvolumes is None:
+        enable_subvolumes = DEFAULT_ENABLE_SUBVOLUMES
 
     # Validate input parameters (now using resolved values)
     validate_required_params(
@@ -570,7 +566,7 @@ def clone_volume(
 
         # Set default protocol types and get usage_threshold from source volume if not provided
         usage_threshold = None
-        if resolved_protocol_types is None or resolved_protocol_types == config.get('protocolTypes', ["NFSv3"]):
+        if resolved_protocol_types is None or resolved_protocol_types == config.get('protocol_types', DEFAULT_PROTOCOL_TYPES):
             # Try to get protocol types and usage_threshold from the source volume
             try:
                 source_volume = client.volumes.get(
@@ -617,57 +613,8 @@ def clone_volume(
                 logger.warning(f"Failed to get usage threshold from source volume '{source_volume_name}': {str(e)}, using default 100 GiB")
                 usage_threshold = 107374182400  # 100 GiB default
         
-        # Construct export policy from provided list or create default for NFS
-        export_policy = None
-        if export_policy_rules is not None:
-            # Construct export policy from provided list of rules
-            export_rules = []
-            for i, rule_dict in enumerate(export_policy_rules):
-                # Set default values if not provided in the rule dictionary
-                rule_params = {
-                    'rule_index': rule_dict.get('rule_index', i + 1),
-                    'unix_read_only': rule_dict.get('unix_read_only', False),
-                    'unix_read_write': rule_dict.get('unix_read_write', True),
-                    'cifs': rule_dict.get('cifs', False),
-                    'nfsv3': rule_dict.get('nfsv3', "NFSv3" in resolved_protocol_types),
-                    'nfsv41': rule_dict.get('nfsv41', "NFSv4.1" in resolved_protocol_types),
-                    'allowed_clients': rule_dict.get('allowed_clients', '0.0.0.0/0'),
-                    'has_root_access': rule_dict.get('has_root_access', True),
-                    'kerberos5_read_only': rule_dict.get('kerberos5_read_only', False),
-                    'kerberos5_read_write': rule_dict.get('kerberos5_read_write', False),
-                    'kerberos5_i_read_only': rule_dict.get('kerberos5_i_read_only', False),
-                    'kerberos5_i_read_write': rule_dict.get('kerberos5_i_read_write', False),
-                    'kerberos5_p_read_only': rule_dict.get('kerberos5_p_read_only', False),
-                    'kerberos5_p_read_write': rule_dict.get('kerberos5_p_read_write', False),
-                    'chown_mode': rule_dict.get('chown_mode', 'Restricted')
-                }
-                export_rules.append(ExportPolicyRule(**rule_params))
-            
-            export_policy = VolumePropertiesExportPolicy(rules=export_rules)
-            
-        elif any(proto in resolved_protocol_types for proto in ["NFSv3", "NFSv4.1"]):
-            # Create default export policy for NFS volumes
-            export_policy = VolumePropertiesExportPolicy(
-                rules=[
-                    ExportPolicyRule(
-                        rule_index=1,
-                        unix_read_only=False,
-                        unix_read_write=True,
-                        cifs=False,
-                        nfsv3="NFSv3" in resolved_protocol_types,
-                        nfsv41="NFSv4.1" in resolved_protocol_types,
-                        allowed_clients="0.0.0.0/0",
-                        has_root_access=True,
-                        kerberos5_read_only=False,
-                        kerberos5_read_write=False,
-                        kerberos5_i_read_only=False,
-                        kerberos5_i_read_write=False,
-                        kerberos5_p_read_only=False,
-                        kerberos5_p_read_write=False,
-                        chown_mode='Restricted'
-                    )
-                ]
-            )
+        # Create export policy using helper function
+        export_policy = _create_export_policy_rules(export_policy_rules, resolved_protocol_types)
         
         # Build volume properties (using resolved values)
         volume_properties = {
@@ -691,32 +638,20 @@ def clone_volume(
             'snapshot_directory_visible': snapshot_directory_visible,
             'network_features': network_features,
             'encryption_key_source': encryption_key_source,
-            'enable_subvolumes': enable_subvolumes
+            'enable_subvolumes': enable_subvolumes,
+            'snapshot_id': snapshot_id,
+            'tags': tags,
+            'zones': zones,
+            'export_policy': export_policy,
+            'throughput_mibps': throughput_mibps,
+            'volume_type': volume_type,
+            'data_protection': data_protection,
+            'unix_permissions': unix_permissions,
+            'coolness_period': coolness_period
         }
         
-        # Add snapshot reference for snapshot-based cloning
-        if snapshot_id:
-            # For snapshot-based cloning in Azure NetApp Files, use snapshot_id parameter
-            # Based on Azure SDK samples, snapshot_id goes directly in Volume object
-            volume_properties['snapshot_id'] = snapshot_id
-        
-        # Add optional parameters if provided
-        if tags:
-            volume_properties['tags'] = tags
-        if zones:
-            volume_properties['zones'] = zones
-        if export_policy:
-            volume_properties['export_policy'] = export_policy
-        if throughput_mibps:
-            volume_properties['throughput_mibps'] = throughput_mibps
-        if volume_type:
-            volume_properties['volume_type'] = volume_type
-        if data_protection:
-            volume_properties['data_protection'] = data_protection
-        if unix_permissions:
-            volume_properties['unix_permissions'] = unix_permissions
-        if coolness_period:
-            volume_properties['coolness_period'] = coolness_period
+        # Filter out None values to avoid passing them to Azure SDK
+        volume_properties = _filter_none_values(volume_properties)
         
         # Create the volume object
         volume = Volume(**volume_properties)
@@ -937,3 +872,81 @@ def list_volumes(
         if print_output:
             logger.error(f"Failed to list volumes: {str(e)}")
         return {"status": "error", "details": str(e)}
+
+
+def _create_export_policy_rules(export_policy_rules: Optional[List[Dict[str, Any]]], protocol_types: List[str]) -> Optional[VolumePropertiesExportPolicy]:
+    """
+    Create export policy rules from provided list or create default for NFS volumes.
+    
+    Args:
+        export_policy_rules: List of export policy rule dictionaries or None
+        protocol_types: List of protocol types for the volume
+        
+    Returns:
+        VolumePropertiesExportPolicy object or None
+    """
+    export_policy = None
+    if export_policy_rules is not None:
+        # Construct export policy from provided list of rules
+        export_rules = []
+        for i, rule_dict in enumerate(export_policy_rules):
+            # Set default values if not provided in the rule dictionary
+            rule_params = {
+                'rule_index': rule_dict.get('rule_index', i + 1),
+                'unix_read_only': rule_dict.get('unix_read_only', False),
+                'unix_read_write': rule_dict.get('unix_read_write', True),
+                'cifs': rule_dict.get('cifs', False),
+                'nfsv3': rule_dict.get('nfsv3', "NFSv3" in protocol_types),
+                'nfsv41': rule_dict.get('nfsv41', "NFSv4.1" in protocol_types),
+                'allowed_clients': rule_dict.get('allowed_clients', '0.0.0.0/0'),
+                'has_root_access': rule_dict.get('has_root_access', True),
+                'kerberos5_read_only': rule_dict.get('kerberos5_read_only', False),
+                'kerberos5_read_write': rule_dict.get('kerberos5_read_write', False),
+                'kerberos5_i_read_only': rule_dict.get('kerberos5_i_read_only', False),
+                'kerberos5_i_read_write': rule_dict.get('kerberos5_i_read_write', False),
+                'kerberos5_p_read_only': rule_dict.get('kerberos5_p_read_only', False),
+                'kerberos5_p_read_write': rule_dict.get('kerberos5_p_read_write', False),
+                'chown_mode': rule_dict.get('chown_mode', 'Restricted')
+            }
+            export_rules.append(ExportPolicyRule(**rule_params))
+        
+        export_policy = VolumePropertiesExportPolicy(rules=export_rules)
+        
+    elif any(proto in protocol_types for proto in ["NFSv3", "NFSv4.1"]):
+        # Create default export policy for NFS volumes
+        export_policy = VolumePropertiesExportPolicy(
+            rules=[
+                ExportPolicyRule(
+                    rule_index=1,
+                    unix_read_only=False,
+                    unix_read_write=True,
+                    cifs=False,
+                    nfsv3="NFSv3" in protocol_types,
+                    nfsv41="NFSv4.1" in protocol_types,
+                    allowed_clients="0.0.0.0/0",
+                    has_root_access=True,
+                    kerberos5_read_only=False,
+                    kerberos5_read_write=False,
+                    kerberos5_i_read_only=False,
+                    kerberos5_i_read_write=False,
+                    kerberos5_p_read_only=False,
+                    kerberos5_p_read_write=False,
+                    chown_mode='Restricted'
+                )
+            ]
+        )
+        
+    return export_policy
+
+
+def _filter_none_values(properties_dict: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Filter out None values from a properties dictionary to avoid passing None to Azure SDK.
+    
+    Args:
+        properties_dict: Dictionary potentially containing None values
+        
+    Returns:
+        Dictionary with None values filtered out
+    """
+    return {k: v for k, v in properties_dict.items() if v is not None}

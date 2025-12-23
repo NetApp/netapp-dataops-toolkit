@@ -374,14 +374,15 @@ def test_delete_snapshot_success():
 # -----------------------------------------------------------------------------
 
 def test_delete_snapshot_not_found():
-    """Test snapshot deletion when snapshot doesn't exist - implementation has bug with ResourceNotFoundError"""
+    """Test snapshot deletion when snapshot doesn't exist - should return proper error"""
     with patch('netapp_dataops.traditional.anf.snapshot_management.get_anf_client') as mock_client_func:
         mock_client = MagicMock()
         mock_client_func.return_value = (mock_client, 'test-subscription')
         mock_client.snapshots.begin_delete.side_effect = ResourceNotFoundError("Snapshot not found")
-        # Due to bug in implementation (undefined variable 'e'), this raises UnboundLocalError
-        with pytest.raises(UnboundLocalError):
-            snapshot_management.delete_snapshot(**DELETE_REQUIRED_ARGS)
+        
+        result = snapshot_management.delete_snapshot(**DELETE_REQUIRED_ARGS)
+        assert result['status'] == 'error'
+        assert 'not found' in result['details'].lower()
 
 
 def test_delete_snapshot_client_exception():
@@ -674,8 +675,8 @@ def test_create_snapshot_maximum_name_length():
         assert result['status'] == 'success'
 
 
-def test_create_snapshot_special_characters():
-    """Test snapshot creation with special characters in name"""
+def test_create_snapshot_special_characters_extended():
+    """Test snapshot creation with extended special characters and numbers in name"""
     args = REQUIRED_ARGS.copy()
     args['snapshot_name'] = 'test-snapshot_123-v2.0'
     

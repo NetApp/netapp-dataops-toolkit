@@ -223,7 +223,7 @@ def delete_snapshot(
 
         return {"status": "success", "details": f"Snapshot '{snapshot_name}' deleted successfully"}
 
-    except ResourceNotFoundError:
+    except ResourceNotFoundError as e:
         if print_output:
             logger.error(f"Snapshot '{snapshot_name}' not found")
         return {"status": "error", "details": str(e)}

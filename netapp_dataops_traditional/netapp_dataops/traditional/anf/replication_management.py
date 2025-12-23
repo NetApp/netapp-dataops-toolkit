@@ -4,7 +4,7 @@ NetApp DataOps Toolkit - Azure NetApp Files (ANF) Replication Management
 This module provides replication management operations for Azure NetApp Files.
 """
 
-from typing import Dict, Optional, Any
+from typing import Dict, List, Any
 from azure.mgmt.netapp.models import AuthorizeRequest
 from azure.core.exceptions import ResourceNotFoundError
 from .client import get_anf_client
@@ -14,6 +14,11 @@ from .config import _retrieve_anf_config, get_config_value, InvalidConfigError
 from netapp_dataops.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
+
+# Constants for validation
+VALID_PROTOCOL_TYPES = ["NFSv3", "NFSv4.1", "CIFS"]
+VALID_SERVICE_LEVELS = ["Standard", "Premium", "Ultra", "StandardZRS", "Flexible"]
+DEFAULT_SERVICE_LEVEL = "Premium"
 
 def create_replication(
     # Source volume parameters
@@ -26,11 +31,11 @@ def create_replication(
     destination_location: str,
     destination_creation_token: str,
     destination_usage_threshold: int,
-    destination_protocol_types: list,
+    destination_protocol_types: List[str],
     destination_virtual_network_name: str,
     destination_subnet_name: str = "default",
     destination_service_level: str = None,
-    destination_zones: list = None,
+    destination_zones: List[str] = None,
     # Source volume parameters (optional - will use config defaults)
     resource_group_name: str = None,
     account_name: str = None,
@@ -66,7 +71,7 @@ def create_replication(
         destination_usage_threshold (int):
             Required. Destination volume quota in bytes.
             This must be at least as large as the source volume's usage threshold.
-        destination_protocol_types (list):
+        destination_protocol_types (List[str]):
             Required. List of protocol types for destination volume (e.g., ["NFSv4.1"]).
         destination_virtual_network_name (str):
             Required. Destination virtual network name.
@@ -75,7 +80,7 @@ def create_replication(
         destination_service_level (str):
             Optional. Destination service level (Standard/Premium/Ultra).
             Defaults to "Premium".
-        destination_zones (list):
+        destination_zones (List[str]):
             Optional. Availability zones for destination volume. If None, defaults to ["1"].
         
         # Source volume parameters (optional - will use config defaults)
@@ -93,7 +98,9 @@ def create_replication(
             Defaults to False.
 
     Returns:
-        Dictionary with status and replication setup details
+        Dictionary with status and replication setup details. The response details 
+        are serialized using _serialize() and include status information, source 
+        volume details, destination volume details, and replication status.
 
     Raises:
         InvalidConfigError: If required source volume parameters are missing from both function call and config
@@ -138,19 +145,44 @@ def create_replication(
             destination_virtual_network_name=destination_virtual_network_name
         )
         
+        # Set default service level if not provided
+        if destination_service_level is None:
+            destination_service_level = DEFAULT_SERVICE_LEVEL
+        
+        # Validate protocol types
+        invalid_protocols = [pt for pt in destination_protocol_types if pt not in VALID_PROTOCOL_TYPES]
+        if invalid_protocols:
+            error_message = f"Invalid protocol types: {invalid_protocols}. Valid options are: {VALID_PROTOCOL_TYPES}"
+            logger.error(error_message)
+            if print_output:
+                logger.error(error_message)
+            return {"status": "error", "details": error_message}
+        
+        # Validate service level
+        if destination_service_level not in VALID_SERVICE_LEVELS:
+            error_message = f"Invalid service level: '{destination_service_level}'. Valid options are: {VALID_SERVICE_LEVELS}"
+            logger.error(error_message)
+            if print_output:
+                logger.error(error_message)
+            return {"status": "error", "details": error_message}
+        
         # Get ANF client and subscription ID (using resolved value)
         client, final_subscription_id = get_anf_client(resolved_subscription_id, print_output=print_output)
 
         # Construct source volume resource ID (using resolved values)
         source_volume_resource_id = f"/subscriptions/{final_subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{resolved_account_name}/capacityPools/{resolved_pool_name}/volumes/{volume_name}"
         
+        # Initialize destination volume resource ID
+        destination_volume_resource_id = None
         
         # Create destination volume if parameters are provided
         if destination_resource_group_name and destination_account_name and destination_pool_name and destination_volume_name:
             if not all([destination_location, destination_creation_token, destination_virtual_network_name, destination_subnet_name]):
+                error_message = "For new destination volume, destination_location, destination_creation_token, destination_virtual_network_name, and destination_subnet_name are required"
+                logger.error(error_message)
                 if print_output:
-                    logger.error("For new destination volume, destination_location, destination_creation_token, and destination_subnet_id are required")
-                return {"status": "error", "details": "For new destination volume, destination_location, destination_creation_token, and destination_subnet_id are required"}
+                    logger.error(error_message)
+                return {"status": "error", "details": error_message}
             
             # Create the data protection volume
             from .volume_management import create_volume
@@ -191,19 +223,31 @@ def create_replication(
             )
             
             if volume_result.get('status') != 'success':
+                error_message = f"Failed to create destination volume: {volume_result.get('details', 'Unknown error')}"
+                logger.error(error_message)
                 if print_output:
-                    logger.error(f"Failed to create destination volume: {volume_result.get('details', 'Unknown error')}")
-                return {"status": "error", "details": f"Failed to create destination volume: {volume_result.get('details', 'Unknown error')}"}
+                    logger.error(error_message)
+                return {"status": "error", "details": error_message}
             
             # Construct destination volume resource ID
             destination_volume_resource_id = f"/subscriptions/{final_subscription_id}/resourceGroups/{destination_resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{destination_account_name}/capacityPools/{destination_pool_name}/volumes/{destination_volume_name}"
         
+        # Ensure destination volume resource ID is set
+        if not destination_volume_resource_id:
+            error_message = "Destination volume resource ID could not be determined"
+            logger.error(error_message)
+            if print_output:
+                logger.error(error_message)
+            return {"status": "error", "details": error_message}
+        
         
         # Validate that source and destination are not the same
         if destination_volume_resource_id and destination_volume_resource_id.lower() == source_volume_resource_id.lower():
+            error_message = "A volume cannot be authorized for replication against itself"
+            logger.error(error_message)
             if print_output:
-                logger.error("A volume cannot be authorized for replication against itself")
-            return {"status": "error", "details": "A volume cannot be authorized for replication against itself"}
+                logger.error(error_message)
+            return {"status": "error", "details": error_message}
         
         # Create the authorize request object
         authorize_request = AuthorizeRequest(
@@ -248,9 +292,11 @@ def create_replication(
     except InvalidConfigError:
         raise
     except ResourceNotFoundError as e:
+        error_message = f"Volume '{volume_name}' not found: {str(e)}"
+        logger.error(error_message)
         if print_output:
-            logger.error(f"Volume '{volume_name}' not found: {str(e)}")
-        return {"status": "error", "details": f"Volume '{volume_name}' not found: {str(e)}"}
+            logger.error(error_message)
+        return {"status": "error", "details": error_message}
     except Exception as e:
         error_message = str(e)
         
@@ -264,6 +310,7 @@ def create_replication(
         else:
             error_details = f"Failed to setup replication: {error_message}"
 
+        logger.error(error_details)
         if print_output:
             logger.error(error_details)
         return {"status": "error", "details": error_details}
