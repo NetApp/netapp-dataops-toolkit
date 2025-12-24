@@ -156,6 +156,13 @@ def create_volume(
         raise ValueError("protocols must be a list")
     if not isinstance(capacity_gib, int) or capacity_gib < 0:
         raise ValueError("capacity_gib must be a non-negative integer")
+    
+    # Validate cooling threshold days range
+    if cooling_threshold_days is not None and not (2 <= cooling_threshold_days <= 183):
+        raise ValueError("cooling_threshold_days must be between 2 and 183")
+    
+    # Note: large_capacity validation removed to allow API-level validation
+    # This enables support for regions/projects where large capacity is available
 
     try:
         client = create_client(print_output=print_output)
@@ -163,20 +170,38 @@ def create_volume(
         # Create a parent string
         parent = f"projects/{project_id}/locations/{location}"
 
+        # Convert protocol strings to enum values
+        protocol_enum_map = {
+            'NFSV3': netapp_v1.Protocols.NFSV3,
+            'NFSV4': netapp_v1.Protocols.NFSV4,
+            'SMB': netapp_v1.Protocols.SMB
+        }
+        protocol_enums = [protocol_enum_map.get(p) for p in protocols if protocol_enum_map.get(p) is not None]
+        
+        # Convert security style string to enum
+        security_style_enum = None
+        if security_style:
+            security_style_map = {
+                'NTFS': netapp_v1.SecurityStyle.NTFS,
+                'UNIX': netapp_v1.SecurityStyle.UNIX
+            }
+            security_style_enum = security_style_map.get(security_style)
+
         # Initialize request argument(s)
         volume = netapp_v1.Volume(
             share_name=share_name,
             storage_pool=storage_pool,
             capacity_gib=capacity_gib,
-            protocols=protocols,
+            protocols=protocol_enums,
             description=description,
             labels=labels or {},
             unix_permissions=unix_permissions,
             snapshot_directory=snapshot_directory,
-            security_style=security_style,
+            security_style=security_style_enum,
             kerberos_enabled=kerberos_enabled,
             large_capacity=large_capacity,
             multiple_endpoints=multiple_endpoints,
+            snap_reserve=snap_reserve,
         )
 
         if smb_settings:
@@ -184,17 +209,36 @@ def create_volume(
 
         # Build ExportPolicy if provided
         if export_policy_rules:
-            volume.export_policy = netapp_v1.ExportPolicy(
-                rules=[
-                    netapp_v1.ExportPolicyRule(
-                        allowed_clients=rule.get("allowed_clients", ""),
-                        access_type=rule.get("access_type", "READ_WRITE"),
-                        has_root_access=rule.get("has_root_access", False),
-                        nfsv3=rule.get("nfsv3", False),
-                        nfsv4=rule.get("nfsv4", False),
-                    ) for rule in export_policy_rules
-                ]
-            )
+            # Convert access_type strings to enum values
+            access_type_map = {
+                'READ_WRITE': netapp_v1.AccessType.READ_WRITE,
+                'READ_ONLY': netapp_v1.AccessType.READ_ONLY,
+                'READ_NONE': netapp_v1.AccessType.READ_NONE
+            }
+            
+            rules = []
+            for rule in export_policy_rules:
+                access_type_enum = access_type_map.get(rule.get("access_type", "READ_WRITE"), netapp_v1.AccessType.READ_WRITE)
+                # Convert has_root_access boolean to string as expected by the API
+                has_root_access_str = "true" if rule.get("has_root_access", False) else "false"
+                
+                export_rule = netapp_v1.SimpleExportPolicyRule()
+                export_rule.allowed_clients = rule.get("allowed_clients", "")
+                export_rule.access_type = access_type_enum
+                export_rule.has_root_access = has_root_access_str
+                export_rule.nfsv3 = rule.get("nfsv3", False)
+                export_rule.nfsv4 = rule.get("nfsv4", False)
+                
+                # Kerberos security modes
+                export_rule.kerberos_5_read_only = rule.get("kerberos_5_read_only", False)
+                export_rule.kerberos_5_read_write = rule.get("kerberos_5_read_write", False)
+                export_rule.kerberos_5i_read_only = rule.get("kerberos_5i_read_only", False)
+                export_rule.kerberos_5i_read_write = rule.get("kerberos_5i_read_write", False)
+                export_rule.kerberos_5p_read_only = rule.get("kerberos_5p_read_only", False)
+                export_rule.kerberos_5p_read_write = rule.get("kerberos_5p_read_write", False)
+                
+                rules.append(export_rule)
+            volume.export_policy = netapp_v1.ExportPolicy(rules=rules)
 
         # Build SnapshotPolicy if provided
         if snapshot_policy:
@@ -203,7 +247,7 @@ def create_volume(
         # Build TieringPolicy if provided
         if tiering_enabled:
             volume.tiering_policy = netapp_v1.TieringPolicy(
-                cooling_threshold_days=cooling_threshold_days or 0
+                cooling_threshold_days=cooling_threshold_days if cooling_threshold_days is not None else 31
             )
 
         # Build BackupConfig if provided
@@ -216,7 +260,7 @@ def create_volume(
 
         # Build RestrictedAction if provided
         if block_deletion_when_clients_connected:
-            volume.restricted_actions = [netapp_v1.RestrictedAction.BLOCK_VOLUME_DELETION]
+            volume.restricted_actions = [netapp_v1.RestrictedAction.DELETE]
 
         # Construct the request
         request = netapp_v1.CreateVolumeRequest(
@@ -395,6 +439,13 @@ def clone_volume(
     if not isinstance(protocols, list):
         raise ValueError("protocols must be a list")
     
+    # Validate cooling threshold days range
+    if cooling_threshold_days is not None and not (2 <= cooling_threshold_days <= 183):
+        raise ValueError("cooling_threshold_days must be between 2 and 183")
+    
+    # Note: large_capacity validation removed to allow API-level validation
+    # This enables support for regions/projects where large capacity is available
+    
     try:
         client = create_client(print_output=print_output)
 
@@ -413,12 +464,29 @@ def clone_volume(
         if not isinstance(source_vol.capacity_gib, int) or source_vol.capacity_gib < 0:
             raise ValueError("capacity_gib in source volume must be a non-negative integer")
     
+        # Convert protocol strings to enum values
+        protocol_enum_map = {
+            'NFSV3': netapp_v1.Protocols.NFSV3,
+            'NFSV4': netapp_v1.Protocols.NFSV4,
+            'SMB': netapp_v1.Protocols.SMB
+        }
+        protocol_enums = [protocol_enum_map.get(p) for p in protocols if protocol_enum_map.get(p) is not None]
+        
+        # Convert security style string to enum
+        security_style_enum = None
+        if security_style:
+            security_style_map = {
+                'NTFS': netapp_v1.SecurityStyle.NTFS,
+                'UNIX': netapp_v1.SecurityStyle.UNIX
+            }
+            security_style_enum = security_style_map.get(security_style)
+
         # Initialize request argument(s)
         volume = netapp_v1.Volume(
             share_name=share_name,
             storage_pool=storage_pool,
             capacity_gib=source_vol.capacity_gib,
-            protocols=protocols,
+            protocols=protocol_enums,
             restore_parameters=netapp_v1.RestoreParameters(
                 source_snapshot=f"{source_name}/snapshots/{source_snapshot}"
             ),
@@ -426,10 +494,11 @@ def clone_volume(
             labels=labels or {},
             unix_permissions=unix_permissions,
             snapshot_directory=snapshot_directory,
-            security_style=security_style,
+            security_style=security_style_enum,
             kerberos_enabled=kerberos_enabled,
             large_capacity=large_capacity,
             multiple_endpoints=multiple_endpoints,
+            snap_reserve=snap_reserve,
         )
     
         if smb_settings:
@@ -437,9 +506,36 @@ def clone_volume(
 
         # Build ExportPolicy if provided
         if export_policy_rules:
-            volume.export_policy = netapp_v1.ExportPolicy(
-                rules=[netapp_v1.ExportPolicyRule(**rule) for rule in export_policy_rules]
-            )
+            # Convert access_type strings to enum values
+            access_type_map = {
+                'READ_WRITE': netapp_v1.AccessType.READ_WRITE,
+                'READ_ONLY': netapp_v1.AccessType.READ_ONLY,
+                'READ_NONE': netapp_v1.AccessType.READ_NONE
+            }
+            
+            rules = []
+            for rule in export_policy_rules:
+                access_type_enum = access_type_map.get(rule.get("access_type", "READ_WRITE"), netapp_v1.AccessType.READ_WRITE)
+                # Convert has_root_access boolean to string as expected by the API
+                has_root_access_str = "true" if rule.get("has_root_access", False) else "false"
+                
+                export_rule = netapp_v1.SimpleExportPolicyRule()
+                export_rule.allowed_clients = rule.get("allowed_clients", "")
+                export_rule.access_type = access_type_enum
+                export_rule.has_root_access = has_root_access_str
+                export_rule.nfsv3 = rule.get("nfsv3", False)
+                export_rule.nfsv4 = rule.get("nfsv4", False)
+                
+                # Kerberos security modes
+                export_rule.kerberos_5_read_only = rule.get("kerberos_5_read_only", False)
+                export_rule.kerberos_5_read_write = rule.get("kerberos_5_read_write", False)
+                export_rule.kerberos_5i_read_only = rule.get("kerberos_5i_read_only", False)
+                export_rule.kerberos_5i_read_write = rule.get("kerberos_5i_read_write", False)
+                export_rule.kerberos_5p_read_only = rule.get("kerberos_5p_read_only", False)
+                export_rule.kerberos_5p_read_write = rule.get("kerberos_5p_read_write", False)
+                
+                rules.append(export_rule)
+            volume.export_policy = netapp_v1.ExportPolicy(rules=rules)
     
         # Build SnapshotPolicy if provided
         if snapshot_policy:
@@ -448,7 +544,7 @@ def clone_volume(
         # Build TieringPolicy if provided
         if tiering_enabled:
             volume.tiering_policy = netapp_v1.TieringPolicy(
-                cooling_threshold_days=cooling_threshold_days or 0
+                cooling_threshold_days=cooling_threshold_days if cooling_threshold_days is not None else 31
             )
     
         # Build BackupConfig if provided
@@ -461,7 +557,7 @@ def clone_volume(
     
         # Build RestrictedAction if provided
         if block_deletion_when_clients_connected:
-            volume.restricted_actions = [netapp_v1.RestrictedAction.BLOCK_VOLUME_DELETION]
+            volume.restricted_actions = [netapp_v1.RestrictedAction.DELETE]
     
         # Construct the request
         request = netapp_v1.CreateVolumeRequest(

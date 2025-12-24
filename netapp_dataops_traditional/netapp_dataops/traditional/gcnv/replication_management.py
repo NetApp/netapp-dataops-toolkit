@@ -129,6 +129,10 @@ def create_replication(
     if labels is not None and not isinstance(labels, dict):
         raise ValueError("labels must be a dictionary")
     
+    # Validate cooling threshold days range
+    if cooling_threshold_days is not None and not (2 <= cooling_threshold_days <= 183):
+        raise ValueError("cooling_threshold_days must be between 2 and 183")
+    
     try:
         client = create_client(print_output=print_output)
 
