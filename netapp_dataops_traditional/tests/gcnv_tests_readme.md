@@ -21,10 +21,10 @@ This directory contains comprehensive unit tests for the NetApp DataOps Toolkit'
 ## Test Files
 
 ### GCNV Traditional Module Tests (`gcnv/` directory)
-- `gcnv/test_base.py`: Tests utility functions including parameter validation, serialization, and error handling
-- `gcnv/test_volume_management.py`: Comprehensive tests for volume operations with professional formatting and complete coverage
-- `gcnv/test_snapshot_management.py`: Enhanced test suite covering all snapshot operations with extensive validation scenarios
-- `gcnv/test_replication_management.py`: Comprehensive replication tests including cross-region scenarios and schedule validation
+- `gcnv/test_gcnv_base.py`: Tests utility functions including parameter validation, serialization, and error handling
+- `gcnv/test_gcnv_volume_management.py`: Comprehensive tests for volume operations with professional formatting and complete coverage
+- `gcnv/test_gcnv_snapshot_management.py`: Enhanced test suite covering all snapshot operations with extensive validation scenarios
+- `gcnv/test_gcnv_replication_management.py`: Comprehensive replication tests including cross-region scenarios and schedule validation
 
 ### MCP Server Tests (`mcp/` directory)
 - `mcp/test_gcnv_mcp.py`: Comprehensive test suite for the Model Context Protocol server implementation
@@ -107,10 +107,10 @@ python3 -m pytest tests/ -v
 python3 -m pytest tests/gcnv/ -v
 
 # Specific GCNV module tests
-python3 -m pytest tests/gcnv/test_volume_management.py -v
-python3 -m pytest tests/gcnv/test_snapshot_management.py -v
-python3 -m pytest tests/gcnv/test_replication_management.py -v
-python3 -m pytest tests/gcnv/test_base.py -v
+python3 -m pytest tests/gcnv/test_gcnv_volume_management.py -v
+python3 -m pytest tests/gcnv/test_gcnv_snapshot_management.py -v
+python3 -m pytest tests/gcnv/test_gcnv_replication_management.py -v
+python3 -m pytest tests/gcnv/test_gcnv_base.py -v
 ```
 
 ### Run MCP Server Tests Only
@@ -190,10 +190,10 @@ tests/
 ├── README.md                           # This file - comprehensive test documentation
 ├── requirements.txt                    # Test dependencies
 ├── gcnv/                               # GCNV traditional module tests (136 tests)
-│   ├── test_base.py                    # Base utility function tests (10 tests)
-│   ├── test_volume_management.py       # Volume operation tests (32 tests)
-│   ├── test_snapshot_management.py     # Snapshot operation tests (47 tests)
-│   └── test_replication_management.py  # Replication tests (47 tests)
+│   ├── test_gcnv_base.py                    # Base utility function tests (10 tests)
+│   ├── test_gcnv_volume_management.py       # Volume operation tests (32 tests)
+│   ├── test_gcnv_snapshot_management.py     # Snapshot operation tests (47 tests)
+│   └── test_gcnv_replication_management.py  # Replication tests (47 tests)
 └── mcp/                                # MCP server integration tests (22 tests)
     └── test_gcnv_mcp.py                # MCP server tests (22 tests)
 ```
@@ -208,7 +208,7 @@ tests/
 5. Mock external dependencies appropriately
 
 ### Adding New Modules
-1. Create new test file following naming convention: `test_<module_name>.py`
+1. Create new test file following naming convention: `test_gcnv_<module_name>.py`
 2. For GCNV traditional modules, place in `gcnv/` subdirectory
 3. For MCP server tests, place in `mcp/` subdirectory
 4. For other integration tests, place in root `tests/` directory
