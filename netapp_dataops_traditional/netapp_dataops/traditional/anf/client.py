@@ -64,12 +64,9 @@ class ANFClientManager:
         client_secret = os.getenv('AZURE_CLIENT_SECRET') 
         tenant_id = os.getenv('AZURE_TENANT_ID')
 
-        if print_output:
-            logger.debug(f"DEBUG-----: client_id={client_id}, tenant_id={tenant_id}, client_secret={'set' if client_secret else 'not set'}")
-
         if client_id and client_secret and tenant_id:
             if print_output:
-                logger.debug(f"Using ClientSecretCredential with client_id: {client_id}")
+                logger.debug("Using ClientSecretCredential authentication")
             return ClientSecretCredential(
                 tenant_id=tenant_id,
                 client_id=client_id,

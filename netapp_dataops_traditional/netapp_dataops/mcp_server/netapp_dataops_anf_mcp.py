@@ -3,7 +3,7 @@
 import logging
 import sys
 import asyncio
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from fastmcp import FastMCP
 from netapp_dataops.traditional.anf import (
     create_volume,
@@ -30,19 +30,19 @@ async def create_volume_tool(
     account_name: Optional[str] = None,
     pool_name: Optional[str] = None,
     location: Optional[str] = None,
-    protocol_types: Optional[list] = None,
+    protocol_types: Optional[List[str]] = None,
     virtual_network_name: Optional[str] = None,
     subnet_name: Optional[str] = None,
     service_level: Optional[str] = None,
-    tags: Optional[dict] = None,
-    zones: Optional[list] = None,
-    export_policy_rules: Optional[list] = None,
+    tags: Optional[Dict[str, str]] = None,
+    zones: Optional[List[str]] = None,
+    export_policy_rules: Optional[List[Dict[str, Any]]] = None,
     security_style: Optional[str] = None,
     smb_encryption: Optional[bool] = None,
     smb_continuously_available: Optional[bool] = None,
     throughput_mibps: Optional[float] = None,
     volume_type: Optional[str] = None,
-    data_protection: Optional[list] = None,
+    data_protection: Optional[List[Dict[str, Any]]] = None,
     is_default_quota_enabled: Optional[bool] = None,
     default_user_quota_in_ki_bs: Optional[int] = None,
     default_group_quota_in_ki_bs: Optional[int] = None,
@@ -256,16 +256,16 @@ async def clone_volume_tool(
     virtual_network_name: Optional[str] = None,
     subnet_name: Optional[str] = None,
     service_level: Optional[str] = None,
-    protocol_types: Optional[list] = None,
-    tags: Optional[dict] = None,
-    zones: Optional[list] = None,
-    export_policy_rules: Optional[list] = None,
+    protocol_types: Optional[List[str]] = None,
+    tags: Optional[Dict[str, str]] = None,
+    zones: Optional[List[str]] = None,
+    export_policy_rules: Optional[List[Dict[str, Any]]] = None,
     security_style: Optional[str] = None,
     smb_encryption: Optional[bool] = None,
     smb_continuously_available: Optional[bool] = None,
     throughput_mibps: Optional[float] = None,
     volume_type: Optional[str] = None,
-    data_protection: Optional[list] = None,
+    data_protection: Optional[List[Dict[str, Any]]] = None,
     is_default_quota_enabled: Optional[bool] = None,
     default_user_quota_in_ki_bs: Optional[int] = None,
     default_group_quota_in_ki_bs: Optional[int] = None,
@@ -528,7 +528,7 @@ async def create_snapshot_tool(
     account_name: Optional[str] = None,
     pool_name: Optional[str] = None,
     location: Optional[str] = None,
-    tags: Optional[dict] = None,
+    tags: Optional[Dict[str, str]] = None,
     subscription_id: Optional[str] = None,
     print_output: Optional[bool] = False
 ) -> Dict[str, Any]:
@@ -660,11 +660,11 @@ async def create_replication_tool(
     destination_location: str,
     destination_creation_token: str,
     destination_usage_threshold: int,
-    destination_protocol_types: list,
+    destination_protocol_types: List[str],
     destination_virtual_network_name: str,
     destination_subnet_name: str = "default",
     destination_service_level: Optional[str] = None,
-    destination_zones: Optional[list] = None,
+    destination_zones: Optional[List[str]] = None,
     # Source volume parameters (optional - will use config defaults)
     resource_group_name: Optional[str] = None,
     account_name: Optional[str] = None,
@@ -779,7 +779,7 @@ async def create_anf_config_tool(
     location: str,
     virtual_network_name: str,
     subnet_name: str = "default",
-    protocol_types: Optional[list] = None,
+    protocol_types: Optional[List[str]] = None,
     print_output: Optional[bool] = False
 ) -> Dict[str, Any]:
     """

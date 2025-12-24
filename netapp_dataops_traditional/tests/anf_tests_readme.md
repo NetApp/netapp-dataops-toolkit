@@ -2,41 +2,44 @@
 
 This directory contains comprehensive unit tests for the NetApp DataOps Toolkit's Azure NetApp Files (ANF) Python modules and Model Context Protocol (MCP) server implementation. The test suite provides extensive coverage for all major operations with professional organization and robust testing patterns.
 
+**Note**: This README focuses on ANF-specific tests. The test suite also includes Google Cloud NetApp Volumes (GCNV) tests with similar coverage patterns.
+
 ## Test Coverage Summary
 
-### ANF Traditional Modules: 236 tests
+### ANF Traditional Modules: 237 tests
 - **Base module**: 36 tests (utility functions including parameter validation, serialization, and error handling)
 - **Client management**: 35 tests (Azure authentication, singleton pattern, and connection management)
 - **Configuration management**: 15 tests (interactive setup, file operations, and parameter resolution)
-- **Volume management**: 59 tests (create, clone, delete, list operations with Azure-specific scenarios)
-- **Snapshot management**: 51 tests (create, delete, list operations with comprehensive validation)
-- **Replication management**: 40 tests (cross-region replication and data protection volume creation)
+- **Volume management**: 65 tests (create, clone, delete, list operations with Azure-specific scenarios)
+- **Snapshot management**: 50 tests (create, delete, list operations with comprehensive validation)
+- **Replication management**: 36 tests (cross-region replication and data protection volume creation)
 
-### MCP Server Integration: 23 tests
-- **Server instantiation**: 3 tests (MCP server creation and configuration)
-- **Business logic validation**: 12 tests (wrapper function testing for all operations)
-- **Integration validation**: 4 tests (response format and error handling consistency)
-- **Module structure**: 4 tests (import validation and logging configuration)
+### MCP Server Integration: 45 tests
+- **ANF MCP Server**: 23 tests (ANF operations via MCP server)
+- **GCNV MCP Server**: 22 tests (Google Cloud NetApp Volumes operations via MCP server)
 
-**Total Test Coverage: 259 tests**
+**Total ANF Test Coverage: 282 tests**
+
+**Total Test Suite Coverage: 418 tests (includes ANF + GCNV + MCP tests)**
 
 All tests are designed to be self-contained and can be run independently or as part of the complete suite.
 
 ## Test Files
 
 ### ANF Traditional Module Tests (`anf/` directory)
-- `anf/test_base.py`: Tests utility functions including parameter validation, serialization, and error handling for Azure SDK objects
-- `anf/test_client.py`: Comprehensive tests for Azure client authentication, singleton pattern, and connection management
-- `anf/test_config.py`: Complete configuration management testing including interactive setup, file operations, and parameter resolution
-- `anf/test_volume_management.py`: Complete volume operations testing with professional formatting and boundary conditions
-- `anf/test_snapshot_management.py`: Enhanced snapshot test suite covering all snapshot operations with Azure-specific scenarios
-- `anf/test_replication_management.py`: Cross-region replication tests including data protection volume creation and authorization
+- `anf/test_anf_base.py`: Tests utility functions including parameter validation, serialization, and error handling for Azure SDK objects
+- `anf/test_anf_client.py`: Comprehensive tests for Azure client authentication, singleton pattern, and connection management
+- `anf/test_anf_config.py`: Complete configuration management testing including interactive setup, file operations, and parameter resolution
+- `anf/test_anf_volume_management.py`: Complete volume operations testing with professional formatting and boundary conditions
+- `anf/test_anf_snapshot_management.py`: Enhanced snapshot test suite covering all snapshot operations with Azure-specific scenarios
+- `anf/test_anf_replication_management.py`: Cross-region replication tests including data protection volume creation and authorization
 
 ### MCP Server Tests (`mcp/` directory)
-- `mcp/test_anf_mcp.py`: Comprehensive test suite for the Model Context Protocol server implementation
+- `mcp/test_anf_mcp.py`: Comprehensive test suite for the ANF Model Context Protocol server implementation
+- `mcp/test_gcnv_mcp.py`: Comprehensive test suite for the Google Cloud NetApp Volumes (GCNV) MCP server implementation
   - **Basic Integration Tests**: Server instantiation, main function, and import validation
-  - **Business Logic Tests**: Wrapper function testing using recreated logic patterns for ANF operations
-  - **Error Handling Tests**: Comprehensive validation of Azure-specific error scenarios and logging
+  - **Business Logic Tests**: Wrapper function testing using recreated logic patterns for cloud operations
+  - **Error Handling Tests**: Comprehensive validation of cloud-specific error scenarios and logging
   - **Module Structure Tests**: Import validation, logging configuration, and response format consistency
 
 
@@ -110,10 +113,16 @@ Each test file follows a consistent professional structure with:
 
 ## Usage
 
-### Run All Tests (ANF + MCP)
+### Run All Tests (ANF + GCNV + MCP)
 ```bash
 cd /path/to/netapp-dataops-toolkit/netapp_dataops_traditional
 python3 -m pytest tests/ -v
+```
+
+### Run ANF Tests Only (ANF modules + ANF MCP)
+```bash
+# ANF traditional modules + ANF MCP server
+python3 -m pytest tests/anf/ tests/mcp/test_anf_mcp.py -v
 ```
 
 ### Run ANF Module Tests Only
@@ -122,21 +131,22 @@ python3 -m pytest tests/ -v
 python3 -m pytest tests/anf/ -v
 
 # Specific ANF module tests
-python3 -m pytest tests/anf/test_volume_management.py -v
-python3 -m pytest tests/anf/test_snapshot_management.py -v
-python3 -m pytest tests/anf/test_replication_management.py -v
-python3 -m pytest tests/anf/test_client.py -v
-python3 -m pytest tests/anf/test_config.py -v
-python3 -m pytest tests/anf/test_base.py -v
+python3 -m pytest tests/anf/test_anf_volume_management.py -v
+python3 -m pytest tests/anf/test_anf_snapshot_management.py -v
+python3 -m pytest tests/anf/test_anf_replication_management.py -v
+python3 -m pytest tests/anf/test_anf_client.py -v
+python3 -m pytest tests/anf/test_anf_config.py -v
+python3 -m pytest tests/anf/test_anf_base.py -v
 ```
 
 ### Run MCP Server Tests Only
 ```bash
-# All MCP tests
+# All MCP tests (ANF + GCNV)
 python3 -m pytest tests/mcp/ -v
 
 # Specific MCP test file
 python3 -m pytest tests/mcp/test_anf_mcp.py -v
+python3 -m pytest tests/mcp/test_gcnv_mcp.py -v
 ```
 
 ### Run Tests with Different Options
@@ -206,16 +216,20 @@ This approach allows comprehensive testing of:
 ```
 tests/
 ├── anf_tests_readme.md                # This file - comprehensive ANF test documentation
+├── gcnv_tests_readme.md               # GCNV test documentation
 ├── requirements.txt                   # Test dependencies
-├── anf/                               # ANF traditional module tests (236 tests)
-│   ├── test_base.py                   # Base utility function tests (36 tests)
-│   ├── test_client.py                 # Azure client management tests (35 tests)
-│   ├── test_config.py                 # Configuration management tests (15 tests)
-│   ├── test_volume_management.py      # Volume operation tests (59 tests)
-│   ├── test_snapshot_management.py    # Snapshot operation tests (51 tests)
-│   └── test_replication_management.py # Replication tests (40 tests)
-└── mcp/                               # MCP server integration tests (23 tests)
-    └── test_anf_mcp.py                # ANF MCP server tests (23 tests)
+├── anf/                               # ANF traditional module tests (237 tests)
+│   ├── test_anf_base.py               # Base utility function tests (36 tests)
+│   ├── test_anf_client.py             # Azure client management tests (35 tests)
+│   ├── test_anf_config.py             # Configuration management tests (15 tests)
+│   ├── test_anf_volume_management.py  # Volume operation tests (65 tests)
+│   ├── test_anf_snapshot_management.py # Snapshot operation tests (50 tests)
+│   └── test_anf_replication_management.py # Replication tests (36 tests)
+├── gcnv/                              # GCNV traditional module tests
+│   └── [GCNV test files]
+└── mcp/                               # MCP server integration tests (45 tests)
+    ├── test_anf_mcp.py                # ANF MCP server tests (23 tests)
+    └── test_gcnv_mcp.py               # GCNV MCP server tests (22 tests)
 ```
 
 ## Extending the Test Suite
@@ -255,7 +269,7 @@ All test dependencies are defined in `requirements.txt` in this directory
 
 ## Notes
 
-- **Fast Execution**: All 259 tests typically complete in under 90 seconds
+- **Fast Execution**: All 282 tests typically complete in under 2 minutes
 - **No External Dependencies**: Tests run completely offline with mocked Azure APIs and MCP components
 - **Cross-Platform**: Compatible with macOS, Linux, and Windows development environments
 - **CI/CD Ready**: Designed for integration with continuous integration pipelines

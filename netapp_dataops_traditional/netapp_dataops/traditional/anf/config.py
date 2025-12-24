@@ -8,11 +8,16 @@ interactive config creation and automatic config loading.
 import os
 import json
 import sys
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 
 from netapp_dataops.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
+
+# Constants
+DEFAULT_CONFIG_DIR = "~/.netapp_dataops"
+DEFAULT_CONFIG_FILE = "anf_config.json"
+DEFAULT_SUBNET_NAME = "default"
 
 
 class InvalidConfigError(Exception):
@@ -20,13 +25,160 @@ class InvalidConfigError(Exception):
     pass
 
 
-def create_anf_config(config_dir_path: str = "~/.netapp_dataops", config_filename: str = "anf_config.json") -> None:
+def create_anf_config(
+    subscription_id: str = None,
+    resource_group_name: str = None, 
+    account_name: str = None,
+    pool_name: str = None,
+    location: str = None,
+    virtual_network_name: str = None,
+    subnet_name: str = DEFAULT_SUBNET_NAME,
+    protocol_types: Optional[List[str]] = None,
+    print_output: bool = False,
+    config_dir_path: str = DEFAULT_CONFIG_DIR,
+    config_filename: str = DEFAULT_CONFIG_FILE
+) -> Optional[Dict[str, Any]]:
+    """
+    Create an ANF configuration file. Can work in two modes:
+    1. Programmatic mode: When all required parameters are provided
+    2. Interactive mode: When no parameters are provided (backward compatibility)
+    
+    Args:
+        subscription_id (str): Optional. Azure subscription ID. If None, runs in interactive mode.
+        resource_group_name (str): Optional. The name of the resource group.
+        account_name (str): Optional. The name of the NetApp account.
+        pool_name (str): Optional. The name of the capacity pool.
+        location (str): Optional. Azure region (e.g., "centralus").
+        virtual_network_name (str): Optional. The name of the virtual network.
+        subnet_name (str): Optional. The name of the subnet. Defaults to DEFAULT_SUBNET_NAME.
+        protocol_types (List[str]): Optional. List of protocol types. Defaults to ["NFSv3"].
+        print_output (bool): Optional. Whether to print output messages.
+        config_dir_path (str): Directory path for config file. Defaults to DEFAULT_CONFIG_DIR.
+        config_filename (str): Config file name. Defaults to DEFAULT_CONFIG_FILE.
+        
+    Returns:
+        Dict[str, Any]: Status and details in programmatic mode, None in interactive mode.
+        
+    Raises:
+        InvalidConfigError: If there's an error creating the config file.
+    """
+    # If all required parameters for programmatic mode are provided, use programmatic mode
+    if all([subscription_id, resource_group_name, account_name, pool_name, location, virtual_network_name]):
+        return _create_anf_config_programmatic(
+            subscription_id, resource_group_name, account_name, pool_name, 
+            location, virtual_network_name, subnet_name, protocol_types, 
+            print_output, config_dir_path, config_filename
+        )
+    else:
+        # Use interactive mode for backward compatibility
+        create_anf_config_interactive(config_dir_path, config_filename)
+        return None
+
+
+def _create_anf_config_programmatic(
+    subscription_id: str,
+    resource_group_name: str, 
+    account_name: str,
+    pool_name: str,
+    location: str,
+    virtual_network_name: str,
+    subnet_name: str = DEFAULT_SUBNET_NAME,
+    protocol_types: Optional[List[str]] = None,
+    print_output: bool = False,
+    config_dir_path: str = DEFAULT_CONFIG_DIR,
+    config_filename: str = DEFAULT_CONFIG_FILE
+) -> Dict[str, Any]:
+    """
+    Create an ANF configuration file with provided parameters (programmatic mode).
+    
+    Args:
+        subscription_id (str): Azure subscription ID.
+        resource_group_name (str): The name of the resource group.
+        account_name (str): The name of the NetApp account.
+        pool_name (str): The name of the capacity pool.
+        location (str): Azure region (e.g., "centralus").
+        virtual_network_name (str): The name of the virtual network.
+        subnet_name (str): Optional. The name of the subnet. Defaults to DEFAULT_SUBNET_NAME.
+        protocol_types (List[str]): Optional. List of protocol types. Defaults to ["NFSv3"].
+        print_output (bool): Optional. Whether to print output messages.
+        config_dir_path (str): Directory path for config file. Defaults to DEFAULT_CONFIG_DIR.
+        config_filename (str): Config file name. Defaults to DEFAULT_CONFIG_FILE.
+        
+    Returns:
+        Dict[str, Any]: Status and details of the config creation.
+        
+    Raises:
+        InvalidConfigError: If there's an error creating the config file.
+    """
+    try:
+        # Set default protocol types if not provided
+        if protocol_types is None:
+            protocol_types = ["NFSv3"]
+        
+        # Expand config directory path
+        config_dir_path = os.path.expanduser(config_dir_path)
+        config_file_path = os.path.join(config_dir_path, config_filename)
+        
+        if print_output:
+            logger.info(f"Creating ANF configuration file: {config_file_path}")
+        
+        # Create configuration dictionary
+        config = {
+            "subscriptionId": subscription_id,
+            "resourceGroupName": resource_group_name,
+            "accountName": account_name,
+            "poolName": pool_name,
+            "location": location,
+            "virtualNetworkName": virtual_network_name,
+            "subnetName": subnet_name,
+            "protocolTypes": protocol_types
+        }
+        
+        # Create config directory if it doesn't exist
+        try:
+            os.makedirs(config_dir_path, exist_ok=True)
+        except Exception as e:
+            error_msg = f"Failed to create config directory '{config_dir_path}': {str(e)}"
+            logger.error(error_msg)
+            raise InvalidConfigError(error_msg)
+        
+        # Write config file
+        try:
+            with open(config_file_path, 'w') as config_file:
+                json.dump(config, config_file, indent=2)
+        except Exception as e:
+            error_msg = f"Failed to write config file '{config_file_path}': {str(e)}"
+            logger.error(error_msg)
+            raise InvalidConfigError(error_msg)
+        
+        if print_output:
+            logger.info(f"ANF configuration created successfully: {config_file_path}")
+        
+        return {
+            "status": "success",
+            "details": f"Configuration file created: {config_file_path}",
+            "config_path": config_file_path,
+            "config": config
+        }
+        
+    except InvalidConfigError:
+        raise
+    except Exception as e:
+        error_msg = f"Unexpected error creating ANF config: {str(e)}"
+        logger.error(error_msg)
+        return {
+            "status": "error", 
+            "details": error_msg
+        }
+
+
+def create_anf_config_interactive(config_dir_path: str = DEFAULT_CONFIG_DIR, config_filename: str = DEFAULT_CONFIG_FILE) -> None:
     """
     Create an ANF configuration file through interactive prompts.
     
     Args:
-        config_dir_path (str): Directory path for config file. Defaults to "~/.netapp_dataops".
-        config_filename (str): Config file name. Defaults to "anf_config.json".
+        config_dir_path (str): Directory path for config file. Defaults to DEFAULT_CONFIG_DIR.
+        config_filename (str): Config file name. Defaults to DEFAULT_CONFIG_FILE.
         
     Raises:
         InvalidConfigError: If there's an error creating the config file.
@@ -181,7 +333,7 @@ def create_anf_config(config_dir_path: str = "~/.netapp_dataops", config_filenam
     logger.info(f"Created ANF config file: {config_file_path}")
 
 
-def _retrieve_anf_config(config_dir_path: str = "~/.netapp_dataops", config_filename: str = "anf_config.json", 
+def _retrieve_anf_config(config_dir_path: str = DEFAULT_CONFIG_DIR, config_filename: str = DEFAULT_CONFIG_FILE, 
                         print_output: bool = False) -> Dict[str, Any]:
     """
     Retrieve ANF configuration from config file.
