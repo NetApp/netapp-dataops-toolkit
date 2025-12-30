@@ -205,6 +205,8 @@ def _instantiate_connection(config: dict, connectionType: str = "ONTAP", print_o
             ontapClusterAdminUsername = config["username"]
             ontapClusterAdminPassword = config["password"]
             verifySSLCert = config["verifySSLCert"]
+            # Port is optional, default to 443 if not specified
+            ontapClusterPort = int(config.get("port", 443))
         except:
             if print_output:
                 _print_invalid_config_error()
@@ -220,7 +222,8 @@ def _instantiate_connection(config: dict, connectionType: str = "ONTAP", print_o
             host=ontapClusterMgmtHostname,
             username=ontapClusterAdminUsername,
             password=ontapClusterAdminPassword,
-            verify=verifySSLCert
+            verify=verifySSLCert,
+            port=ontapClusterPort
         )
 
     else:
