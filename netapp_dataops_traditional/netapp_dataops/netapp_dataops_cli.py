@@ -572,6 +572,16 @@ def createConfig(configDirPath: str = "~/.netapp_dataops", configFilename: str =
 
         # Prompt user to enter config details
         config["hostname"] = input("Enter ONTAP management LIF hostname or IP address (Recommendation: Use SVM management interface): ")
+        # Prompt user to enter port (optional, defaults to 443)
+        portInput = input("Enter ONTAP API port number [443]: ")
+        if portInput:
+            try:
+                config["port"] = int(portInput)
+            except ValueError:
+                logger.error("Invalid port number. Using default port 443.")
+                config["port"] = 443
+        else:
+            config["port"] = 443
         config["svm"] = input("Enter SVM (Storage VM) name: ")
         config["dataLif"] = input("Enter SVM NFS data LIF hostname or IP address: ")
 

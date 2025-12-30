@@ -1,3 +1,4 @@
 build
 netapp_dataops_traditional.egg-info
 dist
+*.pyc

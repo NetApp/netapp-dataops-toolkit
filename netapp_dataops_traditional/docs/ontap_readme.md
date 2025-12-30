@@ -41,6 +41,8 @@ netapp_dataops_cli.py config
 
 Note: The toolkit requires an ONTAP account with API access. The toolkit will use this account to access the ONTAP API. NetApp recommends using an SVM-level account. Usage of a cluster admin account should be avoided for security reasons.
 
+Note: The toolkit supports custom port numbers for the ONTAP API connection. If not specified during configuration, the default port 443 (HTTPS) will be used. To use a custom port, specify it when creating the config file or add it to your existing `config.json` file as `"port": <port_number>`.
+
 > **Note: Keyring Service Configuration**
 > 
 > The toolkit stores ONTAP credentials securely using your system's keyring service. By default, it uses the service name `netapp:dataops:ontap` to store and retrieve credentials. 
@@ -50,6 +52,7 @@ Note: The toolkit requires an ONTAP account with API access. The toolkit will us
 ```sh
 netapp_dataops_cli.py config
 Enter ONTAP management LIF hostname or IP address (Recommendation: Use SVM management interface): 10.61.188.114
+Enter ONTAP API port number [443]: 8001
 Enter SVM (Storage VM) name: ailab1
 Enter SVM NFS data LIF hostname or IP address: 10.61.188.119
 Enter default volume type to use when creating new volumes (flexgroup/flexvol) [flexgroup]:        
