@@ -11,6 +11,7 @@ from netapp_dataops.k8s import (
     create_jupyter_lab_snapshot,
     delete_volume_snapshot,
     delete_volume,
+    delete_flexcache_volume,
     delete_jupyter_lab,
     delete_triton_server,
     list_jupyter_labs,
@@ -20,6 +21,7 @@ from netapp_dataops.k8s import (
     list_triton_servers,
     restore_jupyter_lab_snapshot,
     restore_volume_snapshot,
+    create_flexcache,
     APIConnectionError,
     CAConfigMap,
     InvalidConfigError
@@ -29,6 +31,11 @@ from netapp_dataops.k8s.data_movers.s3 import (
     S3ConfigSecret,
     S3DataMover,
 )
+
+from netapp_dataops.logging_utils import setup_logger
+
+logger = setup_logger(__name__)
+
 
 # Define contents of help text
 astra_error_text = "Error: Astra Control functionality within the DataOps Toolkit is no longer supported. Please use the Astra SDK and/or toolkit. For details, visit https://github.com/NetApp/netapp-astra-toolkits."
@@ -69,6 +76,8 @@ Note: To view details regarding options/arguments for a specific command, run th
 \tdelete volume-snapshot\t\tDelete an existing snapshot.
 \tlist volume-snapshots\t\tList all snapshots.
 \trestore volume-snapshot\t\tRestore a snapshot.
+\tcreate flexcache\t\tCreate a new FlexCache volume.
+\tdelete flexcache-volume\t\tDelete an existing FlexCache volume.
 
 Data Movement Commands:
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
@@ -271,6 +280,28 @@ Examples:
 \tnetapp_dataops_k8s_cli.py create volume -p datasets -s 10Ti -n team1
 \tnetapp_dataops_k8s_cli.py create volume --pvc-name=project2 --size=2Ti --namespace=team2 --storage-class=ontap-flexgroup
 '''
+helpTextCreateFlexCache = '''
+Command: create flexcache
+
+Create a new FlexCache volume.
+
+Required Options/Arguments:
+\t-f, --flexcache-vol=\t\tName of flexcache volume
+\t-s, --source-svm=\t\tSource SVM name
+\t-v, --source-vol=\t\tSource volume name
+\t-z, --flexcache-size=\t\tSize of flexcache volume (Format: '1024Mi', '100Gi', '10Ti', etc.).
+\t-b, --backend-name=\t\tName of tridentbackendconfig.
+
+Optional Options/Arguments:
+\t-h, --help\t\t\tPrint help text.
+\t-c, --junction=\t\t\tThe junction path for the FlexCache volume.
+\t-n, --namespace=\t\tKubernetes namespace to create the new PersistentVolumeClaim (PVC) in. If not specified, the PVC will be created in the "default" namespace.
+\t-t, --trident-namespace=\tKubernetes namespace where Trident is installed. If not specified, the namespace "trident" will be used.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py create flexcache --flexcache-vol=cache1 --flexcache-size=50Gi --source-vol=origin1 --source-svm=svm1 --backend-name=backend1
+\tnetapp_dataops_k8s_cli.py create flexcache -s svm1 -v vol1 -n vol2 -b backend1 -z 100Gi -c /cache1
+'''
 helpTextDeleteCAConfigMap = '''
 Command: delete ca-config-map
 
@@ -405,6 +436,25 @@ Optional Options/Arguments:
 Examples:
 \tnetapp_dataops_k8s_cli.py delete volume --pvc-name=project1
 \tnetapp_dataops_k8s_cli.py delete volume -p project2 -n team1
+'''
+helpTextDeleteFlexCacheVolume = '''
+Command: delete flexcache-volume
+
+Delete an existing FlexCache volume.
+
+Required Options/Arguments:
+\t-p, --pvc-name=\t\t\tName of Kubernetes PersistentVolumeClaim (PVC) to be deleted.
+\t-b, --backend-name=\t\tName of tridentbackendconfig.
+
+Optional Options/Arguments:
+\t-f, --force\t\t\tDo not prompt user to confirm operation.
+\t-h, --help\t\t\tPrint help text.
+\t-n, --namespace=\t\tKubernetes namespace that PersistentVolumeClaim (PVC) is located in. If not specified, namespace "default" will be used.
+\t-t, --trident-namespace=\tKubernetes namespace where Trident is installed. If not specified, the namespace "trident" will be used.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py delete flexcache-volume --pvc-name=cache1
+\tnetapp_dataops_k8s_cli.py delete flexcache-volume -p cache2 -n team1
 '''
 helpTextGetS3Bucket = '''
 Command: get-s3 bucket
@@ -665,10 +715,10 @@ Examples:
 ## Function for handling situation in which user enters invalid command
 def handleInvalidCommand(helpText: str = helpTextStandard, invalidOptArg: bool = False):
     if invalidOptArg:
-        print("Error: Invalid option/argument.")
+        logger.error("Error: Invalid option/argument.")
     else:
-        print("Error: Invalid command.")
-    print(helpText)
+        logger.error("Error: Invalid command.")
+    logger.info(helpText)
     sys.exit(1)
 
 
@@ -726,7 +776,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextCloneVolume)
+                    logger.info(helpTextCloneVolume)
                     sys.exit(0)
                 elif opt in ("-p", "--new-pvc-name"):
                     newPvcName = arg
@@ -743,7 +793,7 @@ if __name__ == '__main__':
             if not newPvcName or (not sourceSnapshotName and not sourcePvcName):
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
             if sourceSnapshotName and sourcePvcName:
-                print(
+                logger.error(
                     "Error: Both -s/--source-snapshot-name and -v/--source-pvc-name cannot be specified for the same operation.")
                 handleInvalidCommand(helpText=helpTextCloneVolume, invalidOptArg=True)
 
@@ -778,7 +828,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextCloneJupyterLab)
+                    logger.info(helpTextCloneJupyterLab)
                     sys.exit(0)
                 elif opt in ("-w", "--new-workspace-name"):
                     newWorkspaceName = arg
@@ -805,8 +855,7 @@ if __name__ == '__main__':
             if not newWorkspaceName or (not sourceSnapshotName and not sourceWorkspaceName):
                 handleInvalidCommand(helpText=helpTextCloneJupyterLab, invalidOptArg=True)
             if sourceSnapshotName and sourceWorkspaceName:
-                print(
-                    "Error: Both -s/--source-snapshot-name and -j/--source-workspace-name cannot be specified for the same operation.")
+                logger.error("Error: Both -s/--source-snapshot-name and -j/--source-workspace-name cannot be specified for the same operation.")
                 handleInvalidCommand(helpText=helpTextCloneJupyterLab, invalidOptArg=True)
 
             # Clone volume
@@ -854,7 +903,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextCreateVolumeSnapshot)
+                    logger.info(helpTextCreateVolumeSnapshot)
                     sys.exit(0)
                 elif opt in ("-p", "--pvc-name"):
                     pvcName = arg
@@ -892,7 +941,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextCreateVolume)
+                    logger.info(helpTextCreateVolume)
                     sys.exit(0)
                 elif opt in ("-p", "--pvc-name"):
                     pvcName = arg
@@ -911,6 +960,54 @@ if __name__ == '__main__':
             try:
                 create_volume(pvc_name=pvcName, volume_size=volumeSize, storage_class=storageClass, namespace=namespace,
                               print_output=True)
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
+        elif target == "flexcache":
+            namespace = "default"
+            junction = None
+            sourceSvm = None
+            sourceVol = None
+            flexCacheVol = None
+            flexCacheSize = None
+            backendName = None
+            tridentNamespace = "trident"
+
+            # Get command line options
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hn:f:z:v:s:b:n:c:t:", ["help", "flexcache-vol=", "flexcache-size=", "source-vol=", "source-svm=", "backend-name=", "namespace=", "junction=", "trident-namespace="])
+            except getopt.GetoptError:
+                handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    logger.info(helpTextCreateFlexCache)
+                    sys.exit(0)
+                elif opt in ("-f", "--flexcache-vol"):
+                    flexCacheVol = arg
+                elif opt in ("-s", "--source-svm"):
+                    sourceSvm = arg
+                elif opt in ("-v", "--source-vol"):
+                    sourceVol = arg
+                elif opt in ("-z", "--flexcache-size"):
+                    flexCacheSize = arg
+                elif opt in ("-b", "--backend-name"):
+                    backendName = arg
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+                elif opt in ("-c", "--junction"):
+                    junction = arg
+                elif opt in ("-t", "--trident-namespace"):
+                    tridentNamespace = arg
+
+            # Check for required options
+            if not flexCacheVol or not sourceVol or not sourceSvm or not flexCacheSize or not backendName:
+                handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
+
+            # Create FlexCache volume
+            try:
+                create_flexcache(flexcache_vol=flexCacheVol, flexcache_size=flexCacheSize, source_vol=sourceVol, source_svm=sourceSvm, backend_name=backendName, namespace=namespace, junction=junction, trident_namespace=tridentNamespace, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -939,7 +1036,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextCreateJupyterLab)
+                    logger.info(helpTextCreateJupyterLab)
                     sys.exit(0)
                 elif opt in ("-w", "--workspace-name"):
                     workspaceName = arg
@@ -1000,7 +1097,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextDeployTritonServer)
+                    logger.info(helpTextDeployTritonServer)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -1052,7 +1149,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextCreateJupyterLabSnapshot)
+                    logger.info(helpTextCreateJupyterLabSnapshot)
                     sys.exit(0)
                 elif opt in ("-w", "--workspace-name"):
                     workspaceName = arg
@@ -1090,7 +1187,7 @@ if __name__ == '__main__':
 
             for opt, arg in opts:
                 if opt in ("-h", "-help"):
-                    print(helpTextCreateS3Secret)
+                    logger.info(helpTextCreateS3Secret)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -1115,7 +1212,7 @@ if __name__ == '__main__':
                     print_output=True
                 )
                 s3_secret.create()
-                print("Kubernetes secret successfully created.")
+                logger.info("Kubernetes secret successfully created.")
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1135,7 +1232,7 @@ if __name__ == '__main__':
 
             for opt, arg in opts:
                 if opt in ("-h", "-help"):
-                    print(helpTextCreateCAConfigMap)
+                    logger.info(helpTextCreateCAConfigMap)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -1157,7 +1254,7 @@ if __name__ == '__main__':
                         print_output=True
                     )
                 config_map.create()
-                print("Kubernetes CA config-map successfully created.")
+                logger.info("Kubernetes CA config-map successfully created.")
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1180,7 +1277,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextCreateFlexCache)
+                    logger.info(helpTextCreateFlexCache)
                     sys.exit(0)
                 elif opt in ("-f", "--flexcache-vol"):
                     flexCacheVol = arg
@@ -1235,7 +1332,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpText)
+                    logger.info(helpText)
                     sys.exit(0)
                 elif opt in ("-s", "--snapshot-name"):
                     snapshotName = arg
@@ -1250,7 +1347,7 @@ if __name__ == '__main__':
 
             # Confirm delete operation
             if not force:
-                print("Warning: This snapshot will be permanently deleted.")
+                logger.warning("Warning: This snapshot will be permanently deleted.")
                 while True:
                     proceed = input("Are you sure that you want to proceed? (yes/no): ")
                     if proceed in ("yes", "Yes", "YES"):
@@ -1258,7 +1355,7 @@ if __name__ == '__main__':
                     elif proceed in ("no", "No", "NO"):
                         sys.exit(0)
                     else:
-                        print("Invalid value. Must enter 'yes' or 'no'.")
+                        logger.error("Invalid value. Must enter \'yes\' or \'no\'.")
 
             # Delete snapshot
             try:
@@ -1282,7 +1379,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextDeleteVolume)
+                    logger.info(helpTextDeleteVolume)
                     sys.exit(0)
                 elif opt in ("-p", "--pvc-name"):
                     pvcName = arg
@@ -1299,7 +1396,7 @@ if __name__ == '__main__':
 
             # Confirm delete operation
             if not force:
-                print("Warning: All data associated with the volume will be permanently deleted.")
+                logger.warning("Warning: All data associated with the volume will be permanently deleted.")
                 while True:
                     proceed = input("Are you sure that you want to proceed? (yes/no): ")
                     if proceed in ("yes", "Yes", "YES"):
@@ -1307,12 +1404,65 @@ if __name__ == '__main__':
                     elif proceed in ("no", "No", "NO"):
                         sys.exit(0)
                     else:
-                        print("Invalid value. Must enter 'yes' or 'no'.")
+                        logger.error("Invalid value. Must enter \'yes\' or \'no\'.")
 
             # Delete volume
             try:
                 delete_volume(pvc_name=pvcName, namespace=namespace, preserve_snapshots=preserveSnapshots,
                               print_output=True)
+            except (InvalidConfigError, APIConnectionError):
+                sys.exit(1)
+
+        elif target in ("flexcache-volume", "flexcache"):
+            pvcName = None
+            backendName = None
+            namespace = "default"
+            tridentNamespace = "trident"
+            force = False
+
+            # Get command line options
+            try:
+                opts, args = getopt.getopt(sys.argv[3:], "hp:b:fn:t:",
+                                        ["help", "pvc-name=", "backend-name=", "force", "namespace=", "trident-namespace="])
+            except:
+                handleInvalidCommand(helpText=helpTextDeleteFlexCacheVolume, invalidOptArg=True)
+
+            # Parse command line options
+            for opt, arg in opts:
+                if opt in ("-h", "--help"):
+                    logger.info(helpTextDeleteFlexCacheVolume)
+                    sys.exit(0)
+                elif opt in ("-p", "--pvc-name"):
+                    pvcName = arg
+                elif opt in ("-b", "--backend-name"):
+                    backendName = arg
+                elif opt in ("-n", "--namespace"):
+                    namespace = arg
+                elif opt in ("-t", "--trident-namespace"):
+                    tridentNamespace = arg
+                elif opt in ("-f", "--force"):
+                    force = True
+
+            # Check for required options
+            if not pvcName or not backendName:
+                handleInvalidCommand(helpText=helpTextDeleteFlexCacheVolume, invalidOptArg=True)
+
+            # Confirm delete operation
+            if not force:
+                logger.warning("Warning: This FlexCache volume will be permanently deleted.")
+                while True:
+                    proceed = input("Are you sure that you want to proceed? (yes/no): ")
+                    if proceed in ("yes", "Yes", "YES"):
+                        break
+                    elif proceed in ("no", "No", "NO"):
+                        sys.exit(0)
+                    else:
+                        logger.error("Invalid value. Must enter \'yes\' or \'no\'.")
+
+            # Delete FlexCache volume
+            try:
+                delete_flexcache_volume(pvc_name=pvcName, backend_name=backendName, namespace=namespace,
+                                        trident_namespace=tridentNamespace, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1332,7 +1482,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextDeleteJupyterLab)
+                    logger.info(helpTextDeleteJupyterLab)
                     sys.exit(0)
                 elif opt in ("-w", "--workspace-name"):
                     workspaceName = arg
@@ -1349,7 +1499,7 @@ if __name__ == '__main__':
 
             # Confirm delete operation
             if not force:
-                print("Warning: All data associated with the workspace will be permanently deleted.")
+                logger.warning("Warning: All data associated with the workspace will be permanently deleted.")
                 while True:
                     proceed = input("Are you sure that you want to proceed? (yes/no): ")
                     if proceed in ("yes", "Yes", "YES"):
@@ -1357,7 +1507,7 @@ if __name__ == '__main__':
                     elif proceed in ("no", "No", "NO"):
                         sys.exit(0)
                     else:
-                        print("Invalid value. Must enter 'yes' or 'no'.")
+                        logger.error("Invalid value. Must enter \'yes\' or \'no\'.")
 
             # Delete JupyterLab workspace
             try:
@@ -1383,7 +1533,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextDeleteS3Secret)
+                    logger.info(helpTextDeleteS3Secret)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -1405,7 +1555,7 @@ if __name__ == '__main__':
                     print_output=True
                 )
                 s3_secret.delete()
-                print("Kubernetes secret successfully deleted.")
+                logger.info("Kubernetes secret successfully deleted.")
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1428,7 +1578,7 @@ if __name__ == '__main__':
 
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextDeleteS3Job)
+                    logger.info(helpTextDeleteS3Job)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -1442,7 +1592,7 @@ if __name__ == '__main__':
             try:
                 mover_job = DataMoverJob(namespace=namespace, print_output=True)
                 mover_job.delete_job(job=job_name)
-                print("Job {} deleted.".format(job_name))
+                logger.info("Job %s deleted.", job_name)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1465,7 +1615,7 @@ if __name__ == '__main__':
 
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextDeleteCAConfigMap)
+                    logger.info(helpTextDeleteCAConfigMap)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -1484,7 +1634,7 @@ if __name__ == '__main__':
                     print_output=True
                 )
                 config_map.delete()
-                print("Kubernetes CA config-map successfully deleted.")
+                logger.info("Kubernetes CA config-map successfully deleted.")
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1503,7 +1653,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextDeleteTritonServer)
+                    logger.info(helpTextDeleteTritonServer)
                     sys.exit(0)
                 elif opt in ("-s", "--server-name"):
                     server_name = arg
@@ -1518,7 +1668,7 @@ if __name__ == '__main__':
 
             # Confirm delete operation
             if not force:
-                print("Warning: This server will be permanently deleted.")
+                logger.warning("Warning: This server will be permanently deleted.")
                 while True:
                     proceed = input("Are you sure that you want to proceed? (yes/no): ")
                     if proceed in ("yes", "Yes", "YES"):
@@ -1526,7 +1676,7 @@ if __name__ == '__main__':
                     elif proceed in ("no", "No", "NO"):
                         sys.exit(0)
                     else:
-                        print("Invalid value. Must enter 'yes' or 'no'.")
+                        logger.error("Invalid value. Must enter \'yes\' or \'no\'.")
 
             # Delete Triton instance
             try:
@@ -1587,7 +1737,7 @@ if __name__ == '__main__':
 
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextGetS3Bucket)
+                    logger.info(helpTextGetS3Bucket)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -1642,7 +1792,7 @@ if __name__ == '__main__':
                     print_output=True
                 )
                 job = data_mover.get_bucket(bucket=bucket_name, pvc=pvc_name, pvc_dir=pvc_dir)
-                print("Created Kubernetes job {}".format(job))
+                logger.info("Created Kubernetes job %s", job)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1693,7 +1843,7 @@ if __name__ == '__main__':
 
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextGetS3Object)
+                    logger.info(helpTextGetS3Object)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -1750,7 +1900,7 @@ if __name__ == '__main__':
                     print_output=True
                 )
                 job = data_mover.get_object(bucket=bucket_name, pvc=pvc_name, object_key=object_key, file_location=file_location)
-                print("Created Kubernetes job {}".format(job))
+                logger.info("Created Kubernetes job %s", job)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1759,7 +1909,7 @@ if __name__ == '__main__':
 
 
     elif action in ("help", "h", "-h", "--help"):
-        print(helpTextStandard)
+        logger.info(helpTextStandard)
 
     elif action in ("list", "ls"):
         # Get desired target from command line args
@@ -1779,7 +1929,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextListVolumeSnapshots)
+                    logger.info(helpTextListVolumeSnapshots)
                     sys.exit(0)
                 elif opt in ("-p", "--pvc-name"):
                     pvcName = arg
@@ -1805,7 +1955,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextListVolumes)
+                    logger.info(helpTextListVolumes)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -1829,7 +1979,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextListJupyterLabSnapshots)
+                    logger.info(helpTextListJupyterLabSnapshots)
                     sys.exit(0)
                 elif opt in ("-w", "--workspace-name"):
                     workspaceName = arg
@@ -1855,7 +2005,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextListJupyterLabs)
+                    logger.info(helpTextListJupyterLabs)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -1880,7 +2030,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextListTritonServers)
+                    logger.info(helpTextListTritonServers)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -1943,7 +2093,7 @@ if __name__ == '__main__':
 
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextPutS3Bucket)
+                    logger.info(helpTextPutS3Bucket)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -1998,7 +2148,7 @@ if __name__ == '__main__':
                     print_output=True
                 )
                 job = data_mover.put_bucket(bucket=bucket_name, pvc=pvc_name, pvc_dir=pvc_dir)
-                print("Created Kubernetes job {}".format(job))
+                logger.info("Created Kubernetes job %s", job)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -2049,7 +2199,7 @@ if __name__ == '__main__':
 
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextPutS3Object)
+                    logger.info(helpTextPutS3Object)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -2106,7 +2256,7 @@ if __name__ == '__main__':
                     print_output=True
                 )
                 job = data_mover.put_object(bucket=bucket_name, pvc=pvc_name, file_location=file_location, object_key=object_key)
-                print("Created Kubernetes job {}".format(job))
+                logger.info("Created Kubernetes job %s", job)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -2143,7 +2293,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextRestoreVolumeSnapshot)
+                    logger.info(helpTextRestoreVolumeSnapshot)
                     sys.exit(0)
                 elif opt in ("-s", "--snapshot-name"):
                     snapshotName = arg
@@ -2158,8 +2308,7 @@ if __name__ == '__main__':
 
             # Confirm restore operation
             if not force:
-                print(
-                    "Warning: In order to restore a snapshot, the PersistentVolumeClaim (PVC) associated the snapshot must NOT be mounted to any pods.")
+                logger.warning("Warning: In order to restore a snapshot, the PersistentVolumeClaim (PVC) associated the snapshot must NOT be mounted to any pods.")
                 while True:
                     proceed = input("Are you sure that you want to proceed? (yes/no): ")
                     if proceed in ("yes", "Yes", "YES"):
@@ -2167,7 +2316,7 @@ if __name__ == '__main__':
                     elif proceed in ("no", "No", "NO"):
                         sys.exit(0)
                     else:
-                        print("Invalid value. Must enter 'yes' or 'no'.")
+                        logger.error("Invalid value. Must enter \'yes\' or \'no\'.")
 
             # Restore snapshot
             try:
@@ -2188,7 +2337,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextRestoreJupyterLabSnapshot)
+                    logger.info(helpTextRestoreJupyterLabSnapshot)
                     sys.exit(0)
                 elif opt in ("-s", "--snapshot-name"):
                     snapshotName = arg
@@ -2231,7 +2380,7 @@ if __name__ == '__main__':
 
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextShowS3Job)
+                    logger.info(helpTextShowS3Job)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -2245,13 +2394,13 @@ if __name__ == '__main__':
             try:
                 mover_job = DataMoverJob(namespace=namespace, print_output=True)
                 job_status = mover_job.get_job_status(job=job_name)
-                print("Job {} status:\n{}".format(job_name, job_status))
+                logger.info("Job %s status:\n%s", job_name, job_status)
             except (InvalidConfigError, APIConnectionError):
-                print(f"Unable to get status of job {job_name}")
+                logger.error(f"Unable to get status of job {job_name}")
                 sys.exit(1)
 
     elif action in ("version", "v", "-v", "--version"):
-        print("NetApp DataOps Toolkit for Kubernetes - version " + k8s.__version__)
+        logger.info("NetApp DataOps Toolkit for Kubernetes - version %s", k8s.__version__)
 
     else:
         handleInvalidCommand()
