@@ -101,7 +101,7 @@ async def create_volume_tool(
             snaplock_type=snaplock_type
         )
     except Exception as e:
-        print(f"Error creating volume: {e}")
+        logger.error(f"Error creating volume: {e}")
         raise
 
 
@@ -176,7 +176,7 @@ async def clone_volume_tool(
             print_output=print_output
         )
     except Exception as e:
-        print(f"Error cloning volume: {e}")
+        logger.error(f"Error cloning volume: {e}")
         raise
 
 
@@ -221,7 +221,7 @@ async def list_volumes_tool(
             return []
         return volumes
     except Exception as e:
-        print(f"Error listing volumes: {e}")
+        logger.error(f"Error listing volumes: {e}")
         raise
 
 
@@ -267,7 +267,7 @@ async def mount_volume_tool(
             print_output=print_output
         )
     except Exception as e:
-        print(f"Error mounting volume: {e}")
+        logger.error(f"Error mounting volume: {e}")
         raise
 
 
@@ -312,7 +312,7 @@ async def create_snapshot_tool(
             print_output=print_output
         )
     except Exception as e:
-        print(f"Error creating snapshot: {e}")
+        logger.error(f"Error creating snapshot: {e}")
         raise
 
 
@@ -345,7 +345,7 @@ async def list_snapshots_tool(
             return []
         return snapshots
     except Exception as e:
-        print(f"Error listing snapshots: {e}")
+        logger.error(f"Error listing snapshots: {e}")
         raise
 
 
@@ -395,7 +395,7 @@ async def create_snap_mirror_relationship_tool(
             print_output=print_output
         )
     except Exception as e:
-        print(f"Error creating snapmirror relationship: {e}")
+        logger.error(f"Error creating snapmirror relationship: {e}")
         raise
 
 
@@ -478,7 +478,7 @@ async def create_flexcache_tool(
             print_output=print_output
         )
     except Exception as e:
-        print(f"Error creating FlexCache: {e}")
+        logger.error(f"Error creating FlexCache: {e}")
         raise
 
 
@@ -488,8 +488,8 @@ async def create_cifs_share_tool(
     volume_name : str,
     svm : str,
     comment: Optional[str] = None,
-    acls: List[Any] = [],
-    properties: List[str] = [],
+    acls: Optional[List[Any]] = None,
+    properties: Optional[List[str]] = None,
     cluster_name: Optional[str] = None,
     print_output: bool = False
 ) -> None:
@@ -510,6 +510,11 @@ async def create_cifs_share_tool(
         None
     """
     try:
+        # Initialize mutable default arguments
+        if acls is None:
+            acls = []
+        if properties is None:
+            properties = []
         
         # Create the CIFS share
         create_cifs_share(
@@ -524,7 +529,7 @@ async def create_cifs_share_tool(
         )
 
     except Exception as e:
-        print(f"Error creating CIFS share: {e}")
+        logger.error(f"Error creating CIFS share: {e}")
         raise
 
 
@@ -566,17 +571,26 @@ async def list_cifs_shares_tool(
                 serializable_shares.append(share.to_dict())
             else:
                 # Fallback: extract key attributes manually
+                # Robust SVM attribute extraction
+                svm_value = getattr(share, 'svm', None)
+                if hasattr(svm_value, 'name'):
+                    svm_name = svm_value.name
+                elif isinstance(svm_value, dict) and 'name' in svm_value:
+                    svm_name = svm_value['name']
+                else:
+                    svm_name = None
+                
                 serializable_shares.append({
                     'name': getattr(share, 'name', None),
                     'path': getattr(share, 'path', None),
-                    'svm': getattr(share, 'svm', {}).get('name') if hasattr(getattr(share, 'svm', {}), 'get') else None,
+                    'svm': svm_name,
                     'comment': getattr(share, 'comment', None),
                 })
         
         return serializable_shares
     
     except Exception as e:
-        print(f"Error listing CIFS shares: {e}")
+        logger.error(f"Error listing CIFS shares: {e}")
         raise
 
 
@@ -616,15 +630,24 @@ async def get_cifs_share_tool(
             return share_details.to_dict()
         else:
             # Fallback: extract key attributes manually
+            # Robust SVM attribute extraction
+            svm_value = getattr(share_details, 'svm', None)
+            if hasattr(svm_value, 'name'):
+                svm_name = svm_value.name
+            elif isinstance(svm_value, dict) and 'name' in svm_value:
+                svm_name = svm_value['name']
+            else:
+                svm_name = None
+            
             return {
                 'name': getattr(share_details, 'name', None),
                 'path': getattr(share_details, 'path', None),
-                'svm': getattr(share_details, 'svm', {}).get('name') if hasattr(getattr(share_details, 'svm', {}), 'get') else None,
+                'svm': svm_name,
                 'comment': getattr(share_details, 'comment', None),
             }
         
     except Exception as e:
-        print(f"Error getting CIFS share: {e}")
+        logger.error(f"Error getting CIFS share: {e}")
         raise
 
 
