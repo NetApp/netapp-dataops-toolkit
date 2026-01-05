@@ -41,8 +41,15 @@ def create_cifs_share(
         volume_name (str): Name of the volume to share. The volume's NAS path will be used as the share path.
         svm (str): Existing SVM in which to create the CIFS share.
         comment (str, optional): Comment for the share
-        properties (List[str], optional): Share properties (e.g., ['browsable', 'oplocks'])
-        acls (List[Dict], optional): Access Control List entries
+        properties (List[str], optional): Share properties as a list of strings. Valid properties include:
+            'browsable', 'oplocks', 'showsnapshot', 'changenotify', 'attributecache', 
+            'continuously_available', 'encryption'. Example: ['browsable', 'oplocks']
+        acls (List[Dict], optional): Access Control List entries as a list of dictionaries. 
+            Each dictionary should contain:
+            - 'user_or_group' (str): Windows user or group name
+            - 'permission' (str): Access level ('no_access', 'read', 'change', 'full_control')
+            - 'type' (str, optional): Principal type ('windows', 'unix_user', 'unix_group')
+            Example: [{'user_or_group': 'Everyone', 'permission': 'full_control', 'type': 'windows'}]
         cluster_name (str, optional): Non default hosting cluster name
         print_output (bool): Whether to print output messages
         
@@ -55,6 +62,28 @@ def create_cifs_share(
         InvalidCifsShareParameterError: If invalid parameters are provided
         NetAppRestError: If the API request fails
     """
+
+    # Validate parameter types
+    if acls is not None:
+        if not isinstance(acls, list):
+            raise InvalidCifsShareParameterError("`acls` must be a list of dictionaries")
+        for i, acl in enumerate(acls):
+            if not isinstance(acl, dict):
+                raise InvalidCifsShareParameterError(f"`acls[{i}]` must be a dictionary")
+            if 'user_or_group' not in acl:
+                raise InvalidCifsShareParameterError(f"`acls[{i}]` must contain 'user_or_group' key")
+            if 'permission' not in acl:
+                raise InvalidCifsShareParameterError(f"`acls[{i}]` must contain 'permission' key")
+            if not isinstance(acl.get('user_or_group'), str):
+                raise InvalidCifsShareParameterError(f"`acls[{i}]['user_or_group']` must be a string")
+            if not isinstance(acl.get('permission'), str):
+                raise InvalidCifsShareParameterError(f"`acls[{i}]['permission']` must be a string")
+    
+    if properties is not None:
+        if not isinstance(properties, list):
+            raise InvalidCifsShareParameterError("`properties` must be a list of strings")
+        if not all(isinstance(p, str) for p in properties):
+            raise InvalidCifsShareParameterError("`properties` must be a list of strings")
 
     # Retrieve config details from config file
     try:
