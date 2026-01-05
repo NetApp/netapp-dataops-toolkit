@@ -21,7 +21,7 @@ from netapp_dataops.traditional.gcnv import (
 # Creating an instance of FastMCP for the NetApp DataOps Traditional GCNV Toolkit
 mcp = FastMCP("NetApp DataOps Traditional GCNV Toolkit MCP")
 
-@mcp.tool(name = "Create Volume")
+@mcp.tool(name = "Create_Volume")
 async def create_volume_tool(
     project_id: str,
     location: str,
@@ -200,7 +200,7 @@ async def create_volume_tool(
     return response
     
     
-@mcp.tool(name = "Clone Volume")
+@mcp.tool(name = "Clone_Volume")
 async def clone_volume_tool(
     project_id: str,
     location: str,
@@ -380,7 +380,7 @@ async def clone_volume_tool(
             logger.error(f"Error cloning volume: {response.get('message', 'Unknown error')}")
     return response
     
-@mcp.tool(name = "List Volumes")
+@mcp.tool(name = "List_Volumes")
 async def list_volumes_tool(
     project_id: str,
     location: str,
@@ -418,7 +418,7 @@ async def list_volumes_tool(
             logger.error(f"Error listing volumes: {response['message']}")
     return response
 
-@mcp.tool(name = "Create Snapshot")
+@mcp.tool(name = "Create_Snapshot")
 async def create_snapshot_tool(
     project_id: str,
     location: str,
@@ -473,8 +473,8 @@ async def create_snapshot_tool(
         if print_output:
             logger.error(f"Error creating snapshot: {response['message']}")
     return response
-    
-@mcp.tool(name = "List Snapshots")
+
+@mcp.tool(name = "List_Snapshots")
 async def list_snapshots_tool(
     project_id: str,
     location: str,
@@ -516,7 +516,7 @@ async def list_snapshots_tool(
             logger.error(f"Error listing snapshots: {response['message']}")
     return response
 
-@mcp.tool(name = "Create Replication")
+@mcp.tool(name = "Create_Replication")
 async def create_replication_tool(
     source_project_id: str,
     source_location: str,
