@@ -248,7 +248,7 @@ def list_cifs_shares(
                 shares = list(NetAppCifsShare.get_collection())
 
             # Filter out administrative shares
-            shares = [share for share in shares if share.name.lower() not in admin_shares]
+            shares = [share for share in shares if share.name and share.name.strip().lower() not in admin_shares]
             
             
             # Construct list of CIFS shares
