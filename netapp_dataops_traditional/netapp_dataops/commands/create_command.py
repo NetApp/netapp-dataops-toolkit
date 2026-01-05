@@ -278,7 +278,6 @@ class CreateCommand(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
-            import sys
             sys.exit(1)
 
     def _create_cifs_share(self) -> None:
@@ -295,19 +294,19 @@ class CreateCommand(BaseCommand):
         
         # Get command line options
         try:
-            opts, args = getopt.getopt(
+            opts, _ = getopt.getopt(
                 self.args[3:], 
                 "u:h:s:n:l:a:v:c:", 
                 ["cluster-name=", "help", "svm=", "name=", "properties=", "acls=", "volume=", "comment="]
             )
         except Exception as err:
-            print(err)
+            logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_CREATE_CIFS_SHARE, invalid_opt_arg=True)
         
         # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print(HELP_TEXT_CREATE_CIFS_SHARE)
+                logger.info(HELP_TEXT_CREATE_CIFS_SHARE)
                 return
             elif opt in ("-s", "--svm"):
                 svm = arg
@@ -325,8 +324,12 @@ class CreateCommand(BaseCommand):
                 try:
                     acls = json.loads(arg)
                 except json.JSONDecodeError as e:
-                    print("Error parsing ACLs JSON: %s" % e)
+                    logger.error("Error parsing ACLs JSON: %s" % e)
                     self.handle_invalid_command(help_text=HELP_TEXT_CREATE_CIFS_SHARE, invalid_opt_arg=True)
+        
+        # Filter out empty properties entries from trailing commas
+        if properties:
+            properties = [p for p in properties if p]
         
         # Check for required options
         if not name or not svm or not volume_name:
@@ -345,5 +348,4 @@ class CreateCommand(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError, InvalidCifsShareParameterError):
-            import sys
             sys.exit(1)
