@@ -80,7 +80,6 @@ def create_cifs_share(
 
         if print_output:
             logger.info("Creating CIFS share %s for volume %s on SVM %s", name, volume_name, svm)
-            pass
         
         try:
             # Verify SVM exists
@@ -101,7 +100,6 @@ def create_cifs_share(
             
             if print_output:
                 logger.info("Using path %s from volume %s", path, volume_name)
-                pass
             
             # Check if CIFS share already exists
             existing_share = NetAppCifsShare.find(name=name, svm=svm)
@@ -126,7 +124,6 @@ def create_cifs_share(
                     if prop not in valid_properties:
                         if print_output:
                             logger.warning("Property '%s' may not be valid. Valid properties: %s", prop, valid_properties)
-                            pass
                 cifs_share.properties = properties
                 
             if acls:
@@ -137,14 +134,12 @@ def create_cifs_share(
             
             if print_output:
                 logger.info("CIFS share '%s' created successfully", name)
-                pass
                 
             return cifs_share
             
         except NetAppRestError as err:
             if print_output:
                 logger.error("Error: ONTAP Rest API Error: %s", err)
-                pass
             raise APIConnectionError(err)
     
     else:
@@ -203,7 +198,6 @@ def list_cifs_shares(
     
         if print_output:
             logger.info("Retrieving CIFS shares...")
-            pass
         
         try:
             # Build query parameters
@@ -269,17 +263,15 @@ def list_cifs_shares(
                 # Convert shares array to Pandas DataFrame and print as table
                 if sharesList:
                     sharesDF = pd.DataFrame.from_dict(sharesList, dtype="string")
-                    print(tabulate(sharesDF, showindex=False, headers=sharesDF.columns))
+                    logger.info(tabulate(sharesDF, showindex=False, headers=sharesDF.columns))
                 else:
-                    print("No CIFS shares found.")
-                pass
+                    logger.info("No CIFS shares found.")
                 
             return shares
             
         except NetAppRestError as err:
             if print_output:
                 logger.error("Error: ONTAP Rest API Error: %s", err)
-                pass
             raise APIConnectionError(err)
     
     else:
@@ -335,7 +327,6 @@ def get_cifs_share(
     
         if print_output:
             logger.info("Retrieving CIFS share %s from SVM %s", name, svm)
-            pass
         
         try:
             # Verify SVM exists
@@ -377,18 +368,15 @@ def get_cifs_share(
                     logger.info("Properties: %s", cifs_share.properties)
                 if hasattr(cifs_share, 'acls') and cifs_share.acls:
                     logger.info("ACLs: %s", cifs_share.acls)
-                pass
             
             if print_output:
                 logger.info("Successfully retrieved CIFS share %s", name)
-                pass
                 
             return cifs_share
               
         except NetAppRestError as err:
             if print_output:
                 logger.error("Error: ONTAP Rest API Error: %s", err)
-                pass
             raise APIConnectionError(err)
     
     else:
