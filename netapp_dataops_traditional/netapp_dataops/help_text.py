@@ -540,7 +540,7 @@ List all CIFS shares.
 Note: Administrative shares (c$, ipc$, admin$, print$) are hidden by default.
 
 Optional Options/Arguments:
-\t-s, --svm=\t\tExisting SVM in which to create the CIFS share.
+\t-s, --svm=\t\tExisting SVM to list CIFS shares from.
 \t-n, --name-pattern=\tPattern to filter share names by (supports wildcard '*').
 \t-u, --cluster-name=\tNon default hosting cluster
 \t-h, --help\t\tPrint help text.
