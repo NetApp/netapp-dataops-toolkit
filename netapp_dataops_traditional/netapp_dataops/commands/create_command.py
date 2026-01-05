@@ -286,7 +286,7 @@ class CreateCommand(BaseCommand):
         # Initialize variables
         svm = None
         name = None
-        path = None
+        volume_name = None
         cluster_name = None
         comment = None
         acls = None
@@ -297,8 +297,8 @@ class CreateCommand(BaseCommand):
         try:
             opts, args = getopt.getopt(
                 self.args[3:], 
-                "u:h:s:n:l:a:p:c:", 
-                ["cluster-name=", "help", "svm=", "name=", "properties=", "acls=", "path=", "comment="]
+                "u:h:s:n:l:a:v:c:", 
+                ["cluster-name=", "help", "svm=", "name=", "properties=", "acls=", "volume=", "comment="]
             )
         except Exception as err:
             print(err)
@@ -315,8 +315,8 @@ class CreateCommand(BaseCommand):
                 cluster_name = arg
             elif opt in ("-n", "--name"):
                 name = arg
-            elif opt in ("-p", "--path"):
-                path = arg
+            elif opt in ("-v", "--volume"):
+                volume_name = arg
             elif opt in ("-c", "--comment"):
                 comment = arg
             elif opt in ("-l", "--properties"):
@@ -329,7 +329,7 @@ class CreateCommand(BaseCommand):
                     self.handle_invalid_command(help_text=HELP_TEXT_CREATE_CIFS_SHARE, invalid_opt_arg=True)
         
         # Check for required options
-        if not name or not svm or not path:
+        if not name or not svm or not volume_name:
             self.handle_invalid_command(help_text=HELP_TEXT_CREATE_CIFS_SHARE, invalid_opt_arg=True)
         
         # Create CIFS share
@@ -337,7 +337,7 @@ class CreateCommand(BaseCommand):
             create_cifs_share(
                 svm=svm,
                 name=name,
-                path=path,
+                volume_name=volume_name,
                 cluster_name=cluster_name,
                 acls=acls,
                 properties=properties,

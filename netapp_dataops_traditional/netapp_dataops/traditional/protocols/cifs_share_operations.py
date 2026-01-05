@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional
 from netapp_ontap.resources import CifsShare as NetAppCifsShare
 from netapp_ontap.resources import Svm as NetAppSvm
+from netapp_ontap.resources import Volume as NetAppVolume
 from netapp_ontap.error import NetAppRestError
 import pandas as pd
 from tabulate import tabulate
@@ -24,7 +25,7 @@ logger = setup_logger(__name__)
 
 def create_cifs_share(
     name: str,
-    path: str,
+    volume_name: str,
     svm: str,
     comment: Optional[str] = None,
     acls: Optional[List[Dict]] = None,
@@ -37,7 +38,7 @@ def create_cifs_share(
     
     Args:
         name (str): Name of the CIFS share
-        path (str): Path in the owning SVM namespace that is shared through this share.
+        volume_name (str): Name of the volume to share. The volume's NAS path will be used as the share path.
         svm (str): Existing SVM in which to create the CIFS share.
         comment (str, optional): Comment for the share
         properties (List[str], optional): Share properties (e.g., ['browsable', 'oplocks'])
@@ -78,7 +79,7 @@ def create_cifs_share(
             raise
 
         if print_output:
-            logger.info("Creating CIFS share %s at path %s on SVM %s", name, path, svm)
+            logger.info("Creating CIFS share %s for volume %s on SVM %s", name, volume_name, svm)
             pass
         
         try:
@@ -86,6 +87,21 @@ def create_cifs_share(
             svm_object = NetAppSvm.find(name=svm)
             if not svm_object:
                 raise InvalidCifsShareParameterError("SVM %s not found" % svm)
+            
+            # Get volume and retrieve its NAS path
+            volume = NetAppVolume.find(name=volume_name, svm=svm)
+            if not volume:
+                raise InvalidCifsShareParameterError("Volume %s not found on SVM %s" % (volume_name, svm))
+            
+            volume.get(fields="nas.path")
+            if not hasattr(volume, 'nas') or not hasattr(volume.nas, 'path'):
+                raise InvalidCifsShareParameterError("Volume %s does not have a NAS path configured" % volume_name)
+            
+            path = volume.nas.path
+            
+            if print_output:
+                logger.info("Using path %s from volume %s", path, volume_name)
+                pass
             
             # Check if CIFS share already exists
             existing_share = NetAppCifsShare.find(name=name, svm=svm)
@@ -224,10 +240,23 @@ def list_cifs_shares(
                 # Get properties as comma-separated string
                 properties_str = ', '.join(share.properties) if hasattr(share, 'properties') and share.properties else ""
                 
+                # Find volume for this share by matching the path
+                volume_name = ""
+                try:
+                    volumes = list(NetAppVolume.get_collection(svm=svm_name, fields="name,nas.path"))
+                    for vol in volumes:
+                        vol.get(fields="nas.path")
+                        if hasattr(vol, 'nas') and hasattr(vol.nas, 'path') and vol.nas.path == share.path:
+                            volume_name = vol.name
+                            break
+                except:
+                    pass
+                
                 # Construct dict containing CIFS share details
                 shareDict = {
                     "Share Name": share.name,
                     "SVM": svm_name,
+                    "Volume Name": volume_name,
                     "Path": share.path,
                     "Comment": share.comment if hasattr(share, 'comment') and share.comment else "",
                     "Properties": properties_str
@@ -324,10 +353,24 @@ def get_cifs_share(
             cifs_share.get()
 
             if print_output:
+                # Find volume for this share by matching the path
+                volume_name = ""
+                try:
+                    volumes = list(NetAppVolume.get_collection(svm=svm, fields="name,nas.path"))
+                    for vol in volumes:
+                        vol.get(fields="nas.path")
+                        if hasattr(vol, 'nas') and hasattr(vol.nas, 'path') and vol.nas.path == cifs_share.path:
+                            volume_name = vol.name
+                            break
+                except:
+                    pass
+                
                 # Log share details
                 logger.info("Share Name: %s", cifs_share.name)
-                logger.info("Path: %s", cifs_share.path)
                 logger.info("SVM: %s", cifs_share.svm.name if hasattr(cifs_share.svm, 'name') else cifs_share.svm)
+                if volume_name:
+                    logger.info("Volume Name: %s", volume_name)
+                logger.info("Path: %s", cifs_share.path)
                 if hasattr(cifs_share, 'comment') and cifs_share.comment:
                     logger.info("Comment: %s", cifs_share.comment)
                 if hasattr(cifs_share, 'properties') and cifs_share.properties:

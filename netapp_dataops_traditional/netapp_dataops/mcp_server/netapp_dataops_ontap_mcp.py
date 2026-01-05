@@ -485,7 +485,7 @@ async def create_flexcache_tool(
 @mcp.tool(name="Create CIFS Share")
 async def create_cifs_share_tool(
     name : str,
-    path : str,
+    volume_name : str,
     svm : str,
     comment: Optional[str] = None,
     acls: List[Any] = [],
@@ -494,18 +494,18 @@ async def create_cifs_share_tool(
     print_output: bool = False
 ) -> None:
     """
-    Use this tool to create a CIFS share on a specified SVM.
-
+    Use this tool to create a new CIFS share on a volume.
+    
     Args:
         name (str): Name of the CIFS share (required).
-        path (str): Path to the volume or directory to be shared (required).
-        svm (str): Name of the SVM where the share will be created (required).
+        volume_name (str): Name of the volume to share. The volume's NAS path will be used as the share path (required).
+        svm (str): Name of the Storage Virtual Machine (SVM) where the share will be created (required).
         comment (str): Optional comment for the CIFS share. Defaults to None.
-        acls (List[Dict]): Optional list of ACLs to set on the CIFS share. Each ACL should be a dictionary with appropriate keys. Defaults to None.
-        properties (List[str]): Optional list of additional properties to set on the CIFS share. Defaults to None.
+        acls (List[Dict]): Optional list of Access Control List entries to set on the CIFS share. Each ACL should be a dictionary with appropriate keys. Defaults to None.
+        properties (List[str]): Optional list of additional share properties (e.g., ['browsable', 'oplocks']). Defaults to None.
         cluster_name (str): Non-default cluster name. Defaults to None.
-        print_output (bool): Denotes whether or not to print messages. Defaults to False.
-
+        print_output (bool): Denotes whether or not to print messages to the console during execution. Defaults to False.
+    
     Returns:
         None
     """
@@ -514,7 +514,7 @@ async def create_cifs_share_tool(
         # Create the CIFS share
         create_cifs_share(
             name=name,
-            path=path,
+            volume_name=volume_name,
             svm=svm,
             comment=comment,
             acls=acls,
