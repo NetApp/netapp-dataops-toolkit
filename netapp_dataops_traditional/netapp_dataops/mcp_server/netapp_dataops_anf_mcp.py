@@ -21,7 +21,7 @@ logger = setup_logger(__name__)
 
 mcp = FastMCP("NetApp DataOps ANF Toolkit MCP")
 
-@mcp.tool(name="Create Volume")
+@mcp.tool(name="Create_Volume")
 async def create_volume_tool(
     volume_name: str,
     creation_token: str,
@@ -243,7 +243,7 @@ async def create_volume_tool(
         return {"status": "error", "details": f"Error creating ANF volume: {e}"}
 
 
-@mcp.tool(name="Clone Volume")
+@mcp.tool(name="Clone_Volume")
 async def clone_volume_tool(
     source_volume_name: str,
     volume_name: str,
@@ -467,7 +467,7 @@ async def clone_volume_tool(
         return {"status": "error", "details": f"Error cloning ANF volume: {e}"}
 
 
-@mcp.tool(name="List Volumes")
+@mcp.tool(name="List_Volumes")
 async def list_volumes_tool(
     resource_group_name: Optional[str] = None,
     account_name: Optional[str] = None,
@@ -520,7 +520,7 @@ async def list_volumes_tool(
         return {"status": "error", "details": f"Error listing ANF volumes: {e}"}
 
 
-@mcp.tool(name="Create Snapshot")
+@mcp.tool(name="Create_Snapshot")
 async def create_snapshot_tool(
     volume_name: str,
     snapshot_name: str,
@@ -590,7 +590,7 @@ async def create_snapshot_tool(
             print(error_message)
         return {"status": "error", "details": f"Error creating ANF snapshot: {e}"}
 
-@mcp.tool(name="List Snapshots")
+@mcp.tool(name="List_Snapshots")
 async def list_snapshots_tool(
     volume_name: str,
     resource_group_name: Optional[str] = None,
@@ -648,7 +648,7 @@ async def list_snapshots_tool(
         return {"status": "error", "details": f"Error listing ANF snapshots: {e}"}
 
 
-@mcp.tool(name="Create Replication")
+@mcp.tool(name="Create_Replication")
 async def create_replication_tool(
     # Source volume parameters
     volume_name: str,
@@ -770,7 +770,7 @@ async def create_replication_tool(
             print(error_message)
         return {"status": "error", "details": f"Error creating ANF replication: {e}"}
 
-@mcp.tool(name="Create ANF Config")
+@mcp.tool(name="Create_ANF_Config")
 async def create_anf_config_tool(
     subscription_id: str,
     resource_group_name: str,
