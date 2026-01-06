@@ -19,15 +19,6 @@ from netapp_dataops.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
 
-# Constants for default values and validation
-VALID_PROTOCOL_TYPES = ["NFSv3", "NFSv4.1", "CIFS"]
-VALID_SERVICE_LEVELS = ["Standard", "Premium", "Ultra", "StandardZRS", "Flexible"]
-VALID_SECURITY_STYLES = ["ntfs", "unix"]
-VALID_NETWORK_FEATURES = ["Basic", "Standard", "Basic_Standard", "Standard_Basic"]
-VALID_ENCRYPTION_KEY_SOURCES = ["Microsoft.NetApp", "Microsoft.KeyVault"]
-VALID_AVS_DATA_STORE = ["Enabled", "Disabled"]
-VALID_ENABLE_SUBVOLUMES = ["Enabled", "Disabled"]
-
 # Default values
 DEFAULT_SERVICE_LEVEL = "Premium"
 DEFAULT_SECURITY_STYLE = "unix"
