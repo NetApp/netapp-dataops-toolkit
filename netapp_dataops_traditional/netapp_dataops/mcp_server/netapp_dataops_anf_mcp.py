@@ -528,7 +528,6 @@ async def create_snapshot_tool(
     account_name: Optional[str] = None,
     pool_name: Optional[str] = None,
     location: Optional[str] = None,
-    tags: Optional[Dict[str, str]] = None,
     subscription_id: Optional[str] = None,
     print_output: Optional[bool] = False
 ) -> Dict[str, Any]:
@@ -573,7 +572,6 @@ async def create_snapshot_tool(
             account_name=account_name,
             pool_name=pool_name,
             location=location,
-            tags=tags,
             subscription_id=subscription_id,
             print_output=print_output
         )

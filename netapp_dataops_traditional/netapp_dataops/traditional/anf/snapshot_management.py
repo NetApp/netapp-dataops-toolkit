@@ -22,7 +22,6 @@ def create_snapshot(
     account_name: str = None,
     pool_name: str = None,
     location: str = None,
-    tags: dict = None,
     subscription_id: str = None,
     print_output: bool = False
 ) -> Dict[str, Any]:
@@ -42,8 +41,6 @@ def create_snapshot(
             Optional. The name of the capacity pool. Will use config default if not provided.
         location (str):
             Optional. Azure region. Will use config default if not provided.
-        tags (Dict[str, str]):
-            Optional. Resource tags.
         subscription_id (str):
             Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
@@ -95,9 +92,8 @@ def create_snapshot(
             'location': resolved_location
         }
         
-        # Add optional parameters if provided
-        if tags:
-            snapshot_properties['tags'] = tags
+        # Note: Azure NetApp Files snapshots do not support tags
+        # Tags are inherited from the parent volume
         
         # Create the snapshot object
         snapshot = Snapshot(**snapshot_properties)

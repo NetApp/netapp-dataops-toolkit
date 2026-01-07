@@ -90,7 +90,7 @@ def create_volume(
         location (str):
             Optional. Azure region (e.g., "eastus"). Will use config default if not provided.
         protocol_types (List[str]):
-            Optional. List of protocol types (NFSv3, NFSv4.1, CIFS). Will use config default if not provided.
+            Optional. List of protocol types (NFSv3, NFSv4.1, SMB). Will use config default if not provided.
         virtual_network_name (str):
             Optional. The name of the virtual network to which the volume will be connected. Will use config default if not provided.
         subnet_name (str):
@@ -111,7 +111,7 @@ def create_volume(
                 - rule_index (int): The index of the rule (defaults to position in list + 1)
                 - unix_read_only (bool): Unix read only access (defaults to False)
                 - unix_read_write (bool): Unix read write access (defaults to True)
-                - cifs (bool): CIFS protocol access (defaults to False)
+                - smb (bool): SMB protocol access (defaults to False)
                 - nfsv3 (bool): NFSv3 protocol access (defaults based on protocol_types)
                 - nfsv41 (bool): NFSv4.1 protocol access (defaults based on protocol_types)
                 - allowed_clients (str): Allowed client specification (defaults to "0.0.0.0/0")
@@ -125,7 +125,7 @@ def create_volume(
                 - chown_mode (str): Chown mode (defaults to "Restricted")
             Defaults to None. If not provided and using NFS, a default export policy will be created.
         security_style (str):
-            Optional. The security style of volume, default unix, defaults to ntfs for dual protocol or CIFS protocol. Known values are: "ntfs" and "unix".
+            Optional. The security style of volume, default unix, defaults to ntfs for dual protocol or SMB protocol. Known values are: "ntfs" and "unix".
             Defaults to unix.
         smb_encryption (bool):
             Optional. Enables encryption for in-flight smb3 data. Only applicable for SMB/DualProtocol volume. To be used with swagger version 2020-08-01 or later.
@@ -224,7 +224,8 @@ def create_volume(
         service_level = DEFAULT_SERVICE_LEVEL
     if security_style is None:
         security_style = DEFAULT_SECURITY_STYLE  
-    if unix_permissions is None:
+    # Only set unix_permissions default for unix security style volumes
+    if unix_permissions is None and security_style == 'unix':
         unix_permissions = DEFAULT_UNIX_PERMISSIONS
     if network_features is None:
         network_features = DEFAULT_NETWORK_FEATURES
@@ -399,7 +400,7 @@ def clone_volume(
             Optional. Service level (Standard, Premium, Ultra, StandardZRS, Flexible).
             Defaults to Premium.
         protocol_types (List[str]):
-            Optional. List of protocol types (NFSv3, NFSv4.1, CIFS). Will use config default if not provided.
+            Optional. List of protocol types (NFSv3, NFSv4.1, SMB). Will use config default if not provided.
         tags (Dict[str, str]):
             Optional. Resource tags.
             Defaults to None.
@@ -412,7 +413,7 @@ def clone_volume(
                 - rule_index (int): The index of the rule (defaults to position in list + 1)
                 - unix_read_only (bool): Unix read only access (defaults to False)
                 - unix_read_write (bool): Unix read write access (defaults to True)
-                - cifs (bool): CIFS protocol access (defaults to False)
+                - smb (bool): SMB protocol access (defaults to False)
                 - nfsv3 (bool): NFSv3 protocol access (defaults based on protocol_types)
                 - nfsv41 (bool): NFSv4.1 protocol access (defaults based on protocol_types)
                 - allowed_clients (str): Allowed client specification (defaults to "0.0.0.0/0")
@@ -426,7 +427,7 @@ def clone_volume(
                 - chown_mode (str): Chown mode (defaults to "Restricted")
             Defaults to None. If not provided and using NFS, a default export policy will be created.
         security_style (str):
-            Optional. The security style of volume, default unix, defaults to ntfs for dual protocol or CIFS protocol. Known values are: "ntfs" and "unix".
+            Optional. The security style of volume, default unix, defaults to ntfs for dual protocol or SMB protocol. Known values are: "ntfs" and "unix".
             Defaults to unix.
         smb_encryption (bool):
             Optional. Enables encryption for in-flight smb3 data. Only applicable for SMB/DualProtocol volume. To be used with swagger version 2020-08-01 or later.
@@ -525,7 +526,8 @@ def clone_volume(
         service_level = DEFAULT_SERVICE_LEVEL
     if security_style is None:
         security_style = DEFAULT_SECURITY_STYLE  
-    if unix_permissions is None:
+    # Only set unix_permissions default for unix security style volumes  
+    if unix_permissions is None and security_style == 'unix':
         unix_permissions = "0777"  # clone_volume default is different
     if network_features is None:
         network_features = DEFAULT_NETWORK_FEATURES
@@ -900,7 +902,7 @@ def _create_export_policy_rules(export_policy_rules: Optional[List[Dict[str, Any
                 'rule_index': rule_dict.get('rule_index', i + 1),
                 'unix_read_only': rule_dict.get('unix_read_only', False),
                 'unix_read_write': rule_dict.get('unix_read_write', True),
-                'cifs': rule_dict.get('cifs', False),
+                'cifs': rule_dict.get('smb', False),
                 'nfsv3': rule_dict.get('nfsv3', "NFSv3" in protocol_types),
                 'nfsv41': rule_dict.get('nfsv41', "NFSv4.1" in protocol_types),
                 'allowed_clients': rule_dict.get('allowed_clients', '0.0.0.0/0'),
