@@ -262,7 +262,10 @@ def create_replication(
             volume_name=volume_name,
             body=authorize_request
         )
-        
+
+        if print_output:
+            logger.info(f"Creating replication of volume '{volume_name}' to destination volume '{destination_volume_name}'...")
+
         # Wait for completion
         poller.result()
         
@@ -286,6 +289,10 @@ def create_replication(
             replication_details["destination_volume"]["location"] = destination_location
         else:
             replication_details["destination_volume"]["created"] = False
+
+        if print_output:
+            logger.info(f"Replication setup completed successfully for volume '{volume_name}'")
+            logger.info(_serialize(replication_details))
         
         return {"status": "success", "details": _serialize(replication_details)}
 

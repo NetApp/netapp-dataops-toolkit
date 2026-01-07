@@ -751,7 +751,23 @@ def delete_volume(
 
     try:
         # Get ANF client and subscription ID (using resolved value)
-        client, final_subscription_id = get_anf_client(resolved_subscription_id, print_output=print_output)
+        client, _ = get_anf_client(resolved_subscription_id, print_output=print_output)
+
+        # Check if volume exists before attempting deletion
+        try:
+            _ = client.volumes.get(
+                resource_group_name=resolved_resource_group_name,
+                account_name=resolved_account_name,
+                pool_name=resolved_pool_name,
+                volume_name=volume_name
+            )
+           
+        except ResourceNotFoundError:
+            error_message = f"Volume '{volume_name}' not found"
+            logger.error(error_message)
+            if print_output:
+                print(error_message)
+            return {"status": "error", "details": f"Volume '{volume_name}' does not exist"}
 
         # Delete the volume (using resolved values)
         if force_delete is not None:
