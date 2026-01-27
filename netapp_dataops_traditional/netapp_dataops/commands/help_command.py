@@ -1,8 +1,6 @@
-"""
-Help command module for NetApp DataOps Toolkit CLI.
-"""
+"""Help command module for NetApp DataOps Toolkit CLI."""
 
-from .base_command import BaseCommand
+from .base_command import BaseCommand, logger
 from netapp_dataops.help_text import HELP_TEXT_STANDARD
 
 
@@ -11,4 +9,4 @@ class HelpCommand(BaseCommand):
     
     def execute(self) -> None:
         """Display the standard help text."""
-        print(HELP_TEXT_STANDARD)
+        logger.info(HELP_TEXT_STANDARD)
