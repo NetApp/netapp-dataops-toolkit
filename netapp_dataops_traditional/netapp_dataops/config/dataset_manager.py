@@ -48,60 +48,10 @@ class DatasetManagerConfigurator:
                 print("Note: Dataset Manager requires a root volume to function.")
                 return DatasetManagerConfig(enabled=False)
     
-    def _ensure_nfs_client_available(self) -> bool:
-        """
-        Check and optionally install NFS client utilities when needed for mounting operations.
-        
-        Returns:
-            bool: True if NFS client utilities are available, False otherwise
-        """
-        print("\n🔧 Checking system requirements for NFS mounting...")
-        
-        # Check for mount.nfs binary
-        nfs_check = subprocess.run(['which', 'mount.nfs'], capture_output=True, text=True)
-        if nfs_check.returncode == 0:
-            print("✓ NFS client utilities found.")
-            return True
-        
-        # Also check alternative locations
-        nfs_paths = ['/sbin/mount.nfs', '/usr/sbin/mount.nfs', '/bin/mount.nfs']
-        for path in nfs_paths:
-            if os.path.exists(path):
-                print(f"✓ NFS client utilities found at {path}")
-                return True
-        
-        print("⚠️  NFS client utilities not found on this system.")
-        print("   NFS client utilities are required for mounting Dataset Manager volumes.")
-        
-        print("\n📦 Installing NFS client utilities automatically...")
-        if self._install_nfs_client():
-            # Verify installation worked
-            final_check = subprocess.run(['which', 'mount.nfs'], capture_output=True, text=True)
-            if final_check.returncode == 0:
-                print("✅ NFS client utilities installed and verified successfully.")
-                return True
-            else:
-                print("⚠️  Installation completed but mount.nfs not found in PATH.")
-                print("   Please verify installation manually.")
-                return False
-        else:
-            print("❌ Failed to install NFS client utilities automatically.")
-            self._show_manual_nfs_installation()
-            return False
-    
-    def _show_manual_nfs_installation(self) -> None:
-        """Show manual NFS client installation instructions."""
-        print("\n📋 Manual NFS client installation:")
-        print("   Ubuntu/Debian: sudo apt update && sudo apt install -y nfs-common")
-        print("   RHEL/CentOS:   sudo yum install -y nfs-utils")
-        print("   Fedora:        sudo dnf install -y nfs-utils") 
-        print("   SUSE:          sudo zypper install -y nfs-client")
-        print("\n   After installation, re-run: python -m netapp_dataops.netapp_dataops_cli config")
-    
     def _collect_existing_root_config(self) -> DatasetManagerConfig:
         """Collect configuration for existing root volume without performing operations."""
         while True:
-            root_volume_name = PromptUtils.prompt_required("Dataset Manager 'root' volume name")
+            root_volume_name = PromptUtils.prompt_required("Enter Dataset Manager \"root\" volume name: ")
             
             # Basic validation - just check if volume exists
             try:
@@ -109,9 +59,6 @@ class DatasetManagerConfigurator:
                 
                 if volume_info is None:
                     print(f"Error: Volume '{root_volume_name}' not found on ONTAP.")
-                    if not PromptUtils.prompt_yes_no("Would you like to try a different name?"):
-                        print("Dataset Manager configuration cancelled.")
-                        return DatasetManagerConfig(enabled=False)
                     continue
                 
                 print(f"✓ Volume '{root_volume_name}' found on ONTAP")
@@ -119,13 +66,10 @@ class DatasetManagerConfigurator:
                     
             except Exception as e:
                 print(f"Error checking volume: {e}")
-                if not PromptUtils.prompt_yes_no("Would you like to try a different name?"):
-                    print("Dataset Manager configuration cancelled.")
-                    return DatasetManagerConfig(enabled=False)
                 continue
         
         # Get local mountpoint
-        root_mountpoint = PromptUtils.prompt_required("Local mountpoint path for Dataset Manager 'root' volume")
+        root_mountpoint = PromptUtils.prompt_required("Enter desired local mountpoint for Dataset Manager \"root\" volume:")
         
         # Create configuration object
         config = DatasetManagerConfig(
@@ -146,8 +90,8 @@ class DatasetManagerConfigurator:
     def _collect_new_root_config(self) -> DatasetManagerConfig:
         """Collect configuration for new root volume without performing operations."""
         # 1. Collect inputs
-        root_volume_name = PromptUtils.prompt_with_default("Desired Dataset Manager 'root' volume name", "dataset_mgr_root")
-        root_mountpoint = PromptUtils.prompt_required("Local mountpoint path for Dataset Manager 'root' volume")
+        root_volume_name = PromptUtils.prompt_with_default("Enter desired Dataset Manager \"root\" volume name:", "dataset_mgr_root")
+        root_mountpoint = PromptUtils.prompt_required("Enter desired local mountpoint for Dataset Manager \"root\" volume:")
         
         # Create configuration object
         config = DatasetManagerConfig(
@@ -156,11 +100,6 @@ class DatasetManagerConfigurator:
             root_mountpoint=root_mountpoint
         )
         
-        print("✅ Dataset Manager configuration created successfully!")
-        print(f"Root volume: {root_volume_name}")
-        print(f"Mountpoint: {root_mountpoint}")
-        
-        # Now perform operations after config is saved
         self._setup_new_root_volume(config)
         
         return config
@@ -170,7 +109,7 @@ class DatasetManagerConfigurator:
         root_volume_name = config.root_volume_name
         root_mountpoint = config.root_mountpoint
         
-        print(f"\n🔧 Setting up existing Dataset Manager root volume '{root_volume_name}'...")
+        print(f"\nSetting up existing Dataset Manager root volume '{root_volume_name}'...")
         
         # Verify the volume exists and validate junction path
         try:
@@ -213,7 +152,7 @@ class DatasetManagerConfigurator:
         root_volume_name = config.root_volume_name
         root_mountpoint = config.root_mountpoint
         
-        print(f"\n🔧 Setting up new Dataset Manager root volume '{root_volume_name}'...")
+        print(f"\nSetting up new Dataset Manager root volume '{root_volume_name}'...")
         
         while True:  # Loop for retrying with different names if needed
             try:
@@ -227,7 +166,7 @@ class DatasetManagerConfigurator:
                     expected_junction = f"/{root_volume_name}"
                     
                     if junction_path == expected_junction:
-                        print(f"✓ Volume '{root_volume_name}' already exists with correct junction path.")
+                        print(f"Volume '{root_volume_name}' already exists with correct junction path.")
                         print("Proceeding with existing volume setup...")
                         break  # Volume is ready, proceed to mounting
                     else:
@@ -250,7 +189,7 @@ class DatasetManagerConfigurator:
                         print("Configuration has been saved. Please create the volume manually or reconfigure with a different name.")
                         return
                     
-                    print(f"✓ Root volume '{root_volume_name}' created successfully")
+                    print(f"Root volume '{root_volume_name}' created successfully")
                     break  # Volume created successfully
             
             except Exception as e:
@@ -347,150 +286,46 @@ class DatasetManagerConfigurator:
             
             if expected_nfs_target in current_target or f"/{volume_name}" in current_target:
                 print(f"✓ Volume '{volume_name}' is already correctly mounted at '{mountpoint}'")
-                
-                # Still ask about fstab for persistence across reboots
-                self._handle_fstab_setup(volume_name, mountpoint, expected_nfs_target)
                 return
             else:
                 print(f"Warning: Mountpoint '{mountpoint}' is in use by '{current_target}'")
                 print(f"Expected: {expected_nfs_target}")
                 return
         
-        # Check NFS utilities BEFORE attempting any mount operations
-        print("\n🔧 Preparing for volume mounting...")
-        if not self._ensure_nfs_client_available():
-            print("\nCannot proceed with mounting without NFS client utilities.")
-            print(f"To mount manually later: sudo mount -t nfs {expected_nfs_target} {mountpoint}")
-            return
-        
-        # Ask about fstab BEFORE mounting (following requirements)
-        print(f"\n🔧 Configuring mount options for volume '{volume_name}'...")
-        add_to_fstab = PromptUtils.prompt_yes_no(f"Would you like to add your Dataset Manager '{volume_name}' volume to /etc/fstab now?")
+        print(f"\nConfiguring mount options for volume '{volume_name}'...")
+        add_to_fstab = PromptUtils.prompt_yes_no(f"Would you like to add your Dataset Manager \"root\" volume to /etc/fstab now? (yes/no):")
         
         if add_to_fstab:
             # Add to fstab FIRST, then mount using fstab entry
-            if self._add_to_fstab_and_mount(volume_name, mountpoint, expected_nfs_target):
-                print(f"✅ Volume '{volume_name}' added to fstab and mounted successfully")
-            else:
-                print(f"⚠️  Failed to add to fstab. Attempting direct mount...")
-                self._mount_volume_directly(volume_name, mountpoint, expected_nfs_target)
-        else:
-            # User declined fstab - do direct mount and show manual instructions
-            print(f"\n🔧 Mounting volume '{volume_name}' directly to '{mountpoint}'...")
-            if self._mount_volume_directly(volume_name, mountpoint, expected_nfs_target):
-                print(f"✅ Volume '{volume_name}' mounted successfully")
-                self._show_manual_fstab_instructions(expected_nfs_target, mountpoint)
-            else:
-                print(f"❌ Failed to mount volume automatically.")
-                print(f"To mount manually: sudo mount -t nfs {expected_nfs_target} {mountpoint}")
+            if self._add_to_fstab(volume_name, mountpoint, expected_nfs_target):
+                print(f"Volume '{volume_name}' added to fstab and mounted successfully")
     
-    def _add_to_fstab_and_mount(self, volume_name: str, mountpoint: str, nfs_target: str) -> bool:
+    def _add_to_fstab(self, volume_name: str, mountpoint: str, nfs_target: str) -> bool:
         """Add volume to fstab first, then mount using fstab entry (following requirements)."""
         try:
-            print(f"\n📝 Adding Dataset Manager volume to /etc/fstab...")
+            print(f"\nAdding Dataset Manager volume to /etc/fstab...")
             
             # Check if fstab entry already exists
             if self._fstab_entry_exists(mountpoint, volume_name):
-                print(f"✓ /etc/fstab already contains an entry for this mount")
+                print(f"/etc/fstab already contains an entry for this mount")
             else:
                 # Create standardized fstab entry
                 fstab_entry = self._create_fstab_entry(nfs_target, mountpoint)
                 
                 # Ensure mountpoint directory exists
                 os.makedirs(mountpoint, exist_ok=True)
-                print(f"✓ Mountpoint directory '{mountpoint}' ready")
+                print(f"Mountpoint directory '{mountpoint}' ready")
                 
                 # Add entry to fstab safely
                 if not self._add_fstab_entry_safely(fstab_entry, nfs_target, mountpoint):
-                    print("❌ Failed to add entry to /etc/fstab")
+                    print("Failed to add entry to /etc/fstab")
                     return False
                 
-                print(f"✓ Entry added to /etc/fstab successfully")
-            
-            # Now mount using fstab entry (this is the key requirement)
-            print(f"🔧 Mounting volume using fstab entry...")
-            if self._mount_from_fstab(mountpoint):
-                print(f"✓ Volume '{volume_name}' mounted successfully and will persist across reboots")
-                
-                # Validate the mount
-                if self._validate_mount(mountpoint, nfs_target):
-                    print(f"✓ Mount validation successful")
-                    return True
-                else:
-                    print(f"⚠️  Mount validation failed - please check manually")
-                    return False
-            else:
-                print(f"❌ Failed to mount using fstab entry")
-                return False
+                print(f"Entry added to /etc/fstab successfully")
                 
         except Exception as e:
-            print(f"❌ Error in fstab setup and mount: {e}")
+            print(f"Error in fstab setup and mount: {e}")
             return False
-
-    def _mount_volume_directly(self, volume_name: str, mountpoint: str, nfs_target: str) -> bool:
-        """Mount volume directly without using fstab."""
-        try:
-            # Create mountpoint directory if it doesn't exist
-            os.makedirs(mountpoint, exist_ok=True)
-            print(f"✓ Mountpoint directory '{mountpoint}' ready")
-            
-            # First try using the CLI to mount (handles the data LIF and NFS properly)
-            print("   Attempting CLI mount...")
-            result = subprocess.run([
-                'python', '-m', 'netapp_dataops.netapp_dataops_cli',
-                'mount', 'volume',
-                '-n', volume_name,
-                '-m', mountpoint
-            ], capture_output=True, text=True)
-            
-            if result.returncode == 0:
-                print("✓ CLI mount successful")
-                return True
-            
-            print(f"   CLI mount failed: {result.stderr.strip()}")
-            
-            # If CLI mount fails, try direct NFS mount
-            print("   Attempting direct NFS mount...")
-            
-            result = subprocess.run([
-                'sudo', 'mount', '-t', 'nfs', nfs_target, mountpoint
-            ], capture_output=True, text=True)
-            
-            if result.returncode == 0:
-                print("✓ Direct NFS mount successful")
-                return True
-            else:
-                print(f"❌ Mount command failed: {result.stderr.strip()}")
-                return False
-                
-        except Exception as e:
-            print(f"❌ Error during direct mount operation: {e}")
-            return False
-
-    def _handle_fstab_setup(self, volume_name: str, mountpoint: str, nfs_target: str) -> None:
-        """Handle fstab setup for volumes that are already mounted."""
-        add_to_fstab = PromptUtils.prompt_yes_no(f"Would you like to add your Dataset Manager '{volume_name}' volume to /etc/fstab for persistence across reboots?")
-        
-        if add_to_fstab:
-            print(f"\n📝 Adding Dataset Manager volume to /etc/fstab...")
-            
-            # Check if fstab entry already exists
-            if self._fstab_entry_exists(mountpoint, volume_name):
-                print(f"✓ /etc/fstab already contains an entry for this mount")
-                return
-            
-            # Create standardized fstab entry
-            fstab_entry = self._create_fstab_entry(nfs_target, mountpoint)
-            
-            # Add entry to fstab safely
-            if self._add_fstab_entry_safely(fstab_entry, nfs_target, mountpoint):
-                print(f"✅ Entry added to /etc/fstab successfully - volume will persist across reboots")
-            else:
-                print("❌ Failed to add entry to /etc/fstab automatically")
-                self._show_manual_fstab_instructions(nfs_target, mountpoint)
-        else:
-            # User declined - show manual instructions
-            self._show_manual_fstab_instructions(nfs_target, mountpoint)
 
     def _get_expected_nfs_target(self, volume_name: str) -> str:
         """Get the expected NFS target for a volume."""
@@ -515,68 +350,6 @@ class DatasetManagerConfigurator:
         # Production-ready fstab entry with essential NFS options
         # For Dataset Manager root volume: permanent mount, no auto-unmount
         return f"{nfs_target} {mountpoint} nfs rw,_netdev,nfsvers=4.1,hard 0 0"
-    
-    def _show_manual_fstab_instructions(self, nfs_target: str, mountpoint: str) -> None:
-        """Show manual instructions for fstab setup."""
-        fstab_entry = self._create_fstab_entry(nfs_target, mountpoint)
-        
-        print(f"\nManual setup instructions:")
-        print(f"1. Add this line to /etc/fstab:")
-        print(f"   # Dataset Manager root volume")
-        print(f"   {fstab_entry}")
-        print(f"")
-        print(f"2. Create mountpoint and mount:")
-        print(f"   sudo mkdir -p {mountpoint}")
-        print(f"   sudo mount {mountpoint}")
-        print(f"")
-        print(f"3. Verify the mount:")
-        print(f"   mount | grep {mountpoint}")
-    
-    def _mount_from_fstab(self, mountpoint: str) -> bool:
-        """Mount using fstab entry (reads options from /etc/fstab)."""
-        try:
-            result = subprocess.run([
-                'sudo', 'mount', mountpoint
-            ], capture_output=True, text=True)
-            
-            if result.returncode == 0:
-                return True
-            else:
-                print(f"Mount command failed: {result.stderr}")
-                return False
-                
-        except Exception as e:
-            print(f"Error mounting from fstab: {e}")
-            return False
-    
-    def _validate_mount(self, mountpoint: str, expected_target: str) -> bool:
-        """Validate that the mount is working correctly."""
-        try:
-            # Check if mountpoint is mounted
-            if not self._is_mounted(mountpoint):
-                print(f"Mountpoint '{mountpoint}' is not mounted")
-                return False
-            
-            # Check if the correct target is mounted
-            current_target = self._get_mount_target(mountpoint)
-            if expected_target not in current_target and mountpoint.split('/')[-1] not in current_target:
-                print(f"Wrong target mounted. Expected: {expected_target}, Got: {current_target}")
-                return False
-            
-            # Test write access
-            test_file = os.path.join(mountpoint, '.dataset_manager_test')
-            try:
-                with open(test_file, 'w') as f:
-                    f.write('test')
-                os.remove(test_file)
-                return True
-            except Exception as e:
-                print(f"Write test failed: {e}")
-                return False
-                
-        except Exception as e:
-            print(f"Mount validation error: {e}")
-            return False
     
     def _add_fstab_entry_safely(self, fstab_entry: str, nfs_target: str, mountpoint: str) -> bool:
         """Add entry to /etc/fstab safely, avoiding duplicates."""
@@ -642,107 +415,4 @@ class DatasetManagerConfigurator:
                     f"/{volume_name}" in content or
                     "Dataset Manager root volume" in content)
         except Exception:
-            return False
-    
-    def _detect_os(self) -> str:
-        """Detect the operating system type"""
-        # Primary detection via /etc/os-release (most reliable)
-        try:
-            with open('/etc/os-release', 'r') as f:
-                content = f.read().lower()
-                
-                # Use more specific patterns for better accuracy
-                os_patterns = {
-                    'debian': ['ubuntu', 'debian', 'mint'],
-                    'redhat': ['red hat', 'rhel', 'centos', 'fedora', 'rocky', 'almalinux'],
-                    'suse': ['suse', 'opensuse', 'sles']
-                }
-                
-                for os_type, patterns in os_patterns.items():
-                    if any(pattern in content for pattern in patterns):
-                        return os_type
-                        
-        except (IOError, OSError):
-            pass
-        
-        # Fallback detection via package managers (faster than subprocess version checks)
-        if platform.system().lower() == 'linux':
-            # Check for package manager binaries (faster than running --version)
-            package_managers = [
-                ('debian', ['/usr/bin/apt', '/usr/bin/dpkg']),
-                ('redhat', ['/usr/bin/yum', '/usr/bin/dnf', '/usr/bin/rpm']),
-                ('suse', ['/usr/bin/zypper', '/usr/bin/rpm'])
-            ]
-            
-            for os_type, binaries in package_managers:
-                if any(os.path.exists(binary) for binary in binaries):
-                    return os_type
-        
-        return 'unknown'
-    
-    def _install_nfs_client(self) -> bool:
-        """Automatically install NFS client utilities based on the detected OS."""
-        os_type = self._detect_os()
-        
-        # Define installation strategies for each OS type
-        install_strategies = {
-            'debian': {
-                'commands': [
-                    (['sudo', 'apt', 'update'], "Updating package list..."),
-                    (['sudo', 'apt', 'install', '-y', 'nfs-common'], "Installing nfs-common...")
-                ]
-            },
-            'redhat': {
-                'commands': [
-                    (['sudo', 'yum', 'install', '-y', 'nfs-utils'], "Installing nfs-utils...")
-                ]
-            },
-            'suse': {
-                'commands': [
-                    (['sudo', 'zypper', 'install', '-y', 'nfs-client'], "Installing nfs-client...")
-                ]
-            }
-        }
-        
-        if os_type not in install_strategies:
-            print(f"Unsupported OS type: {os_type}")
-            print("Please install NFS client utilities manually:")
-            print("  Ubuntu/Debian: sudo apt install -y nfs-common")
-            print("  RHEL/CentOS:   sudo yum install -y nfs-utils")
-            print("  SUSE:          sudo zypper install -y nfs-client")
-            return False
-        
-        strategy = install_strategies[os_type]
-        print(f"Detected OS type: {os_type}")
-        
-        try:
-            print(f"Installing NFS client utilities for {os_type}...")
-            
-            # Execute installation commands
-            for cmd, description in strategy['commands']:
-                print(description)
-                result = subprocess.run(cmd, capture_output=True, text=True)
-                if result.returncode != 0:
-                    print(f"Command failed: {' '.join(cmd)}")
-                    print(f"Error: {result.stderr.strip()}")
-                    return False
-            
-            print("✓ NFS client utilities installed successfully")
-            
-            # Verify installation
-            try:
-                result = subprocess.run(['which', 'mount.nfs'], 
-                                      capture_output=True, text=True)
-                if result.returncode == 0:
-                    print(f"✓ NFS mount helper found at: {result.stdout.strip()}")
-                    return True
-                else:
-                    print("mount.nfs not found after installation")
-                    return False
-            except:
-                print("Could not verify NFS installation")
-                return False
-            
-        except Exception as e:
-            print(f"Error during NFS client installation: {e}")
             return False
