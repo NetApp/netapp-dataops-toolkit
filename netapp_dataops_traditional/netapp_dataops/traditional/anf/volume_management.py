@@ -90,7 +90,7 @@ def create_volume(
         location (str):
             Optional. Azure region (e.g., "eastus"). Will use config default if not provided.
         protocol_types (List[str]):
-            Optional. List of protocol types (NFSv3, NFSv4.1, SMB). Will use config default if not provided.
+            Optional. List of protocol types (NFSv3, NFSv4.1, CIFS). Will use config default if not provided.
         virtual_network_name (str):
             Optional. The name of the virtual network to which the volume will be connected. Will use config default if not provided.
         subnet_name (str):
@@ -133,9 +133,9 @@ def create_volume(
         smb_continuously_available (bool):
             Optional. Enables continuously available share property for smb volume. Only applicable for SMB volume.
             Defaults to False.
-        throughput_mibps (int):
+        throughput_mibps (float):
             Optional. Maximum throughput in MiB/s that can be achieved by this volume and this will be accepted as input only for manual qosType volume.
-            Defaults to 0.
+            Defaults to 3.75.
         volume_type (str):
             Optional. What type of volume is this. For destination volumes in Cross Region Replication, set type to DataProtection.
             Defaults to empty string.
@@ -218,7 +218,7 @@ def create_volume(
         resolved_protocol_types = get_config_value('protocol_types', protocol_types, config, print_output) if protocol_types is not None else config.get('protocol_types', DEFAULT_PROTOCOL_TYPES)
     except InvalidConfigError:
         raise
-        
+    
     # Apply default values for parameters with documented defaults  
     if service_level is None:
         service_level = DEFAULT_SERVICE_LEVEL
@@ -259,6 +259,31 @@ def create_volume(
         # Create export policy using helper function
         export_policy = _create_export_policy_rules(export_policy_rules, resolved_protocol_types)
 
+        # Retrieve the pool to check its QoS type
+        pool = client.pools.get(
+            resource_group_name=resolved_resource_group_name,
+            account_name=resolved_account_name,
+            pool_name=resolved_pool_name
+        )
+        qos_type = getattr(pool, 'qos_type', None)
+        if print_output:
+            logger.info(f"Pool '{resolved_pool_name}' QoS type: {qos_type}")
+
+        # If pool is manual QoS, throughput_mibps is required
+        if qos_type and qos_type.lower() == "manual":
+            if throughput_mibps is None:
+                error_message = (
+                    "Parameter 'throughput_mibps' is required for pools with manual QoS type."
+                )
+                logger.error(error_message)
+                raise ValueError(error_message)
+        # If pool is auto QoS, ignore throughput_mibps if not provided
+        elif qos_type and qos_type.lower() == "auto":
+            if throughput_mibps is None:
+                # Not required, but it is best to log this for the information of the user
+                if print_output:
+                    logger.info("Pool is auto QoS; 'throughput_mibps' is not required.")
+
         # Build volume properties (using resolved values)
         volume_properties = {
             'location': resolved_location,
@@ -291,10 +316,9 @@ def create_volume(
             'unix_permissions': unix_permissions,
             'coolness_period': coolness_period
         }
-        
         # Filter out None values to avoid passing them to Azure SDK
         volume_properties = _filter_none_values(volume_properties)
-        
+
         # Create the volume object
         volume = Volume(**volume_properties)
         
@@ -865,7 +889,7 @@ def list_volumes(
 
     try:
         # Get ANF client and subscription ID (using resolved value)
-        client, final_subscription_id = get_anf_client(resolved_subscription_id, print_output=print_output)
+        client, _ = get_anf_client(resolved_subscription_id, print_output=print_output)
 
         # List all volumes in the pool (using resolved values)
         volumes = client.volumes.list(
@@ -964,12 +988,12 @@ def _create_export_policy_rules(export_policy_rules: Optional[List[Dict[str, Any
 
 def _filter_none_values(properties_dict: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Filter out None values from a properties dictionary to avoid passing None to Azure SDK.
+    Filter out None and empty string values from a properties dictionary to avoid passing them to Azure SDK.
     
     Args:
-        properties_dict: Dictionary potentially containing None values
+        properties_dict: Dictionary potentially containing None or empty string values
         
     Returns:
-        Dictionary with None values filtered out
+        Dictionary with None and empty string values filtered out
     """
-    return {k: v for k, v in properties_dict.items() if v is not None}
+    return {k: v for k, v in properties_dict.items() if v is not None and v != ''}
