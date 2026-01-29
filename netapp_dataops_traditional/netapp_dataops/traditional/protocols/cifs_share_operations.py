@@ -250,12 +250,32 @@ def list_cifs_shares(
             # Filter out administrative shares
             shares = [share for share in shares if share.name and share.name.strip().lower() not in admin_shares]
             
+            # Build a cache of volume paths to names for all relevant SVMs to avoid repeated queries
+            volume_path_cache = {}
+            if shares:
+                # Get unique SVM names from shares
+                svm_names = set()
+                for share in shares:
+                    share.get()
+                    svm_name = share.svm.name if hasattr(share.svm, 'name') else str(share.svm)
+                    svm_names.add(svm_name)
+                
+                # Build cache for each SVM
+                for svm_name in svm_names:
+                    try:
+                        volumes = list(NetAppVolume.get_collection(svm=svm_name, fields="name,nas.path"))
+                        for vol in volumes:
+                            if hasattr(vol, 'nas') and hasattr(vol.nas, 'path'):
+                                volume_path_cache[f"{svm_name}:{vol.nas.path}"] = vol.name
+                    except:
+                        pass
             
             # Construct list of CIFS shares
             sharesList = list()
             for share in shares:
-                # Get detailed information for each share
-                share.get()
+                # Get detailed information for each share (already done above in cache building)
+                if not hasattr(share, 'path'):
+                    share.get()
                 
                 # Get SVM name
                 svm_name = share.svm.name if hasattr(share.svm, 'name') else str(share.svm)
@@ -263,17 +283,8 @@ def list_cifs_shares(
                 # Get properties as comma-separated string
                 properties_str = ', '.join(share.properties) if hasattr(share, 'properties') and share.properties else ""
                 
-                # Find volume for this share by matching the path
-                volume_name = ""
-                try:
-                    volumes = list(NetAppVolume.get_collection(svm=svm_name, fields="name,nas.path"))
-                    for vol in volumes:
-                        vol.get(fields="nas.path")
-                        if hasattr(vol, 'nas') and hasattr(vol.nas, 'path') and vol.nas.path == share.path:
-                            volume_name = vol.name
-                            break
-                except:
-                    pass
+                # Find volume for this share using the cache
+                volume_name = volume_path_cache.get(f"{svm_name}:{share.path}", "")
                 
                 # Construct dict containing CIFS share details
                 shareDict = {
