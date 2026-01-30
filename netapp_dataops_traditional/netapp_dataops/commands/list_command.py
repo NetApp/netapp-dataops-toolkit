@@ -174,7 +174,7 @@ class ListCommand(BaseCommand):
         try:
             opts, args = getopt.getopt(
                 self.args[3:], 
-                "hv:u:n:", 
+                "hs:u:n:", 
                 ["cluster-name=", "help", "svm=", "name-pattern="]
             )
         except Exception as err:
