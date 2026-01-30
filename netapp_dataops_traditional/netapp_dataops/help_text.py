@@ -516,19 +516,19 @@ Create a new CIFS share.
 
 Required Options/Arguments:
 \t-n, --name=\t\tName of the CIFS share.
-\t-v, --volume=\tName of the volume to share.
+\t-v, --volume=\t\tName of the volume to share. The volume's NAS path will be used as the share path.
 \t-s, --svm=\t\tExisting SVM in which to create the CIFS share.
 
 Optional Options/Arguments:
 \t-u, --cluster-name=\tNon default hosting cluster
 \t-c, --comment=\t\tComment/ description for the CIFS share.
-\t-a, --acls=\t\tComma-separated list of ACLs to apply to the share. 
+\t-a, --acls=\t\tJSON string of ACLs to apply to the share. Example: '[{"user_or_group":"Everyone","permission":"full_control"}]'
 \t-l, --properties=\tComma-separated list of properties to apply to the share ('browsable', 'oplocks', 'showsnapshot', 'changenotify', 'attributecache', 'continuously_available', 'encryption').
 \t-h, --help\t\tPrint help text.
 
 Examples:
-\tnetapp_dataops_cli.py create cifs share --name=cifs-share1 --path=/mnt/project1 
-\tnetapp_dataops_cli.py create cifs share -n cifs-share2 -p /mnt/project2
+\tnetapp_dataops_cli.py create cifs-share --name=cifs-share1 --volume=project1_vol --svm=svm1
+\tnetapp_dataops_cli.py create cifs-share -n cifs-share2 -v project2_vol -s svm1
 '''
 
 # List CIFS Shares help text
@@ -546,9 +546,9 @@ Optional Options/Arguments:
 \t-h, --help\t\tPrint help text.
 
 Examples:
-\tnetapp_dataops_cli.py list cifs shares --cluster-name=cluster1
-\tnetapp_dataops_cli.py list cifs shares -u cluster1
-\tnetapp_dataops_cli.py list cifs-shares --name-pattern="cifs*"
+\tnetapp_dataops_cli.py list cifs-shares
+\tnetapp_dataops_cli.py list cifs-shares --svm=svm1
+\tnetapp_dataops_cli.py list cifs-shares -s svm1 --name-pattern="cifs*"
 '''
 
 # Get CIFS Share help text
@@ -566,6 +566,6 @@ Optional Options/Arguments:
 \t-h, --help\t\tPrint help text.
 
 Examples:
-\tnetapp_dataops_cli.py get cifs share --name=cifs-share1
-\tnetapp_dataops_cli.py get cifs share -n cifs-share2
+	netapp_dataops_cli.py get cifs-share --name=cifs-share1 --svm=svm1
+	netapp_dataops_cli.py get cifs-share -n cifs-share1 -s svm1
 '''
