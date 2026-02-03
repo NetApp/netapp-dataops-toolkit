@@ -26,7 +26,7 @@ logger = setup_logger(__name__)
 
 def create_qtree(qtree_name: str, volume_name: str, cluster_name: str = None, svm_name: str = None,
                  security_style: str = None, unix_permissions: str = None, export_policy: str = None,
-                 nas_path: str = None, print_output: bool = False):
+                 print_output: bool = False):
     """
     Create a new qtree in a volume.
 
@@ -40,7 +40,6 @@ def create_qtree(qtree_name: str, volume_name: str, cluster_name: str = None, sv
         security_style (str): Security style for the qtree.
         unix_permissions (str): UNIX permissions for the qtree
         export_policy (str): Export policy of the SVM for the qtree.
-        nas_path (str): Client-visible path within the volume (nas.path). If not provided, ONTAP defaults are used.
         print_output (bool): Print detailed output if True.
 
     Raises:
@@ -128,10 +127,6 @@ def create_qtree(qtree_name: str, volume_name: str, cluster_name: str = None, sv
             # Set export policy if specified
             if export_policy:
                 qtree.export_policy = {"name": export_policy}
-
-            # Set NAS path if specified
-            if nas_path:
-                qtree.nas = {"path": nas_path}
 
             # Create the qtree
             qtree.post(poll=True, poll_timeout=120)

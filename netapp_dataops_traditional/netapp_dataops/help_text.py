@@ -526,7 +526,6 @@ Optional Options/Arguments:
 \t-t, --security-style=\tSecurity style for the qtree.
 \t-p, --permissions=\tUNIX permissions for the qtree (octal format, e.g., 0755).
 \t-e, --export-policy=\tExport policy name for the qtree.
-\t-a, --nas-path=\t\tClient-visible NAS path (nas.path) for the qtree. If omitted, ONTAP defaults apply.
 \t-h, --help\t\tPrint help text.
 
 Examples:
