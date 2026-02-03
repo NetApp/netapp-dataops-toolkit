@@ -154,15 +154,18 @@ def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: st
 
         #exists check if snapshot-policy
         try:
-            snapshotPoliciesDetails  = NetAppSnapshotPolicy.get_collection(**{"name":snapshot_policy})
+            snapshotPoliciesDetails  = NetAppSnapshotPolicy.get_collection(**{"name":snapshot_policy}, fields="name,svm.name")
             clusterSnapshotPolicy = False
             svmSnapshotPolicy = False
             for snapshotPolicyDetails in snapshotPoliciesDetails:
                 if str(snapshotPolicyDetails.name) == snapshot_policy:
                     try:
+                        # Get full details to access svm field
+                        snapshotPolicyDetails.get()
                         if str(snapshotPolicyDetails.svm.name) == targetsvm:
                             svmSnapshotPolicy = True
-                    except KeyError:
+                    except (KeyError, AttributeError):
+                        # Cluster-level policies don't have an svm field
                         clusterSnapshotPolicy = True
 
             if not clusterSnapshotPolicy and not svmSnapshotPolicy:
