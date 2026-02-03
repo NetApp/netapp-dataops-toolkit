@@ -72,9 +72,7 @@ class DatasetManagerConfigurator:
         
         Returns:
             DatasetManagerConfig: Created configuration
-        """
-        print("\n--- Dataset Manager Settings ---")
-        
+        """        
         # Check if user has existing root volume
         has_existing = PromptUtils.prompt_yes_no("Do you have a pre-existing Dataset Manager 'root' volume?")
         
@@ -134,10 +132,6 @@ class DatasetManagerConfigurator:
             root_mountpoint=root_mountpoint
         )
         
-        print("✅ Dataset Manager configuration created successfully!")
-        print(f"   Root volume: {root_volume_name}")
-        print(f"   Mountpoint: {root_mountpoint}")
-        
         # Now perform operations after config is saved
         self._setup_existing_root_volume(config)
         
@@ -165,8 +159,6 @@ class DatasetManagerConfigurator:
         root_volume_name = config.root_volume_name
         root_mountpoint = config.root_mountpoint
         
-        print(f"\nSetting up existing Dataset Manager root volume '{root_volume_name}'...")
-        
         # Verify the volume exists and validate junction path
         try:
             volume_info = self._get_volume_info(root_volume_name)
@@ -193,7 +185,7 @@ class DatasetManagerConfigurator:
                     print("Configuration has been saved. Please resolve junction path conflicts manually.")
                     return
             else:
-                print(f"✓ Volume '{root_volume_name}' found with correct junction path '{junction_path}'")
+                print(f"Volume '{root_volume_name}' found with correct junction path '{junction_path}'")
                 
         except Exception as e:
             print(f"Error validating volume: {e}")
@@ -260,7 +252,8 @@ class DatasetManagerConfigurator:
         """Get volume information from ONTAP."""
         try:
             # Use list_volumes to find the specific volume
-            volumes = volume_operations.list_volumes(print_output=self.print_output)
+            # Always suppress output to avoid displaying volume lists during user input
+            volumes = volume_operations.list_volumes(print_output=False)
             for volume in volumes:
                 if volume.get("Volume Name") == volume_name:
                     return volume
@@ -273,7 +266,8 @@ class DatasetManagerConfigurator:
     def _junction_path_exists(self, junction_path: str, exclude_volume: str = None) -> bool:
         """Check if a junction path is already in use by any volume."""
         try:
-            volumes = volume_operations.list_volumes(print_output=self.print_output)
+            # Always suppress output to avoid displaying volume lists during validation
+            volumes = volume_operations.list_volumes(print_output=False)
             for volume in volumes:
                 # Skip the excluded volume (useful when checking for conflicts)
                 volume_name = volume.get("Volume Name")
@@ -298,12 +292,12 @@ class DatasetManagerConfigurator:
     def _create_root_volume_on_ontap(self, volume_name: str) -> bool:
         """Create the root volume on ONTAP with appropriate settings."""
         try:
-            # Create a small root volume - let create_volume handle defaults from config
+            # Create a small root volume - suppress output during creation
             volume_operations.create_volume(
                 volume_name=volume_name,
                 volume_size="1GB",  # Minimal size for root volume
                 junction=f"/{volume_name}",
-                print_output=self.print_output
+                print_output=False
             )
             return True
         except Exception as e:
