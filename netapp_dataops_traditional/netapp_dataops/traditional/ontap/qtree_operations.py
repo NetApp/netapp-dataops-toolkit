@@ -212,7 +212,6 @@ def list_qtrees(volume_name: str = None, cluster_name: str = None, svm_name: str
                     "svm": qtree.svm.name if hasattr(qtree.svm, 'name') else None,
                     "security_style": qtree.security_style if hasattr(qtree, 'security_style') else None,
                     "unix_permissions": qtree.unix_permissions if hasattr(qtree, 'unix_permissions') else None,
-                    "path": qtree.path if hasattr(qtree, 'path') else None,
                     "nas_path": qtree.nas.path if hasattr(qtree, 'nas') and qtree.nas and hasattr(qtree.nas, 'path') else None,
                     "export_policy": qtree.export_policy.name if hasattr(qtree, 'export_policy') and qtree.export_policy else None,
                     "qos_policy": qtree.qos_policy.name if hasattr(qtree, 'qos_policy') and qtree.qos_policy else None
@@ -230,7 +229,7 @@ def list_qtrees(volume_name: str = None, cluster_name: str = None, svm_name: str
                             logger.info(qtree)
                     else:
                         headers = [
-                            "ID", "Name", "Volume", "SVM", "Security Style", "UNIX Permissions", "Path", "NAS Path", "Export Policy", "QoS Policy"
+                            "ID", "Name", "Volume", "SVM", "Security Style", "UNIX Permissions", "NAS Path", "Export Policy", "QoS Policy"
                         ]
                         table = []
                         for qtree in qtrees_list:
@@ -241,7 +240,6 @@ def list_qtrees(volume_name: str = None, cluster_name: str = None, svm_name: str
                                 qtree["svm"],
                                 qtree["security_style"],
                                 qtree["unix_permissions"],
-                                qtree["path"],
                                 qtree["nas_path"],
                                 qtree["export_policy"],
                                 qtree["qos_policy"]
@@ -324,7 +322,6 @@ def get_qtree(volume_uuid: str, qtree_id: int, cluster_name: str = None,
                 },
                 "security_style": qtree.security_style if hasattr(qtree, 'security_style') else None,
                 "unix_permissions": qtree.unix_permissions if hasattr(qtree, 'unix_permissions') else None,
-                "path": qtree.path if hasattr(qtree, 'path') else None,
                 "nas_path": qtree.nas.path if hasattr(qtree, 'nas') and qtree.nas and hasattr(qtree.nas, 'path') else None,
                 "export_policy": {
                     "id": qtree.export_policy.id if hasattr(qtree, 'export_policy') and qtree.export_policy and hasattr(qtree.export_policy, 'id') else None,
@@ -352,7 +349,6 @@ def get_qtree(volume_uuid: str, qtree_id: int, cluster_name: str = None,
                 logger.info("  SVM: %s (UUID: %s)", str(qtree_info["svm"]["name"]), str(qtree_info["svm"]["uuid"]))
                 logger.info("  Security Style: %s", str(qtree_info["security_style"]))
                 logger.info("  UNIX Permissions: %s", str(qtree_info["unix_permissions"]))
-                logger.info("  Path: %s", str(qtree_info["path"]))
                 logger.info("  NAS Path: %s", str(qtree_info["nas_path"]))
                 if qtree_info["export_policy"]["name"]:
                     logger.info("  Export Policy: %s", str(qtree_info["export_policy"]["name"]))
