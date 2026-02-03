@@ -287,14 +287,15 @@ class CreateCommand(BaseCommand):
         security_style = None
         unix_permissions = None
         export_policy = None
+        nas_path = None
         
         # Get command line options
         try:
             opts, _ = getopt.getopt(
                 self.args[3:], 
-                "hn:v:u:s:t:p:e:", 
+                "hn:v:u:s:t:p:e:a:", 
                 ["help", "name=", "volume=", "cluster-name=", "svm=", 
-                 "security-style=", "permissions=", "export-policy="]
+                 "security-style=", "permissions=", "export-policy=", "nas-path="]
             )
         except Exception as err:
             logger.error(err)
@@ -319,6 +320,8 @@ class CreateCommand(BaseCommand):
                 unix_permissions = arg
             elif opt in ("-e", "--export-policy"):
                 export_policy = arg
+            elif opt in ("-a", "--nas-path"):
+                nas_path = arg
         
         # Check for required options
         if not qtree_name or not volume_name:
@@ -339,6 +342,7 @@ class CreateCommand(BaseCommand):
                 security_style=security_style,
                 unix_permissions=unix_permissions,
                 export_policy=export_policy,
+                nas_path=nas_path,
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
