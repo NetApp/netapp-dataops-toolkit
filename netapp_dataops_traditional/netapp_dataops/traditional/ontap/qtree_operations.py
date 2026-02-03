@@ -435,8 +435,8 @@ def get_qtree_metrics(volume_uuid: str, qtree_id: int, cluster_name: str = None,
                 raise InvalidVolumeParameterError("Qtree not found")
 
             metrics = PerformanceQtreeMetric.get_collection(
-                volume={"uuid": volume_uuid},
-                qtree={"id": qtree_id}
+                volume_uuid,
+                qtree_id
             )
 
             metrics_records = [metric.to_dict() for metric in metrics]
