@@ -102,6 +102,12 @@ Snapshot management operations:
 - [List all snapshots for a data volume.](#cli-list-snapshots)
 - [Restore a snapshot for a data volume.](#cli-restore-snapshot)
 
+Qtree management operations:
+- [Create a new qtree.](#cli-create-qtree)
+- [List all qtrees.](#cli-list-qtrees)
+- [Get qtree details.](#cli-get-qtree)
+- [Get qtree performance metrics.](#cli-get-qtree-metrics)
+
 Data fabric operations:
 - [List all Cloud Sync relationships.](#cli-list-cloud-sync-relationships)
 - [Trigger a sync operation for an existing Cloud Sync relationship.](#cli-sync-cloud-sync-relationship)
@@ -597,6 +603,195 @@ Restoring snapshot 'initial_dataset'.
 Snapshot restored successfully.
 ```
 
+### Qtree Management Operations
+
+<a name="cli-create-qtree"></a>
+
+#### Create a New Qtree
+
+The NetApp DataOps Toolkit can be used to create a new qtree within an existing volume. Qtrees are lightweight, flexible containers that can be used to organize data within a volume. They support independent security styles, UNIX permissions, and export policies. The command for creating a new qtree is `netapp_dataops_cli.py create qtree`.
+
+The following options/arguments are required:
+
+```
+    -n, --name=             Name of new qtree.
+    -v, --volume=           Name of volume in which to create the qtree.
+```
+
+The following options/arguments are optional:
+
+```
+    -l, --cluster-name=     Non-default hosting cluster.
+    -s, --svm=              Non-default SVM name.
+    -t, --security-style=   Security style for the qtree (unix/ntfs/mixed).
+    -p, --permissions=      UNIX permissions for the qtree (ex. '0755' for read/write/execute for owner, read/execute for group and others).
+    -e, --export-policy=    NFS export policy to use for the qtree.
+    -h, --help              Print help text.
+```
+
+##### Example Usage
+
+Create a qtree named 'dataset1' in volume 'project1'.
+
+```sh
+netapp_dataops_cli.py create qtree --name=dataset1 --volume=project1
+Creating qtree 'dataset1' in volume 'project1' on SVM 'svm1'.
+Qtree 'dataset1' created successfully.
+Qtree ID: 1
+```
+
+Create a qtree named 'dataset2' in volume 'project1' with UNIX security style and custom permissions.
+
+```sh
+netapp_dataops_cli.py create qtree --name=dataset2 --volume=project1 --security-style=unix --permissions=0755
+Creating qtree 'dataset2' in volume 'project1' on SVM 'svm1'.
+Qtree 'dataset2' created successfully.
+Qtree ID: 2
+```
+
+Create a qtree with a specific export policy.
+
+```sh
+netapp_dataops_cli.py create qtree --name=dataset3 --volume=project1 --export-policy=restricted
+Creating qtree 'dataset3' in volume 'project1' on SVM 'svm1'.
+Qtree 'dataset3' created successfully.
+Qtree ID: 3
+```
+
+<a name="cli-list-qtrees"></a>
+
+#### List All Qtrees
+
+The NetApp DataOps Toolkit can be used to print a list of all existing qtrees, either for a specific volume or across all volumes in an SVM. The command for printing a list of qtrees is `netapp_dataops_cli.py list qtrees`.
+
+No options/arguments are required for this command.
+
+The following options/arguments are optional:
+
+```
+    -v, --volume=           List qtrees only for the specified volume.
+    -l, --cluster-name=     Non-default hosting cluster.
+    -s, --svm=              Non-default SVM name.
+    -h, --help              Print help text.
+```
+
+##### Example Usage
+
+List all qtrees across all volumes in the SVM.
+
+```sh
+netapp_dataops_cli.py list qtrees
+ID  Name       Volume    SVM    Security Style    UNIX Permissions    NAS Path                Export Policy    QoS Policy
+--  ---------  --------  -----  ----------------  ------------------  ----------------------  ---------------  ------------
+0   <root>     project1  svm1   unix              755                 /project1               default          None
+1   dataset1   project1  svm1   unix              755                 /project1/dataset1      default          None
+2   dataset2   project1  svm1   unix              755                 /project1/dataset2      restricted       None
+```
+
+List all qtrees in a specific volume.
+
+```sh
+netapp_dataops_cli.py list qtrees --volume=project1
+ID  Name       Volume    SVM    Security Style    UNIX Permissions    NAS Path                Export Policy    QoS Policy
+--  ---------  --------  -----  ----------------  ------------------  ----------------------  ---------------  ------------
+0   <root>     project1  svm1   unix              755                 /project1               default          None
+1   dataset1   project1  svm1   unix              755                 /project1/dataset1      default          None
+2   dataset2   project1  svm1   unix              755                 /project1/dataset2      restricted       None
+```
+
+<a name="cli-get-qtree"></a>
+
+#### Get Qtree Details
+
+The NetApp DataOps Toolkit can be used to retrieve detailed information about a specific qtree. The command for retrieving qtree details is `netapp_dataops_cli.py get qtree`.
+
+Note: To use this command, you need the volume UUID and qtree ID. You can obtain these by running `netapp_dataops_cli.py list qtrees`.
+
+The following options/arguments are required:
+
+```
+    -v, --volume-uuid=      UUID of the volume containing the qtree.
+    -i, --qtree-id=         ID of the qtree.
+```
+
+The following options/arguments are optional:
+
+```
+    -l, --cluster-name=     Non-default hosting cluster.
+    -h, --help              Print help text.
+```
+
+##### Example Usage
+
+Get details for qtree with ID 1 in a specific volume.
+
+```sh
+netapp_dataops_cli.py get qtree --volume-uuid=12345678-1234-1234-1234-123456789abc --qtree-id=1
+Qtree Details:
+  ID: 1
+  Name: dataset1
+  Volume: project1 (UUID: 12345678-1234-1234-1234-123456789abc)
+  SVM: svm1 (UUID: 87654321-4321-4321-4321-cba987654321)
+  Security Style: unix
+  UNIX Permissions: 755
+  NAS Path: /project1/dataset1
+  Export Policy: default
+```
+
+<a name="cli-get-qtree-metrics"></a>
+
+#### Get Qtree Performance Metrics
+
+The NetApp DataOps Toolkit can be used to retrieve historical performance metrics for a specific qtree. This is useful for monitoring qtree usage patterns and performance characteristics. The command for retrieving qtree metrics is `netapp_dataops_cli.py get qtree-metrics`.
+
+Note: Performance metrics require extended performance monitoring to be enabled on the qtree. If no metrics are available, the command will return a message indicating that no data is available.
+
+The following options/arguments are required:
+
+```
+    -v, --volume-uuid=      UUID of the volume containing the qtree.
+    -i, --qtree-id=         ID of the qtree.
+```
+
+The following options/arguments are optional:
+
+```
+    -l, --cluster-name=     Non-default hosting cluster.
+    -h, --help              Print help text.
+```
+
+##### Example Usage
+
+Get performance metrics for qtree with ID 1.
+
+```sh
+netapp_dataops_cli.py get qtree-metrics --volume-uuid=12345678-1234-1234-1234-123456789abc --qtree-id=1
+Qtree Performance Metrics:
+  Volume UUID: 12345678-1234-1234-1234-123456789abc
+  Qtree ID: 1
+  Number of data points: 10
+  Data point 1:
+    Timestamp: 2024-01-15 10:30:00
+    Duration: PT15S
+    Status: ok
+    Qtree Name: dataset1
+    SVM: svm1 (UUID: 87654321-4321-4321-4321-cba987654321)
+    Volume: project1 (UUID: 12345678-1234-1234-1234-123456789abc)
+    IOPS:
+      Read: 150
+      Write: 75
+      Other: 10
+      Total: 235
+    Latency:
+      Read: 1.5
+      Write: 2.3
+      Other: 0.8
+      Total: 1.8
+    Throughput:
+      Read: 15728640
+      Write: 7864320
+```
+
 ### Data Fabric Operations
 
 <a name="cli-list-cloud-sync-relationships"></a>
@@ -992,7 +1187,7 @@ Setting state to snapmirrored, action:resync
 The NetApp DataOps Toolkit can also be utilized as a library of functions that can be imported into any Python program or Jupyter Notebook. In this manner, data scientists and data engineers can easily incorporate data management tasks into their existing projects, programs, and workflows. This functionality is only recommended for advanced users who are proficient in Python.
 
 ```py
-from netapp_dataops.traditional import clone_volume, create_volume, delete_volume, list_volumes, mount_volume, create_snapshot, delete_snapshot, list_snapshots, restore_snapshot, list_cloud_sync_relationships, sync_cloud_sync_relationship, list_snap_mirror_relationships, sync_snap_mirror_relationship, create_flexcache, prepopulate_flex_cache, push_directory_to_s3, push_file_to_s3, pull_bucket_from_s3, pull_object_from_s3
+from netapp_dataops.traditional import clone_volume, create_volume, delete_volume, list_volumes, mount_volume, create_snapshot, delete_snapshot, list_snapshots, restore_snapshot, create_qtree, list_qtrees, get_qtree, get_qtree_metrics, list_cloud_sync_relationships, sync_cloud_sync_relationship, list_snap_mirror_relationships, sync_snap_mirror_relationship, create_flexcache, prepopulate_flex_cache, push_directory_to_s3, push_file_to_s3, pull_bucket_from_s3, pull_object_from_s3
 ```
 
 Note: The prerequisite steps outlined in the [Getting Started](#getting-started) section still appy when the toolkit is being utilized as an importable library of functions.
@@ -1013,6 +1208,12 @@ Snapshot management operations:
 - [Delete an existing snapshot for a data volume.](#lib-delete-snapshot)
 - [List all snapshots for a data volume.](#lib-list-snapshots)
 - [Restore a snapshot for a data volume.](#lib-restore-snapshot)
+
+Qtree management operations:
+- [Create a new qtree.](#lib-create-qtree)
+- [List all qtrees.](#lib-list-qtrees)
+- [Get qtree details.](#lib-get-qtree)
+- [Get qtree performance metrics.](#lib-get-qtree-metrics)
 
 Data fabric operations:
 - [List all Cloud Sync relationships.](#lib-list-cloud-sync-relationships)
@@ -1447,6 +1648,137 @@ InvalidConfigError              # Config file is missing or contains an invalid 
 APIConnectionError              # The storage system/service API returned an error.
 InvalidSnapshotParameterError   # An invalid parameter was specified.
 InvalidVolumeParameterError     # An invalid parameter was specified.
+```
+
+### Qtree Management Operations
+
+<a name="lib-create-qtree"></a>
+
+#### Create a New Qtree
+
+The NetApp DataOps Toolkit can be used to create a new qtree within an existing volume as part of any Python program or workflow. Qtrees are lightweight, flexible containers that can be used to organize data within a volume.
+
+##### Function Definition
+
+```py
+def create_qtree(
+    qtree_name: str,                 # Name of the qtree to create (required).
+    volume_name: str,                # Name of the volume in which to create the qtree (required).
+    cluster_name: str = None,        # Non-default cluster name, same credentials as the default credentials should be used.
+    svm_name: str = None,            # Non-default SVM name, same credentials as the default credentials should be used.
+    security_style: str = None,      # Security style for the qtree (unix/ntfs/mixed).
+    unix_permissions: str = None,    # UNIX permissions for the qtree (ex. '0755').
+    export_policy: str = None,       # Export policy of the SVM for the qtree.
+    print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
+):
+```
+
+##### Return Value
+
+None
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError              # Config file is missing or contains an invalid value.
+APIConnectionError              # The storage system/service API returned an error.
+InvalidVolumeParameterError     # An invalid parameter was specified.
+```
+
+<a name="lib-list-qtrees"></a>
+
+#### List All Qtrees
+
+The NetApp DataOps Toolkit can be used to retrieve a list of all existing qtrees, either for a specific volume or across all volumes in an SVM, as part of any Python program or workflow.
+
+##### Function Definition
+
+```py
+def list_qtrees(
+    volume_name: str = None,         # Name of the volume to list qtrees from. If not specified, lists qtrees from all volumes.
+    cluster_name: str = None,        # Non-default cluster name, same credentials as the default credentials should be used.
+    svm_name: str = None,            # Non-default SVM name, same credentials as the default credentials should be used.
+    print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
+) -> list:
+```
+
+##### Return Value
+
+The function returns a list of all qtrees. Each item in the list will be a dictionary containing details regarding a specific qtree. The keys for the values in this dictionary are "id", "name", "volume", "svm", "security_style", "unix_permissions", "nas_path", "export_policy", "qos_policy".
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError              # Config file is missing or contains an invalid value.
+APIConnectionError              # The storage system/service API returned an error.
+```
+
+<a name="lib-get-qtree"></a>
+
+#### Get Qtree Details
+
+The NetApp DataOps Toolkit can be used to retrieve detailed information about a specific qtree as part of any Python program or workflow.
+
+##### Function Definition
+
+```py
+def get_qtree(
+    volume_uuid: str,                # UUID of the volume containing the qtree (required).
+    qtree_id: int,                   # ID of the qtree to retrieve (required).
+    cluster_name: str = None,        # Non-default cluster name, same credentials as the default credentials should be used.
+    print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
+) -> dict:
+```
+
+##### Return Value
+
+The function returns a dictionary containing detailed information about the qtree. The dictionary contains the following keys: "id", "name", "volume" (dict with "uuid" and "name"), "svm" (dict with "uuid" and "name"), "security_style", "unix_permissions", "nas_path", "export_policy" (dict with "id" and "name"), "qos_policy" (dict with "uuid" and "name"), "user" (dict with "name"), "group" (dict with "name").
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError              # Config file is missing or contains an invalid value.
+APIConnectionError              # The storage system/service API returned an error.
+InvalidVolumeParameterError     # An invalid parameter was specified (qtree not found).
+```
+
+<a name="lib-get-qtree-metrics"></a>
+
+#### Get Qtree Performance Metrics
+
+The NetApp DataOps Toolkit can be used to retrieve historical performance metrics for a specific qtree as part of any Python program or workflow.
+
+Note: Performance metrics require extended performance monitoring to be enabled on the qtree.
+
+##### Function Definition
+
+```py
+def get_qtree_metrics(
+    volume_uuid: str,                # UUID of the volume containing the qtree (required).
+    qtree_id: int,                   # ID of the qtree to retrieve metrics for (required).
+    cluster_name: str = None,        # Non-default cluster name, same credentials as the default credentials should be used.
+    print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
+) -> dict:
+```
+
+##### Return Value
+
+The function returns a dictionary containing performance metrics for the qtree. The dictionary has a "records" key containing a list of metric data points. Each data point includes timestamp, duration, status, IOPS (read/write/other/total), latency (read/write/other/total), and throughput (read/write) information. If no metrics are available, returns {"records": [], "message": "No metrics data available"}.
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError              # Config file is missing or contains an invalid value.
+APIConnectionError              # The storage system/service API returned an error.
+InvalidVolumeParameterError     # An invalid parameter was specified (qtree not found or metrics not available).
 ```
 
 ### Data Fabric Operations
