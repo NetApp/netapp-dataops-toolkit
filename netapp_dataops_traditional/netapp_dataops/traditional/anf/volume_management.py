@@ -586,6 +586,7 @@ def clone_volume(
         snapshot_id = f"/subscriptions/{final_subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{resolved_account_name}/capacityPools/{resolved_pool_name}/volumes/{source_volume_name}/snapshots/{snapshot_name}"
 
         # Set default protocol types and get usage_threshold from source volume if not provided
+        source_volume = None
         usage_threshold = None
         if resolved_protocol_types is None or resolved_protocol_types == config.get('protocol_types', DEFAULT_PROTOCOL_TYPES):
             # Try to get protocol types and usage_threshold from the source volume
@@ -633,7 +634,54 @@ def clone_volume(
             except Exception as e:
                 logger.warning(f"Failed to get usage threshold from source volume '{source_volume_name}': {str(e)}, using default 100 GiB")
                 usage_threshold = 107374182400  # 100 GiB default
-        
+
+        # Retrieve the pool to check its QoS type
+        pool = client.pools.get(
+            resource_group_name=resolved_resource_group_name,
+            account_name=resolved_account_name,
+            pool_name=resolved_pool_name
+        )
+        qos_type = getattr(pool, 'qos_type', None)
+        if print_output:
+            logger.info(f"Pool '{resolved_pool_name}' QoS type: {qos_type}")
+
+        # If destination pool is manual QoS and no throughput_mibps provided,
+        # try to get it from source volume or calculate default
+        if qos_type and qos_type.lower() == "manual" and throughput_mibps is None:
+            # Try to get throughput from source volume if it has one
+            if hasattr(source_volume, 'throughput_mibps') and source_volume.throughput_mibps:
+                throughput_mibps = source_volume.throughput_mibps
+                if print_output:
+                    logger.info(f"Using throughput_mibps from source volume: {throughput_mibps}")
+            else:
+                # Calculate minimum throughput based on service level and size
+                # This is a fallback - user should ideally provide explicit value
+                size_gib = usage_threshold / (1024 * 1024 * 1024)
+                if service_level.lower() == "standard":
+                    throughput_mibps = max(16, size_gib * 0.016)  # 16 MiB/s per TiB, min 16
+                elif service_level.lower() == "premium":
+                    throughput_mibps = max(64, size_gib * 0.064)  # 64 MiB/s per TiB, min 64
+                elif service_level.lower() == "ultra":
+                    throughput_mibps = max(128, size_gib * 0.128)  # 128 MiB/s per TiB, min 128
+                else:
+                    throughput_mibps = 64  # Default fallback
+                
+                if print_output:
+                    logger.info(f"Calculated throughput_mibps for manual QoS: {throughput_mibps}")
+
+        # If pool is manual QoS, throughput_mibps is required
+        if qos_type and qos_type.lower() == "manual":
+            if throughput_mibps is None:
+                error_message = (
+                    "Parameter 'throughput_mibps' is required for pools with manual QoS type."
+                )
+                logger.error(error_message)
+                raise ValueError(error_message)
+        elif qos_type and qos_type.lower() == "auto":
+            if throughput_mibps is None:
+                if print_output:
+                    logger.info("Pool is auto QoS; 'throughput_mibps' is not required.")
+
         # Create export policy using helper function
         export_policy = _create_export_policy_rules(export_policy_rules, resolved_protocol_types)
         
