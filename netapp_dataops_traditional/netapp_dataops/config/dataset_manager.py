@@ -7,6 +7,8 @@ including root volume creation, mounting, and validation.
 
 import os
 import platform
+import re
+import shutil
 import subprocess
 from typing import Optional, Dict, Any
 
@@ -22,6 +24,47 @@ class DatasetManagerConfigurator:
     This class is responsible for setting up and configuring Dataset Manager
     including root volume creation, mounting, and system requirements validation.
     """
+    
+    def __init__(self, print_output: bool = True):
+        """
+        Initialize the Dataset Manager configurator.
+        
+        Args:
+            print_output: Whether to print output messages (useful for testing)
+        """
+        self.print_output = print_output
+    
+    @staticmethod
+    def _check_required_utilities(*utilities: str) -> None:
+        """
+        Check if required system utilities are available.
+        
+        Args:
+            *utilities: Variable number of utility names to check
+            
+        Raises:
+            RuntimeError: If any required utility is missing
+        """
+        missing_utilities = []
+        for utility in utilities:
+            if not shutil.which(utility):
+                missing_utilities.append(utility)
+        
+        if missing_utilities:
+            utility_list = "', '".join(missing_utilities)
+            error_msg = (
+                f"ERROR: Required system utilities missing: '{utility_list}'\n"
+                f"Please install the missing utilities and try again.\n"
+            )
+            
+            # Add platform-specific installation hints
+            if platform.system() == 'Linux':
+                error_msg += "On Debian/Ubuntu: sudo apt-get install nfs-common\n"
+                error_msg += "On RHEL/CentOS: sudo yum install nfs-utils\n"
+            elif platform.system() == 'Darwin':
+                error_msg += "On macOS, these utilities should be available by default.\n"
+            
+            raise RuntimeError(error_msg)
     
     def configure_dataset_manager(self) -> DatasetManagerConfig:
         """
@@ -51,7 +94,12 @@ class DatasetManagerConfigurator:
     def _collect_existing_root_config(self) -> DatasetManagerConfig:
         """Collect configuration for existing root volume without performing operations."""
         while True:
-            root_volume_name = PromptUtils.prompt_required("Enter Dataset Manager \"root\" volume name: ")
+            root_volume_name = PromptUtils.prompt_required("Enter Dataset Manager \"root\" volume name (or 'abort' to cancel): ")
+            
+            # Allow user to abort
+            if root_volume_name.lower() in ['abort', 'cancel', 'quit', 'exit']:
+                print("Dataset Manager configuration cancelled.")
+                return DatasetManagerConfig(enabled=False)
             
             # Basic validation - just check if volume exists
             try:
@@ -59,6 +107,10 @@ class DatasetManagerConfigurator:
                 
                 if volume_info is None:
                     print(f"Error: Volume '{root_volume_name}' not found on ONTAP.")
+                    retry = PromptUtils.prompt_yes_no("Would you like to try again?")
+                    if not retry:
+                        print("Dataset Manager configuration cancelled.")
+                        return DatasetManagerConfig(enabled=False)
                     continue
                 
                 print(f"✓ Volume '{root_volume_name}' found on ONTAP")
@@ -66,6 +118,10 @@ class DatasetManagerConfigurator:
                     
             except Exception as e:
                 print(f"Error checking volume: {e}")
+                retry = PromptUtils.prompt_yes_no("Would you like to try again?")
+                if not retry:
+                    print("Dataset Manager configuration cancelled.")
+                    return DatasetManagerConfig(enabled=False)
                 continue
         
         # Get local mountpoint
@@ -204,19 +260,20 @@ class DatasetManagerConfigurator:
         """Get volume information from ONTAP."""
         try:
             # Use list_volumes to find the specific volume
-            volumes = volume_operations.list_volumes(print_output=False)
+            volumes = volume_operations.list_volumes(print_output=self.print_output)
             for volume in volumes:
                 if volume.get("Volume Name") == volume_name:
                     return volume
             return None
         except Exception as e:
-            print(f"Error retrieving volume information: {e}")
+            if self.print_output:
+                print(f"Error retrieving volume information: {e}")
             return None
     
     def _junction_path_exists(self, junction_path: str, exclude_volume: str = None) -> bool:
         """Check if a junction path is already in use by any volume."""
         try:
-            volumes = volume_operations.list_volumes(print_output=False)
+            volumes = volume_operations.list_volumes(print_output=self.print_output)
             for volume in volumes:
                 # Skip the excluded volume (useful when checking for conflicts)
                 volume_name = volume.get("Volume Name")
@@ -234,7 +291,8 @@ class DatasetManagerConfigurator:
                     return True
             return False
         except Exception as e:
-            print(f"Error checking junction path existence: {e}")
+            if self.print_output:
+                print(f"Error checking junction path existence: {e}")
             return False
     
     def _create_root_volume_on_ontap(self, volume_name: str) -> bool:
@@ -245,25 +303,35 @@ class DatasetManagerConfigurator:
                 volume_name=volume_name,
                 volume_size="1GB",  # Minimal size for root volume
                 junction=f"/{volume_name}",
-                print_output=False
+                print_output=self.print_output
             )
             return True
         except Exception as e:
-            print(f"Error creating volume: {e}")
+            if self.print_output:
+                print(f"Error creating volume: {e}")
             return False
     
     def _is_mounted(self, mountpoint: str) -> bool:
         """Check if a mountpoint is currently in use."""
         try:
+            # Check if mountpoint utility is available
+            self._check_required_utilities('mountpoint')
+            
             result = subprocess.run(['mountpoint', '-q', mountpoint], 
                                   capture_output=True, text=True)
             return result.returncode == 0
+        except RuntimeError as e:
+            # Re-raise utility check errors
+            raise
         except Exception:
             return False
     
     def _get_mount_target(self, mountpoint: str) -> str:
         """Get what is currently mounted at the given mountpoint."""
         try:
+            # Check if mount utility is available
+            self._check_required_utilities('mount')
+            
             result = subprocess.run(['mount'], capture_output=True, text=True)
             if result.returncode == 0:
                 for line in result.stdout.split('\n'):
@@ -271,6 +339,9 @@ class DatasetManagerConfigurator:
                         # Extract the source (first part before " on ")
                         return line.split(' on ')[0]
             return "unknown"
+        except RuntimeError as e:
+            # Re-raise utility check errors
+            raise
         except Exception:
             return "unknown"
     
@@ -326,7 +397,7 @@ class DatasetManagerConfigurator:
         """Get the expected NFS target for a volume."""
         try:
             from ..traditional.core import _retrieve_config
-            config = _retrieve_config(print_output=False)
+            config = _retrieve_config(print_output=self.print_output)
             data_lif = config.get("dataLif", "unknown")
             return f"{data_lif}:/{volume_name}"
         except Exception:
@@ -348,16 +419,11 @@ class DatasetManagerConfigurator:
     
     def _add_fstab_entry_safely(self, fstab_entry: str, nfs_target: str, mountpoint: str) -> bool:
         """
-        Add entry to /etc/fstab safely using append-only approach.
+        Add entry to /etc/fstab safely using regex-based parsing.
         
         This method:
-        1. Checks for duplicate entries using simple string parsing
+        1. Checks for duplicate entries using regex to parse fstab fields
         2. Appends the new entry if not already present
-        
-        This append-only approach is safer than rewriting the entire file as it:
-        - Never overwrites existing content
-        - Handles concurrent modifications better
-        - Simpler and less error-prone
         
         Args:
             fstab_entry: The complete fstab entry line to add
@@ -370,7 +436,7 @@ class DatasetManagerConfigurator:
         fstab_path = '/etc/fstab'
         
         try:
-            # Step 1: Check if entry already exists for this mountpoint
+            # Step 1: Read existing fstab content
             try:
                 with open(fstab_path, 'r') as f:
                     current_content = f.read()
@@ -385,22 +451,26 @@ class DatasetManagerConfigurator:
                 else:
                     current_content = ""
             
-            # Parse existing entries to check for conflicts
-            # Use simple string parsing instead of regex for better readability and maintainability
-            # fstab format: <device> <mountpoint> <fstype> <options> <dump> <pass>
-            # Example: "192.168.1.10:/vol1 /mnt/data nfs rw,hard 0 0"
+            # Parse existing entries using regex to avoid false positives
+            # Regex pattern matches: <device> <mountpoint> <fstype> <options> <dump> <pass>
+            # Example match: "192.168.1.10:/vol1 /mnt/data nfs rw,hard 0 0"
+            fstab_pattern = re.compile(r'^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)(?:\s+\d+)?(?:\s+\d+)?\s*$')
+            
             for line in current_content.splitlines():
                 # Skip comments and empty lines
-                line = line.strip()
-                if not line or line.startswith('#'):
+                stripped = line.strip()
+                if not stripped or stripped.startswith('#'):
                     continue
                 
-                # Split by whitespace and check if we have at least 2 fields (device and mountpoint)
-                fields = line.split()
-                if len(fields) >= 2:
-                    existing_mountpoint = fields[1]
+                # Use regex to parse fstab entry fields
+                match = fstab_pattern.match(stripped)
+                if match:
+                    existing_device = match.group(1)
+                    existing_mountpoint = match.group(2)
+                    
                     if existing_mountpoint == mountpoint:
                         print(f"Warning: An entry for mountpoint '{mountpoint}' already exists in /etc/fstab")
+                        print(f"  Existing: {existing_device} -> {existing_mountpoint}")
                         print("Skipping duplicate entry. Please manually edit /etc/fstab if you need to update it.")
                         return True  # Not an error - entry already exists
             
@@ -429,7 +499,7 @@ class DatasetManagerConfigurator:
     
     def _fstab_entry_exists(self, mountpoint: str, volume_name: str) -> bool:
         """
-        Check if an fstab entry already exists for this mount using simple string parsing.
+        Check if an fstab entry already exists for this mount using regex parsing.
         
         Args:
             mountpoint: The mountpoint path to check
@@ -442,26 +512,28 @@ class DatasetManagerConfigurator:
             with open('/etc/fstab', 'r') as f:
                 content = f.read()
             
-            # Use simple string parsing - more readable than regex
-            # fstab format: <device> <mountpoint> <fstype> <options> <dump> <pass>
-            # Example: "192.168.1.10:/vol1 /mnt/data nfs rw,hard 0 0"
+            # Use regex to parse fstab entries and avoid false positives
+            # Regex pattern matches: <device> <mountpoint> <fstype> <options> <dump> <pass>
+            # Example match: "192.168.1.10:/vol1 /mnt/data nfs rw,hard 0 0"
+            fstab_pattern = re.compile(r'^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)(?:\s+\d+)?(?:\s+\d+)?\s*$')
+            
             for line in content.splitlines():
                 # Skip comments and empty lines
-                line = line.strip()
-                if not line or line.startswith('#'):
+                stripped = line.strip()
+                if not stripped or stripped.startswith('#'):
                     continue
                 
-                # Split by whitespace and parse fields
-                fields = line.split()
-                if len(fields) >= 2:
-                    device = fields[0]
-                    mount_point = fields[1]
+                # Use regex to parse fstab entry fields
+                match = fstab_pattern.match(stripped)
+                if match:
+                    device = match.group(1)
+                    mount_point = match.group(2)
                     
                     # Check if this entry matches our mountpoint
                     if mount_point == mountpoint:
                         return True
                     
-                    # Check if the device contains our volume name
+                    # Check if the device contains our volume name (e.g., "data_lif:/volume_name")
                     if f"/{volume_name}" in device:
                         return True
             
