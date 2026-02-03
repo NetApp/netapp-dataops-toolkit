@@ -303,8 +303,6 @@ class DatasetManagerConfigurator:
     def _add_to_fstab(self, volume_name: str, mountpoint: str, nfs_target: str) -> bool:
         """Add volume to fstab first, then mount using fstab entry (following requirements)."""
         try:
-            print(f"\nAdding Dataset Manager volume to /etc/fstab...")
-            
             # Check if fstab entry already exists
             if self._fstab_entry_exists(mountpoint, volume_name):
                 print(f"/etc/fstab already contains an entry for this mount")
@@ -314,14 +312,11 @@ class DatasetManagerConfigurator:
                 
                 # Ensure mountpoint directory exists
                 os.makedirs(mountpoint, exist_ok=True)
-                print(f"Mountpoint directory '{mountpoint}' ready")
                 
                 # Add entry to fstab safely
                 if not self._add_fstab_entry_safely(fstab_entry, nfs_target, mountpoint):
                     print("Failed to add entry to /etc/fstab")
                     return False
-                
-                print(f"Entry added to /etc/fstab successfully")
                 
         except Exception as e:
             print(f"Error in fstab setup and mount: {e}")
@@ -352,67 +347,132 @@ class DatasetManagerConfigurator:
         return f"{nfs_target} {mountpoint} nfs rw,_netdev,nfsvers=4.1,hard 0 0"
     
     def _add_fstab_entry_safely(self, fstab_entry: str, nfs_target: str, mountpoint: str) -> bool:
-        """Add entry to /etc/fstab safely, avoiding duplicates."""
+        """
+        Add entry to /etc/fstab safely using append-only approach.
+        
+        This method:
+        1. Checks for duplicate entries using simple string parsing
+        2. Appends the new entry if not already present
+        
+        This append-only approach is safer than rewriting the entire file as it:
+        - Never overwrites existing content
+        - Handles concurrent modifications better
+        - Simpler and less error-prone
+        
+        Args:
+            fstab_entry: The complete fstab entry line to add
+            nfs_target: The NFS target (for validation)
+            mountpoint: The mountpoint path
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        fstab_path = '/etc/fstab'
+        
         try:
-            # Read current fstab content
+            # Step 1: Check if entry already exists for this mountpoint
             try:
-                with open('/etc/fstab', 'r') as f:
+                with open(fstab_path, 'r') as f:
                     current_content = f.read()
-            except Exception:
+            except FileNotFoundError:
                 current_content = ""
+            except PermissionError:
+                # Try reading with sudo
+                result = subprocess.run(['sudo', 'cat', fstab_path],
+                                      capture_output=True, text=True)
+                if result.returncode == 0:
+                    current_content = result.stdout
+                else:
+                    current_content = ""
             
-            # Check for existing entries for this mountpoint
-            lines = current_content.strip().split('\n')
-            new_lines = []
-            found_existing = False
-            
-            for line in lines:
-                if line.strip() and not line.strip().startswith('#'):
-                    # Parse fstab line: device mountpoint fstype options dump pass
-                    parts = line.split()
-                    if len(parts) >= 2 and parts[1] == mountpoint:
-                        # Found existing entry for this mountpoint - replace it
-                        print(f"Replacing existing fstab entry for {mountpoint}")
-                        new_lines.append(f"# Dataset Manager root volume")
-                        new_lines.append(fstab_entry)
-                        found_existing = True
-                        continue
+            # Parse existing entries to check for conflicts
+            # Use simple string parsing instead of regex for better readability and maintainability
+            # fstab format: <device> <mountpoint> <fstype> <options> <dump> <pass>
+            # Example: "192.168.1.10:/vol1 /mnt/data nfs rw,hard 0 0"
+            for line in current_content.splitlines():
+                # Skip comments and empty lines
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
                 
-                new_lines.append(line)
+                # Split by whitespace and check if we have at least 2 fields (device and mountpoint)
+                fields = line.split()
+                if len(fields) >= 2:
+                    existing_mountpoint = fields[1]
+                    if existing_mountpoint == mountpoint:
+                        print(f"Warning: An entry for mountpoint '{mountpoint}' already exists in /etc/fstab")
+                        print("Skipping duplicate entry. Please manually edit /etc/fstab if you need to update it.")
+                        return True  # Not an error - entry already exists
             
-            # If no existing entry found, add new one
-            if not found_existing:
-                if new_lines and new_lines[-1].strip():  # Add blank line if needed
-                    new_lines.append("")
-                new_lines.append("# Dataset Manager root volume")
-                new_lines.append(fstab_entry)
+            # Step 2: Append new entry with comment
+            comment = "# Dataset Manager root volume\n"
+            full_entry = f"{comment}{fstab_entry}\n"
             
-            # Write updated content
-            updated_content = '\n'.join(new_lines)
-            if not updated_content.endswith('\n'):
-                updated_content += '\n'
+            # Use shell redirection to append (safer than rewriting entire file)
+            # Escape any special characters in the entry
+            escaped_entry = full_entry.replace("'", "'\\''")
             
-            # Use a more robust approach to write to fstab
-            result = subprocess.run([
-                'sudo', 'sh', '-c', 
-                f"cat > /etc/fstab << 'EOF'\n{updated_content}EOF"
-            ], capture_output=True, text=True)
+            result = subprocess.run(
+                ['sudo', 'sh', '-c', f"printf '%s' '{escaped_entry}' >> {fstab_path}"],
+                capture_output=True, text=True
+            )
             
-            return result.returncode == 0
+            if result.returncode != 0:
+                print(f"Error appending to /etc/fstab: {result.stderr}")
+                return False
+            
+            return True
             
         except Exception as e:
             print(f"Error updating /etc/fstab: {e}")
             return False
     
     def _fstab_entry_exists(self, mountpoint: str, volume_name: str) -> bool:
-        """Check if an fstab entry already exists for this mount."""
+        """
+        Check if an fstab entry already exists for this mount using simple string parsing.
+        
+        Args:
+            mountpoint: The mountpoint path to check
+            volume_name: The volume name to check
+            
+        Returns:
+            bool: True if entry exists, False otherwise
+        """
         try:
             with open('/etc/fstab', 'r') as f:
                 content = f.read()
+            
+            # Use simple string parsing - more readable than regex
+            # fstab format: <device> <mountpoint> <fstype> <options> <dump> <pass>
+            # Example: "192.168.1.10:/vol1 /mnt/data nfs rw,hard 0 0"
+            for line in content.splitlines():
+                # Skip comments and empty lines
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
                 
-            # Check for either mountpoint or volume name in fstab
-            return (mountpoint in content or 
-                    f"/{volume_name}" in content or
-                    "Dataset Manager root volume" in content)
-        except Exception:
+                # Split by whitespace and parse fields
+                fields = line.split()
+                if len(fields) >= 2:
+                    device = fields[0]
+                    mount_point = fields[1]
+                    
+                    # Check if this entry matches our mountpoint
+                    if mount_point == mountpoint:
+                        return True
+                    
+                    # Check if the device contains our volume name
+                    if f"/{volume_name}" in device:
+                        return True
+            
+            # Also check for our comment marker
+            if "Dataset Manager root volume" in content:
+                return True
+                
+            return False
+            
+        except FileNotFoundError:
+            return False
+        except Exception as e:
+            print(f"Warning: Error checking fstab: {e}")
             return False
