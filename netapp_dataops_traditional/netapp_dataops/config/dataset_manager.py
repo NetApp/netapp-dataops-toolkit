@@ -21,7 +21,7 @@ class DatasetManagerConfigurator:
     """
     Handles Dataset Manager configuration operations.
     
-    This class is responsible for setting up and configuring Dataset Manager
+    This class is responsible for setting up
     including root volume creation, mounting, and system requirements validation.
     """
     
@@ -357,7 +357,6 @@ class DatasetManagerConfigurator:
                 print(f"Expected: {expected_nfs_target}")
                 return
         
-        print(f"\nConfiguring mount options for volume '{volume_name}'...")
         add_to_fstab = PromptUtils.prompt_yes_no(f"Would you like to add your Dataset Manager \"root\" volume to /etc/fstab now? (yes/no):")
         
         if add_to_fstab:
