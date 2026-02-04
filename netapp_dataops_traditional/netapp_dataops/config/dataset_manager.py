@@ -351,7 +351,7 @@ class DatasetManagerConfigurator:
             current_target = self._get_mount_target(mountpoint)
             
             if expected_nfs_target in current_target or f"/{volume_name}" in current_target:
-                logger.info(f"  ✓ Volume '{volume_name}' is already correctly mounted at '{mountpoint}'")
+                logger.info(f"  Volume '{volume_name}' is already correctly mounted at '{mountpoint}'")
                 return
             else:
                 logger.info(f"  Warning: Mountpoint '{mountpoint}' is in use by '{current_target}'")
@@ -363,7 +363,7 @@ class DatasetManagerConfigurator:
         if add_to_fstab:
             # Add to fstab FIRST, then mount using fstab entry
             if self._add_to_fstab(volume_name, mountpoint, expected_nfs_target):
-                logger.info(f"  Volume '{volume_name}' added to fstab and mounted successfully")
+                logger.info(f"  Volume '{volume_name}' added to fstab")
     
     def _add_to_fstab(self, volume_name: str, mountpoint: str, nfs_target: str) -> bool:
         """Add volume to fstab first, then mount using fstab entry (following requirements)."""
@@ -472,23 +472,79 @@ class DatasetManagerConfigurator:
                         logger.info("  Skipping duplicate entry. Please manually edit /etc/fstab if you need to update it.")
                         return True  # Not an error - entry already exists
             
-            # Step 2: Append new entry with comment
-            comment = "# Dataset Manager root volume\n"
+            # Step 2: Prepare entry with comment (only if comment doesn't exist)
+            comment = ""
+            if "# Dataset Manager root volume" not in current_content:
+                comment = "# Dataset Manager root volume\n"
+            
             full_entry = f"{comment}{fstab_entry}\n"
             
-            # Use shell redirection to append (safer than rewriting entire file)
             # Escape any special characters in the entry
             escaped_entry = full_entry.replace("'", "'\\''")
             
+            # Step 3: Try writing without sudo first
             result = subprocess.run(
-                ['sudo', 'sh', '-c', f"printf '%s' '{escaped_entry}' >> {fstab_path}"],
+                ['sh', '-c', f"printf '%s' '{escaped_entry}' >> {fstab_path}"],
                 capture_output=True, text=True
             )
             
+            # If failed without sudo, check if it's a permission error
             if result.returncode != 0:
-                logger.info(f"Error appending to /etc/fstab: {result.stderr}")
-                return False
+                error_msg = result.stderr.lower()
+                
+                # Check if it's a permission-related error
+                if 'permission denied' in error_msg or 'operation not permitted' in error_msg:
+                    logger.info("  Elevated privileges required to modify /etc/fstab. Attempting with sudo...")
+                    
+                    # Try with sudo
+                    result = subprocess.run(
+                        ['sudo', 'sh', '-c', f"printf '%s' '{escaped_entry}' >> {fstab_path}"],
+                        capture_output=True, text=True
+                    )
+                    
+                    if result.returncode != 0:
+                        # Sudo also failed
+                        sudo_error = result.stderr.strip()
+                        
+                        if 'sudo' in sudo_error.lower() or 'password' in sudo_error.lower():
+                            logger.info("")
+                            logger.info("  ╔════════════════════════════════════════════════════════════════╗")
+                            logger.info("  ║  ERROR: Unable to modify /etc/fstab - sudo access required    ║")
+                            logger.info("  ╚════════════════════════════════════════════════════════════════╝")
+                            logger.info("")
+                            logger.info("  Please do one of the following:")
+                            logger.info("  1. Run this configuration with sudo privileges")
+                            logger.info("  2. Manually add the following entry to /etc/fstab:")
+                            logger.info("")
+                            logger.info(f"     {fstab_entry}")
+                            logger.info("")
+                        else:
+                            logger.info("")
+                            logger.info("  ╔════════════════════════════════════════════════════════════════╗")
+                            logger.info("  ║  ERROR: Failed to modify /etc/fstab                           ║")
+                            logger.info("  ╚════════════════════════════════════════════════════════════════╝")
+                            logger.info("")
+                            logger.info(f"  Error details: {sudo_error}")
+                            logger.info("")
+                            logger.info("  Please manually add the following entry to /etc/fstab:")
+                            logger.info(f"     {fstab_entry}")
+                            logger.info("")
+                        return False
+                else:
+                    # Some other error occurred
+                    logger.info("")
+                    logger.info("  ╔════════════════════════════════════════════════════════════════╗")
+                    logger.info("  ║  ERROR: Failed to modify /etc/fstab                           ║")
+                    logger.info("  ╚════════════════════════════════════════════════════════════════╝")
+                    logger.info("")
+                    logger.info(f"  Error details: {result.stderr.strip()}")
+                    logger.info("")
+                    logger.info("  Please manually add the following entry to /etc/fstab:")
+                    logger.info(f"     {fstab_entry}")
+                    logger.info("")
+                    return False
             
+            # Successfully wrote to fstab
             return True
             
         except Exception as e:
