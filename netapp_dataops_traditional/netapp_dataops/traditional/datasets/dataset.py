@@ -6,28 +6,18 @@ into a simple dataset interface for Data Engineers and Data Scientists.
 """
 
 import os
-import datetime
-import re
 from typing import List, Dict, Optional, Any
-from pathlib import Path
 
-from netapp_ontap.error import NetAppRestError
 from netapp_ontap.resources import Volume as NetAppVolume
-from netapp_ontap.resources import Snapshot as NetAppSnapshot
 
+from netapp_dataops.logging_utils import setup_logger
 from ..exceptions import (
     InvalidConfigError,
-    ConnectionTypeError,
-    APIConnectionError,
-    InvalidVolumeParameterError,
-    InvalidSnapshotParameterError
 )
 from ..core import (
     _retrieve_config,
     _instantiate_connection,
-    _print_invalid_config_error,
     _convert_bytes_to_pretty_size,
-    _convert_size_string_to_bytes,
     _sizes_are_equivalent
 )
 from ..ontap.volume_operations import (
@@ -42,11 +32,12 @@ from ..ontap.snapshot_operations import (
 )
 from .exceptions import (
     DatasetError,
-    DatasetNotFoundError,
     DatasetExistsError,
     DatasetConfigError,
     DatasetVolumeError
 )
+
+logger = setup_logger(__name__)
 
 
 class Dataset:
@@ -146,17 +137,17 @@ class Dataset:
             
             if not junction_path or junction_path != expected_junction:
                 if self.print_output:
-                    print(f"Root volume '{self._root_volume_name}' junction path issue detected.")
+                    logger.info(f"Root volume '{self._root_volume_name}' junction path issue detected.")
                     if not junction_path:
-                        print("Junction path is not set.")
+                        logger.info("Junction path is not set.")
                     else:
-                        print(f"Current junction: '{junction_path}', expected: '{expected_junction}'")
-                    print("Attempting to fix automatically...")
+                        logger.info(f"Current junction: '{junction_path}', expected: '{expected_junction}'")
+                    logger.info("Attempting to fix automatically...")
                 
                 # Attempt to fix the junction path automatically
                 if self._fix_junction_path(self._root_volume_name, expected_junction):
                     if self.print_output:
-                        print(f"✓ Junction path fixed to '{expected_junction}'")
+                        logger.info(f"✓ Junction path fixed to '{expected_junction}'")
                 else:
                     raise DatasetConfigError(
                         f"Root volume '{self._root_volume_name}' is not properly junctioned. "
@@ -186,7 +177,7 @@ class Dataset:
                 # Fall back to "default" if no export policy is explicitly set
                 self._root_export_policy = "default"
                 if self.print_output:
-                    print(f"Warning: Root volume has no explicit export policy, using 'default' for new datasets")
+                    logger.info(f"Warning: Root volume has no explicit export policy, using 'default' for new datasets")
                 
         except Exception as e:
             if isinstance(e, DatasetConfigError):
@@ -269,7 +260,7 @@ class Dataset:
             )
         
         if self.print_output:
-            print(f"Bound to existing dataset '{self.name}'")
+            logger.info(f"Bound to existing dataset '{self.name}'")
     
     def _create_new_dataset(self, max_size: str):
         """Create a new dataset volume."""
@@ -293,7 +284,7 @@ class Dataset:
             self.local_file_path = os.path.join(self._root_mountpoint, self.name)
             
             if self.print_output:
-                print(f"Created new dataset '{self.name}' with size '{max_size}' using export policy '{self._root_export_policy}'")
+                logger.info(f"Created new dataset '{self.name}' with size '{max_size}' using export policy '{self._root_export_policy}'")
                 
         except Exception as e:
             raise DatasetVolumeError(f"Failed to create dataset '{self.name}': {str(e)}")
@@ -362,7 +353,7 @@ class Dataset:
             )
             
             if self.print_output:
-                print(f"Created clone '{name}' from dataset '{self.name}'")
+                logger.info(f"Created clone '{name}' from dataset '{self.name}'")
             
             # Return new Dataset instance for the clone
             return Dataset(name=name, print_output=self.print_output)
@@ -391,7 +382,7 @@ class Dataset:
             )
             
             if self.print_output:
-                print(f"Created snapshot '{snapshot_name}' for dataset '{self.name}'")
+                logger.info(f"Created snapshot '{snapshot_name}' for dataset '{self.name}'")
             
             return snapshot_name
             
@@ -440,7 +431,7 @@ class Dataset:
             )
             
             if self.print_output:
-                print(f"Deleted dataset '{self.name}'")
+                logger.info(f"Deleted dataset '{self.name}'")
                 
         except Exception as e:
             raise DatasetVolumeError(f"Failed to delete dataset '{self.name}': {str(e)}")
@@ -470,7 +461,7 @@ class Dataset:
             
             if not volumes:
                 if self.print_output:
-                    print(f"Volume '{volume_name}' not found")
+                    logger.info(f"Volume '{volume_name}' not found")
                 return False
             
             volume = volumes[0]
@@ -480,12 +471,12 @@ class Dataset:
             volume.patch()
             
             if self.print_output:
-                print(f"Junction path updated to '{new_junction_path}'")
+                logger.info(f"Junction path updated to '{new_junction_path}'")
             return True
             
         except Exception as e:
             if self.print_output:
-                print(f"Error fixing junction path: {e}")
+                logger.info(f"Error fixing junction path: {e}")
             return False
     
     def __str__(self) -> str:
@@ -546,7 +537,7 @@ def get_datasets(print_output: bool = False) -> List[Dataset]:
                         datasets.append(dataset)
                     except Exception as e:
                         if print_output:
-                            print(f"Warning: Failed to load dataset '{dataset_name}': {str(e)}")
+                            logger.info(f"Warning: Failed to load dataset '{dataset_name}': {str(e)}")
         
         return datasets
         

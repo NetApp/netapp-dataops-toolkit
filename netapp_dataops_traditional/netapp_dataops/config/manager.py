@@ -125,6 +125,7 @@ class ConfigManager:
             # Optional Dataset Manager configuration
             dataset_manager_config = None
             if PromptUtils.prompt_yes_no("Do you intend to use the toolkit's Dataset Manager functionality?"):
+                logger.info("\nDataset Manager Configuration:")
                 dataset_manager_configurator = DatasetManagerConfigurator()
                 dataset_manager_config = dataset_manager_configurator.configure_dataset_manager()
             

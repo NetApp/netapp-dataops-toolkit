@@ -8,6 +8,10 @@ operations across different configuration modules.
 import getpass
 from typing import List
 
+from netapp_dataops.logging_utils import setup_logger
+
+logger = setup_logger(__name__)
+
 
 class PromptUtils:
     """
@@ -24,7 +28,7 @@ class PromptUtils:
             value = input(f"{prompt}: ").strip()
             if value:
                 return value
-            print("This field is required. Please enter a value.")
+            logger.info("This field is required. Please enter a value.")
     
     @staticmethod
     def prompt_with_default(prompt: str, default: str) -> str:
@@ -39,7 +43,7 @@ class PromptUtils:
             password = getpass.getpass(f"{prompt}: ")
             if password:
                 return password
-            print("Password cannot be empty. Please enter a password.")
+            logger.info("Password cannot be empty. Please enter a password.")
     
     @staticmethod
     def prompt_yes_no(prompt: str, default: bool = False) -> bool:
@@ -56,7 +60,7 @@ class PromptUtils:
             elif value in ['n', 'no']:
                 return False
             else:
-                print("Please enter 'y' for yes or 'n' for no.")
+                logger.info("Please enter 'y' for yes or 'n' for no.")
     
     @staticmethod
     def prompt_choice(prompt: str, choices: List[str], default: str = None) -> str:
@@ -73,4 +77,4 @@ class PromptUtils:
             elif value in choices:
                 return value
             else:
-                print(f"Please choose from: {', '.join(choices)}")
+                logger.info(f"Please choose from: {', '.join(choices)}")

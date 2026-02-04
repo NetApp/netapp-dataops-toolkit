@@ -12,9 +12,12 @@ import shutil
 import subprocess
 from typing import Optional, Dict, Any
 
+from netapp_dataops.logging_utils import setup_logger
 from .models import DatasetManagerConfig
 from .prompt_utils import PromptUtils
 from ..traditional.ontap import volume_operations
+
+logger = setup_logger(__name__)
 
 
 class DatasetManagerConfigurator:
@@ -85,8 +88,8 @@ class DatasetManagerConfigurator:
             if create_new:
                 return self._collect_new_root_config()
             else:
-                print("Dataset Manager configuration skipped.")
-                print("Note: Dataset Manager requires a root volume to function.")
+                logger.info("Dataset Manager configuration skipped.")
+                logger.info("Note: Dataset Manager requires a root volume to function.")
                 return DatasetManagerConfig(enabled=False)
     
     def _collect_existing_root_config(self) -> DatasetManagerConfig:
@@ -96,7 +99,7 @@ class DatasetManagerConfigurator:
             
             # Allow user to abort
             if root_volume_name.lower() in ['abort', 'cancel', 'quit', 'exit']:
-                print("Dataset Manager configuration cancelled.")
+                logger.info("Dataset Manager configuration cancelled.")
                 return DatasetManagerConfig(enabled=False)
             
             # Basic validation - just check if volume exists
@@ -104,26 +107,25 @@ class DatasetManagerConfigurator:
                 volume_info = self._get_volume_info(root_volume_name)
                 
                 if volume_info is None:
-                    print(f"Error: Volume '{root_volume_name}' not found on ONTAP.")
+                    logger.info(f"Error: Volume '{root_volume_name}' not found on ONTAP.")
                     retry = PromptUtils.prompt_yes_no("Would you like to try again?")
                     if not retry:
-                        print("Dataset Manager configuration cancelled.")
+                        logger.info("Dataset Manager configuration cancelled.")
                         return DatasetManagerConfig(enabled=False)
                     continue
                 
-                print(f"✓ Volume '{root_volume_name}' found on ONTAP")
                 break
                     
             except Exception as e:
-                print(f"Error checking volume: {e}")
+                logger.info(f"Error checking volume: {e}")
                 retry = PromptUtils.prompt_yes_no("Would you like to try again?")
                 if not retry:
-                    print("Dataset Manager configuration cancelled.")
+                    logger.info("Dataset Manager configuration cancelled.")
                     return DatasetManagerConfig(enabled=False)
                 continue
         
         # Get local mountpoint
-        root_mountpoint = PromptUtils.prompt_required("Enter desired local mountpoint for Dataset Manager \"root\" volume:")
+        root_mountpoint = PromptUtils.prompt_required("Enter desired local mountpoint for Dataset Manager \"root\" volume")
         
         # Create configuration object
         config = DatasetManagerConfig(
@@ -141,7 +143,7 @@ class DatasetManagerConfigurator:
         """Collect configuration for new root volume without performing operations."""
         # 1. Collect inputs
         root_volume_name = PromptUtils.prompt_with_default("Enter desired Dataset Manager \"root\" volume name:", "dataset_mgr_root")
-        root_mountpoint = PromptUtils.prompt_required("Enter desired local mountpoint for Dataset Manager \"root\" volume:")
+        root_mountpoint = PromptUtils.prompt_required("Enter desired local mountpoint for Dataset Manager \"root\" volume")
         
         # Create configuration object
         config = DatasetManagerConfig(
@@ -159,13 +161,14 @@ class DatasetManagerConfigurator:
         root_volume_name = config.root_volume_name
         root_mountpoint = config.root_mountpoint
         
+        
         # Verify the volume exists and validate junction path
         try:
             volume_info = self._get_volume_info(root_volume_name)
             
             if volume_info is None:
-                print(f"Warning: Volume '{root_volume_name}' not found on ONTAP.")
-                print("Configuration has been saved. Please verify the volume name and try setup again.")
+                logger.info(f"Warning: Volume '{root_volume_name}' not found on ONTAP.")
+                logger.info("Configuration has been saved. Please verify the volume name and try setup again.")
                 return
             
             # Check junction path
@@ -176,20 +179,18 @@ class DatasetManagerConfigurator:
             expected_junction = f"/{root_volume_name}"
             
             if junction_path != expected_junction:
-                print(f"Warning: Volume '{root_volume_name}' exists but has junction path '{junction_path}'")
-                print(f"Expected junction path: '{expected_junction}'")
+                logger.info(f"Warning: Volume '{root_volume_name}' exists but has junction path '{junction_path}'")
+                logger.info(f"Expected junction path: '{expected_junction}'")
                 
                 # Check if expected junction path is already taken by another volume
                 if self._junction_path_exists(expected_junction, exclude_volume=root_volume_name):
-                    print(f"Error: Junction path '{expected_junction}' is already in use by another volume.")
-                    print("Configuration has been saved. Please resolve junction path conflicts manually.")
+                    logger.info(f"Error: Junction path '{expected_junction}' is already in use by another volume.")
+                    logger.info("Configuration has been saved. Please resolve junction path conflicts manually.")
                     return
-            else:
-                print(f"Volume '{root_volume_name}' found with correct junction path '{junction_path}'")
                 
         except Exception as e:
-            print(f"Error validating volume: {e}")
-            print("Configuration has been saved. Please verify volume setup manually.")
+            logger.info(f"Error validating volume: {e}")
+            logger.info("Configuration has been saved. Please verify volume setup manually.")
             return
         
         # Handle mounting with proper validation
@@ -200,7 +201,7 @@ class DatasetManagerConfigurator:
         root_volume_name = config.root_volume_name
         root_mountpoint = config.root_mountpoint
         
-        print(f"\nSetting up new Dataset Manager root volume '{root_volume_name}'...")
+        logger.info(f"\nSetting up new Dataset Manager root volume '{root_volume_name}'...")
         
         while True:  # Loop for retrying with different names if needed
             try:
@@ -214,35 +215,35 @@ class DatasetManagerConfigurator:
                     expected_junction = f"/{root_volume_name}"
                     
                     if junction_path == expected_junction:
-                        print(f"Volume '{root_volume_name}' already exists with correct junction path.")
-                        print("Proceeding with existing volume setup...")
+                        logger.info(f"Volume '{root_volume_name}' already exists with correct junction path.")
+                        logger.info("Proceeding with existing volume setup...")
                         break  # Volume is ready, proceed to mounting
                     else:
-                        print(f"Volume '{root_volume_name}' exists but has junction path '{junction_path}'")
-                        print(f"Expected: '{expected_junction}'")
-                        print("Configuration has been saved. Please resolve junction path conflicts manually.")
+                        logger.info(f"Volume '{root_volume_name}' exists but has junction path '{junction_path}'")
+                        logger.info(f"Expected: '{expected_junction}'")
+                        logger.info("Configuration has been saved. Please resolve junction path conflicts manually.")
                         return
                 else:
                     # Check junction path collision
                     expected_junction = f"/{root_volume_name}"
                     if self._junction_path_exists(expected_junction):
-                        print(f"Error: Junction path '{expected_junction}' is already in use by another volume.")
-                        print("Configuration has been saved. Please choose a different volume name and reconfigure.")
+                        logger.info(f"Error: Junction path '{expected_junction}' is already in use by another volume.")
+                        logger.info("Configuration has been saved. Please choose a different volume name and reconfigure.")
                         return
                     
                     # Create the root volume
-                    print(f"Creating Dataset Manager root volume '{root_volume_name}'...")
+                    logger.info(f"Creating Dataset Manager root volume '{root_volume_name}'...")
                     if not self._create_root_volume_on_ontap(root_volume_name):
-                        print("Failed to create root volume.")
-                        print("Configuration has been saved. Please create the volume manually or reconfigure with a different name.")
+                        logger.info("Failed to create root volume.")
+                        logger.info("Configuration has been saved. Please create the volume manually or reconfigure with a different name.")
                         return
                     
-                    print(f"Root volume '{root_volume_name}' created successfully")
+                    logger.info(f"Root volume '{root_volume_name}' created successfully")
                     break  # Volume created successfully
             
             except Exception as e:
-                print(f"Error during volume operations: {e}")
-                print("Configuration has been saved. Please create the volume manually or reconfigure.")
+                logger.info(f"Error during volume operations: {e}")
+                logger.info("Configuration has been saved. Please create the volume manually or reconfigure.")
                 return
         
         # Handle mounting with proper validation
@@ -260,7 +261,7 @@ class DatasetManagerConfigurator:
             return None
         except Exception as e:
             if self.print_output:
-                print(f"Error retrieving volume information: {e}")
+                logger.info(f"Error retrieving volume information: {e}")
             return None
     
     def _junction_path_exists(self, junction_path: str, exclude_volume: str = None) -> bool:
@@ -286,7 +287,7 @@ class DatasetManagerConfigurator:
             return False
         except Exception as e:
             if self.print_output:
-                print(f"Error checking junction path existence: {e}")
+                logger.info(f"Error checking junction path existence: {e}")
             return False
     
     def _create_root_volume_on_ontap(self, volume_name: str) -> bool:
@@ -302,7 +303,7 @@ class DatasetManagerConfigurator:
             return True
         except Exception as e:
             if self.print_output:
-                print(f"Error creating volume: {e}")
+                logger.info(f"Error creating volume: {e}")
             return False
     
     def _is_mounted(self, mountpoint: str) -> bool:
@@ -350,11 +351,11 @@ class DatasetManagerConfigurator:
             current_target = self._get_mount_target(mountpoint)
             
             if expected_nfs_target in current_target or f"/{volume_name}" in current_target:
-                print(f"✓ Volume '{volume_name}' is already correctly mounted at '{mountpoint}'")
+                logger.info(f"✓ Volume '{volume_name}' is already correctly mounted at '{mountpoint}'")
                 return
             else:
-                print(f"Warning: Mountpoint '{mountpoint}' is in use by '{current_target}'")
-                print(f"Expected: {expected_nfs_target}")
+                logger.info(f"Warning: Mountpoint '{mountpoint}' is in use by '{current_target}'")
+                logger.info(f"Expected: {expected_nfs_target}")
                 return
         
         add_to_fstab = PromptUtils.prompt_yes_no(f"Would you like to add your Dataset Manager \"root\" volume to /etc/fstab now? (yes/no):")
@@ -362,15 +363,13 @@ class DatasetManagerConfigurator:
         if add_to_fstab:
             # Add to fstab FIRST, then mount using fstab entry
             if self._add_to_fstab(volume_name, mountpoint, expected_nfs_target):
-                print(f"Volume '{volume_name}' added to fstab and mounted successfully")
+                logger.info(f"Volume '{volume_name}' added to fstab and mounted successfully")
     
     def _add_to_fstab(self, volume_name: str, mountpoint: str, nfs_target: str) -> bool:
         """Add volume to fstab first, then mount using fstab entry (following requirements)."""
         try:
             # Check if fstab entry already exists
-            if self._fstab_entry_exists(mountpoint, volume_name):
-                print(f"/etc/fstab already contains an entry for this mount")
-            else:
+            if not self._fstab_entry_exists(mountpoint, volume_name):
                 # Create standardized fstab entry
                 fstab_entry = self._create_fstab_entry(nfs_target, mountpoint)
                 
@@ -379,11 +378,11 @@ class DatasetManagerConfigurator:
                 
                 # Add entry to fstab safely
                 if not self._add_fstab_entry_safely(fstab_entry, nfs_target, mountpoint):
-                    print("Failed to add entry to /etc/fstab")
+                    logger.info("Failed to add entry to /etc/fstab")
                     return False
                 
         except Exception as e:
-            print(f"Error in fstab setup and mount: {e}")
+            logger.info(f"Error in fstab setup and mount: {e}")
             return False
 
     def _get_expected_nfs_target(self, volume_name: str) -> str:
@@ -462,9 +461,9 @@ class DatasetManagerConfigurator:
                     existing_mountpoint = match.group(2)
                     
                     if existing_mountpoint == mountpoint:
-                        print(f"Warning: An entry for mountpoint '{mountpoint}' already exists in /etc/fstab")
-                        print(f"  Existing: {existing_device} -> {existing_mountpoint}")
-                        print("Skipping duplicate entry. Please manually edit /etc/fstab if you need to update it.")
+                        logger.info(f"Warning: An entry for mountpoint '{mountpoint}' already exists in /etc/fstab")
+                        logger.info(f"  Existing: {existing_device} -> {existing_mountpoint}")
+                        logger.info("Skipping duplicate entry. Please manually edit /etc/fstab if you need to update it.")
                         return True  # Not an error - entry already exists
             
             # Step 2: Append new entry with comment
@@ -481,13 +480,13 @@ class DatasetManagerConfigurator:
             )
             
             if result.returncode != 0:
-                print(f"Error appending to /etc/fstab: {result.stderr}")
+                logger.info(f"Error appending to /etc/fstab: {result.stderr}")
                 return False
             
             return True
             
         except Exception as e:
-            print(f"Error updating /etc/fstab: {e}")
+            logger.info(f"Error updating /etc/fstab: {e}")
             return False
     
     def _fstab_entry_exists(self, mountpoint: str, volume_name: str) -> bool:
@@ -539,5 +538,5 @@ class DatasetManagerConfigurator:
         except FileNotFoundError:
             return False
         except Exception as e:
-            print(f"Warning: Error checking fstab: {e}")
+            logger.info(f"Warning: Error checking fstab: {e}")
             return False
