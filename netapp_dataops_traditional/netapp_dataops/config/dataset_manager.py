@@ -507,41 +507,13 @@ class DatasetManagerConfigurator:
                         sudo_error = result.stderr.strip()
                         
                         if 'sudo' in sudo_error.lower() or 'password' in sudo_error.lower():
-                            logger.info("")
-                            logger.info("  ╔════════════════════════════════════════════════════════════════╗")
-                            logger.info("  ║  ERROR: Unable to modify /etc/fstab - sudo access required    ║")
-                            logger.info("  ╚════════════════════════════════════════════════════════════════╝")
-                            logger.info("")
-                            logger.info("  Please do one of the following:")
-                            logger.info("  1. Run this configuration with sudo privileges")
-                            logger.info("  2. Manually add the following entry to /etc/fstab:")
-                            logger.info("")
-                            logger.info(f"     {fstab_entry}")
-                            logger.info("")
+                            logger.info(f"  ERROR: Unable to modify /etc/fstab - sudo access required. Please run with sudo or manually add: {fstab_entry}")
                         else:
-                            logger.info("")
-                            logger.info("  ╔════════════════════════════════════════════════════════════════╗")
-                            logger.info("  ║  ERROR: Failed to modify /etc/fstab                           ║")
-                            logger.info("  ╚════════════════════════════════════════════════════════════════╝")
-                            logger.info("")
-                            logger.info(f"  Error details: {sudo_error}")
-                            logger.info("")
-                            logger.info("  Please manually add the following entry to /etc/fstab:")
-                            logger.info(f"     {fstab_entry}")
-                            logger.info("")
+                            logger.info(f"  ERROR: Failed to modify /etc/fstab ({sudo_error}). Please manually add: {fstab_entry}")
                         return False
                 else:
                     # Some other error occurred
-                    logger.info("")
-                    logger.info("  ╔════════════════════════════════════════════════════════════════╗")
-                    logger.info("  ║  ERROR: Failed to modify /etc/fstab                           ║")
-                    logger.info("  ╚════════════════════════════════════════════════════════════════╝")
-                    logger.info("")
-                    logger.info(f"  Error details: {result.stderr.strip()}")
-                    logger.info("")
-                    logger.info("  Please manually add the following entry to /etc/fstab:")
-                    logger.info(f"     {fstab_entry}")
-                    logger.info("")
+                    logger.info(f"  ERROR: Failed to modify /etc/fstab ({result.stderr.strip()}). Please manually add: {fstab_entry}")
                     return False
             
             # Successfully wrote to fstab
@@ -588,12 +560,10 @@ class DatasetManagerConfigurator:
                         return True
                     
                     # Check if the device contains our volume name (e.g., "data_lif:/volume_name")
-                    if f"/{volume_name}" in device:
+                    # Only return True if we find a matching volume AND matching mountpoint
+                    # to avoid false positives from old entries
+                    if f"/{volume_name}" in device and mount_point == mountpoint:
                         return True
-            
-            # Also check for our comment marker
-            if "Dataset Manager root volume" in content:
-                return True
                 
             return False
             
