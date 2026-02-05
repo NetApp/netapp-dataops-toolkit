@@ -38,7 +38,7 @@ class GetCommand(BaseCommand):
         
         # Get command line options
         try:
-            opts, args = getopt.getopt(
+            opts, _ = getopt.getopt(
                 self.args[3:], 
                 "hn:s:u:", 
                 ["help", "name=", "svm=", "cluster-name="]
