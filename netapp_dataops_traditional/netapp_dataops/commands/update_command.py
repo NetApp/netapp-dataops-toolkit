@@ -26,6 +26,15 @@ class UpdateCommand(BaseCommand):
         else:
             self.handle_invalid_command()
     
+    def _parse_bool(self, arg, optname):
+        if arg.lower() in ('true', '1', 'yes', 'y'):
+            return True
+        elif arg.lower() in ('false', '0', 'no', 'n'):
+            return False
+        logger.error(f"Error: Invalid value for {optname}. Use 'true' or 'false'.")
+        self.handle_invalid_command(help_text=HELP_TEXT_UPDATE_FLEXCACHE, invalid_opt_arg=True)
+        return None
+
     def _update_flexcache(self) -> None:
         """Handle FlexCache volume update."""
         uuid = None
@@ -82,21 +91,13 @@ class UpdateCommand(BaseCommand):
             elif opt in ("-x", "--prepopulate-exclude-paths"):
                 prepopulate_exclude_paths = arg.split(',')
             elif opt in ("-w", "--writeback-enabled"):
-                if arg.lower() in ('true', '1', 'yes', 'y'):
-                    writeback_enabled = True
-                elif arg.lower() in ('false', '0', 'no', 'n'):
-                    writeback_enabled = False
-                else:
-                    logger.error("Error: Invalid value for writeback-enabled. Use 'true' or 'false'.")
-                    self.handle_invalid_command(help_text=HELP_TEXT_UPDATE_FLEXCACHE, invalid_opt_arg=True)
+                value = self._parse_bool(arg, "writeback-enabled")
+                if value is not None:
+                    writeback_enabled = value
             elif opt in ("-r", "--relative-size-enabled"):
-                if arg.lower() in ('true', '1', 'yes', 'y'):
-                    relative_size_enabled = True
-                elif arg.lower() in ('false', '0', 'no', 'n'):
-                    relative_size_enabled = False
-                else:
-                    logger.error("Error: Invalid value for relative-size-enabled. Use 'true' or 'false'.")
-                    self.handle_invalid_command(help_text=HELP_TEXT_UPDATE_FLEXCACHE, invalid_opt_arg=True)
+                value = self._parse_bool(arg, "relative-size-enabled")
+                if value is not None:
+                    relative_size_enabled = value
             elif opt == "--relative-size-percentage":
                 try:
                     relative_size_percentage = int(arg)
@@ -107,13 +108,9 @@ class UpdateCommand(BaseCommand):
                     logger.error("Error: relative-size-percentage must be an integer.")
                     self.handle_invalid_command(help_text=HELP_TEXT_UPDATE_FLEXCACHE, invalid_opt_arg=True)
             elif opt in ("-a", "--atime-scrub-enabled"):
-                if arg.lower() in ('true', '1', 'yes', 'y'):
-                    atime_scrub_enabled = True
-                elif arg.lower() in ('false', '0', 'no', 'n'):
-                    atime_scrub_enabled = False
-                else:
-                    logger.error("Error: Invalid value for atime-scrub-enabled. Use 'true' or 'false'.")
-                    self.handle_invalid_command(help_text=HELP_TEXT_UPDATE_FLEXCACHE, invalid_opt_arg=True)
+                value = self._parse_bool(arg, "atime-scrub-enabled")
+                if value is not None:
+                    atime_scrub_enabled = value
             elif opt == "--atime-scrub-period":
                 try:
                     atime_scrub_period = int(arg)
@@ -124,13 +121,9 @@ class UpdateCommand(BaseCommand):
                     logger.error("Error: atime-scrub-period must be an integer.")
                     self.handle_invalid_command(help_text=HELP_TEXT_UPDATE_FLEXCACHE, invalid_opt_arg=True)
             elif opt in ("-c", "--cifs-change-notify-enabled"):
-                if arg.lower() in ('true', '1', 'yes', 'y'):
-                    cifs_change_notify_enabled = True
-                elif arg.lower() in ('false', '0', 'no', 'n'):
-                    cifs_change_notify_enabled = False
-                else:
-                    logger.error("Error: Invalid value for cifs-change-notify-enabled. Use 'true' or 'false'.")
-                    self.handle_invalid_command(help_text=HELP_TEXT_UPDATE_FLEXCACHE, invalid_opt_arg=True)
+                value = self._parse_bool(arg, "cifs-change-notify-enabled")
+                if value is not None:
+                    cifs_change_notify_enabled = value
         
         # Validate that either uuid or volume_name is provided
         if not uuid and not volume_name:
