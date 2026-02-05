@@ -16,6 +16,9 @@ The NetApp DataOps Toolkit MCP Server for ONTAP is an open-source server compone
 - **Create SnapMirror Relationship**: Set up SnapMirror relationships for efficient data replication.
 - **List SnapMirror Relationships**: Retrieve a list of all SnapMirror relationships on the storage system.
 - **Create FlexCache Volume**: Create FlexCache volumes for efficient data access and caching.
+- **List FlexCache Volumes**: Retrieve a list of all FlexCache volumes with their origin information.
+- **Get FlexCache Origin**: Retrieve detailed origin information for a specific FlexCache volume.
+- **Update FlexCache Volume**: Update configuration and properties of existing FlexCache volumes.
 
 ### Prerequisites
 
