@@ -33,6 +33,128 @@ from ..core import (
 logger = setup_logger(__name__)
 
 
+def get_volume(volume_name: str, print_output: bool = False):
+    """Get details for a specific volume.
+    
+    Args:
+        volume_name: Name of the volume to retrieve
+        print_output: Whether to print output messages
+        
+    Returns:
+        Dictionary containing volume details with keys:
+        - Volume Name: Name of the volume
+        - Size: Pretty-formatted size (e.g., "100GB")
+        - Junction Path: NFS junction path
+        - Export Policy: Export policy name
+        - Type: Volume type (flexvol, flexgroup)
+        - Clone: "yes" or "no"
+        - Clone Parent Volume: Parent volume name if clone
+        - Clone Parent SVM: Parent SVM name if clone
+        - Clone Parent Snapshot: Parent snapshot name if clone
+        - NFS Mount Target: NFS mount target string
+        
+        Returns None if volume doesn't exist
+        
+    Raises:
+        InvalidConfigError: If configuration is invalid
+        APIConnectionError: If ONTAP API call fails
+        ConnectionTypeError: If connection type is not ONTAP
+    """
+    try:
+        config = _retrieve_config(print_output=print_output)
+    except InvalidConfigError:
+        raise
+        
+    try:
+        connectionType = config["connectionType"]
+    except KeyError:
+        if print_output:
+            _print_invalid_config_error()
+        raise InvalidConfigError()
+    
+    if connectionType == "ONTAP":
+        try:
+            _instantiate_connection(config=config, connectionType=connectionType, print_output=print_output)
+        except InvalidConfigError:
+            raise
+        
+        try:
+            svmname = config["svm"]
+            
+            # Find the specific volume
+            volume = NetAppVolume.find(name=volume_name, svm=svmname)
+            
+            if not volume:
+                return None
+            
+            # Get full volume details including junction path, size, clone info, export policy
+            volume.get(fields="nas.path,nas.export_policy,size,style,clone")
+            
+            # Extract junction path
+            junction_path = None
+            if hasattr(volume, "nas") and hasattr(volume.nas, "path"):
+                junction_path = volume.nas.path
+            
+            # Extract export policy
+            export_policy = None
+            if hasattr(volume, "nas") and hasattr(volume.nas, "export_policy"):
+                export_policy = volume.nas.export_policy.name
+            
+            # Convert size to pretty format
+            pretty_size = _convert_bytes_to_pretty_size(size_in_bytes=volume.size)
+            
+            # Construct NFS mount target
+            nfs_mount_target = None
+            if junction_path:
+                nfs_mount_target = config["dataLif"] + ":" + junction_path
+                if svmname != config["svm"]:
+                    nfs_mount_target = svmname + ":" + junction_path
+            
+            # Extract clone information
+            clone = "no"
+            clone_parent_svm = None
+            clone_parent_volume = None
+            clone_parent_snapshot = None
+            
+            try:
+                if hasattr(volume, "clone") and hasattr(volume.clone, "parent_volume"):
+                    clone = "yes"
+                    clone_parent_volume = volume.clone.parent_volume.name
+                    if hasattr(volume.clone, "parent_svm"):
+                        clone_parent_svm = volume.clone.parent_svm.name
+                    if hasattr(volume.clone, "parent_snapshot"):
+                        clone_parent_snapshot = volume.clone.parent_snapshot.name
+            except (AttributeError, KeyError):
+                pass
+            
+            # Build volume dictionary
+            volume_dict = {
+                "Volume Name": volume.name,
+                "Size": pretty_size,
+                "Junction Path": junction_path,
+                "Export Policy": export_policy,
+                "Type": volume.style,
+                "NFS Mount Target": nfs_mount_target,
+                "Clone": clone
+            }
+            
+            # Add clone details if it's a clone
+            if clone == "yes":
+                volume_dict["Clone Parent Volume"] = clone_parent_volume
+                volume_dict["Clone Parent SVM"] = clone_parent_svm
+                volume_dict["Clone Parent Snapshot"] = clone_parent_snapshot
+            
+            return volume_dict
+            
+        except NetAppRestError as err:
+            if print_output:
+                logger.error("Error: ONTAP Rest API Error: %s", err)
+            raise APIConnectionError(err)
+    
+    else:
+        raise ConnectionTypeError()
+
+
 def clone_volume(new_volume_name: str, source_volume_name: str, cluster_name: str = None, source_snapshot_name: str = None,
                  source_svm: str = None, target_svm: str = None, export_hosts: str = None, export_policy: str = None, split: bool = False,
                  unix_uid: str = None, unix_gid: str = None, mountpoint: str = None, junction: str= None, readonly: bool = False,
@@ -979,6 +1101,7 @@ def list_volumes(check_local_mounts: bool = False, include_space_usage_details: 
                         volumeDict["Footprint"] = prettyFootprint
                     volumeDict["Type"] = volume.style
                     volumeDict["NFS Mount Target"] = nfsMountTarget
+                    volumeDict["Junction Path"] = volumeExportPath
                     if check_local_mounts:
                         localMountpoint = ""
                         if nfsMountTarget:

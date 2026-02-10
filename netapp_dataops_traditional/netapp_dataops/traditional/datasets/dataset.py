@@ -6,9 +6,8 @@ into a simple dataset interface for Data Engineers and Data Scientists.
 """
 
 import os
+import time
 from typing import List, Dict, Optional, Any
-
-from netapp_ontap.resources import Volume as NetAppVolume
 
 from netapp_dataops.logging_utils import setup_logger
 from ..exceptions import (
@@ -24,6 +23,7 @@ from ..ontap.volume_operations import (
     create_volume,
     clone_volume,
     delete_volume,
+    get_volume,
     list_volumes
 )
 from ..ontap.snapshot_operations import (
@@ -117,13 +117,8 @@ class Dataset:
         inherit the same NFS access permissions for consistent traversal.
         """
         try:
-            volumes = list_volumes(print_output=False)
-            root_volume = None
-            
-            for volume in volumes:
-                if volume.get("Volume Name") == self._root_volume_name:
-                    root_volume = volume
-                    break
+            # Fetch root volume using volume_operations abstraction layer
+            root_volume = get_volume(volume_name=self._root_volume_name, print_output=False)
             
             if not root_volume:
                 raise DatasetConfigError(
@@ -131,7 +126,7 @@ class Dataset:
                     "Please create it or update your configuration."
                 )
             
-            # Check junction path exists and fix automatically if needed
+            # Check junction path
             junction_path = root_volume.get("Junction Path")
             expected_junction = f"/{self._root_volume_name}"
             
@@ -143,19 +138,6 @@ class Dataset:
                     else:
                         logger.info(f"Current junction: '{junction_path}', expected: '{expected_junction}'")
                     logger.info("Attempting to fix automatically...")
-                
-                # Attempt to fix the junction path automatically
-                if self._fix_junction_path(self._root_volume_name, expected_junction):
-                    if self.print_output:
-                        logger.info(f"✓ Junction path fixed to '{expected_junction}'")
-                else:
-                    raise DatasetConfigError(
-                        f"Root volume '{self._root_volume_name}' is not properly junctioned. "
-                        f"Expected junction path: '{expected_junction}'. "
-                        "Automatic fix failed. Please set manually using ONTAP CLI: "
-                        f"volume mount -vserver {self._config.get('svm', 'svm0')} "
-                        f"-volume {self._root_volume_name} -junction-path {expected_junction}"
-                    )
             
             # Verify local mountpoint exists and is accessible
             if not os.path.exists(self._root_mountpoint):
@@ -187,34 +169,28 @@ class Dataset:
     def _find_dataset_volume(self) -> Optional[Dict[str, Any]]:
         """Find the volume corresponding to this dataset."""
         try:
-            volumes = list_volumes(print_output=False)
-            existing_volume = None
+            # Find volume using volume_operations abstraction layer
+            volume = get_volume(volume_name=self.name, print_output=False)
             
-            # First, check if a volume with this name exists anywhere
-            for volume in volumes:
-                if volume.get("Volume Name") == self.name:
-                    existing_volume = volume
-                    break
+            if not volume:
+                # No volume with this name exists - safe to create
+                return None
             
-            if existing_volume:
-                # Volume exists - check if it's in the right location
-                expected_junction = f"/{self._root_volume_name}/{self.name}"
-                actual_junction = existing_volume.get("Junction Path")
-                
-                if actual_junction == expected_junction:
-                    # Volume exists and is correctly managed by Dataset Manager
-                    return existing_volume
-                else:
-                    # Volume exists but is not under Dataset Manager control
-                    junction_info = f"junction: {actual_junction}" if actual_junction else "no junction path"
-                    raise DatasetExistsError(
-                        f"Volume '{self.name}' already exists but is not managed by the Dataset Manager "
-                        f"({junction_info}). Please use a different name or move the existing volume to be "
-                        f"managed under '{expected_junction}'."
-                    )
+            # Check if it's in the right location
+            expected_junction = f"/{self._root_volume_name}/{self.name}"
+            actual_junction = volume.get("Junction Path")
             
-            # No volume with this name exists - safe to create
-            return None
+            if actual_junction == expected_junction:
+                # Volume exists and is correctly managed by Dataset Manager
+                return volume
+            else:
+                # Volume exists but is not under Dataset Manager control
+                junction_info = f"junction: {actual_junction}" if actual_junction else "no junction path"
+                raise DatasetExistsError(
+                    f"Volume '{self.name}' already exists but is not managed by the Dataset Manager "
+                    f"({junction_info}). Please use a different name or move the existing volume to be "
+                    f"managed under '{expected_junction}'."
+                )
             
         except DatasetExistsError:
             # Re-raise our specific error
@@ -262,6 +238,18 @@ class Dataset:
         if self.print_output:
             logger.info(f"Bound to existing dataset '{self.name}'")
     
+    def _refresh_nfs_namespace(self):
+        """
+        Refresh NFS client's view of the namespace to discover newly junctioned volumes.
+        """
+        try:
+            os.listdir(self._root_mountpoint)
+            time.sleep(1)
+        except OSError:
+            pass
+    
+
+    
     def _create_new_dataset(self, max_size: str):
         """Create a new dataset volume."""
         try:
@@ -282,6 +270,9 @@ class Dataset:
             self.is_clone = False
             self.source_dataset_name = None
             self.local_file_path = os.path.join(self._root_mountpoint, self.name)
+            
+            # Refresh NFS client cache
+            self._refresh_nfs_namespace()
             
             if self.print_output:
                 logger.info(f"Created new dataset '{self.name}' with size '{max_size}' using export policy '{self._root_export_policy}'")
@@ -355,8 +346,13 @@ class Dataset:
             if self.print_output:
                 logger.info(f"Created clone '{name}' from dataset '{self.name}'")
             
-            # Return new Dataset instance for the clone
-            return Dataset(name=name, print_output=self.print_output)
+            # Create the Dataset instance for the clone
+            cloned_dataset = Dataset(name=name, print_output=self.print_output)
+            
+            # Refresh NFS namespace
+            cloned_dataset._refresh_nfs_namespace()
+            
+            return cloned_dataset
             
         except Exception as e:
             raise DatasetVolumeError(f"Failed to clone dataset '{self.name}' to '{name}': {str(e)}")
@@ -417,9 +413,13 @@ class Dataset:
         except Exception as e:
             raise DatasetVolumeError(f"Failed to list snapshots for dataset '{self.name}': {str(e)}")
     
-    def delete(self):
+    def delete(self, delete_non_clone: bool = True):
         """
         Permanently delete this dataset.
+        
+        Args:
+            delete_non_clone: If True (default), allows deletion of non-clone volumes.
+                            If False, only clone volumes can be deleted
         
         Raises:
             DatasetVolumeError: If the delete operation fails
@@ -427,6 +427,7 @@ class Dataset:
         try:
             delete_volume(
                 volume_name=self.name,
+                delete_non_clone=delete_non_clone,
                 print_output=self.print_output
             )
             
@@ -440,45 +441,12 @@ class Dataset:
     def _check_dataset_exists(cls, name: str) -> bool:
         """Check if a dataset with the given name exists."""
         try:
-            volumes = list_volumes(print_output=False)
-            for volume in volumes:
-                if volume.get("Volume Name") == name:
-                    return True
-            return False
+            volume = get_volume(volume_name=name, print_output=False)
+            return volume is not None
         except:
             return False
     
-    def _fix_junction_path(self, volume_name: str, new_junction_path: str) -> bool:
-        """Fix the junction path of an existing volume."""
-        try:
-            # Get config and establish connection
-            config = _retrieve_config(print_output=False)
-            _instantiate_connection(config=config, connectionType="ONTAP", print_output=False)
-            
-            # Find the volume by name
-            volume_collection = NetAppVolume.get_collection(svm=config["svm"], name=volume_name)
-            volumes = list(volume_collection)
-            
-            if not volumes:
-                if self.print_output:
-                    logger.info(f"Volume '{volume_name}' not found")
-                return False
-            
-            volume = volumes[0]
-            
-            # Update the junction path
-            volume.nas = {"path": new_junction_path}
-            volume.patch()
-            
-            if self.print_output:
-                logger.info(f"Junction path updated to '{new_junction_path}'")
-            return True
-            
-        except Exception as e:
-            if self.print_output:
-                logger.info(f"Error fixing junction path: {e}")
-            return False
-    
+
     def __str__(self) -> str:
         """String representation of the dataset."""
         return f"Dataset(name='{self.name}', size='{self.max_size}', path='{self.local_file_path}')"
@@ -522,13 +490,14 @@ def get_datasets(print_output: bool = False) -> List[Dataset]:
         )
     
     try:
+        # Get all volumes using volume_operations abstraction layer
         volumes = list_volumes(print_output=False)
         datasets = []
         
         for volume in volumes:
             junction_path = volume.get("Junction Path", "")
             # Check if volume is nested under the root volume
-            if junction_path.startswith(f"/{root_volume_name}/"):
+            if junction_path and junction_path.startswith(f"/{root_volume_name}/"):
                 # Extract dataset name from junction path
                 dataset_name = junction_path.split("/")[-1]
                 if dataset_name and dataset_name != root_volume_name:
