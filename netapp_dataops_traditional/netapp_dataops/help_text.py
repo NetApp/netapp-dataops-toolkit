@@ -592,7 +592,7 @@ Command: get flexcache-origin
 Retrieve attributes of a specific FlexCache origin volume by name.
 
 Required Options/Arguments:
-	-n, --name=\tName of the FlexCache volume.
+	-n, --volume-name=\tName of the FlexCache volume.
 
 Optional Options/Arguments:
 	-s, --svm=\t\tName of the SVM containing the FlexCache (defaults to configured SVM).
@@ -600,7 +600,7 @@ Optional Options/Arguments:
 	-h, --help\t\tPrint help text.
 
 Examples:
-	netapp_dataops_cli.py get flexcache-origin --name=project1_cache
+	netapp_dataops_cli.py get flexcache-origin --volume-name=project1_cache
 	netapp_dataops_cli.py get flexcache-origin -n project1_cache -s svm1
 	netapp_dataops_cli.py get flexcache-origin -n project1_cache -s svm1 -u cluster1
 '''

@@ -41,7 +41,7 @@ class GetCommand(BaseCommand):
             opts, _ = getopt.getopt(
                 self.args[3:], 
                 "hn:s:u:", 
-                ["help", "name=", "svm=", "cluster-name="]
+                ["help", "volume-name=", "svm=", "cluster-name="]
             )
         except Exception as err:
             print(err)
@@ -52,7 +52,7 @@ class GetCommand(BaseCommand):
             if opt in ("-h", "--help"):
                 print(HELP_TEXT_GET_FLEXCACHE_ORIGIN)
                 return
-            elif opt in ("-n", "--name"):
+            elif opt in ("-n", "--volume-name"):
                 volume_name = arg
             elif opt in ("-s", "--svm"):
                 svm_name = arg
