@@ -156,16 +156,7 @@ async def create_volume_tool(
         If an error occurs while creating the volume, the tool logs the error using `mcp.log_error()` and returns a response
         with "status": "error" and the error message.
     """
-    # Validate parameters before calling the underlying function  
-    if cooling_threshold_days is not None and not (2 <= cooling_threshold_days <= 183):
-        error_msg = "cooling_threshold_days must be between 2 and 183"
-        if print_output:
-            logger.error(f"Parameter validation error: {error_msg}")
-        return {"status": "error", "message": error_msg}
-    
-    # Note: large_capacity validation removed to allow API-level validation
-    # This enables support for regions/projects where large capacity is available
-    
+   
     response = create_volume(
         project_id=project_id,
         location=location,
@@ -336,16 +327,7 @@ async def clone_volume_tool(
         If an error occurs while cloning the volume, the tool logs the error using `mcp.log_error()` and returns a response
         with "status": "error" and the error message.
     """
-    # Validate parameters before calling the underlying function
-    if cooling_threshold_days is not None and not (2 <= cooling_threshold_days <= 183):
-        error_msg = "cooling_threshold_days must be between 2 and 183"
-        if print_output:
-            logger.error(f"Parameter validation error: {error_msg}")
-        return {"status": "error", "message": error_msg}
-    
-    # Note: large_capacity validation removed to allow API-level validation
-    # This enables support for regions/projects where large capacity is available
-    
+   
     response = clone_volume(
         project_id=project_id,
         location=location,
@@ -627,12 +609,6 @@ async def create_replication_tool(
         If an error occurs while creating the replication, the tool logs the error using `mcp.log_error()` and returns a response
         with "status": "error" and the error message.
     """
-    # Validate parameters before calling the underlying function
-    if cooling_threshold_days is not None and not (2 <= cooling_threshold_days <= 183):
-        error_msg = "cooling_threshold_days must be between 2 and 183"
-        if print_output:
-            logger.error(f"Parameter validation error: {error_msg}")
-        return {"status": "error", "message": error_msg}
     
     response = create_replication(
         source_project_id=source_project_id,
