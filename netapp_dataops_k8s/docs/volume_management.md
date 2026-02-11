@@ -8,16 +8,18 @@ The NetApp DataOps Toolkit for Kubernetes can be used to manage persistent volum
 
 You can perform volume management operations using the toolkit's command line utility. The command line utility supports the following operations.
 
-| Kubernetes persistent volume management operations                                   | Supported by BeeGFS | Supported by Trident |
-| ------------------------------------------------------------------------------------ | ------------------- | -------------------- |
-| [Clone a persistent volume.](#cli-clone-volume)                                      | No                  | Yes                  |
-| [Create a new persistent volume.](#cli-create-volume)                                | Yes                 | Yes                  |
-| [Delete an existing persistent volume.](#cli-delete-volume)                          | Yes                 | Yes                  |
-| [List all persistent volumes.](#cli-list-volumes)                                    | Yes                 | Yes                  |
-| [Create a new snapshot for a persistent volume.](#cli-create-volume-snapshot)        | No                  | Yes                  |
-| [Delete an existing snapshot.](#cli-delete-volume-snapshot)                          | No                  | Yes                  |
-| [List all snapshots.](#cli-list-volume-snapshots)                                    | No                  | Yes                  |
-| [Restore a snapshot.](#cli-restore-volume-snapshot)                                  | No                  | Yes                  |
+| Kubernetes persistent volume management operations                                   | Supported by BeeGFS | Supported with Trident |
+| ------------------------------------------------------------------------------------ | ------------------- | ---------------------- |
+| [Clone a persistent volume.](#cli-clone-volume)                                      | No                  | Yes                    |
+| [Create a new persistent volume.](#cli-create-volume)                                | Yes                 | Yes                    |
+| [Delete an existing persistent volume.](#cli-delete-volume)                          | Yes                 | Yes                    |
+| [List all persistent volumes.](#cli-list-volumes)                                    | Yes                 | Yes                    |
+| [Create a new snapshot for a persistent volume.](#cli-create-volume-snapshot)        | No                  | Yes                    |
+| [Delete an existing snapshot.](#cli-delete-volume-snapshot)                          | No                  | Yes                    |
+| [List all snapshots.](#cli-list-volume-snapshots)                                    | No                  | Yes                    |
+| [Restore a snapshot.](#cli-restore-volume-snapshot)                                  | No                  | Yes                    |
+| [Create a new FlexCache volume](#cli-create-flexcache)                               | No                  | Yes                    |
+| [Delete an existing FlexCache volume](#cli-delete-flexcache)                         | No                  | Yes                    |
 
 ### Kubernetes Persistent Volume Management Operations
 
@@ -119,6 +121,9 @@ Volume successfully created and bound to PersistentVolumeClaim (PVC) 'test1' in 
 #### Delete an Existing Persistent Volume
 
 The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing persistent volume within a Kubernetes cluster. The command for deleting an existing persistent volume is `netapp_dataops_k8s_cli.py delete volume`.
+
+>[!NOTE]
+When deleting a volume that is the origin for a FlexCache volume using the NetApp DataOps Toolkit, the PVC will be deleted, but the volume will still exist on the ONTAP cluster. You must delete all associated FlexCache volumes first to avoid errors when deleting the origin volume directly from ONTAP.
 
 The following options/arguments are required:
 
@@ -317,6 +322,92 @@ Restoring VolumeSnapshot 'snap1' for PersistentVolumeClaim 'project1' in namespa
 VolumeSnapshot successfully restored.
 ```
 
+<a name="cli-create-flexcache"></a>
+
+#### Create a FlexCache Volume
+
+The NetApp DataOps Toolkit can be used to create a FlexCache volume in ONTAP and then create a PV and PVC representing the FlexCache in Kubernetes. The command to create a FlexCache volume is `netapp_dataops_k8s_cli.py create flexcache`.
+
+>[!NOTE]
+>The source and target Storage Virtual Machines (SVMs) need to have been peered as a prerequisite to running this command.
+
+The following options/arguments are required:
+
+```
+    -f, --flexcache-vol=    Name of the FlexCache volume to be created. This is the name that will be applied to the new Kubernetes PersistentVolumeClaim (PVC).
+    -s, --source-svm=       Name of the source Storage Virtual Machine (SVM) that contains the origin volume to be cached.
+    -v, --source-vol=       Name of the source volume in the source SVM that will be cached by the FlexCache volume.
+    -z, --flexcache-size=   Size of the FlexCache volume to be created. The size must be specified in a format such as '1024Mi', '100Gi', '10Ti', etc. Note: The size must be at least 50Gi.
+    -b, --backend-name=     Name of the tridentbackendconfig.
+
+```
+
+The following options/arguments are optional:
+
+```
+    -c, --junction          The junction path for the FlexCache volume.
+    -h, --help              Print help text.
+    -n, --namespace=        Kubernetes namespace to create the new PersistentVolumeClaim (PVC) in. If not specified, the PVC will be created in the "default" namespace.
+    -t, --trident-namespace= Kubernetes namespace where Trident is installed. Default is "trident".
+```
+
+##### Example Usage
+
+Create a FlexCache volume 'test-cache-vol1' of size '53Gi', and attach it to a Kubernetes PersistentVolumeClaim (PVC) named 'test-vol1' in namespace 'trident', using 'ontap' tridentbackendconfig.
+
+```sh
+netapp_dataops_k8s_cli.py create flexcache --flexcache-vol=test-cache-vol1 --source-vol=test-vol1 --source-svm=svm0 --flexcache-size=53Gi --backend-name=ontap --namespace=trident --trident-namespace=netapp-trident
+Creating FlexCache: svm0:test-vol1 -> svm0:test-cache-vol1
+FlexCache created successfully.
+[K8s] Creating PV 'pv-test-cache-vol1' in namespace 'trident'...
+[K8s] PV 'pv-test-cache-vol1' created successfully.
+[K8s] Creating PVC 'test-cache-vol1' in namespace 'trident'...
+[K8s] PVC 'test-cache-vol1' created successfully.
+Waiting for Kubernetes to bind volume to PVC.
+[K8s] PVC 'test-cache-vol1' is bound to PV 'pv-test-cache-vol1'.
+Volume successfully created and bound to PersistentVolumeClaim (PVC) 'test-cache-vol1' in namespace 'trident'.
+```
+
+<a name="cli-delete-flexcache"></a>
+
+#### Delete an existing FlexCache volume
+
+The NetApp DataOps Toolkit can be used to delete a FlexCache volume in ONTAP and remove its associated Kubernetes PVC and PV. The command to delete a FlexCache volume is `netapp_dataops_k8s_cli.py delete flexcache-volume`.
+
+Required Options/Arguments:
+
+```
+    -p, --pvc-name=            Name of Kubernetes PersistentVolumeClaim (PVC) to be deleted.
+    -b, --backend-name=        Name of Trident backend config.
+```
+
+Optional Options/Arguments:
+
+```
+    -f, --force                Do not prompt user to confirm operation.
+    -h, --help                 Print help text.
+    -n, --namespace=           Kubernetes namespace that PersistentVolumeClaim (PVC) is located in. If not specified, namespace "default" will be used.
+    -t, --trident-namespace=   Kubernetes namespace where Trident is installed. If not specified, the namespace "trident" will be used.
+```
+
+##### Example Usage
+
+Delete FlexCache volume 'test-cach-vol1', using 'ontap' tridentbackendconfig.
+
+```sh
+netapp_dataops_k8s_cli.py delete flexcache-volume -p test-cache-vol1 -b ontap
+Warning: This FlexCache volume will be permanently deleted.
+Are you sure that you want to proceed? (yes/no): yes
+Unmounting FlexCache volume 'test-cache-vol1' in SVM 'svm0'.
+Taking FlexCache volume 'test-cache-vol1' offline in SVM 'svm0'.
+Deleting FlexCache volume 'test-cache-vol1' in SVM 'svm0'.
+FlexCache volume 'test-cache-vol1' successfully deleted.
+Deleting PVC 'test-cache-vol1' in namespace 'default'.
+PVC 'test-cache-vol1' successfully deleted.
+Deleting PersistentVolume (PV) 'pv-test-cache-vol1' associated with FlexCache PVC 'test-cache-vol1'.
+PersistentVolume (PV) 'pv-test-cache-vol1' successfully deleted.
+```
+
 <a name="library-of-functions"></a>
 
 ## Advanced: Set of Functions
@@ -324,21 +415,23 @@ VolumeSnapshot successfully restored.
 The NetApp DataOps Toolkit for Kubernetes provides a set of functions that can be imported into any Python program or Jupyter Notebook. In this manner, data scientists and data engineers can easily incorporate Kubernetes-native data management tasks into their existing projects, programs, and workflows. This functionality is only recommended for advanced users who are proficient in Python.
 
 ```py
-from netapp_dataops.k8s import clone_volume, create_volume, delete_volume, list_volumes, create_volume_snapshot, delete_volume_snapshot, list_volume_snapshots, restore_volume_snapshot
+from netapp_dataops.k8s import clone_volume, create_volume, delete_volume, list_volumes, create_volume_snapshot, delete_volume_snapshot, list_volume_snapshots, restore_volume_snapshot, create_flexcache, delete_flexcache_volume
 ```
 
 The following volume management operations are available within the set of functions.
 
-| Kubernetes persistent volume management operations                                   | Supported by BeeGFS | Supported by Trident |
-| ------------------------------------------------------------------------------------ | ------------------- | -------------------- |
-| [Clone a persistent volume.](#lib-clone-volume)                                      | No                  | Yes                  |
-| [Create a new persistent volume.](#lib-create-volume)                                | Yes                 | Yes                  |
-| [Delete an existing persistent volume.](#lib-delete-volume)                          | Yes                 | Yes                  |
-| [List all persistent volumes.](#lib-list-volumes)                                    | Yes                 | Yes                  |
-| [Create a new snapshot for a persistent volume.](#lib-create-volume-snapshot)        | No                  | Yes                  |
-| [Delete an existing snapshot.](#lib-delete-volume-snapshot)                          | No                  | Yes                  |
-| [List all snapshots.](#lib-list-volume-snapshots)                                    | No                  | Yes                  |
-| [Restore a snapshot.](#lib-restore-volume-snapshot)                                  | No                  | Yes                  |
+| Kubernetes persistent volume management operations                                   | Supported by BeeGFS | Supported with Trident |
+| ------------------------------------------------------------------------------------ | ------------------- | ---------------------- |
+| [Clone a persistent volume.](#lib-clone-volume)                                      | No                  | Yes                    |
+| [Create a new persistent volume.](#lib-create-volume)                                | Yes                 | Yes                    |
+| [Delete an existing persistent volume.](#lib-delete-volume)                          | Yes                 | Yes                    |
+| [List all persistent volumes.](#lib-list-volumes)                                    | Yes                 | Yes                    |
+| [Create a new snapshot for a persistent volume.](#lib-create-volume-snapshot)        | No                  | Yes                    |
+| [Delete an existing snapshot.](#lib-delete-volume-snapshot)                          | No                  | Yes                    |
+| [List all snapshots.](#lib-list-volume-snapshots)                                    | No                  | Yes                    |
+| [Restore a snapshot.](#lib-restore-volume-snapshot)                                  | No                  | Yes                    |
+| [Create a new FlexCache volume.](#lib-create-flexcache)                              | No                  | Yes                    |
+| [Delete an existing FlexCache volume](#lib-delete-flexcache)                         | No                  | Yes                    |
 
 ### Kubernetes Persistent Volume Management Operations
 
@@ -414,6 +507,9 @@ APIConnectionError              # The Kubernetes API returned an error.
 #### Delete an Existing Persistent Volume
 
 The NetApp DataOps Toolkit can be used to near-instantaneously delete an existing persistent volume within a Kubernetes cluster as part of any Python program or workflow.
+
+>[!NOTE]
+>When deleting a volume with associated FlexCache volumes using the NetApp DataOps Toolkit, the PVC will be deleted, but the volume will still exist on the ONTAP cluster. You must delete all associated FlexCache volumes first to avoid errors when deleting the origin volume directly from ONTAP.
 
 ##### Function Definition
 
@@ -590,4 +686,77 @@ If an error is encountered, the function will raise an exception of one of the f
 ```py
 InvalidConfigError              # kubeconfig file is missing or is invalid.
 APIConnectionError              # The Kubernetes API returned an error.
+```
+
+<a name="lib-create-flexcache"></a>
+
+#### Create a FlexCache Volume
+
+The NetApp DataOps Toolkit can be used to create a FlexCache volume in ONTAP and then create a PV and PVC representing the FlexCache in Kubernetes.
+
+>[!NOTE]
+>The source and target Storage Virtual Machines (SVMs) need to have been peered as a prerequisite to running this command.
+
+##### Function Definition
+
+```py
+def create_flexcache(
+    source_vol: str,                # Name of the source volume in the source SVM that will be cached by the FlexCache volume (required).
+    source_svm: str,                # Name of the source Storage Virtual Machine (SVM) that contains the origin volume to be cached (required).
+    flexcache_vol: str,             # Name of the FlexCache volume to be created (required).
+    flexcache_size: str,            # Size of the FlexCache volume to be created. Format: '1024Mi', '100Gi', '10Ti', etc. Note: The size must be at least 50Gi (required).
+    backend_name: str,              # Name of the tridentbackendconfig (required).
+    junction: str = None,           # The junction path for the FlexCache volume (optional).
+    namespace: str = "default",     # Kubernetes namespace to create the new PersistentVolumeClaim (PVC) in. If not specified, the PVC will be created in the "default" namespace (optional).
+    trident_namespace: str = "trident", # Kubernetes namespace where Trident is installed (optional).
+    print_output: bool = False      # Denotes whether or not to print messages to the console during execution (optional).
+) :
+```
+
+##### Return Value
+
+The function returns a dictionary containing details about the created FlexCache volume and the associated Kubernetes PersistentVolumeClaim (PVC). The keys for the values in this dictionary are:
+
+- "ontap_flexcache": The FlexCache volume in ONTAP in the format "{svm}: {flexcache_vol}".
+- "k8s_pvc": The name of the Kubernetes PersistentVolumeClaim (PVC) created.
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.k8s`.
+
+```py
+InvalidConfigError              # kubeconfig file is missing or is invalid.
+APIConnectionError              # The Kubernetes API returned an error.
+InvalidVolumeParameterError     # Invalid parameters specified for the FlexCache volume.
+ConnectionTypeError             # Invalid connection type specified.
+NetAppRestError                 # Error with the NetApp REST API.
+```
+
+<a name="lib-delete-flexcache"></a>
+
+The NetApp DataOps Toolkit can be used to delete a FlexCache volume in ONTAP and remove its associated Kubernetes PVC and PV. 
+
+##### Function Definition
+
+```py
+def delete_flexcache_volume(
+    pvc_name: str,                # Name of Kubernetes PersistentVolumeClaim (PVC) to be deleted (required).
+    backend_name: str,            # Name of Trident backend config (required).
+    namespace: str = "default",   # Kubernetes namespace that PersistentVolumeClaim (PVC) is located in. If not specified, namespace "default" will be used.
+    trident_namespace: str = "trident", # Namespace where Trident is installed. If not specified, "trident" will be used.
+    print_output: bool = False    # Print progress messages to the console during execution.
+)
+```
+
+##### Return Value
+
+None
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.k8s`.
+
+```py
+InvalidConfigError              # kubeconfig file is missing or is invalid.
+APIConnectionError              # The Kubernetes or ONTAP API returned an error.
 ```

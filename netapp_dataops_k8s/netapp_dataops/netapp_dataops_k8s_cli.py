@@ -280,28 +280,6 @@ Examples:
 \tnetapp_dataops_k8s_cli.py create volume -p datasets -s 10Ti -n team1
 \tnetapp_dataops_k8s_cli.py create volume --pvc-name=project2 --size=2Ti --namespace=team2 --storage-class=ontap-flexgroup
 '''
-helpTextCreateFlexCache = '''
-Command: create flexcache
-
-Create a new FlexCache volume.
-
-Required Options/Arguments:
-\t-f, --flexcache-vol=\t\tName of flexcache volume
-\t-s, --source-svm=\t\tSource SVM name
-\t-v, --source-vol=\t\tSource volume name
-\t-z, --flexcache-size=\t\tSize of flexcache volume (Format: '1024Mi', '100Gi', '10Ti', etc.).
-\t-b, --backend-name=\t\tName of tridentbackendconfig.
-
-Optional Options/Arguments:
-\t-h, --help\t\t\tPrint help text.
-\t-c, --junction=\t\t\tThe junction path for the FlexCache volume.
-\t-n, --namespace=\t\tKubernetes namespace to create the new PersistentVolumeClaim (PVC) in. If not specified, the PVC will be created in the "default" namespace.
-\t-t, --trident-namespace=\tKubernetes namespace where Trident is installed. If not specified, the namespace "trident" will be used.
-
-Examples:
-\tnetapp_dataops_k8s_cli.py create flexcache --flexcache-vol=cache1 --flexcache-size=50Gi --source-vol=origin1 --source-svm=svm1 --backend-name=backend1
-\tnetapp_dataops_k8s_cli.py create flexcache -s svm1 -v vol1 -n vol2 -b backend1 -z 100Gi -c /cache1
-'''
 helpTextDeleteCAConfigMap = '''
 Command: delete ca-config-map
 
@@ -710,6 +688,28 @@ Examples:
 \tnetapp_dataops_k8s_cli.py show s3-job --job=job1
 \tnetapp_dataops_k8s_cli.py show s3-job -j job1 -n team1
 '''
+helpTextCreateFlexCache = '''
+Command: create flexcache
+
+Create a new FlexCache volume.
+
+Required Options/Arguments:
+\t-f, --flexcache-vol=\t\tName of flexcache volume
+\t-s, --source-svm=\t\tSource SVM name
+\t-v, --source-vol=\t\tSource volume name
+\t-z, --flexcache-size=\t\tSize of flexcache volume (Format: '1024Mi', '100Gi', '10Ti', etc.).
+\t-b, --backend-name=\t\tName of tridentbackendconfig.
+
+Optional Options/Arguments:
+\t-h, --help\t\t\tPrint help text.
+\t-c, --junction=\t\t\tThe junction path for the FlexCache volume.
+\t-n, --namespace=\t\tKubernetes namespace to create the new PersistentVolumeClaim (PVC) in. If not specified, the PVC will be created in the "default" namespace.
+\t-t, --trident-namespace=\tKubernetes namespace where Trident is installed. If not specified, the namespace "trident" will be used.
+
+Examples:
+\tnetapp_dataops_k8s_cli.py create flexcache --flexcache-vol=cache1 --flexcache-size=50Gi --source-vol=origin1 --source-svm=svm1 --backend-name=backend1
+\tnetapp_dataops_k8s_cli.py create flexcache -s svm1 -v vol1 -n vol2 -b backend1 -z 100Gi -c /cache1
+'''
 
 
 ## Function for handling situation in which user enters invalid command
@@ -960,54 +960,6 @@ if __name__ == '__main__':
             try:
                 create_volume(pvc_name=pvcName, volume_size=volumeSize, storage_class=storageClass, namespace=namespace,
                               print_output=True)
-            except (InvalidConfigError, APIConnectionError):
-                sys.exit(1)
-
-        elif target == "flexcache":
-            namespace = "default"
-            junction = None
-            sourceSvm = None
-            sourceVol = None
-            flexCacheVol = None
-            flexCacheSize = None
-            backendName = None
-            tridentNamespace = "trident"
-
-            # Get command line options
-            try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:f:z:v:s:b:n:c:t:", ["help", "flexcache-vol=", "flexcache-size=", "source-vol=", "source-svm=", "backend-name=", "namespace=", "junction=", "trident-namespace="])
-            except getopt.GetoptError:
-                handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
-
-            # Parse command line options
-            for opt, arg in opts:
-                if opt in ("-h", "--help"):
-                    logger.info(helpTextCreateFlexCache)
-                    sys.exit(0)
-                elif opt in ("-f", "--flexcache-vol"):
-                    flexCacheVol = arg
-                elif opt in ("-s", "--source-svm"):
-                    sourceSvm = arg
-                elif opt in ("-v", "--source-vol"):
-                    sourceVol = arg
-                elif opt in ("-z", "--flexcache-size"):
-                    flexCacheSize = arg
-                elif opt in ("-b", "--backend-name"):
-                    backendName = arg
-                elif opt in ("-n", "--namespace"):
-                    namespace = arg
-                elif opt in ("-c", "--junction"):
-                    junction = arg
-                elif opt in ("-t", "--trident-namespace"):
-                    tridentNamespace = arg
-
-            # Check for required options
-            if not flexCacheVol or not sourceVol or not sourceSvm or not flexCacheSize or not backendName:
-                handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
-
-            # Create FlexCache volume
-            try:
-                create_flexcache(flexcache_vol=flexCacheVol, flexcache_size=flexCacheSize, source_vol=sourceVol, source_svm=sourceSvm, backend_name=backendName, namespace=namespace, junction=junction, trident_namespace=tridentNamespace, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -2404,4 +2356,3 @@ if __name__ == '__main__':
 
     else:
         handleInvalidCommand()
-
