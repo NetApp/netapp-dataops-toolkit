@@ -177,27 +177,18 @@ def test_create_volume_protocols_not_list():
         volume_management.create_volume(**args)
 
 def test_create_volume_invalid_cooling_threshold():
-    """Test cooling_threshold_days boundary validation - currently no validation implemented"""
-    # Note: The actual implementation doesn't validate cooling_threshold_days
-    # These tests document expected behavior but the validation isn't implemented yet
+    """Test cooling_threshold_days boundary validation"""
     args = REQUIRED_ARGS.copy()
-    args['cooling_threshold_days'] = 1  # Below minimum of 2
-    with patch('netapp_dataops.traditional.gcnv.volume_management.create_client') as mock_client:
-        mock_instance = MagicMock()
-        mock_client.return_value = mock_instance
-        mock_instance.create_volume.return_value.result.return_value = MagicMock()
-        # Currently passes - validation not implemented
-        result = volume_management.create_volume(**args)
-        assert result['status'] == 'success'
     
-    args['cooling_threshold_days'] = 184  # Above maximum of 183
-    with patch('netapp_dataops.traditional.gcnv.volume_management.create_client') as mock_client:
-        mock_instance = MagicMock()
-        mock_client.return_value = mock_instance
-        mock_instance.create_volume.return_value.result.return_value = MagicMock()
-        # Currently passes - validation not implemented
-        result = volume_management.create_volume(**args)
-        assert result['status'] == 'success'
+    # Test below minimum of 2
+    args['cooling_threshold_days'] = 1
+    with pytest.raises(ValueError, match="cooling_threshold_days must be between 2 and 183"):
+        volume_management.create_volume(**args)
+    
+    # Test above maximum of 183
+    args['cooling_threshold_days'] = 184
+    with pytest.raises(ValueError, match="cooling_threshold_days must be between 2 and 183"):
+        volume_management.create_volume(**args)
 
 # =============================================================================
 # CLONE VOLUME TESTS
@@ -303,6 +294,20 @@ def test_clone_volume_source_capacity_not_int():
         result = volume_management.clone_volume(**CLONE_REQUIRED_ARGS)
         assert result['status'] == 'error'
         assert 'capacity_gib in source volume must be a non-negative integer' in result['message']
+
+def test_clone_volume_invalid_cooling_threshold():
+    """Test cooling_threshold_days boundary validation for clone volume"""
+    args = CLONE_REQUIRED_ARGS.copy()
+    
+    # Test below minimum of 2
+    args['cooling_threshold_days'] = 1
+    with pytest.raises(ValueError, match="cooling_threshold_days must be between 2 and 183"):
+        volume_management.clone_volume(**args)
+    
+    # Test above maximum of 183
+    args['cooling_threshold_days'] = 184
+    with pytest.raises(ValueError, match="cooling_threshold_days must be between 2 and 183"):
+        volume_management.clone_volume(**args)
 
 # =============================================================================
 # DELETE VOLUME TESTS

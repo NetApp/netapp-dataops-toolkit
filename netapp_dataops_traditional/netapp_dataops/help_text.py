@@ -145,6 +145,72 @@ Examples (advanced usage):
 \tnetapp_dataops_cli.py create volume --name=project1 --size=100GB --snaplock-type=compliance
 '''
 
+HELP_TEXT_CREATE_FLEXCACHE = '''
+Command: create flexcache
+
+Create a new FlexCache volume from an origin volume.
+
+Required Options/Arguments:
+\t-n, --name=\t\tName of FlexCache volume to be created.
+\t-v, --source-volume=\tName of the source/origin volume.
+\t-o, --source-svm=\tName of the source/origin SVM.
+
+Optional Options/Arguments:
+\t-s, --size=\t\tSize of the FlexCache volume. Format: '1024MB', '100GB', '10TB', etc. Default is 10% of origin volume size.
+\t-t, --target-svm=\tName of the target SVM for FlexCache (defaults to config SVM).
+\t-u, --cluster-name=\tnon default hosting cluster
+\t-j, --junction=\t\tJunction path for the FlexCache volume export.
+\t-e, --export-policy=\tNFS export policy to use (default: 'default').
+\t-m, --mountpoint=\tLocal mountpoint to mount the FlexCache after creation (requires root).
+\t-x, --readonly\t\tMount the FlexCache as read-only.
+\t-h, --help\t\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py create flexcache --name=cache1 --source-volume=vol1 --source-svm=svm1
+\tnetapp_dataops_cli.py create flexcache -n cache1 -v vol1 -o svm1 -s 100GB
+\tnetapp_dataops_cli.py create flexcache -n cache1 -v vol1 -o svm1 -t svm2 -e custom_policy
+\tsudo -E netapp_dataops_cli.py create flexcache -n cache1 -v vol1 -o svm1 -m /mnt/cache1
+'''
+
+HELP_TEXT_UPDATE_FLEXCACHE = '''
+Command: update flexcache
+
+Update configuration properties of an existing FlexCache volume.
+
+Required Options/Arguments (one of):
+\t-i, --uuid=\t\t\tUUID of the FlexCache volume to update.
+\t-n, --name=\t\t\tName of FlexCache volume to update (requires --svm if not using --uuid).
+
+Optional Options/Arguments:
+\t-v, --svm=\t\t\tSVM name (required when using --name instead of --uuid).
+\t-u, --cluster-name=\t\tNon-default hosting cluster.
+\t-p, --prepopulate-paths=\tComma-separated list of directory paths to prepopulate.
+\t-x, --prepopulate-exclude-paths=Comma-separated list of directory paths to exclude from prepopulation.
+\t-w, --writeback-enabled=\tEnable or disable writeback (true/false).
+\t-r, --relative-size-enabled=\tEnable or disable relative sizing (true/false).
+\t    --relative-size-percentage=\tPercentage size relative to origin (1-100).
+\t-a, --atime-scrub-enabled=\tEnable or disable atime-based scrubbing (true/false).
+\t    --atime-scrub-period=\tDuration in days for atime scrub (1-365).
+\t-c, --cifs-change-notify-enabled=Enable or disable CIFS change notification (true/false).
+\t-h, --help\t\t\tPrint help text.
+
+Examples:
+\t# Update FlexCache by UUID with prepopulate paths
+\tnetapp_dataops_cli.py update flexcache --uuid=ec774932-0f3c-11e9-8b2b-0050568e0b79 --prepopulate-paths=/dir1,/dir2
+
+\t# Update FlexCache by name and enable writeback
+\tnetapp_dataops_cli.py update flexcache --name=cache1 --svm=svm1 --writeback-enabled=true
+
+\t# Enable relative sizing with 50% of origin size
+\tnetapp_dataops_cli.py update flexcache -i ec774932-0f3c-11e9-8b2b-0050568e0b79 -r true --relative-size-percentage=50
+
+\t# Enable atime scrubbing with 30 day period
+\tnetapp_dataops_cli.py update flexcache -n cache1 -v svm1 -a true --atime-scrub-period=30
+
+\t# Update multiple properties
+\tnetapp_dataops_cli.py update flexcache -i ec774932-0f3c-11e9-8b2b-0050568e0b79 -w true -c true -p /data,/logs
+'''
+
 HELP_TEXT_DELETE_VOLUME = '''
 Command: delete volume
 
@@ -182,6 +248,24 @@ Optional Options/Arguments:
 Examples:
 \tnetapp_dataops_cli.py list volumes
 \tnetapp_dataops_cli.py list volumes --include-space-usage-details
+'''
+
+HELP_TEXT_LIST_FLEXCACHE = '''
+Command: list flexcache
+
+List all FlexCache volumes with their origin information.
+
+No options/arguments are required.
+
+Optional Options/Arguments:
+\t-u, --cluster-name=\tnon default hosting cluster
+\t-v, --svm=\t\tlist FlexCache on non default svm
+\t-h, --help\t\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py list flexcache
+\tnetapp_dataops_cli.py list flexcache --svm=svm1
+\tnetapp_dataops_cli.py list flexcache -v svm1 -u cluster1
 '''
 
 HELP_TEXT_MOUNT_VOLUME = '''
@@ -500,4 +584,23 @@ Optional Options/Arguments:
 Examples:
 \tnetapp_dataops_cli.py prepopulate flexcache --name=project1 --paths=/datasets/project1,/datasets/project2
 \tnetapp_dataops_cli.py prepopulate flexcache -n test1 -p /datasets/project1,/datasets/project2
+'''
+
+HELP_TEXT_GET_FLEXCACHE_ORIGIN = '''
+Command: get flexcache-origin
+
+Retrieve attributes of a specific FlexCache origin volume by name.
+
+Required Options/Arguments:
+	-n, --volume-name=\tName of the FlexCache volume.
+
+Optional Options/Arguments:
+	-s, --svm=\t\tName of the SVM containing the FlexCache (defaults to configured SVM).
+	-u, --cluster-name=\tNon default hosting cluster.
+	-h, --help\t\tPrint help text.
+
+Examples:
+	netapp_dataops_cli.py get flexcache-origin --volume-name=project1_cache
+	netapp_dataops_cli.py get flexcache-origin -n project1_cache -s svm1
+	netapp_dataops_cli.py get flexcache-origin -n project1_cache -s svm1 -u cluster1
 '''
