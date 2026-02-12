@@ -413,15 +413,19 @@ class DatasetManagerConfigurator:
         """
         # Production-ready fstab entry with essential NFS options
         # For Dataset Manager root volume: permanent mount, no auto-unmount
-        return f"{nfs_target} {mountpoint} nfs rw,_netdev,nfsvers=4.1,hard 0 0"
+        # NFS version is auto-negotiated by the OS to use the highest supported version
+        return f"{nfs_target} {mountpoint} nfs rw,_netdev,hard 0 0"
     
     def _add_fstab_entry_safely(self, fstab_entry: str, nfs_target: str, mountpoint: str) -> bool:
         """
-        Add entry to /etc/fstab safely using regex-based parsing.
+        Add entry to /etc/fstab safely using atomic write pattern.
         
         This method:
-        1. Checks for duplicate entries using regex to parse fstab fields
-        2. Appends the new entry if not already present
+        1. Detects if sudo is required and uses a single sudo session for all operations
+        2. Creates a backup of /etc/fstab before modification
+        3. Checks for duplicate entries using regex to parse fstab fields
+        4. Uses atomic write (temp file + mv) to append the new entry
+        5. Restores from backup if the operation fails
         
         Args:
             fstab_entry: The complete fstab entry line to add
@@ -432,35 +436,38 @@ class DatasetManagerConfigurator:
             bool: True if successful, False otherwise
         """
         fstab_path = '/etc/fstab'
+        fstab_backup = '/etc/fstab.bak'
+        fstab_temp = '/tmp/fstab.tmp'
         
         try:
-            # Step 1: Read existing fstab content
+            # Step 1: Check if we need sudo by testing write access to /etc
+            needs_sudo = not os.access('/etc', os.W_OK)
+            
+            # Step 2: Read existing fstab content
             try:
                 with open(fstab_path, 'r') as f:
                     current_content = f.read()
             except FileNotFoundError:
                 current_content = ""
             except PermissionError:
-                # Try reading with sudo
-                result = subprocess.run(['sudo', 'cat', fstab_path],
-                                      capture_output=True, text=True)
-                if result.returncode == 0:
-                    current_content = result.stdout
+                if needs_sudo:
+                    result = subprocess.run(['sudo', 'cat', fstab_path],
+                                          capture_output=True, text=True)
+                    if result.returncode == 0:
+                        current_content = result.stdout
+                    else:
+                        current_content = ""
                 else:
                     current_content = ""
             
-            # Parse existing entries using regex to avoid false positives
-            # Regex pattern matches: <device> <mountpoint> <fstype> <options> <dump> <pass>
-            # Example match: "192.168.1.10:/vol1 /mnt/data nfs rw,hard 0 0"
+            # Step 3: Parse existing entries using regex to avoid false positives
             fstab_pattern = re.compile(r'^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)(?:\s+\d+)?(?:\s+\d+)?\s*$')
             
             for line in current_content.splitlines():
-                # Skip comments and empty lines
                 stripped = line.strip()
                 if not stripped or stripped.startswith('#'):
                     continue
                 
-                # Use regex to parse fstab entry fields
                 match = fstab_pattern.match(stripped)
                 if match:
                     existing_device = match.group(1)
@@ -470,57 +477,108 @@ class DatasetManagerConfigurator:
                         logger.info(f"  Warning: An entry for mountpoint '{mountpoint}' already exists in /etc/fstab")
                         logger.info(f"    Existing: {existing_device} -> {existing_mountpoint}")
                         logger.info("  Skipping duplicate entry. Please manually edit /etc/fstab if you need to update it.")
-                        return True  # Not an error - entry already exists
+                        return True
             
-            # Step 2: Prepare entry with comment (only if comment doesn't exist)
+            # Step 4: Prepare entry with comment
             comment = ""
             if "# Dataset Manager root volume" not in current_content:
                 comment = "# Dataset Manager root volume\n"
             
             full_entry = f"{comment}{fstab_entry}\n"
             
-            # Escape any special characters in the entry
-            escaped_entry = full_entry.replace("'", "'\\''")
+            # Step 5: Prepare new content
+            new_content = current_content
+            if not new_content.endswith('\n') and new_content:
+                new_content += '\n'
+            new_content += full_entry
             
-            # Step 3: Try writing without sudo first
-            result = subprocess.run(
-                ['sh', '-c', f"printf '%s' '{escaped_entry}' >> {fstab_path}"],
-                capture_output=True, text=True
-            )
+            # Step 6: Write to temporary file
+            try:
+                with open(fstab_temp, 'w') as f:
+                    f.write(new_content)
+            except Exception as e:
+                logger.info(f"  ERROR: Failed to write temporary file: {e}")
+                return False
             
-            # If failed without sudo, check if it's a permission error
-            if result.returncode != 0:
-                error_msg = result.stderr.lower()
+            # Step 7: Execute all operations in a single sudo session if needed
+            if needs_sudo:
+                logger.info("  Elevated privileges required to modify /etc/fstab...")
                 
-                # Check if it's a permission-related error
-                if 'permission denied' in error_msg or 'operation not permitted' in error_msg:
-                    logger.info("  Elevated privileges required to modify /etc/fstab. Attempting with sudo...")
+                # Single sudo command that does: backup, move temp to fstab
+                # Using shell to chain commands in one sudo session (only one password prompt)
+                shell_cmd = f"cp {fstab_path} {fstab_backup} && mv {fstab_temp} {fstab_path}"
+                result = subprocess.run(['sudo', 'sh', '-c', shell_cmd],
+                                      capture_output=True, text=True)
+                
+                if result.returncode != 0:
+                    # Operation failed - try to restore from backup if it was created
+                    error_msg = result.stderr.strip()
                     
-                    # Try with sudo
-                    result = subprocess.run(
-                        ['sudo', 'sh', '-c', f"printf '%s' '{escaped_entry}' >> {fstab_path}"],
-                        capture_output=True, text=True
-                    )
+                    # Check if backup was created before the failure
+                    if os.path.exists(fstab_backup):
+                        logger.info(f"  ERROR: Failed to update /etc/fstab. Restoring from backup...")
+                        subprocess.run(['sudo', 'cp', fstab_backup, fstab_path],
+                                     capture_output=True, text=True)
                     
-                    if result.returncode != 0:
-                        # Sudo also failed
-                        sudo_error = result.stderr.strip()
-                        
-                        if 'sudo' in sudo_error.lower() or 'password' in sudo_error.lower():
-                            logger.info(f"  ERROR: Unable to modify /etc/fstab - sudo access required. Please run with sudo or manually add: {fstab_entry}")
-                        else:
-                            logger.info(f"  ERROR: Failed to modify /etc/fstab ({sudo_error}). Please manually add: {fstab_entry}")
-                        return False
-                else:
-                    # Some other error occurred
-                    logger.info(f"  ERROR: Failed to modify /etc/fstab ({result.stderr.strip()}). Please manually add: {fstab_entry}")
+                    # Clean up temp file
+                    try:
+                        if os.path.exists(fstab_temp):
+                            os.remove(fstab_temp)
+                    except:
+                        pass
+                    
+                    logger.info(f"  ERROR: Failed to modify /etc/fstab ({error_msg}). Please manually add: {fstab_entry}")
+                    return False
+                
+                logger.info(f"  Created backup: {fstab_backup}")
+            else:
+                # No sudo needed - do operations directly
+                try:
+                    # Create backup
+                    subprocess.run(['cp', fstab_path, fstab_backup], check=True,
+                                 capture_output=True, text=True)
+                    logger.info(f"  Created backup: {fstab_backup}")
+                    
+                    # Move temp file to fstab
+                    subprocess.run(['mv', fstab_temp, fstab_path], check=True,
+                                 capture_output=True, text=True)
+                except subprocess.CalledProcessError as e:
+                    # Restore from backup
+                    if os.path.exists(fstab_backup):
+                        logger.info(f"  ERROR: Failed to update /etc/fstab. Restoring from backup...")
+                        subprocess.run(['cp', fstab_backup, fstab_path],
+                                     capture_output=True, text=True)
+                    
+                    # Clean up temp file
+                    try:
+                        if os.path.exists(fstab_temp):
+                            os.remove(fstab_temp)
+                    except:
+                        pass
+                    
+                    logger.info(f"  ERROR: Failed to modify /etc/fstab. Please manually add: {fstab_entry}")
                     return False
             
-            # Successfully wrote to fstab
+            # Step 8: Clean up temp file if it still exists
+            try:
+                if os.path.exists(fstab_temp):
+                    os.remove(fstab_temp)
+            except:
+                pass
+            
+            logger.info(f"  Successfully added entry to /etc/fstab")
             return True
             
         except Exception as e:
-            logger.info(f"Error updating /etc/fstab: {e}")
+            # Clean up temp file
+            try:
+                if os.path.exists(fstab_temp):
+                    os.remove(fstab_temp)
+            except:
+                pass
+            
+            logger.info(f"  ERROR: Error updating /etc/fstab: {e}")
+            logger.info(f"  Please manually add: {fstab_entry}")
             return False
     
     def _fstab_entry_exists(self, mountpoint: str, volume_name: str) -> bool:
