@@ -381,7 +381,7 @@ class DatasetManagerConfigurator:
                     logger.info("  Failed to add entry to /etc/fstab")
                     return False
                 
-                logger.info(f"  Successfully added entry to /etc/fstab")
+                # Success message already printed by _add_fstab_entry_safely()
                 return True
             else:
                 logger.info(f"  Entry already exists in /etc/fstab")
