@@ -15,7 +15,10 @@ from netapp_dataops.traditional.ontap import (
     list_snapshots, 
     create_snap_mirror_relationship, 
     list_snap_mirror_relationships,
-    create_flexcache
+    create_flexcache,
+    list_flexcaches,
+    get_flexcache_origin,
+    update_flexcache
 )
 
 #Sets up logging
@@ -476,6 +479,136 @@ async def create_flexcache_tool(
         )
     except Exception as e:
         print(f"Error creating FlexCache: {e}")
+        raise
+
+
+@mcp.tool(name="ListFlexCache")
+async def list_flexcaches_tool(
+    cluster_name: Optional[str] = None,
+    svm_name: Optional[str] = None,
+    print_output: bool = False
+) -> list:
+    
+    """
+    Use this tool to retrieve a list of all existing FlexCache volumes along with their origin volume information.
+    This is useful for understanding the FlexCache topology in your environment.
+
+    Args:
+        cluster_name (str): Non-default cluster name, same credentials as the default credentials should be used. Defaults to None.
+        svm_name (str): Non-default SVM name, same credentials as the default credentials should be used. Defaults to None.
+        print_output (bool): Denotes whether or not to print messages to the console during execution. Defaults to False.
+
+    Returns:
+        A list of all existing FlexCache volumes with their origin information.
+        Each item in the list will be a dictionary containing details regarding a specific FlexCache volume and its origin.
+        The keys for the values in this dictionary are "FlexCache Name", "FlexCache SVM", "Size", "Origin Volume", 
+        "Origin SVM", "Origin Cluster", "Origin IP", "Origin Size", "Origin State".
+    """
+    try:
+        return list_flexcaches(
+            cluster_name=cluster_name,
+            svm_name=svm_name,
+            print_output=print_output
+        )
+    except Exception as e:
+        logger.error(f"Error listing FlexCache origins: {e}")
+        raise
+
+
+@mcp.tool(name="GetFlexCacheOrigin")
+async def get_flexcache_origin_tool(
+    volume_name: str,
+    svm_name: Optional[str] = None,
+    cluster_name: Optional[str] = None,
+    print_output: bool = False
+) -> list:
+    
+    """
+    Use this tool to retrieve detailed origin information for a specific FlexCache volume.
+    This command provides comprehensive details about the origin volume(s) associated with a FlexCache.
+
+    Args:
+        volume_name (str): Name of the FlexCache volume (required).
+        svm_name (str): Name of the SVM containing the FlexCache volume. Defaults to configured SVM if not provided.
+        cluster_name (str): Non-default cluster name, same credentials as the default credentials should be used. Defaults to None.
+        print_output (bool): Denotes whether or not to print messages to the console during execution. Defaults to False.
+
+    Returns:
+        A list of origin details for the specified FlexCache volume.
+        Each item in the list will be a dictionary containing details regarding a specific origin.
+        The keys for the values in this dictionary are "Origin Volume", "Origin UUID", "Origin SVM", 
+        "Origin SVM UUID", "Origin Cluster", "Origin Cluster UUID", "IP Address", "Size", "State", "Create Time".
+    """
+    try:
+        return get_flexcache_origin(
+            volume_name=volume_name,
+            svm_name=svm_name,
+            cluster_name=cluster_name,
+            print_output=print_output
+        )
+    except Exception as e:
+        logger.error(f"Error getting FlexCache origin: {e}")
+        raise
+
+
+@mcp.tool(name="UpdateFlexCache")
+async def update_flexcache_tool(
+    uuid: Optional[str] = None,
+    volume_name: Optional[str] = None,
+    svm_name: Optional[str] = None,
+    cluster_name: Optional[str] = None,
+    prepopulate_paths: Optional[list] = None,
+    prepopulate_exclude_paths: Optional[list] = None,
+    writeback_enabled: Optional[bool] = None,
+    relative_size_enabled: Optional[bool] = None,
+    relative_size_percentage: Optional[int] = None,
+    atime_scrub_enabled: Optional[bool] = None,
+    atime_scrub_period: Optional[int] = None,
+    cifs_change_notify_enabled: Optional[bool] = None,
+    print_output: bool = False
+) -> None:
+    
+    """
+    Use this tool to update the configuration and properties of an existing FlexCache volume.
+    This includes operations like prepopulating specific paths, enabling writeback, configuring relative sizing, 
+    enabling atime scrubbing, and managing CIFS change notifications.
+
+    Args:
+        uuid (str): UUID of the FlexCache volume (required if volume_name not provided). Defaults to None.
+        volume_name (str): Name of the FlexCache volume (required if uuid not provided). Defaults to None.
+        svm_name (str): Name of the SVM containing the FlexCache (used with volume_name). Defaults to None.
+        cluster_name (str): Non-default cluster name, same credentials as the default credentials should be used. Defaults to None.
+        prepopulate_paths (list): List of directory paths to prepopulate in the FlexCache. Defaults to None.
+        prepopulate_exclude_paths (list): List of directory paths to exclude from prepopulation. Defaults to None.
+        writeback_enabled (bool): Enable or disable writeback for the FlexCache volume. Defaults to None.
+        relative_size_enabled (bool): Enable or disable relative sizing for the FlexCache volume. Defaults to None.
+        relative_size_percentage (int): Percentage size of FlexCache relative to origin (1-100). Defaults to None.
+        atime_scrub_enabled (bool): Enable or disable atime-based scrubbing of inactive files. Defaults to None.
+        atime_scrub_period (int): Duration in days after which inactive files can be scrubbed (1-365). Defaults to None.
+        cifs_change_notify_enabled (bool): Enable or disable CIFS change notification. Defaults to None.
+        print_output (bool): Denotes whether or not to print messages to the console during execution. Defaults to False.
+
+    Returns:
+        None
+    """
+    try:
+        update_flexcache(
+            uuid=uuid,
+            volume_name=volume_name,
+            svm_name=svm_name,
+            cluster_name=cluster_name,
+            prepopulate_paths=prepopulate_paths,
+            prepopulate_exclude_paths=prepopulate_exclude_paths,
+            writeback_enabled=writeback_enabled,
+            relative_size_enabled=relative_size_enabled,
+            relative_size_percentage=relative_size_percentage,
+            atime_scrub_enabled=atime_scrub_enabled,
+            atime_scrub_period=atime_scrub_period,
+            cifs_change_notify_enabled=cifs_change_notify_enabled,
+            print_output=print_output
+        )
+    except Exception as e:
+        logger.error(f"Error updating FlexCache: {e}")
         raise
 
 

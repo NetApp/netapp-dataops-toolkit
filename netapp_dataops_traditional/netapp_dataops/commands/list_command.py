@@ -7,13 +7,15 @@ from netapp_dataops.help_text import (
     HELP_TEXT_LIST_CLOUD_SYNC_RELATIONSHIPS,
     HELP_TEXT_LIST_SNAPMIRROR_RELATIONSHIPS,
     HELP_TEXT_LIST_SNAPSHOTS,
-    HELP_TEXT_LIST_VOLUMES
+    HELP_TEXT_LIST_VOLUMES,
+    HELP_TEXT_LIST_FLEXCACHE
 )
 from netapp_dataops.traditional import (
     list_cloud_sync_relationships,
     list_snap_mirror_relationships,
     list_snapshots,
     list_volumes,
+    list_flexcaches,
     InvalidConfigError,
     APIConnectionError,
     InvalidVolumeParameterError
@@ -35,6 +37,8 @@ class ListCommand(BaseCommand):
             self._list_snapshots()
         elif target in ("volume", "vol", "volumes", "vols"):
             self._list_volumes()
+        elif target in ("flexcache", "flexcaches", "fc"):
+            self._list_flexcache()
         else:
             self.handle_invalid_command()
     
@@ -155,6 +159,39 @@ class ListCommand(BaseCommand):
                 print_output=True, 
                 svm_name=svm_name, 
                 cluster_name=cluster_name
+            )
+        except (InvalidConfigError, APIConnectionError):
+            sys.exit(1)
+    
+    def _list_flexcache(self) -> None:
+        """Handle FlexCache listing."""
+        svm_name = None
+        cluster_name = None
+        
+        try:
+            opts, _ = getopt.getopt(
+                self.args[3:], 
+                "hv:u:", 
+                ["cluster-name=", "help", "svm="]
+            )
+        except Exception as err:
+            logger.error(err)
+            self.handle_invalid_command(help_text=HELP_TEXT_LIST_FLEXCACHE, invalid_opt_arg=True)
+        
+        for opt, arg in opts:
+            if opt in ("-h", "--help"):
+                logger.info(HELP_TEXT_LIST_FLEXCACHE)
+                return
+            elif opt in ("-v", "--svm"):
+                svm_name = arg
+            elif opt in ("-u", "--cluster-name"):
+                cluster_name = arg
+        
+        try:
+            list_flexcaches(
+                cluster_name=cluster_name, 
+                svm_name=svm_name, 
+                print_output=True
             )
         except (InvalidConfigError, APIConnectionError):
             sys.exit(1)
