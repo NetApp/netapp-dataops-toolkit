@@ -298,6 +298,7 @@ class DatasetManagerConfigurator:
                 volume_name=volume_name,
                 volume_size="1GB",  # Minimal size for root volume
                 junction=f"/{volume_name}",
+                unix_permissions="444",  # Read-only permissions for root volume
                 print_output=False
             )
             return True
