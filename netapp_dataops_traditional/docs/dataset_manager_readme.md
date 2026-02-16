@@ -608,25 +608,24 @@ Permanently delete datasets when they're no longer needed:
 ```python
 dataset = Dataset(name="temporary_data")
 
-# Delete the dataset (clone volumes only by default)
+# Delete the dataset (both clones and originals can be deleted by default)
 dataset.delete()
 ```
 
 **Safety features:**
 
-By default, `delete()` only allows deletion of cloned datasets. To delete a non-clone dataset, you must explicitly confirm:
+By default, `delete()` allows deletion of both clones and original datasets. To restrict deletion to clones only, set `delete_non_clone=False`:
 
 ```python
-# This will work (clones can be deleted by default)
+# This will work (both clones and originals can be deleted by default)
 clone = Dataset(name="my_clone")
 clone.delete()  # ✓ Works
 
-# This will fail (non-clones protected by default)
 original = Dataset(name="my_original_data")
-original.delete()  # ✗ Raises error
+original.delete()  # ✓ Also works (delete_non_clone defaults to True)
 
-# To delete non-clones, explicitly allow it
-original.delete(delete_non_clone=True)  # ✓ Works
+# To restrict deletion to clones only:
+original.delete(delete_non_clone=False)  # ✗ Will raise error if not a clone
 ```
 
 **Complete cleanup example:**
