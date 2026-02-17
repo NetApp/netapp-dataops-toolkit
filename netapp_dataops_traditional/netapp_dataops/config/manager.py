@@ -9,11 +9,13 @@ import json
 import base64
 import getpass
 import keyring
+import os
+import subprocess
 from pathlib import Path
 from typing import Optional, List
 
 from netapp_dataops.logging_utils import setup_logger
-from .models import NetAppDataOpsConfig, ONTAPConfig, S3Config, CloudSyncConfig
+from .models import NetAppDataOpsConfig, ONTAPConfig, S3Config, CloudSyncConfig, DatasetManagerConfig
 from .exceptions import (
     ConfigValidationError, 
     ConfigFileError, 
@@ -22,6 +24,8 @@ from .exceptions import (
 from netapp_dataops.constants import KEYRING_SERVICE_NAME
 
 logger = setup_logger(__name__)
+from .dataset_manager import DatasetManagerConfigurator
+from .prompt_utils import PromptUtils
 
 
 class ConfigManager:
@@ -118,10 +122,18 @@ class ConfigManager:
             if self._prompt_yes_no("Do you intend to use this toolkit to trigger Cloud Sync operations?"):
                 cloud_sync_config = self._create_cloud_sync_config()
             
+            # Optional Dataset Manager configuration
+            dataset_manager_config = None
+            if PromptUtils.prompt_yes_no("Do you intend to use the toolkit's Dataset Manager functionality?"):
+                logger.info("\nDataset Manager Configuration:")
+                dataset_manager_configurator = DatasetManagerConfigurator()
+                dataset_manager_config = dataset_manager_configurator.configure_dataset_manager()
+            
             return NetAppDataOpsConfig(
                 ontap=ontap_config,
                 s3=s3_config,
-                cloud_sync=cloud_sync_config
+                cloud_sync=cloud_sync_config,
+                dataset_manager=dataset_manager_config
             )
             
         except Exception as e:
@@ -188,9 +200,9 @@ class ConfigManager:
         """
         logger.info("\nS3 Configuration:")
         
-        endpoint = self._prompt_required("S3 endpoint URL")
-        access_key_id = self._prompt_required("S3 access key ID")
-        secret_access_key = self._prompt_password("S3 secret access key")
+        endpoint = PromptUtils.prompt_required("S3 endpoint URL")
+        access_key_id = PromptUtils.prompt_required("S3 access key ID")
+        secret_access_key = PromptUtils.prompt_password("S3 secret access key")
         
         verify_ssl = self._prompt_yes_no("Verify SSL certificate", default=True)
         ca_cert_bundle = self._prompt_with_default("CA certificate bundle (optional)", "")
@@ -212,7 +224,7 @@ class ConfigManager:
         """
         logger.info("\nCloud Sync Configuration:")
         
-        refresh_token = self._prompt_password("Cloud Central refresh token")
+        refresh_token = PromptUtils.prompt_password("Cloud Central refresh token")
         
         return CloudSyncConfig(
             refresh_token=base64.b64encode(refresh_token.encode()).decode()
@@ -338,5 +350,10 @@ class ConfigManager:
         
         if config.cloud_sync:
             summary.append("  Cloud Sync: Enabled")
+        
+        if config.dataset_manager and config.dataset_manager.enabled:
+            summary.append("  Dataset Manager: Enabled")
+            summary.append(f"    Root Volume: {config.dataset_manager.root_volume_name}")
+            summary.append(f"    Root Mountpoint: {config.dataset_manager.root_mountpoint}")
         
         return "\n".join(summary)

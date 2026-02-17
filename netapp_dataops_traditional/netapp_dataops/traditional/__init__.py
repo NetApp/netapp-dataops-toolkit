@@ -18,6 +18,16 @@ from .exceptions import (
     CloudSyncSyncOperationError
 )
 
+# Import dataset exceptions
+from .datasets.exceptions import (
+    DatasetError,
+    DatasetNotFoundError,
+    DatasetExistsError,
+    DatasetConfigError,
+    DatasetVolumeError
+)
+
+# Import volume operations from ontap package
 from .ontap.volume_operations import (
     clone_volume,
     create_volume,
