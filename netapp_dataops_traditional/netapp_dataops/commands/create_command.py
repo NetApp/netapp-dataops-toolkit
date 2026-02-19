@@ -8,13 +8,15 @@ from netapp_dataops.help_text import (
     HELP_TEXT_CREATE_SNAPSHOT,
     HELP_TEXT_CREATE_VOLUME,
     HELP_TEXT_CREATE_SNAPMIRROR_RELATIONSHIP,
-    HELP_TEXT_CREATE_QTREE
+    HELP_TEXT_CREATE_QTREE,
+    HELP_TEXT_CREATE_FLEXCACHE
 )
 from netapp_dataops.traditional import (
     create_snapshot,
     create_volume,
     create_snap_mirror_relationship,
     create_qtree,
+    create_flexcache,
     InvalidConfigError,
     APIConnectionError,
     InvalidVolumeParameterError,
@@ -37,6 +39,8 @@ class CreateCommand(BaseCommand):
             self._create_snapmirror_relationship()
         elif target in ("qtree", "qt"):
             self._create_qtree()
+        elif target in ("flexcache", "fc"):
+            self._create_flexcache()
         else:
             self.handle_invalid_command()
     
@@ -303,43 +307,113 @@ class CreateCommand(BaseCommand):
         # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                logger.info(HELP_TEXT_CREATE_QTREE)
-                return
-            elif opt in ("-n", "--name"):
-                qtree_name = arg
-            elif opt in ("-v", "--volume"):
-                volume_name = arg
+                flexcache_vol = arg
+
+            def _create_flexcache(self) -> None:
+                """Handle FlexCache creation."""
+                flexcache_vol = None
+                source_vol = None
+                source_svm = None
+                target_svm = None
+                cluster_name = None
+                flexcache_size = None
+                junction = None
+                export_policy = None
+                mountpoint = None
+                readonly = False
+        
+                try:
+                    opts, _ = getopt.getopt(
+                        self.args[3:], 
+                        "hn:v:o:t:s:u:j:e:m:x", 
+                        ["help", "name=", "source-volume=", "source-svm=", "target-svm=", 
+                         "size=", "cluster-name=", "junction=", "export-policy=", 
+                         "mountpoint=", "readonly"]
+                    )
+                except Exception as err:
+                    logger.error(err)
+                    self.handle_invalid_command(help_text=HELP_TEXT_CREATE_FLEXCACHE, invalid_opt_arg=True)
+        
+                for opt, arg in opts:
+                    if opt in ("-h", "--help"):
+                        logger.info(HELP_TEXT_CREATE_FLEXCACHE)
+                        return
+                    elif opt in ("-n", "--name"):
+                        flexcache_vol = arg
+                    elif opt in ("-v", "--source-volume"):
+                        source_vol = arg
+                    elif opt in ("-o", "--source-svm"):
+                        source_svm = arg
+                    elif opt in ("-t", "--target-svm"):
+                        target_svm = arg
+                    elif opt in ("-s", "--size"):
+                        flexcache_size = arg
+                    elif opt in ("-u", "--cluster-name"):
+                        cluster_name = arg
+                    elif opt in ("-j", "--junction"):
+                        junction = arg
+                    elif opt in ("-e", "--export-policy"):
+                        export_policy = arg
+                    elif opt in ("-m", "--mountpoint"):
+                        mountpoint = arg
+                    elif opt in ("-x", "--readonly"):
+                        readonly = True
+        
+                if not flexcache_vol or not source_vol or not source_svm:
+                    self.handle_invalid_command(help_text=HELP_TEXT_CREATE_FLEXCACHE, invalid_opt_arg=True)
+        
+                try:
+                    create_flexcache(
+                        flexcache_vol=flexcache_vol, 
+                        source_vol=source_vol, 
+                        source_svm=source_svm, 
+                        target_svm=target_svm, 
+                        flexcache_size=flexcache_size, 
+                        cluster_name=cluster_name, 
+                        junction=junction, 
+                        export_policy=export_policy, 
+                        mountpoint=mountpoint, 
+                        readonly=readonly, 
+                        print_output=True
+                    )
+                except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
+                    sys.exit(1)
+            elif opt in ("-v", "--source-volume"):
+                source_vol = arg
+            elif opt in ("-o", "--source-svm"):
+                source_svm = arg
+            elif opt in ("-t", "--target-svm"):
+                target_svm = arg
+            elif opt in ("-s", "--size"):
+                flexcache_size = arg
             elif opt in ("-u", "--cluster-name"):
                 cluster_name = arg
-            elif opt in ("-s", "--svm"):
-                svm_name = arg
-            elif opt in ("-t", "--security-style"):
-                security_style = arg
-            elif opt in ("-p", "--permissions"):
-                unix_permissions = arg
+            elif opt in ("-j", "--junction"):
+                junction = arg
             elif opt in ("-e", "--export-policy"):
                 export_policy = arg
+            elif opt in ("-m", "--mountpoint"):
+                mountpoint = arg
+            elif opt in ("-x", "--readonly"):
+                readonly = True
         
-        # Check for required options
-        if not qtree_name or not volume_name:
-            self.handle_invalid_command(help_text=HELP_TEXT_CREATE_QTREE, invalid_opt_arg=True)
+        if not flexcache_vol or not source_vol or not source_svm:
+            self.handle_invalid_command(help_text=HELP_TEXT_CREATE_FLEXCACHE, invalid_opt_arg=True)
         
-        # Validate security style if provided
-        if security_style and security_style not in ["unix", "ntfs", "mixed"]:
-            logger.error("Error: Security style must be one of: unix, ntfs, mixed")
-            self.handle_invalid_command(help_text=HELP_TEXT_CREATE_QTREE, invalid_opt_arg=True)
-        
-        # Create qtree
         try:
-            create_qtree(
-                qtree_name=qtree_name,
-                volume_name=volume_name,
+            create_flexcache(
+                source_vol=source_vol,
+                source_svm=source_svm,
+                flexcache_vol=flexcache_vol,
+                flexcache_svm=target_svm,
                 cluster_name=cluster_name,
-                svm_name=svm_name,
-                security_style=security_style,
-                unix_permissions=unix_permissions,
-                export_policy=export_policy,
+                flexcache_size=flexcache_size,
+                junction=junction,
+                export_policy=export_policy if export_policy else "default",
+                mountpoint=mountpoint,
+                readonly=readonly,
                 print_output=True
             )
-        except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
+        except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
+>>>>>>> origin/release-v3.0.0
             sys.exit(1)

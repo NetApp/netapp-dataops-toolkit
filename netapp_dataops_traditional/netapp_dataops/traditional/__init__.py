@@ -18,6 +18,16 @@ from .exceptions import (
     CloudSyncSyncOperationError
 )
 
+# Import dataset exceptions
+from .datasets.exceptions import (
+    DatasetError,
+    DatasetNotFoundError,
+    DatasetExistsError,
+    DatasetConfigError,
+    DatasetVolumeError
+)
+
+# Import volume operations from ontap package
 from .ontap.volume_operations import (
     clone_volume,
     create_volume,
@@ -53,7 +63,11 @@ from .data_movement.s3_operations import (
 )
 
 from .ontap.flexcache_operations import (
-    prepopulate_flex_cache
+    prepopulate_flex_cache,
+    list_flexcaches,
+    get_flexcache_origin,
+    create_flexcache,
+    update_flexcache
 )
 
 from .ontap.qtree_operations import (
@@ -98,6 +112,10 @@ __all__ = [
     'list_qtrees',
     'get_qtree',
     'get_qtree_metrics',
+    'list_flexcaches',
+    'get_flexcache_origin',
+    'create_flexcache',
+    'update_flexcache',
 ]
 
 _lazy_modules = {}

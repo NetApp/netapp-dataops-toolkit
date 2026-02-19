@@ -8,7 +8,8 @@ from netapp_dataops.help_text import (
     HELP_TEXT_LIST_SNAPMIRROR_RELATIONSHIPS,
     HELP_TEXT_LIST_SNAPSHOTS,
     HELP_TEXT_LIST_VOLUMES,
-    HELP_TEXT_LIST_QTREES
+    HELP_TEXT_LIST_QTREES,
+    HELP_TEXT_LIST_FLEXCACHE
 )
 from netapp_dataops.traditional import (
     list_cloud_sync_relationships,
@@ -16,6 +17,7 @@ from netapp_dataops.traditional import (
     list_snapshots,
     list_volumes,
     list_qtrees,
+    list_flexcaches,
     InvalidConfigError,
     APIConnectionError,
     InvalidVolumeParameterError
@@ -39,6 +41,8 @@ class ListCommand(BaseCommand):
             self._list_volumes()
         elif target in ("qtree", "qt", "qtrees", "qts"):
             self._list_qtrees()
+        elif target in ("flexcache", "flexcaches", "fc"):
+            self._list_flexcache()
         else:
             self.handle_invalid_command()
     
@@ -169,7 +173,6 @@ class ListCommand(BaseCommand):
         cluster_name = None
         svm_name = None
         
-        # Get command line options
         try:
             opts, _ = getopt.getopt(
                 self.args[3:], 
@@ -180,7 +183,6 @@ class ListCommand(BaseCommand):
             logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_LIST_QTREES, invalid_opt_arg=True)
         
-        # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
                 logger.info(HELP_TEXT_LIST_QTREES)
@@ -192,7 +194,6 @@ class ListCommand(BaseCommand):
             elif opt in ("-u", "--cluster-name"):
                 cluster_name = arg
         
-        # List qtrees
         try:
             list_qtrees(
                 volume_name=volume_name,
@@ -201,4 +202,37 @@ class ListCommand(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
+            sys.exit(1)
+
+    def _list_flexcache(self) -> None:
+        """Handle FlexCache listing."""
+        svm_name = None
+        cluster_name = None
+        
+        try:
+            opts, _ = getopt.getopt(
+                self.args[3:], 
+                "hv:u:", 
+                ["cluster-name=", "help", "svm="]
+            )
+        except Exception as err:
+            logger.error(err)
+            self.handle_invalid_command(help_text=HELP_TEXT_LIST_FLEXCACHE, invalid_opt_arg=True)
+        
+        for opt, arg in opts:
+            if opt in ("-h", "--help"):
+                logger.info(HELP_TEXT_LIST_FLEXCACHE)
+                return
+            elif opt in ("-v", "--svm"):
+                svm_name = arg
+            elif opt in ("-u", "--cluster-name"):
+                cluster_name = arg
+        
+        try:
+            list_flexcaches(
+                cluster_name=cluster_name, 
+                svm_name=svm_name, 
+                print_output=True
+            )
+        except (InvalidConfigError, APIConnectionError):
             sys.exit(1)

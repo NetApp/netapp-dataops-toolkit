@@ -78,79 +78,143 @@ Create a new data volume that is an exact copy of an existing volume.
 Required Options/Arguments:
 \t-n, --name=\t\tName of new volume..
 \t-v, --source-volume=\tName of volume to be cloned.
+# Qtree operations help text
+HELP_TEXT_CREATE_QTREE = '''
+Command: create qtree
 
-Optional Options/Arguments:
-\t-l, --cluster-name=\tnon default hosting cluster
-\t-c, --source-svm=\tnon default source svm name
-\t-t, --target-svm=\tnon default target svm name
-\t-g, --gid=\t\tUnix filesystem group id (gid) to apply when creating new volume (if not specified, gid of source volume will be retained) (Note: cannot apply gid of '0' when creating clone).
-\t-h, --help\t\tPrint help text.
-\t-m, --mountpoint=\tLocal mountpoint to mount new volume at after creating. If not specified, new volume will not be mounted locally. On Linux hosts - if specified, must be run as root.
-\t-s, --source-snapshot=\tName of the snapshot to be cloned (if specified, the clone will be created from a specific snapshot on the source volume as opposed to the current state of the volume).
-\t\t\t\twhen snapshot name suffixed with * the latest snapshot will be used (hourly* will use the latest snapshot prefixed with hourly )
-\t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (if not specified, uid of source volume will be retained) (Note: cannot apply uid of '0' when creating clone).
-\t-x, --readonly\t\tRead-only option for mounting volumes locally.
-\t-j, --junction\t\tSpecify a custom junction path for the volume to be exported at.
-\t-e, --export-hosts\tcolon(:) separated hosts/cidrs to use for export. hosts will be exported for rw and root access
-\t-e, --export-policy\texport policy name to attach to the volume, default policy will be used if export-hosts/export-policy not provided
-\t-d, --snapshot-policy\tsnapshot-policy to attach to the volume, default snapshot policy will be used if not provided
-\t-s, --split\t\tstart clone split after creation
-\t-r, --refresh\t\tdelete existing clone if exists before creating a new one
-\t-d, --svm-dr-unprotect\tdisable svm dr protection if svm-dr protection exists
-
-Examples (basic usage):
-\tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset
-\tnetapp_dataops_cli.py clone volume -n project2 -v gold_dataset -s snap1
-\tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset --mountpoint=~/project1 --readonly
-
-
-Examples (advanced usage):
-\tnetapp_dataops_cli.py clone volume -n testvol -v gold_dataset -u 1000 -g 1000 -x -j /project1 -d snappolicy1
-\tnetapp_dataops_cli.py clone volume --name=project1 --source-volume=gold_dataset --source-svm=svm1 --target-svm=svm2 --source-snapshot=daily* --export-hosts 10.5.5.3:host1:10.6.4.0/24 --split
-'''
-
-HELP_TEXT_CREATE_VOLUME = '''
-Command: create volume
-
-Create a new data volume.
+Create a new qtree in a FlexVol or FlexGroup volume.
 
 Required Options/Arguments:
-\t-n, --name=\t\tName of new volume.
-\t-s, --size=\t\tSize of new volume. Format: '1024MB', '100GB', '10TB', etc.
+	-n, --name=		Name of qtree to create.
+	-v, --volume=		Name of volume in which to create the qtree.
 
 Optional Options/Arguments:
-\t-l, --cluster-name=\tnon default hosting cluster
-\t-v, --svm=\t\tnon default svm name
-\t-a, --aggregate=\tAggregate to use when creating new volume (flexvol) or optional comma separated aggrlist when specific aggregates are required for FG.
-\t-d, --snapshot-policy=\tSnapshot policy to apply for new volume.
-\t-e, --export-policy=\tNFS export policy to use when exporting new volume.
-\t-g, --gid=\t\tUnix filesystem group id (gid) to apply when creating new volume (ex. '0' for root group).
-\t-h, --help\t\tPrint help text.
-\t-m, --mountpoint=\tLocal mountpoint to mount new volume at after creating. If not specified, new volume will not be mounted locally. On Linux hosts - if specified, must be run as root.
-\t-p, --permissions=\tUnix filesystem permissions to apply when creating new volume (ex. '0777' for full read/write permissions for all users and groups).
-\t-r, --guarantee-space\tGuarantee sufficient storage space for full capacity of the volume (i.e. do not use thin provisioning).
-\t-t, --type=\t\tVolume type to use when creating new volume (flexgroup/flexvol).
-\t-u, --uid=\t\tUnix filesystem user id (uid) to apply when creating new volume (ex. '0' for root user).
-\t-w, --snaplock-type=\tSnaplock type to apply for new volume. (can be 'compliance','enterprise',None)
-\t-x, --readonly\t\tRead-only option for mounting volumes locally.
-\t-j, --junction\t\tSpecify a custom junction path for the volume to be exported at.
-\t-f, --tiering-policy\tSpecify tiering policy for fabric-pool enabled systems (default is 'none').
-\t-y, --dp\t\tCreate volume as DP volume (the volume will be used as snapmirror target)
+	-u, --cluster-name=	Non default hosting cluster.
+	-s, --svm=		Non default SVM name.
+	-t, --security-style=	Security style for the qtree.
+	-p, --permissions=	UNIX permissions for the qtree (octal format, e.g., 0755).
+	-e, --export-policy=	Export policy name for the qtree.
+	-h, --help		Print help text.
 
+Examples:
+	netapp_dataops_cli.py create qtree --name=qtree1 --volume=project1
+	netapp_dataops_cli.py create qtree -n qtree2 -v project2 -t unix -p 0755
+	netapp_dataops_cli.py create qtree --name=qtree3 --volume=project3 --security-style=mixed --export-policy=default
+'''
 
-Examples (basic usage):
-\tnetapp_dataops_cli.py create volume --name=project1 --size=10GB
-\tnetapp_dataops_cli.py create volume -n datasets -s 10TB
-\tsudo -E netapp_dataops_cli.py create volume --name=project2 --size=2TB --mountpoint=~/project2 --readonly
+HELP_TEXT_GET_QTREE = '''
+Command: get qtree
 
-Examples (advanced usage):
-\tsudo -E netapp_dataops_cli.py create volume --name=project1 --size=10GB --permissions=0755 --type=flexvol --mountpoint=~/project1 --readonly --junction=/project1
-\tsudo -E netapp_dataops_cli.py create volume --name=project2_flexgroup --size=2TB --type=flexgroup --mountpoint=/mnt/project2
-\tnetapp_dataops_cli.py create volume --name=testvol --size=10GB --type=flexvol --aggregate=n2_data
-\tnetapp_dataops_cli.py create volume -n testvol -s 10GB -t flexvol -p 0755 -u 1000 -g 1000 -j /project1
-\tsudo -E netapp_dataops_cli.py create volume -n vol1 -s 5GB -t flexvol --export-policy=team1 -m /mnt/vol1
-\tnetapp_dataops_cli.py create vol -n test2 -s 10GB -t flexvol --snapshot-policy=default --tiering-policy=auto
-\tnetapp_dataops_cli.py create volume --name=project1 --size=100GB --snaplock-type=compliance
+Retrieve properties for a specific qtree identified by volume UUID and qtree ID.
+
+Required Options/Arguments:
+	-v, --volume-uuid=	UUID of the volume containing the qtree.
+	-i, --id=		ID of the qtree to retrieve.
+
+Optional Options/Arguments:
+	-u, --cluster-name=	Non default hosting cluster.
+	-h, --help		Print help text.
+
+Examples:
+	netapp_dataops_cli.py get qtree --volume-uuid=cb20da45-4f6b-11e9-9a71-005056a7f717 --id=1
+	netapp_dataops_cli.py get qtree -v cb20da45-4f6b-11e9-9a71-005056a7f717 -i 2
+	netapp_dataops_cli.py get qtree --volume-uuid=cb20da45-4f6b-11e9-9a71-005056a7f717 --id=1 --cluster-name=cluster1
+'''
+
+HELP_TEXT_LIST_QTREES = '''
+Command: list qtrees
+
+List qtrees in a volume or all qtrees in an SVM.
+
+Optional Options/Arguments:
+	-v, --volume=		Name of the volume to list qtrees from. If not specified, lists qtrees from all volumes.
+	-u, --cluster-name=	Non default hosting cluster.
+	-s, --svm=		Non default SVM name.
+	-h, --help		Print help text.
+
+Examples:
+	netapp_dataops_cli.py list qtrees
+	netapp_dataops_cli.py list qtrees --volume=project1
+	netapp_dataops_cli.py list qtrees -v project2 -s svm1
+	netapp_dataops_cli.py list qtrees --volume=project3 --cluster-name=cluster1
+'''
+
+HELP_TEXT_GET_QTREE_METRICS = '''
+Command: get qtree-metrics
+
+Retrieve historical performance metrics for a qtree with analytics/activity tracking enabled.
+
+Note: Requires extended performance monitoring to be enabled on the qtree.
+
+Required Options/Arguments:
+	-v, --volume-uuid=	UUID of the volume containing the qtree.
+	-i, --id=		ID of the qtree to retrieve metrics for.
+
+Optional Options/Arguments:
+	-u, --cluster-name=	Non default hosting cluster.
+	-h, --help		Print help text.
+
+Examples:
+	netapp_dataops_cli.py get qtree-metrics --volume-uuid=cb20da45-4f6b-11e9-9a71-005056a7f717 --id=1
+	netapp_dataops_cli.py get qtree-metrics -v cb20da45-4f6b-11e9-9a71-005056a7f717 -i 2
+	netapp_dataops_cli.py get qtree-metrics --volume-uuid=cb20da45-4f6b-11e9-9a71-005056a7f717 --id=0 --cluster-name=cluster1
+'''
+
+HELP_TEXT_GET_FLEXCACHE_ORIGIN = '''
+Command: get flexcache-origin
+
+Retrieve attributes of a specific FlexCache origin volume by name.
+
+Required Options/Arguments:
+	-n, --volume-name=	Name of the FlexCache volume.
+
+Optional Options/Arguments:
+	-s, --svm=		Name of the SVM containing the FlexCache (defaults to configured SVM).
+	-u, --cluster-name=	Non default hosting cluster.
+	-h, --help		Print help text.
+
+Examples:
+	netapp_dataops_cli.py get flexcache-origin --volume-name=project1_cache
+	netapp_dataops_cli.py get flexcache-origin -n project1_cache -s svm1
+	netapp_dataops_cli.py get flexcache-origin -n project1_cache -s svm1 -u cluster1
+'''
+HELP_TEXT_UPDATE_FLEXCACHE = '''
+Command: update flexcache
+
+Update configuration properties of an existing FlexCache volume.
+
+Required Options/Arguments (one of):
+\t-i, --uuid=\t\t\tUUID of the FlexCache volume to update.
+\t-n, --name=\t\t\tName of FlexCache volume to update (requires --svm if not using --uuid).
+
+Optional Options/Arguments:
+\t-v, --svm=\t\t\tSVM name (required when using --name instead of --uuid).
+\t-u, --cluster-name=\t\tNon-default hosting cluster.
+\t-p, --prepopulate-paths=\tComma-separated list of directory paths to prepopulate.
+\t-x, --prepopulate-exclude-paths=Comma-separated list of directory paths to exclude from prepopulation.
+\t-w, --writeback-enabled=\tEnable or disable writeback (true/false).
+\t-r, --relative-size-enabled=\tEnable or disable relative sizing (true/false).
+\t    --relative-size-percentage=\tPercentage size relative to origin (1-100).
+\t-a, --atime-scrub-enabled=\tEnable or disable atime-based scrubbing (true/false).
+\t    --atime-scrub-period=\tDuration in days for atime scrub (1-365).
+\t-c, --cifs-change-notify-enabled=Enable or disable CIFS change notification (true/false).
+\t-h, --help\t\t\tPrint help text.
+
+Examples:
+\t# Update FlexCache by UUID with prepopulate paths
+\tnetapp_dataops_cli.py update flexcache --uuid=ec774932-0f3c-11e9-8b2b-0050568e0b79 --prepopulate-paths=/dir1,/dir2
+
+\t# Update FlexCache by name and enable writeback
+\tnetapp_dataops_cli.py update flexcache --name=cache1 --svm=svm1 --writeback-enabled=true
+
+\t# Enable relative sizing with 50% of origin size
+\tnetapp_dataops_cli.py update flexcache -i ec774932-0f3c-11e9-8b2b-0050568e0b79 -r true --relative-size-percentage=50
+
+\t# Enable atime scrubbing with 30 day period
+\tnetapp_dataops_cli.py update flexcache -n cache1 -v svm1 -a true --atime-scrub-period=30
+
+\t# Update multiple properties
+\tnetapp_dataops_cli.py update flexcache -i ec774932-0f3c-11e9-8b2b-0050568e0b79 -w true -c true -p /data,/logs
 '''
 
 HELP_TEXT_DELETE_VOLUME = '''
@@ -190,6 +254,24 @@ Optional Options/Arguments:
 Examples:
 \tnetapp_dataops_cli.py list volumes
 \tnetapp_dataops_cli.py list volumes --include-space-usage-details
+'''
+
+HELP_TEXT_LIST_FLEXCACHE = '''
+Command: list flexcache
+
+List all FlexCache volumes with their origin information.
+
+No options/arguments are required.
+
+Optional Options/Arguments:
+\t-u, --cluster-name=\tnon default hosting cluster
+\t-v, --svm=\t\tlist FlexCache on non default svm
+\t-h, --help\t\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py list flexcache
+\tnetapp_dataops_cli.py list flexcache --svm=svm1
+\tnetapp_dataops_cli.py list flexcache -v svm1 -u cluster1
 '''
 
 HELP_TEXT_MOUNT_VOLUME = '''
@@ -590,4 +672,24 @@ Examples:
 \tnetapp_dataops_cli.py get qtree-metrics --volume-uuid=cb20da45-4f6b-11e9-9a71-005056a7f717 --id=1
 \tnetapp_dataops_cli.py get qtree-metrics -v cb20da45-4f6b-11e9-9a71-005056a7f717 -i 2
 \tnetapp_dataops_cli.py get qtree-metrics --volume-uuid=cb20da45-4f6b-11e9-9a71-005056a7f717 --id=0 --cluster-name=cluster1
+'''
+
+# FlexCache origin help text
+HELP_TEXT_GET_FLEXCACHE_ORIGIN = '''
+Command: get flexcache-origin
+
+Retrieve attributes of a specific FlexCache origin volume by name.
+
+Required Options/Arguments:
+	-n, --volume-name=\tName of the FlexCache volume.
+
+Optional Options/Arguments:
+	-s, --svm=\t\tName of the SVM containing the FlexCache (defaults to configured SVM).
+	-u, --cluster-name=\tNon default hosting cluster.
+	-h, --help\t\tPrint help text.
+
+Examples:
+	netapp_dataops_cli.py get flexcache-origin --volume-name=project1_cache
+	netapp_dataops_cli.py get flexcache-origin -n project1_cache -s svm1
+	netapp_dataops_cli.py get flexcache-origin -n project1_cache -s svm1 -u cluster1
 '''

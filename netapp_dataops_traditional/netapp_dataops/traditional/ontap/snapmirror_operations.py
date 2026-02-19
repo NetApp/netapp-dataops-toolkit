@@ -99,7 +99,7 @@ def list_snap_mirror_relationships(print_output: bool = False, cluster_name: Opt
 
         except NetAppRestError as err:
             if print_output:
-                print("Error: ONTAP Rest API Error: ", err)
+                logger.error("Error: ONTAP Rest API Error: %s", err)
             raise APIConnectionError(err)
 
         if print_output:
