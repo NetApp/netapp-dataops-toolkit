@@ -1,4 +1,6 @@
-"""Get command module for NetApp DataOps Toolkit CLI."""
+"""
+Get command module for NetApp DataOps Toolkit CLI.
+"""
 
 import getopt
 import sys
@@ -23,8 +25,10 @@ class GetCommand(BaseCommand):
     
     def execute(self) -> None:
         """Execute get command for various targets."""
+        # Get desired target from command line args
         target = self.get_target()
         
+        # Route to appropriate handler based on target
         if target in ("qtree", "qt"):
             self._get_qtree()
         elif target in ("qtree-metrics", "qtm"):
@@ -33,15 +37,16 @@ class GetCommand(BaseCommand):
             self._get_flexcache_origin()
         else:
             self.handle_invalid_command()
-    
+
     def _get_qtree(self) -> None:
         """Handle qtree retrieval."""
         volume_uuid = None
         qtree_id = None
         cluster_name = None
         
+        # Get command line options
         try:
-            opts, _ = getopt.getopt(
+            opts, args = getopt.getopt(
                 self.args[3:], 
                 "hv:i:u:", 
                 ["help", "volume-uuid=", "id=", "cluster-name="]
@@ -50,6 +55,7 @@ class GetCommand(BaseCommand):
             logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_GET_QTREE, invalid_opt_arg=True)
         
+        # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
                 logger.info(HELP_TEXT_GET_QTREE)
@@ -65,13 +71,16 @@ class GetCommand(BaseCommand):
             elif opt in ("-u", "--cluster-name"):
                 cluster_name = arg
         
+        # Check for required options
         if not volume_uuid or qtree_id is None:
             self.handle_invalid_command(help_text=HELP_TEXT_GET_QTREE, invalid_opt_arg=True)
         
+        # Validate qtree_id is non-negative
         if qtree_id < 0:
             logger.error("Error: Qtree ID must be a non-negative integer.")
             self.handle_invalid_command(help_text=HELP_TEXT_GET_QTREE, invalid_opt_arg=True)
         
+        # Get qtree
         try:
             get_qtree(
                 volume_uuid=volume_uuid,
@@ -80,6 +89,7 @@ class GetCommand(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
+            import sys
             sys.exit(1)
     
     def _get_qtree_metrics(self) -> None:
@@ -88,8 +98,9 @@ class GetCommand(BaseCommand):
         qtree_id = None
         cluster_name = None
         
+        # Get command line options
         try:
-            opts, _ = getopt.getopt(
+            opts, args = getopt.getopt(
                 self.args[3:], 
                 "hv:i:u:", 
                 ["help", "volume-uuid=", "id=", "cluster-name="]
@@ -98,6 +109,7 @@ class GetCommand(BaseCommand):
             logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_GET_QTREE_METRICS, invalid_opt_arg=True)
         
+        # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
                 logger.info(HELP_TEXT_GET_QTREE_METRICS)
@@ -113,13 +125,16 @@ class GetCommand(BaseCommand):
             elif opt in ("-u", "--cluster-name"):
                 cluster_name = arg
         
+        # Check for required options
         if not volume_uuid or qtree_id is None:
             self.handle_invalid_command(help_text=HELP_TEXT_GET_QTREE_METRICS, invalid_opt_arg=True)
         
+        # Validate qtree_id is non-negative
         if qtree_id < 0:
             logger.error("Error: Qtree ID must be a non-negative integer.")
             self.handle_invalid_command(help_text=HELP_TEXT_GET_QTREE_METRICS, invalid_opt_arg=True)
         
+        # Get qtree metrics
         try:
             get_qtree_metrics(
                 volume_uuid=volume_uuid,
@@ -128,14 +143,16 @@ class GetCommand(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError):
+            import sys
             sys.exit(1)
-
+    
     def _get_flexcache_origin(self) -> None:
         """Handle FlexCache origin retrieval."""
         volume_name = None
         svm_name = None
         cluster_name = None
-
+        
+        # Get command line options
         try:
             opts, _ = getopt.getopt(
                 self.args[3:], 
@@ -143,12 +160,13 @@ class GetCommand(BaseCommand):
                 ["help", "volume-name=", "svm=", "cluster-name="]
             )
         except Exception as err:
-            logger.error(err)
+            print(err)
             self.handle_invalid_command(help_text=HELP_TEXT_GET_FLEXCACHE_ORIGIN, invalid_opt_arg=True)
-
+        
+        # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                logger.info(HELP_TEXT_GET_FLEXCACHE_ORIGIN)
+                print(HELP_TEXT_GET_FLEXCACHE_ORIGIN)
                 return
             elif opt in ("-n", "--volume-name"):
                 volume_name = arg
@@ -156,10 +174,12 @@ class GetCommand(BaseCommand):
                 svm_name = arg
             elif opt in ("-u", "--cluster-name"):
                 cluster_name = arg
-
+        
+        # Check for required options
         if not volume_name:
             self.handle_invalid_command(help_text=HELP_TEXT_GET_FLEXCACHE_ORIGIN, invalid_opt_arg=True)
-
+        
+        # Get FlexCache origin
         try:
             get_flexcache_origin(
                 volume_name=volume_name,
