@@ -70,6 +70,13 @@ from .ontap.flexcache_operations import (
     update_flexcache
 )
 
+from .ontap.qtree_operations import (
+    create_qtree,
+    list_qtrees,
+    get_qtree,
+    get_qtree_metrics
+)
+
 __all__ = [
     '__version__',
     'InvalidConfigError',
@@ -101,6 +108,10 @@ __all__ = [
     'push_directory_to_s3',
     'push_file_to_s3',
     'prepopulate_flex_cache',
+    'create_qtree',
+    'list_qtrees',
+    'get_qtree',
+    'get_qtree_metrics',
     'list_flexcaches',
     'get_flexcache_origin',
     'create_flexcache',
@@ -141,4 +152,5 @@ def __getattr__(name):
                 "Install with: pip install 'netapp-dataops-traditional[gcp]'"
             ) from e
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+
 

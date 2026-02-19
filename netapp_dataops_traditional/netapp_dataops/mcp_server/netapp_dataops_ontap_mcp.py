@@ -18,7 +18,11 @@ from netapp_dataops.traditional.ontap import (
     create_flexcache,
     list_flexcaches,
     get_flexcache_origin,
-    update_flexcache
+    update_flexcache,
+    create_qtree,
+    list_qtrees,
+    get_qtree,
+    get_qtree_metrics
 )
 
 #Sets up logging
@@ -611,6 +615,159 @@ async def update_flexcache_tool(
         logger.error(f"Error updating FlexCache: {e}")
         raise
 
+@mcp.tool(name="CreateQtree")
+async def create_qtree_tool(
+    qtree_name: str,
+    volume_name: str,
+    cluster_name: Optional[str] = None,
+    svm_name: Optional[str] = None,
+    security_style: Optional[str] = None,
+    unix_permissions: Optional[str] = None,
+    export_policy: Optional[str] = None,
+    print_output: bool = False
+) -> None:
+    
+    """
+    Use this tool to create a new qtree within an existing volume.
+    Qtrees are lightweight partitions within a volume that enable you to organize data and apply quotas.
+
+    Args:
+        qtree_name (str): Name of the qtree to create (required).
+        volume_name (str): Name of the volume in which to create the qtree (required).
+        cluster_name (str): Non-default cluster name, same credentials as the default credentials should be used. Defaults to None.
+        svm_name (str): Name of the SVM (defaults to config SVM). Defaults to None.
+        security_style (str): Security style for the qtree (e.g., 'unix', 'ntfs', 'mixed'). Defaults to None.
+        unix_permissions (str): UNIX permissions for the qtree in octal format (e.g., '0755'). Defaults to None.
+        export_policy (str): Export policy of the SVM for the qtree. Defaults to None.
+        print_output (bool): Denotes whether or not to print messages to the console during execution. Defaults to False.
+
+    Returns:
+        None
+    """
+    try:
+        create_qtree(
+            qtree_name=qtree_name,
+            volume_name=volume_name,
+            cluster_name=cluster_name,
+            svm_name=svm_name,
+            security_style=security_style,
+            unix_permissions=unix_permissions,
+            export_policy=export_policy,
+            print_output=print_output
+        )
+    except Exception as e:
+        logger.error(f"Error creating qtree: {e}")
+        raise
+
+
+@mcp.tool(name="ListQtrees")
+async def list_qtrees_tool(
+    volume_name: Optional[str] = None,
+    cluster_name: Optional[str] = None,
+    svm_name: Optional[str] = None,
+    print_output: bool = False
+) -> list:
+    
+    """
+    Use this tool to list qtrees in a volume or all qtrees in an SVM.
+    Qtrees are lightweight partitions within volumes that help organize data.
+
+    Args:
+        volume_name (str): Name of the volume to list qtrees from. If not specified, lists qtrees from all volumes. Defaults to None.
+        cluster_name (str): Non-default cluster name, same credentials as the default credentials should be used. Defaults to None.
+        svm_name (str): Name of the SVM (defaults to config SVM). Defaults to None.
+        print_output (bool): Denotes whether or not to print messages to the console during execution. Defaults to False.
+
+    Returns:
+        A list of qtree information dictionaries. Each item contains details such as qtree ID, name, volume, 
+        SVM, security style, UNIX permissions, path, export policy, and QoS policy.
+    """
+    try:
+        qtrees = list_qtrees(
+            volume_name=volume_name,
+            cluster_name=cluster_name,
+            svm_name=svm_name,
+            print_output=print_output
+        )
+        if qtrees is None:
+            return []
+        return qtrees
+    except Exception as e:
+        logger.error(f"Error listing qtrees: {e}")
+        raise
+
+
+@mcp.tool(name="GetQtree")
+async def get_qtree_tool(
+    volume_uuid: str,
+    qtree_id: int,
+    cluster_name: Optional[str] = None,
+    print_output: bool = False
+) -> dict:
+    
+    """
+    Use this tool to retrieve detailed properties for a specific qtree identified by volume UUID and qtree ID.
+    This provides comprehensive information about a qtree including security settings, permissions, and policies.
+
+    Args:
+        volume_uuid (str): UUID of the volume containing the qtree (required).
+        qtree_id (int): ID of the qtree to retrieve (required).
+        cluster_name (str): Non-default cluster name, same credentials as the default credentials should be used. Defaults to None.
+        print_output (bool): Denotes whether or not to print messages to the console during execution. Defaults to False.
+
+    Returns:
+        A dictionary containing detailed qtree information including ID, name, volume details, SVM details,
+        security style, UNIX permissions, path, export policy, QoS policy, user, and group information.
+    """
+    try:
+        qtree_info = get_qtree(
+            volume_uuid=volume_uuid,
+            qtree_id=qtree_id,
+            cluster_name=cluster_name,
+            print_output=print_output
+        )
+        return qtree_info
+    except Exception as e:
+        logger.error(f"Error getting qtree: {e}")
+        raise
+
+
+@mcp.tool(name="GetQtreeMetrics")
+async def get_qtree_metrics_tool(
+    volume_uuid: str,
+    qtree_id: int,
+    cluster_name: Optional[str] = None,
+    print_output: bool = False
+) -> dict:
+    
+    """
+    Use this tool to retrieve historical performance metrics for a qtree.
+    This provides IOPS, latency, and throughput statistics for read, write, and other operations.
+    
+    Note: Requires extended performance monitoring to be enabled on the qtree.
+
+    Args:
+        volume_uuid (str): UUID of the volume containing the qtree (required).
+        qtree_id (int): ID of the qtree to retrieve metrics for (required).
+        cluster_name (str): Non-default cluster name, same credentials as the default credentials should be used. Defaults to None.
+        print_output (bool): Denotes whether or not to print messages to the console during execution. Defaults to False.
+
+    Returns:
+        A dictionary containing qtree performance metrics including IOPS (read/write/other/total),
+        latency (read/write/other/total), and throughput (read/write/other/total) data points over time.
+    """
+    try:
+        metrics = get_qtree_metrics(
+            volume_uuid=volume_uuid,
+            qtree_id=qtree_id,
+            cluster_name=cluster_name,
+            print_output=print_output
+        )
+        return metrics
+    except Exception as e:
+        logger.error(f"Error getting qtree metrics: {e}")
+        raise
+
 
 if __name__ == "__main__":
 
@@ -629,4 +786,3 @@ if __name__ == "__main__":
         # Logs and prints any startup errors, then exits with an error code
         logging.error(f"Server startup failed: {e}")
         sys.exit(1)
-

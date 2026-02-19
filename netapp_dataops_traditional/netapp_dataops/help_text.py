@@ -25,6 +25,14 @@ Note: To view details regarding options/arguments for a specific command, run th
 \tmount volume\t\t\tMount an existing data volume locally. Note: on Linux hosts - must be run as root.
 \tunmount volume\t\t\tUnmount an existing data volume. Note: on Linux hosts - must be run as root.
 
+Qtree Management Commands:
+Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
+
+\tcreate qtree\t\t\tCreate a new qtree in a volume.
+\tget qtree\t\t\tRetrieve properties for a specific qtree.
+\tget qtree-metrics\t\tRetrieve performance metrics for a specific qtree.
+\tlist qtrees\t\t\tList qtrees in a volume or SVM.
+
 Snapshot Management Commands:
 Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
 
@@ -603,4 +611,86 @@ Examples:
 	netapp_dataops_cli.py get flexcache-origin --volume-name=project1_cache
 	netapp_dataops_cli.py get flexcache-origin -n project1_cache -s svm1
 	netapp_dataops_cli.py get flexcache-origin -n project1_cache -s svm1 -u cluster1
+'''
+
+# Qtree operations help text
+HELP_TEXT_CREATE_QTREE = '''
+Command: create qtree
+
+Create a new qtree in a FlexVol or FlexGroup volume.
+
+Required Options/Arguments:
+\t-n, --name=\t\tName of qtree to create.
+\t-v, --volume=\t\tName of volume in which to create the qtree.
+
+Optional Options/Arguments:
+\t-u, --cluster-name=\tNon default hosting cluster.
+\t-s, --svm=\t\tNon default SVM name.
+\t-t, --security-style=\tSecurity style for the qtree.
+\t-p, --permissions=\tUNIX permissions for the qtree (octal format, e.g., 0755).
+\t-e, --export-policy=\tExport policy name for the qtree.
+\t-h, --help\t\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py create qtree --name=qtree1 --volume=project1
+\tnetapp_dataops_cli.py create qtree -n qtree2 -v project2 -t unix -p 0755
+\tnetapp_dataops_cli.py create qtree --name=qtree3 --volume=project3 --security-style=mixed --export-policy=default
+'''
+
+HELP_TEXT_GET_QTREE = '''
+Command: get qtree
+
+Retrieve properties for a specific qtree identified by volume UUID and qtree ID.
+
+Required Options/Arguments:
+\t-v, --volume-uuid=\tUUID of the volume containing the qtree.
+\t-i, --id=\t\tID of the qtree to retrieve.
+
+Optional Options/Arguments:
+\t-u, --cluster-name=\tNon default hosting cluster.
+\t-h, --help\t\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py get qtree --volume-uuid=cb20da45-4f6b-11e9-9a71-005056a7f717 --id=1
+\tnetapp_dataops_cli.py get qtree -v cb20da45-4f6b-11e9-9a71-005056a7f717 -i 2
+\tnetapp_dataops_cli.py get qtree --volume-uuid=cb20da45-4f6b-11e9-9a71-005056a7f717 --id=1 --cluster-name=cluster1
+'''
+
+HELP_TEXT_LIST_QTREES = '''
+Command: list qtrees
+
+List qtrees in a volume or all qtrees in an SVM.
+
+Optional Options/Arguments:
+\t-v, --volume=\t\tName of the volume to list qtrees from. If not specified, lists qtrees from all volumes.
+\t-u, --cluster-name=\tNon default hosting cluster.
+\t-s, --svm=\t\tNon default SVM name.
+\t-h, --help\t\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py list qtrees
+\tnetapp_dataops_cli.py list qtrees --volume=project1
+\tnetapp_dataops_cli.py list qtrees -v project2 -s svm1
+\tnetapp_dataops_cli.py list qtrees --volume=project3 --cluster-name=cluster1
+'''
+
+HELP_TEXT_GET_QTREE_METRICS = '''
+Command: get qtree-metrics
+
+Retrieve historical performance metrics for a qtree with analytics/activity tracking enabled.
+
+Note: Requires extended performance monitoring to be enabled on the qtree.
+
+Required Options/Arguments:
+\t-v, --volume-uuid=\tUUID of the volume containing the qtree.
+\t-i, --id=\t\tID of the qtree to retrieve metrics for.
+
+Optional Options/Arguments:
+\t-u, --cluster-name=\tNon default hosting cluster.
+\t-h, --help\t\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py get qtree-metrics --volume-uuid=cb20da45-4f6b-11e9-9a71-005056a7f717 --id=1
+\tnetapp_dataops_cli.py get qtree-metrics -v cb20da45-4f6b-11e9-9a71-005056a7f717 -i 2
+\tnetapp_dataops_cli.py get qtree-metrics --volume-uuid=cb20da45-4f6b-11e9-9a71-005056a7f717 --id=0 --cluster-name=cluster1
 '''
