@@ -58,13 +58,13 @@ class CloneCommand(BaseCommand):
                  "snapshot-policy=", "split", "refresh", "svm-dr-unprotect"]
             )
         except Exception as err:
-            print(err)
+            logger.error(err)
             self.handle_invalid_command(help_text=HELP_TEXT_CLONE_VOLUME, invalid_opt_arg=True)
         
         # Parse command line options
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                print(HELP_TEXT_CLONE_VOLUME)
+                logger.info(HELP_TEXT_CLONE_VOLUME)
                 return
             elif opt in ("-l", "--cluster-name"):
                 cluster_name = arg
@@ -106,11 +106,11 @@ class CloneCommand(BaseCommand):
             self.handle_invalid_command(help_text=HELP_TEXT_CLONE_VOLUME, invalid_opt_arg=True)
         
         if (unix_uid and not unix_gid) or (unix_gid and not unix_uid):
-            print("Error: if either one of -u/--uid or -g/--gid is specified, then both must be specified.")
+            logger.error("Error: if either one of -u/--uid or -g/--gid is specified, then both must be specified.")
             self.handle_invalid_command(help_text=HELP_TEXT_CLONE_VOLUME, invalid_opt_arg=True)
         
         if export_hosts and export_policy:
-            print("Error: cannot use both --export-policy and --export-hosts. only one of them can be specified.")
+            logger.error("Error: cannot use both --export-policy and --export-hosts. only one of them can be specified.")
             self.handle_invalid_command(help_text=HELP_TEXT_CLONE_VOLUME, invalid_opt_arg=True)
         
         # Clone volume

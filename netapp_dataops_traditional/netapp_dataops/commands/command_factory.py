@@ -29,6 +29,9 @@ class CommandFactory:
         # Get commands
         "get": ("get_command", "GetCommand"),
         
+        # Get commands
+        "get": ("get_command", "GetCommand"),
+        
         # List commands
         "list": ("list_command", "ListCommand"),
         "ls": ("list_command", "ListCommand"),
@@ -53,6 +56,9 @@ class CommandFactory:
         
         # Sync commands
         "sync": ("sync_command", "SyncCommand"),
+        
+        # Update commands
+        "update": ("update_command", "UpdateCommand"),
         
         # Help commands
         "help": ("help_command", "HelpCommand"),

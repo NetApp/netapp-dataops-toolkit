@@ -48,9 +48,6 @@ class ConfigCommand(BaseCommand):
             
             config_manager.save_config(config)
             
-            summary = config_manager.get_config_summary(config)
-            logger.info(summary)
-            
         except ConfigCreationError as e:
             logger.error(f"Error creating configuration: {e}")
             sys.exit(1)

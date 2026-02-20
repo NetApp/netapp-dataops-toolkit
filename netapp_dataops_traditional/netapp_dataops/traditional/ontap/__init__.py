@@ -24,6 +24,9 @@ from .snapmirror_operations import (
 
 from .flexcache_operations import (
     prepopulate_flex_cache,
+    list_flexcaches,
+    get_flexcache_origin,
+    update_flexcache,
     create_flexcache
 )
 
@@ -31,6 +34,13 @@ from ..protocols.cifs_share_operations import (
     create_cifs_share,
     list_cifs_shares,
     get_cifs_share
+)
+
+from .qtree_operations import (
+    create_qtree,
+    list_qtrees,
+    get_qtree,
+    get_qtree_metrics
 )
 
 __all__ = [
@@ -52,8 +62,17 @@ __all__ = [
     'sync_snap_mirror_relationship',
     # FlexCache operations
     'prepopulate_flex_cache',
+    'list_flexcaches',
+    'get_flexcache_origin',
+    'update_flexcache',
     'create_flexcache',
+    # CIFS Share operations
     'create_cifs_share',
     'list_cifs_shares',
-    'get_cifs_share'
+    'get_cifs_share',
+    # Qtree operations
+    'create_qtree',
+    'list_qtrees',
+    'get_qtree',
+    'get_qtree_metrics',
 ]

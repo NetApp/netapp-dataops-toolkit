@@ -13,9 +13,16 @@ The NetApp DataOps Toolkit MCP Server for ONTAP is an open-source server compone
 - **Mount Volume**: Mount existing data volumes locally as read-only or read-write.
 - **Create Snapshot**: Create space-efficient, read-only copies of data volumes for versioning and traceability.
 - **List Snapshots**: Retrieve a list of all snapshots for a specific volume.
+- **Create Qtree**: Create new qtrees within volumes for flexible data organization.
+- **List Qtrees**: Retrieve a list of all qtrees in a volume or across all volumes in an SVM.
+- **Get Qtree**: Retrieve detailed information about a specific qtree.
+- **Get Qtree Metrics**: Retrieve historical performance metrics for a specific qtree.
 - **Create SnapMirror Relationship**: Set up SnapMirror relationships for efficient data replication.
 - **List SnapMirror Relationships**: Retrieve a list of all SnapMirror relationships on the storage system.
 - **Create FlexCache Volume**: Create FlexCache volumes for efficient data access and caching.
+- **List FlexCache Volumes**: Retrieve a list of all FlexCache volumes with their origin information.
+- **Get FlexCache Origin**: Retrieve detailed origin information for a specific FlexCache volume.
+- **Update FlexCache Volume**: Update configuration and properties of existing FlexCache volumes.
 - **Create CIFS Share**: Create a new CIFS share on a specified SVM with optional ACLs and properties.
 - **List CIFS Shares**: Retrieve a list of all existing CIFS shares, with optional filtering by SVM and name pattern.
 - **Get CIFS Share**: Retrieve detailed information about a specific CIFS share.
