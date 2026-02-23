@@ -23,6 +23,9 @@ The NetApp DataOps Toolkit MCP Server for ONTAP is an open-source server compone
 - **List FlexCache Volumes**: Retrieve a list of all FlexCache volumes with their origin information.
 - **Get FlexCache Origin**: Retrieve detailed origin information for a specific FlexCache volume.
 - **Update FlexCache Volume**: Update configuration and properties of existing FlexCache volumes.
+- **Create CIFS Share**: Create a new CIFS share on a specified SVM with optional ACLs and properties.
+- **List CIFS Shares**: Retrieve a list of all existing CIFS shares, with optional filtering by SVM and name pattern.
+- **Get CIFS Share**: Retrieve detailed information about a specific CIFS share.
 
 ### Prerequisites
 

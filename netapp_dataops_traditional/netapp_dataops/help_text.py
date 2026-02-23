@@ -58,6 +58,12 @@ Note: To view details regarding options/arguments for a specific command, run th
 \tlist snapmirror-relationships\tList all existing SnapMirror relationships.
 \tsync snapmirror-relationship\tTrigger a sync operation for an existing SnapMirror relationship.
 \tcreate snapmirror-relationship\tCreate new SnapMirror relationship.
+
+CIFS Share Management Commands:
+Note: To view details regarding options/arguments for a specific command, run the command with the '-h' or '--help' option.
+\tcreate cifs-share\t\tCreate a new CIFS share.
+\tlist cifs-shares\t\tList all CIFS shares.
+\tget cifs-share\t\t\tGet details of a specific CIFS share.
 '''
 
 # Configuration command help text
@@ -592,6 +598,68 @@ Optional Options/Arguments:
 Examples:
 \tnetapp_dataops_cli.py prepopulate flexcache --name=project1 --paths=/datasets/project1,/datasets/project2
 \tnetapp_dataops_cli.py prepopulate flexcache -n test1 -p /datasets/project1,/datasets/project2
+'''
+
+# CIFS Share operations help text
+HELP_TEXT_CREATE_CIFS_SHARE = '''
+Command: create cifs-share
+
+Create a new CIFS share.
+
+Required Options/Arguments:
+\t-n, --name=\t\tName of the CIFS share.
+\t-v, --volume=\t\tName of the volume to share. The volume's NAS path will be used as the share path.
+\t-s, --svm=\t\tExisting SVM in which to create the CIFS share.
+
+Optional Options/Arguments:
+\t-u, --cluster-name=\tNon default hosting cluster
+\t-c, --comment=\t\tComment/ description for the CIFS share.
+\t-a, --acls=\t\tJSON string of ACLs to apply to the share. Example: '[{"user_or_group":"Everyone","permission":"full_control","type":"windows"}]'
+\t-l, --properties=\tComma-separated list of properties to apply to the share ('browsable', 'oplocks', 'showsnapshot', 'changenotify', 'attributecache', 'continuously_available', 'encryption').
+\t-h, --help\t\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py create cifs-share --name=cifs-share1 --volume=project1_vol --svm=svm1
+\tnetapp_dataops_cli.py create cifs-share -n cifs-share2 -v project2_vol -s svm1
+'''
+
+# List CIFS Shares help text
+HELP_TEXT_LIST_CIFS_SHARES = '''
+Command: list cifs-shares
+
+List all CIFS shares.
+
+Note: Administrative shares (c$, ipc$, admin$, print$) are hidden by default.
+
+Optional Options/Arguments:
+\t-s, --svm=\t\tExisting SVM to list CIFS shares from.
+\t-n, --name-pattern=\tPattern to filter share names by (supports wildcard '*').
+\t-u, --cluster-name=\tNon default hosting cluster
+\t-h, --help\t\tPrint help text.
+
+Examples:
+\tnetapp_dataops_cli.py list cifs-shares
+\tnetapp_dataops_cli.py list cifs-shares --svm=svm1
+\tnetapp_dataops_cli.py list cifs-shares -s svm1 --name-pattern="cifs*"
+'''
+
+# Get CIFS Share help text
+HELP_TEXT_GET_CIFS_SHARE = '''
+Command: get cifs-share
+
+Get details of a specific CIFS share.
+
+Required Options/Arguments:
+\t-n, --name=\t\tName of the CIFS share to retrieve.
+\t-s, --svm=\t\tExisting SVM in which the CIFS share resides.
+
+Optional Options/Arguments:
+\t-u, --cluster-name=\tNon default hosting cluster
+\t-h, --help\t\tPrint help text.
+
+Examples:
+	netapp_dataops_cli.py get cifs-share --name=cifs-share1 --svm=svm1
+	netapp_dataops_cli.py get cifs-share -n cifs-share1 -s svm1
 '''
 
 HELP_TEXT_GET_FLEXCACHE_ORIGIN = '''

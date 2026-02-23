@@ -3,7 +3,7 @@
 import logging
 import sys
 import asyncio
-from typing import Optional
+from typing import Any, Dict, List, Optional
 from fastmcp import FastMCP
 from netapp_dataops.mcp_server.config  import load_credentials
 from netapp_dataops.traditional.ontap import (
@@ -16,6 +16,9 @@ from netapp_dataops.traditional.ontap import (
     create_snap_mirror_relationship, 
     list_snap_mirror_relationships,
     create_flexcache,
+    create_cifs_share,
+    list_cifs_shares,
+    get_cifs_share,
     list_flexcaches,
     get_flexcache_origin,
     update_flexcache,
@@ -482,7 +485,176 @@ async def create_flexcache_tool(
             print_output=print_output
         )
     except Exception as e:
-        print(f"Error creating FlexCache: {e}")
+        logger.error(f"Error creating FlexCache: {e}")
+        raise
+
+
+@mcp.tool(name="Create CIFS Share")
+async def create_cifs_share_tool(
+    name : str,
+    volume_name : str,
+    svm : str,
+    comment: Optional[str] = None,
+    acls: Optional[List[Any]] = None,
+    properties: Optional[List[str]] = None,
+    cluster_name: Optional[str] = None,
+    print_output: bool = False
+) -> None:
+    """
+    Use this tool to create a new CIFS share on a volume.
+    
+    Args:
+        name (str): Name of the CIFS share (required).
+        volume_name (str): Name of the volume to share. The volume's NAS path will be used as the share path (required).
+        svm (str): Name of the Storage Virtual Machine (SVM) where the share will be created (required).
+        comment (str): Optional comment for the CIFS share. Defaults to None.
+        acls (List[Dict]): Optional list of Access Control List entries to set on the CIFS share. Each ACL should be a dictionary with appropriate keys. Defaults to None.
+        properties (List[str]): Optional list of additional share properties (e.g., ['browsable', 'oplocks']). Defaults to None.
+        cluster_name (str): Non-default cluster name. Defaults to None.
+        print_output (bool): Denotes whether or not to print messages to the console during execution. Defaults to False.
+    
+    Returns:
+        None
+    """
+    try:
+        # Initialize mutable default arguments
+        if acls is None:
+            acls = []
+        if properties is None:
+            properties = []
+        
+        # Create the CIFS share
+        create_cifs_share(
+            name=name,
+            volume_name=volume_name,
+            svm=svm,
+            comment=comment,
+            acls=acls,
+            properties=properties,
+            cluster_name=cluster_name,
+            print_output=print_output
+        )
+
+    except Exception as e:
+        logger.error(f"Error creating CIFS share: {e}")
+        raise
+
+
+@mcp.tool(name="List CIFS Shares")
+async def list_cifs_shares_tool(
+    svm : Optional[str] = None,
+    name_pattern : Optional[str] = None,
+    cluster_name: Optional[str] = None,
+    print_output: bool = False
+) -> list:
+    """
+    Use this tool to retrieve a list of all existing CIFS shares.
+
+    Args:
+        svm (str, optional): Name of the SVM to filter shares. Defaults to None.
+        name_pattern (str, optional): Pattern to filter share names. Defaults to None.
+        cluster_name (str, optional): Non default hosting cluster name. Defaults to None.
+        print_output (bool): Whether to print output messages. Defaults to False.
+
+    Returns:
+        A list of all existing CIFS share objects.
+    """
+    try:
+
+        shares = list_cifs_shares(
+            svm=svm,
+            name_pattern=name_pattern,
+            cluster_name=cluster_name,
+            print_output=print_output
+        )
+
+        if shares is None:
+            return []
+        
+        # Convert NetAppCifsShare objects to dictionaries for JSON serialization
+        serializable_shares = []
+        for share in shares:
+            if hasattr(share, 'to_dict'):
+                serializable_shares.append(share.to_dict())
+            else:
+                # Fallback: extract key attributes manually
+                # Robust SVM attribute extraction
+                svm_value = getattr(share, 'svm', None)
+                if hasattr(svm_value, 'name'):
+                    svm_name = svm_value.name
+                elif isinstance(svm_value, dict) and 'name' in svm_value:
+                    svm_name = svm_value['name']
+                else:
+                    svm_name = None
+                
+                serializable_shares.append({
+                    'name': getattr(share, 'name', None),
+                    'path': getattr(share, 'path', None),
+                    'svm': svm_name,
+                    'comment': getattr(share, 'comment', None),
+                })
+        
+        return serializable_shares
+    
+    except Exception as e:
+        logger.error(f"Error listing CIFS shares: {e}")
+        raise
+
+
+@mcp.tool(name="Get CIFS Share")
+async def get_cifs_share_tool(
+    name : str,
+    svm : str,
+    cluster_name: Optional[str] = None,
+    print_output: bool = False
+) -> dict:
+    """
+    Use this tool to retrieve details of a specific CIFS share.
+
+    Args:
+        name (str): Name of the CIFS share (required).
+        svm (str): Name of the SVM where the share is located (required).
+        cluster_name (str): Non-default cluster name. Defaults to None.
+        print_output (bool): Denotes whether or not to print messages. Defaults to False.
+
+    Returns:
+        A dictionary containing details of the specified CIFS share.
+    """
+    try:
+
+        share_details = get_cifs_share(
+            name=name,
+            svm=svm,
+            cluster_name=cluster_name,
+            print_output=print_output
+        )
+        
+        if share_details is None:
+            return {}
+        
+        # Convert to dictionary if it's a NetApp API object
+        if hasattr(share_details, 'to_dict'):
+            return share_details.to_dict()
+        else:
+            # Fallback: extract key attributes manually
+            # Robust SVM attribute extraction
+            svm_value = getattr(share_details, 'svm', None)
+            if hasattr(svm_value, 'name'):
+                svm_name = svm_value.name
+            elif isinstance(svm_value, dict) and 'name' in svm_value:
+                svm_name = svm_value['name']
+            else:
+                svm_name = None
+            
+            return {
+                'name': getattr(share_details, 'name', None),
+                'path': getattr(share_details, 'path', None),
+                'svm': svm_name,
+                'comment': getattr(share_details, 'comment', None),
+            }
+        
+    except Exception as e:
+        logger.error(f"Error getting CIFS share: {e}")
         raise
 
 
@@ -775,9 +947,12 @@ if __name__ == "__main__":
         # Validates the configuration
         load_credentials()
 
+        # Sets up basic logging to capture server events and errors
+        logging.basicConfig(level=logging.INFO)
+
         if hasattr(mcp, '_tool_manager'):
-            logger.info("Registered tools:")
-            logger.info(asyncio.run(mcp._tool_manager.get_tools()))
+            logging.info("Registered tools:") 
+            logging.info(asyncio.run(mcp._tool_manager.get_tools()))
 
         # Starts the MCP server using stdio transport for local operation
         mcp.run(transport="stdio")

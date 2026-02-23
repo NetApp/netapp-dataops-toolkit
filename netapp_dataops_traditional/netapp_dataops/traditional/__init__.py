@@ -15,7 +15,8 @@ from .exceptions import (
     MountOperationError,
     InvalidSnapMirrorParameterError,
     SnapMirrorSyncOperationError,
-    CloudSyncSyncOperationError
+    CloudSyncSyncOperationError,
+    InvalidCifsShareParameterError
 )
 
 # Import dataset exceptions
@@ -53,6 +54,12 @@ from .ontap.snapmirror_operations import (
 from .data_movement.cloud_sync_operations import (
     list_cloud_sync_relationships,
     sync_cloud_sync_relationship
+)
+
+from .protocols.cifs_share_operations import (
+    create_cifs_share,
+    list_cifs_shares,
+    get_cifs_share
 )
 
 from .data_movement.s3_operations import (
@@ -108,6 +115,9 @@ __all__ = [
     'push_directory_to_s3',
     'push_file_to_s3',
     'prepopulate_flex_cache',
+    'create_cifs_share',
+    'list_cifs_shares',
+    'get_cifs_share',
     'create_qtree',
     'list_qtrees',
     'get_qtree',

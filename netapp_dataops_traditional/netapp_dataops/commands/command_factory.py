@@ -25,6 +25,9 @@ class CommandFactory:
         "delete": ("delete_command", "DeleteCommand"),
         "del": ("delete_command", "DeleteCommand"),
         "rm": ("delete_command", "DeleteCommand"),
+
+        # Get commands
+        "get": ("get_command", "GetCommand"),
         
         # Get commands
         "get": ("get_command", "GetCommand"),

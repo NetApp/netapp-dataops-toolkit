@@ -512,17 +512,20 @@ def create_flexcache_tool(
 
         return f"FlexCache volume '{result['ontap_flexcache']}' and PVC '{result['k8s_pvc']}' created successfully."
     except Exception as e:
-        print(f"Error creating FlexCache volume: {e}")
+        logger.error(f"Error creating FlexCache volume: {e}")
         raise
 
 def main():
     try:
+        # Sets up basic logging to capture server events and errors
+        logging.basicConfig(level=logging.INFO)
+
         # Starts the MCP server using stdio transport for local operation
         mcp.run(transport="stdio")
 
     except Exception as e:
         # Logs and prints any startup errors, then exits with an error code
-        logger.error(f"Server startup failed: {e}")
+        logging.error(f"Server startup failed: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

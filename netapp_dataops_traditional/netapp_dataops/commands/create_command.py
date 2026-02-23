@@ -4,10 +4,12 @@ import getopt
 import re
 import sys
 from .base_command import BaseCommand, logger
+import json
 from netapp_dataops.help_text import (
     HELP_TEXT_CREATE_SNAPSHOT,
     HELP_TEXT_CREATE_VOLUME,
     HELP_TEXT_CREATE_SNAPMIRROR_RELATIONSHIP,
+    HELP_TEXT_CREATE_CIFS_SHARE,
     HELP_TEXT_CREATE_QTREE,
     HELP_TEXT_CREATE_FLEXCACHE
 )
@@ -15,12 +17,15 @@ from netapp_dataops.traditional import (
     create_snapshot,
     create_volume,
     create_snap_mirror_relationship,
+    create_cifs_share,
     create_qtree,
     create_flexcache,
     InvalidConfigError,
     APIConnectionError,
     InvalidVolumeParameterError,
-    MountOperationError
+    MountOperationError,
+    ConnectionTypeError,
+    InvalidCifsShareParameterError
 )
 
 
@@ -37,6 +42,8 @@ class CreateCommand(BaseCommand):
             self._create_volume()
         elif target in ("snapmirror-relationship", "sm", "snapmirror"):
             self._create_snapmirror_relationship()
+        elif target in ("cifs-share", "cifs", "cifsshare"):
+            self._create_cifs_share()
         elif target in ("qtree", "qt"):
             self._create_qtree()
         elif target in ("flexcache", "fc"):
@@ -349,6 +356,75 @@ class CreateCommand(BaseCommand):
                 print_output=True
             )
         except (InvalidConfigError, APIConnectionError, InvalidVolumeParameterError, MountOperationError):
+            sys.exit(1)
+
+    def _create_cifs_share(self) -> None:
+        """Handle CIFS share creation."""
+        # Initialize variables
+        svm = None
+        name = None
+        volume_name = None
+        cluster_name = None
+        comment = None
+        acls = None
+        properties = None
+        
+        # Get command line options
+        try:
+            opts, _ = getopt.getopt(
+                self.args[3:], 
+                "u:h:s:n:l:a:v:c:", 
+                ["cluster-name=", "help", "svm=", "name=", "properties=", "acls=", "volume=", "comment="]
+            )
+        except Exception as err:
+            logger.error(err)
+            self.handle_invalid_command(help_text=HELP_TEXT_CREATE_CIFS_SHARE, invalid_opt_arg=True)
+        
+        # Parse command line options
+        for opt, arg in opts:
+            if opt in ("-h", "--help"):
+                logger.info(HELP_TEXT_CREATE_CIFS_SHARE)
+                return
+            elif opt in ("-s", "--svm"):
+                svm = arg
+            elif opt in ("-u", "--cluster-name"):
+                cluster_name = arg
+            elif opt in ("-n", "--name"):
+                name = arg
+            elif opt in ("-v", "--volume"):
+                volume_name = arg
+            elif opt in ("-c", "--comment"):
+                comment = arg
+            elif opt in ("-l", "--properties"):
+                properties = arg.split(',')
+            elif opt in ("-a", "--acls"):
+                try:
+                    acls = json.loads(arg)
+                except json.JSONDecodeError as e:
+                    logger.error("Error parsing ACLs JSON: %s" % e)
+                    self.handle_invalid_command(help_text=HELP_TEXT_CREATE_CIFS_SHARE, invalid_opt_arg=True)
+        
+        # Filter out empty properties entries from trailing commas
+        if properties:
+            properties = [p for p in properties if p]
+        
+        # Check for required options
+        if not name or not svm or not volume_name:
+            self.handle_invalid_command(help_text=HELP_TEXT_CREATE_CIFS_SHARE, invalid_opt_arg=True)
+        
+        # Create CIFS share
+        try:
+            create_cifs_share(
+                svm=svm,
+                name=name,
+                volume_name=volume_name,
+                cluster_name=cluster_name,
+                acls=acls,
+                properties=properties,
+                comment=comment,
+                print_output=True
+            )
+        except (InvalidConfigError, APIConnectionError, InvalidCifsShareParameterError):
             sys.exit(1)
 
     def _create_qtree(self) -> None:

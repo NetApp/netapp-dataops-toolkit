@@ -30,6 +30,12 @@ from .flexcache_operations import (
     create_flexcache
 )
 
+from ..protocols.cifs_share_operations import (
+    create_cifs_share,
+    list_cifs_shares,
+    get_cifs_share
+)
+
 from .qtree_operations import (
     create_qtree,
     list_qtrees,
@@ -60,6 +66,10 @@ __all__ = [
     'get_flexcache_origin',
     'update_flexcache',
     'create_flexcache',
+    # CIFS Share operations
+    'create_cifs_share',
+    'list_cifs_shares',
+    'get_cifs_share',
     # Qtree operations
     'create_qtree',
     'list_qtrees',

@@ -20,6 +20,9 @@ The [NetApp DataOps Toolkit MCP Server for ONTAP](netapp_dataops_traditional/doc
 - **List FlexCache Origins**: Retrieve a list of all FlexCache volumes with their origin volume information.
 - **Get FlexCache Origin**: Retrieve detailed origin information for a specific FlexCache volume.
 - **Update FlexCache**: Update configuration and properties of an existing FlexCache volume, including prepopulation, writeback, relative sizing, and atime scrubbing.
+- **Create CIFS Share**: Create a new CIFS share on a specified SVM with optional ACLs and properties.
+- **List CIFS Shares**: Retrieve a list of all existing CIFS shares, with optional filtering by SVM and name pattern.
+- **Get CIFS Share**: Retrieve detailed information about a specific CIFS share.
 - **Create Qtree**: Create a new qtree within an existing volume for data organization and quota management.
 - **List Qtrees**: Retrieve a list of qtrees in a volume or across all volumes in an SVM.
 - **Get Qtree**: Retrieve detailed properties for a specific qtree including security settings and permissions.
