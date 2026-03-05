@@ -114,15 +114,21 @@ def create_cifs_share(
             # Verify SVM exists
             svm_object = NetAppSvm.find(name=svm)
             if not svm_object:
+                if print_output:
+                    logger.error("Error: SVM '%s' not found", svm)
                 raise InvalidCifsShareParameterError("SVM %s not found" % svm)
             
             # Get volume and retrieve its NAS path
             volume = NetAppVolume.find(name=volume_name, svm=svm)
             if not volume:
+                if print_output:
+                    logger.error("Error: Volume '%s' not found on SVM '%s'", volume_name, svm)
                 raise InvalidCifsShareParameterError("Volume %s not found on SVM %s" % (volume_name, svm))
             
             volume.get(fields="nas.path")
             if not hasattr(volume, 'nas') or not hasattr(volume.nas, 'path'):
+                if print_output:
+                    logger.error("Error: Volume '%s' does not have a NAS path configured", volume_name)
                 raise InvalidCifsShareParameterError("Volume %s does not have a NAS path configured" % volume_name)
             
             path = volume.nas.path
@@ -133,6 +139,8 @@ def create_cifs_share(
             # Check if CIFS share already exists
             existing_share = NetAppCifsShare.find(name=name, svm=svm)
             if existing_share:
+                if print_output:
+                    logger.error("Error: CIFS share '%s' already exists on SVM '%s'", name, svm)
                 raise InvalidCifsShareParameterError("CIFS share %s already exists on SVM %s" % (name, svm))
             
             # Create the CIFS share object
@@ -235,6 +243,8 @@ def list_cifs_shares(
                 # Verify SVM exists
                 svm_object = NetAppSvm.find(name=svm)
                 if not svm_object:
+                    if print_output:
+                        logger.error("Error: SVM '%s' not found", svm)
                     raise InvalidCifsShareParameterError("SVM %s not found" % svm)
                 query['svm.name'] = svm
                 
@@ -372,12 +382,16 @@ def get_cifs_share(
             # Verify SVM exists
             svm_object = NetAppSvm.find(name=svm)
             if not svm_object:
+                if print_output:
+                    logger.error("Error: SVM '%s' not found", svm)
                 raise InvalidCifsShareParameterError("SVM %s not found" % svm)
             
             # Find the specific CIFS share
             cifs_share = NetAppCifsShare.find(name=name, svm=svm)
             
             if not cifs_share:
+                if print_output:
+                    logger.error("Error: CIFS share '%s' not found on SVM '%s'", name, svm)
                 raise InvalidCifsShareParameterError("CIFS share %s not found on SVM %s" % (name, svm))
             
             # Get detailed information by retrieving the full object
