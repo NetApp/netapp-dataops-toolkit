@@ -308,36 +308,31 @@ class DatasetManagerConfigurator:
             return False
     
     def _is_mounted(self, mountpoint: str) -> bool:
-        """Check if a mountpoint is currently in use."""
+        """Check if a mountpoint is currently in use (cross-platform)."""
         try:
-            # Check if mountpoint utility is available
-            self._check_required_utilities('mountpoint')
-            
-            result = subprocess.run(['mountpoint', '-q', mountpoint], 
-                                  capture_output=True, text=True)
-            return result.returncode == 0
-        except RuntimeError as e:
-            # Re-raise utility check errors
-            raise
+            # Use mount command which is available on both Linux and macOS
+            result = subprocess.run(['mount'], capture_output=True, text=True)
+            if result.returncode == 0:
+                # Check if mountpoint appears in mount output
+                for line in result.stdout.split('\n'):
+                    # Match " on <mountpoint> " pattern to avoid false positives
+                    if f" on {mountpoint} " in line or line.endswith(f" on {mountpoint}"):
+                        return True
+            return False
         except Exception:
             return False
     
     def _get_mount_target(self, mountpoint: str) -> str:
-        """Get what is currently mounted at the given mountpoint."""
+        """Get what is currently mounted at the given mountpoint (cross-platform)."""
         try:
-            # Check if mount utility is available
-            self._check_required_utilities('mount')
-            
             result = subprocess.run(['mount'], capture_output=True, text=True)
             if result.returncode == 0:
                 for line in result.stdout.split('\n'):
-                    if f" {mountpoint} " in line:
+                    # Match " on <mountpoint> " pattern
+                    if f" on {mountpoint} " in line or line.endswith(f" on {mountpoint}"):
                         # Extract the source (first part before " on ")
                         return line.split(' on ')[0]
             return "unknown"
-        except RuntimeError as e:
-            # Re-raise utility check errors
-            raise
         except Exception:
             return "unknown"
     
@@ -365,6 +360,8 @@ class DatasetManagerConfigurator:
             # Add to fstab FIRST, then mount using fstab entry
             if self._add_to_fstab(volume_name, mountpoint, expected_nfs_target):
                 logger.info(f"  Volume '{volume_name}' added to fstab")
+                # Now mount the volume using the fstab entry
+                self._mount_from_fstab(mountpoint)
     
     def _add_to_fstab(self, volume_name: str, mountpoint: str, nfs_target: str) -> bool:
         """Add volume to fstab first, then mount using fstab entry (following requirements)."""
@@ -392,6 +389,43 @@ class DatasetManagerConfigurator:
             logger.info(f"  Error in fstab setup and mount: {e}")
             return False
 
+    def _mount_from_fstab(self, mountpoint: str) -> bool:
+        """
+        Mount a volume using its fstab entry.
+        
+        Args:
+            mountpoint: The mountpoint path to mount
+            
+        Returns:
+            bool: True if mount successful, False otherwise
+        """
+        try:
+            logger.info(f"  Mounting volume at '{mountpoint}'...")
+            
+            # Check if we need sudo
+            needs_sudo = not os.access('/etc', os.W_OK)
+            
+            if needs_sudo:
+                result = subprocess.run(['sudo', 'mount', mountpoint],
+                                      capture_output=True, text=True)
+            else:
+                result = subprocess.run(['mount', mountpoint],
+                                      capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                logger.info(f"  Successfully mounted volume at '{mountpoint}'")
+                return True
+            else:
+                error_msg = result.stderr.strip()
+                logger.info(f"  Warning: Failed to mount volume: {error_msg}")
+                logger.info(f"  You can manually mount it later with: sudo mount {mountpoint}")
+                return False
+                
+        except Exception as e:
+            logger.info(f"  Warning: Error mounting volume: {e}")
+            logger.info(f"  You can manually mount it later with: sudo mount {mountpoint}")
+            return False
+    
     def _get_expected_nfs_target(self, volume_name: str) -> str:
         """Get the expected NFS target for a volume."""
         try:
