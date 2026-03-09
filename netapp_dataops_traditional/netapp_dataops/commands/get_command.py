@@ -55,7 +55,7 @@ class GetCommand(BaseCommand):
         try:
             opts, args = getopt.getopt(
                 self.args[3:], 
-                "u:h:s:n:", 
+                "u:hs:n:", 
                 ["cluster-name=", "help", "svm=", "name="]
             )
         except Exception as err:
