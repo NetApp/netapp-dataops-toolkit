@@ -357,6 +357,7 @@ class ConfigManager:
             str: Configuration summary
         """
         summary = []
+        summary.append(f"\nCreated config file: {self.config_file}")
         summary.append("\nConfiguration Summary:")
         summary.append(f"  ONTAP Host: {config.ontap.hostname}")
         summary.append(f"  SVM: {config.ontap.svm}")
