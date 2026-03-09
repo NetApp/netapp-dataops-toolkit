@@ -167,8 +167,9 @@ class DatasetManagerConfigurator:
             volume_info = self._get_volume_info(root_volume_name)
             
             if volume_info is None:
-                logger.info(f"  Warning: Volume '{root_volume_name}' not found on ONTAP.")
-                logger.info("  Configuration has been saved. Please verify the volume name and try setup again.")
+                logger.info(f"  Note: Cannot validate volume '{root_volume_name}' on ONTAP at this time.")
+                logger.info("  Configuration has been saved. Volume validation will occur when you use Dataset Manager.")
+                # Skip mounting setup since we can't validate the volume
                 return
             
             # Check junction path
@@ -202,6 +203,19 @@ class DatasetManagerConfigurator:
         root_mountpoint = config.root_mountpoint
         
         logger.info(f"\n  Setting up new Dataset Manager root volume '{root_volume_name}'...")
+        
+        # Check if we can connect to ONTAP
+        from ..traditional.core import _retrieve_config
+        from ..traditional.exceptions import InvalidConfigError
+        
+        try:
+            _retrieve_config(print_output=False)
+        except (InvalidConfigError, FileNotFoundError):
+            # Base config doesn't exist yet - defer volume creation
+            logger.info(f"  Note: Cannot create root volume on ONTAP - base configuration not yet complete.")
+            logger.info(f"  Configuration has been saved.")
+            logger.info(f"  Please create the root volume '{root_volume_name}' manually or reconfigure after base setup is complete.")
+            return
         
         while True:  # Loop for retrying with different names if needed
             try:
@@ -250,8 +264,23 @@ class DatasetManagerConfigurator:
         self._handle_root_volume_mounting(root_volume_name, root_mountpoint)
     
     def _get_volume_info(self, volume_name: str) -> Optional[Dict[str, Any]]:
-        """Get volume information from ONTAP."""
+        """Get volume information from ONTAP.
+        
+        Returns None if ONTAP connection cannot be established (e.g., during initial config).
+        """
         try:
+            # Check if base ONTAP config exists before trying to connect
+            from ..traditional.core import _retrieve_config
+            from ..traditional.exceptions import InvalidConfigError
+            
+            try:
+                _retrieve_config(print_output=False)
+            except (InvalidConfigError, FileNotFoundError):
+                # Base config doesn't exist yet - can't connect to ONTAP
+                if self.print_output:
+                    logger.info(f"  Note: Cannot validate volume on ONTAP - base configuration not yet complete")
+                return None
+            
             # Use list_volumes to find the specific volume
             # Always suppress output to avoid displaying volume lists during user input
             volumes = volume_operations.list_volumes(print_output=False)
@@ -261,12 +290,25 @@ class DatasetManagerConfigurator:
             return None
         except Exception as e:
             if self.print_output:
-                logger.info(f"Error retrieving volume information: {e}")
+                logger.info(f"  Error retrieving volume information: {e}")
             return None
     
     def _junction_path_exists(self, junction_path: str, exclude_volume: str = None) -> bool:
-        """Check if a junction path is already in use by any volume."""
+        """Check if a junction path is already in use by any volume.
+        
+        Returns False if ONTAP connection cannot be established.
+        """
         try:
+            # Check if base ONTAP config exists before trying to connect
+            from ..traditional.core import _retrieve_config
+            from ..traditional.exceptions import InvalidConfigError
+            
+            try:
+                _retrieve_config(print_output=False)
+            except (InvalidConfigError, FileNotFoundError):
+                # Base config doesn't exist yet - can't check junction paths
+                return False
+            
             # Always suppress output to avoid displaying volume lists during validation
             volumes = volume_operations.list_volumes(print_output=False)
             for volume in volumes:
