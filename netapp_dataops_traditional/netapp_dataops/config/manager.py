@@ -126,15 +126,34 @@ class ConfigManager:
             dataset_manager_config = None
             if PromptUtils.prompt_yes_no("Do you intend to use the toolkit's Dataset Manager functionality?"):
                 logger.info("\nDataset Manager Configuration:")
+                
+                # IMPORTANT: Save base ONTAP config to disk BEFORE Dataset Manager setup
+                # This allows Dataset Manager to connect to ONTAP and create volumes
+                base_config = NetAppDataOpsConfig(
+                    ontap=ontap_config,
+                    s3=s3_config,
+                    cloud_sync=cloud_sync_config,
+                    dataset_manager=None  # Will be added after setup
+                )
+                self.save_config(base_config)
+                
+                # Now Dataset Manager can connect to ONTAP using the saved config
                 dataset_manager_configurator = DatasetManagerConfigurator()
                 dataset_manager_config = dataset_manager_configurator.configure_dataset_manager()
             
-            return NetAppDataOpsConfig(
+            # Create final configuration object
+            final_config = NetAppDataOpsConfig(
                 ontap=ontap_config,
                 s3=s3_config,
                 cloud_sync=cloud_sync_config,
                 dataset_manager=dataset_manager_config
             )
+            
+            # Display configuration summary
+            summary = self.get_config_summary(final_config)
+            logger.info(summary)
+            
+            return final_config
             
         except Exception as e:
             raise ConfigCreationError(f"Failed to create configuration: {e}")
@@ -338,6 +357,7 @@ class ConfigManager:
             str: Configuration summary
         """
         summary = []
+        summary.append(f"\nCreated config file: {self.config_file}")
         summary.append("\nConfiguration Summary:")
         summary.append(f"  ONTAP Host: {config.ontap.hostname}")
         summary.append(f"  SVM: {config.ontap.svm}")

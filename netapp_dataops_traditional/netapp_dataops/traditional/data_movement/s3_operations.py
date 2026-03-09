@@ -19,47 +19,10 @@ from ..core import (
     _print_invalid_config_error,
     deprecated
 )
+from ..core.connection import _instantiate_s3_session
+from ..core.config import _retrieve_s3_access_details
 
 logger = setup_logger(__name__)
-
-
-def _instantiate_s3_session(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s3VerifySSLCert: bool, s3CACertBundle: str, print_output: bool = False):
-    # Instantiate session
-    session = boto3.session.Session(aws_access_key_id=s3AccessKeyId, aws_secret_access_key=s3SecretAccessKey)
-    config = BotoConfig(signature_version='s3v4')
-
-    if s3VerifySSLCert:
-        if s3CACertBundle:
-            s3 = session.resource(service_name='s3', endpoint_url=s3Endpoint, verify=s3CACertBundle, config=config)
-        else:
-            s3 = session.resource(service_name='s3', endpoint_url=s3Endpoint, config=config)
-    else:
-        s3 = session.resource(service_name='s3', endpoint_url=s3Endpoint, verify=False, config=config)
-
-    return s3
-
-
-def _retrieve_s3_access_details(print_output: bool = False) -> Tuple[str, str, str, bool, str]:
-    try:
-        config = _retrieve_config(print_output=print_output)
-    except InvalidConfigError:
-        raise
-    try:
-        s3Endpoint = config["s3Endpoint"]
-        s3AccessKeyId = config["s3AccessKeyId"]
-        s3SecretAccessKeyBase64 = config["s3SecretAccessKey"]
-        s3VerifySSLCert = config["s3VerifySSLCert"]
-        s3CACertBundle = config["s3CACertBundle"]
-    except KeyError:
-        if print_output:
-            _print_invalid_config_error()
-        raise InvalidConfigError()
-
-    s3SecretAccessKeyBase64Bytes = s3SecretAccessKeyBase64.encode("ascii")
-    s3SecretAccessKeyBytes = base64.b64decode(s3SecretAccessKeyBase64Bytes)
-    s3SecretAccessKey = s3SecretAccessKeyBytes.decode("ascii")
-
-    return s3Endpoint, s3AccessKeyId, s3SecretAccessKey, s3VerifySSLCert, s3CACertBundle
 
 
 def _download_from_s3(s3Endpoint: str, s3AccessKeyId: str, s3SecretAccessKey: str, s3VerifySSLCert: bool,
