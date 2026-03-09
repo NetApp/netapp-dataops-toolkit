@@ -198,11 +198,38 @@ class DatasetManagerConfigurator:
         self._handle_root_volume_mounting(root_volume_name, root_mountpoint)
 
     def _setup_new_root_volume(self, config: DatasetManagerConfig) -> None:
-        """Perform operations for new root volume after config is saved."""
+        """Perform operations for new root volume after config is saved.
+        
+        Note: This method assumes the base ONTAP configuration has already been
+        saved to disk before being called, as it needs to access ONTAP APIs.
+        """
         root_volume_name = config.root_volume_name
         root_mountpoint = config.root_mountpoint
         
         logger.info(f"\n  Setting up new Dataset Manager root volume '{root_volume_name}'...")
+        
+        # Verify we can connect to ONTAP before proceeding
+        try:
+            from ..traditional.core import _retrieve_config
+            from ..traditional.exceptions import InvalidConfigError
+            
+            # Try to retrieve config to verify it exists and is valid
+            try:
+                ontap_config = _retrieve_config(print_output=False)
+                # Verify we have the minimum required fields
+                if not all(k in ontap_config for k in ['hostname', 'svm', 'dataLif']):
+                    raise InvalidConfigError("Missing required ONTAP configuration fields")
+            except (InvalidConfigError, FileNotFoundError, KeyError) as e:
+                logger.info(f"  Note: Cannot create root volume - ONTAP configuration not available yet.")
+                logger.info(f"  Dataset Manager configuration has been saved.")
+                logger.info(f"  The root volume will be created when you first use Dataset Manager,")
+                logger.info(f"  or you can create it manually: netapp_dataops_cli.py create volume -n {root_volume_name} -s 1GB")
+                return
+        except Exception as e:
+            logger.info(f"  Note: Cannot validate ONTAP connection: {e}")
+            logger.info(f"  Dataset Manager configuration has been saved.")
+            logger.info(f"  Please create the root volume manually or reconfigure later.")
+            return
         
         while True:  # Loop for retrying with different names if needed
             try:
