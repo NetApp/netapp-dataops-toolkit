@@ -4,11 +4,11 @@ This directory contains comprehensive unit tests for the NetApp DataOps Toolkit'
 
 ## Test Coverage Summary
 
-### GCNV Traditional Modules: 136 tests
+### GCNV Traditional Modules: 137 tests
 - **Base module**: 10 tests (utility functions)
-- **Volume management**: 32 tests (create, clone, delete, list operations)
-- **Snapshot management**: 47 tests (create, delete, list operations)
-- **Replication management**: 47 tests (create operation with comprehensive coverage)
+- **Volume management**: 34 tests (create, clone, delete, list operations)
+- **Snapshot management**: 55 tests (create, delete, list operations)
+- **Replication management**: 38 tests (create operation with comprehensive coverage)
 
 ### MCP Server Integration: 22 tests
 - **Server instantiation**: 3 tests (MCP server creation and configuration)
@@ -16,15 +16,15 @@ This directory contains comprehensive unit tests for the NetApp DataOps Toolkit'
 - **Integration validation**: 4 tests (response format and error handling consistency)
 - **Module structure**: 3 tests (import validation and logging configuration)
 
-**Total Test Coverage: 158 tests**
+**Total Test Coverage: 159 tests**
 
 ## Test Files
 
 ### GCNV Traditional Module Tests (`gcnv/` directory)
-- `gcnv/test_base.py`: Tests utility functions including parameter validation, serialization, and error handling
-- `gcnv/test_volume_management.py`: Comprehensive tests for volume operations with professional formatting and complete coverage
-- `gcnv/test_snapshot_management.py`: Enhanced test suite covering all snapshot operations with extensive validation scenarios
-- `gcnv/test_replication_management.py`: Comprehensive replication tests including cross-region scenarios and schedule validation
+- `gcnv/test_gcnv_base.py`: Tests utility functions including parameter validation, serialization, and error handling
+- `gcnv/test_gcnv_volume_management.py`: Comprehensive tests for volume operations with professional formatting and complete coverage (updated with cooling_threshold_days validation tests)
+- `gcnv/test_gcnv_snapshot_management.py`: Enhanced test suite covering all snapshot operations with extensive validation scenarios
+- `gcnv/test_gcnv_replication_management.py`: Comprehensive replication tests including cross-region scenarios and schedule validation
 
 ### MCP Server Tests (`mcp/` directory)
 - `mcp/test_gcnv_mcp.py`: Comprehensive test suite for the Model Context Protocol server implementation
@@ -73,6 +73,8 @@ Each test file follows a consistent professional structure with:
 - **Empty String Handling**: Tests empty string validation for all required parameters  
 - **Whitespace Validation**: Tests whitespace-only strings return appropriate API errors
 - **Type Validation**: Ensures proper type checking (e.g., labels must be dict)
+- **Cooling Threshold Validation**: Tests cooling_threshold_days parameter bounds (2-183 range) for both create_volume and clone_volume operations
+- **Large Capacity Flexibility**: Updated tests reflect flexible large_capacity validation that allows API-level feature availability determination
 
 ### API Error Simulation
 - **Resource Not Found**: Tests handling of missing volumes, snapshots, and storage pools
@@ -107,10 +109,10 @@ python3 -m pytest tests/ -v
 python3 -m pytest tests/gcnv/ -v
 
 # Specific GCNV module tests
-python3 -m pytest tests/gcnv/test_volume_management.py -v
-python3 -m pytest tests/gcnv/test_snapshot_management.py -v
-python3 -m pytest tests/gcnv/test_replication_management.py -v
-python3 -m pytest tests/gcnv/test_base.py -v
+python3 -m pytest tests/gcnv/test_gcnv_volume_management.py -v
+python3 -m pytest tests/gcnv/test_gcnv_snapshot_management.py -v
+python3 -m pytest tests/gcnv/test_gcnv_replication_management.py -v
+python3 -m pytest tests/gcnv/test_gcnv_base.py -v
 ```
 
 ### Run MCP Server Tests Only
@@ -187,13 +189,13 @@ This approach allows comprehensive testing of:
 
 ```
 tests/
-├── README.md                           # This file - comprehensive test documentation
+├── gcnv_tests_readme.md                # This file - comprehensive test documentation
 ├── requirements.txt                    # Test dependencies
-├── gcnv/                               # GCNV traditional module tests (136 tests)
-│   ├── test_base.py                    # Base utility function tests (10 tests)
-│   ├── test_volume_management.py       # Volume operation tests (32 tests)
-│   ├── test_snapshot_management.py     # Snapshot operation tests (47 tests)
-│   └── test_replication_management.py  # Replication tests (47 tests)
+├── gcnv/                               # GCNV traditional module tests (137 tests)
+│   ├── test_gcnv_base.py                    # Base utility function tests (10 tests)
+│   ├── test_gcnv_volume_management.py       # Volume operation tests (34 tests)
+│   ├── test_gcnv_snapshot_management.py     # Snapshot operation tests (55 tests)
+│   └── test_gcnv_replication_management.py  # Replication tests (38 tests)
 └── mcp/                                # MCP server integration tests (22 tests)
     └── test_gcnv_mcp.py                # MCP server tests (22 tests)
 ```
@@ -208,7 +210,7 @@ tests/
 5. Mock external dependencies appropriately
 
 ### Adding New Modules
-1. Create new test file following naming convention: `test_<module_name>.py`
+1. Create new test file following naming convention: `test_gcnv_<module_name>.py`
 2. For GCNV traditional modules, place in `gcnv/` subdirectory
 3. For MCP server tests, place in `mcp/` subdirectory
 4. For other integration tests, place in root `tests/` directory
@@ -233,10 +235,11 @@ All test dependencies are defined in `requirements.txt` in this directory
 
 ## Notes
 
-- **Fast Execution**: All 158 tests typically complete in under 60 seconds
+- **Fast Execution**: All 159 tests typically complete in under 60 seconds
 - **No External Dependencies**: Tests run completely offline with mocked APIs and MCP components
 - **Cross-Platform**: Compatible with macOS, Linux, and Windows development environments
 - **CI/CD Ready**: Designed for integration with continuous integration pipelines
 - **MCP Framework Testing**: Specialized approach for testing FastMCP decorated functions through business logic validation
 - **MCP Dependencies**: MCP tests require `fastmcp` and `mcp` packages. If these aren't installed, MCP tests will fail but GCNV tests will continue to work
+- **Recent Updates**: Volume management tests updated with cooling_threshold_days validation testing
 - **Dependency Warnings**: Some harmless Marshmallow warnings may appear from NetApp ONTAP library dependencies

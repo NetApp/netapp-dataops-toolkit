@@ -776,7 +776,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextCloneVolume)
+                    logger.info(helpTextCloneVolume)
                     sys.exit(0)
                 elif opt in ("-p", "--new-pvc-name"):
                     newPvcName = arg
@@ -828,7 +828,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextCloneJupyterLab)
+                    logger.info(helpTextCloneJupyterLab)
                     sys.exit(0)
                 elif opt in ("-w", "--new-workspace-name"):
                     newWorkspaceName = arg
@@ -903,7 +903,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextCreateVolumeSnapshot)
+                    logger.info(helpTextCreateVolumeSnapshot)
                     sys.exit(0)
                 elif opt in ("-p", "--pvc-name"):
                     pvcName = arg
@@ -941,7 +941,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextCreateVolume)
+                    logger.info(helpTextCreateVolume)
                     sys.exit(0)
                 elif opt in ("-p", "--pvc-name"):
                     pvcName = arg
@@ -988,7 +988,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextCreateJupyterLab)
+                    logger.info(helpTextCreateJupyterLab)
                     sys.exit(0)
                 elif opt in ("-w", "--workspace-name"):
                     workspaceName = arg
@@ -1049,7 +1049,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextDeployTritonServer)
+                    logger.info(helpTextDeployTritonServer)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -1101,7 +1101,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextCreateJupyterLabSnapshot)
+                    logger.info(helpTextCreateJupyterLabSnapshot)
                     sys.exit(0)
                 elif opt in ("-w", "--workspace-name"):
                     workspaceName = arg
@@ -1139,7 +1139,7 @@ if __name__ == '__main__':
 
             for opt, arg in opts:
                 if opt in ("-h", "-help"):
-                    print(helpTextCreateS3Secret)
+                    logger.info(helpTextCreateS3Secret)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -1184,7 +1184,7 @@ if __name__ == '__main__':
 
             for opt, arg in opts:
                 if opt in ("-h", "-help"):
-                    print(helpTextCreateCAConfigMap)
+                    logger.info(helpTextCreateCAConfigMap)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -1229,7 +1229,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextCreateFlexCache)
+                    logger.info(helpTextCreateFlexCache)
                     sys.exit(0)
                 elif opt in ("-f", "--flexcache-vol"):
                     flexCacheVol = arg
@@ -1284,7 +1284,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpText)
+                    logger.info(helpText)
                     sys.exit(0)
                 elif opt in ("-s", "--snapshot-name"):
                     snapshotName = arg
@@ -1307,7 +1307,7 @@ if __name__ == '__main__':
                     elif proceed in ("no", "No", "NO"):
                         sys.exit(0)
                     else:
-                        logger.error("Invalid value. Must enter 'yes' or 'no'.")
+                        logger.error("Invalid value. Must enter \'yes\' or \'no\'.")
 
             # Delete snapshot
             try:
@@ -1331,7 +1331,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextDeleteVolume)
+                    logger.info(helpTextDeleteVolume)
                     sys.exit(0)
                 elif opt in ("-p", "--pvc-name"):
                     pvcName = arg
@@ -1356,7 +1356,7 @@ if __name__ == '__main__':
                     elif proceed in ("no", "No", "NO"):
                         sys.exit(0)
                     else:
-                        logger.error("Invalid value. Must enter 'yes' or 'no'.")
+                        logger.error("Invalid value. Must enter \'yes\' or \'no\'.")
 
             # Delete volume
             try:
@@ -1382,7 +1382,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextDeleteFlexCacheVolume)
+                    logger.info(helpTextDeleteFlexCacheVolume)
                     sys.exit(0)
                 elif opt in ("-p", "--pvc-name"):
                     pvcName = arg
@@ -1409,7 +1409,7 @@ if __name__ == '__main__':
                     elif proceed in ("no", "No", "NO"):
                         sys.exit(0)
                     else:
-                        logger.error("Invalid value. Must enter 'yes' or 'no'.")
+                        logger.error("Invalid value. Must enter \'yes\' or \'no\'.")
 
             # Delete FlexCache volume
             try:
@@ -1434,7 +1434,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextDeleteJupyterLab)
+                    logger.info(helpTextDeleteJupyterLab)
                     sys.exit(0)
                 elif opt in ("-w", "--workspace-name"):
                     workspaceName = arg
@@ -1459,7 +1459,7 @@ if __name__ == '__main__':
                     elif proceed in ("no", "No", "NO"):
                         sys.exit(0)
                     else:
-                        logger.error("Invalid value. Must enter 'yes' or 'no'.")
+                        logger.error("Invalid value. Must enter \'yes\' or \'no\'.")
 
             # Delete JupyterLab workspace
             try:
@@ -1485,7 +1485,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextDeleteS3Secret)
+                    logger.info(helpTextDeleteS3Secret)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -1530,7 +1530,7 @@ if __name__ == '__main__':
 
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextDeleteS3Job)
+                    logger.info(helpTextDeleteS3Job)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -1544,7 +1544,7 @@ if __name__ == '__main__':
             try:
                 mover_job = DataMoverJob(namespace=namespace, print_output=True)
                 mover_job.delete_job(job=job_name)
-                logger.info("Job {} deleted.".format(job_name))
+                logger.info("Job %s deleted.", job_name)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1567,7 +1567,7 @@ if __name__ == '__main__':
 
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextDeleteCAConfigMap)
+                    logger.info(helpTextDeleteCAConfigMap)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -1605,7 +1605,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextDeleteTritonServer)
+                    logger.info(helpTextDeleteTritonServer)
                     sys.exit(0)
                 elif opt in ("-s", "--server-name"):
                     server_name = arg
@@ -1628,7 +1628,7 @@ if __name__ == '__main__':
                     elif proceed in ("no", "No", "NO"):
                         sys.exit(0)
                     else:
-                        logger.error("Invalid value. Must enter 'yes' or 'no'.")
+                        logger.error("Invalid value. Must enter \'yes\' or \'no\'.")
 
             # Delete Triton instance
             try:
@@ -1689,7 +1689,7 @@ if __name__ == '__main__':
 
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextGetS3Bucket)
+                    logger.info(helpTextGetS3Bucket)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -1744,7 +1744,7 @@ if __name__ == '__main__':
                     print_output=True
                 )
                 job = data_mover.get_bucket(bucket=bucket_name, pvc=pvc_name, pvc_dir=pvc_dir)
-                logger.info("Created Kubernetes job {}".format(job))
+                logger.info("Created Kubernetes job %s", job)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1795,7 +1795,7 @@ if __name__ == '__main__':
 
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextGetS3Object)
+                    logger.info(helpTextGetS3Object)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -1852,7 +1852,7 @@ if __name__ == '__main__':
                     print_output=True
                 )
                 job = data_mover.get_object(bucket=bucket_name, pvc=pvc_name, object_key=object_key, file_location=file_location)
-                logger.info("Created Kubernetes job {}".format(job))
+                logger.info("Created Kubernetes job %s", job)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1861,7 +1861,7 @@ if __name__ == '__main__':
 
 
     elif action in ("help", "h", "-h", "--help"):
-        print(helpTextStandard)
+        logger.info(helpTextStandard)
 
     elif action in ("list", "ls"):
         # Get desired target from command line args
@@ -1881,7 +1881,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextListVolumeSnapshots)
+                    logger.info(helpTextListVolumeSnapshots)
                     sys.exit(0)
                 elif opt in ("-p", "--pvc-name"):
                     pvcName = arg
@@ -1907,7 +1907,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextListVolumes)
+                    logger.info(helpTextListVolumes)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -1931,7 +1931,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextListJupyterLabSnapshots)
+                    logger.info(helpTextListJupyterLabSnapshots)
                     sys.exit(0)
                 elif opt in ("-w", "--workspace-name"):
                     workspaceName = arg
@@ -1957,7 +1957,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextListJupyterLabs)
+                    logger.info(helpTextListJupyterLabs)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -1982,7 +1982,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextListTritonServers)
+                    logger.info(helpTextListTritonServers)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -2045,7 +2045,7 @@ if __name__ == '__main__':
 
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextPutS3Bucket)
+                    logger.info(helpTextPutS3Bucket)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -2100,7 +2100,7 @@ if __name__ == '__main__':
                     print_output=True
                 )
                 job = data_mover.put_bucket(bucket=bucket_name, pvc=pvc_name, pvc_dir=pvc_dir)
-                logger.info("Created Kubernetes job {}".format(job))
+                logger.info("Created Kubernetes job %s", job)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -2151,7 +2151,7 @@ if __name__ == '__main__':
 
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextPutS3Object)
+                    logger.info(helpTextPutS3Object)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -2208,7 +2208,7 @@ if __name__ == '__main__':
                     print_output=True
                 )
                 job = data_mover.put_object(bucket=bucket_name, pvc=pvc_name, file_location=file_location, object_key=object_key)
-                logger.info("Created Kubernetes job {}".format(job))
+                logger.info("Created Kubernetes job %s", job)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -2245,7 +2245,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextRestoreVolumeSnapshot)
+                    logger.info(helpTextRestoreVolumeSnapshot)
                     sys.exit(0)
                 elif opt in ("-s", "--snapshot-name"):
                     snapshotName = arg
@@ -2260,8 +2260,7 @@ if __name__ == '__main__':
 
             # Confirm restore operation
             if not force:
-                logger.warning(
-                    "Warning: In order to restore a snapshot, the PersistentVolumeClaim (PVC) associated the snapshot must NOT be mounted to any pods.")
+                logger.warning("Warning: In order to restore a snapshot, the PersistentVolumeClaim (PVC) associated the snapshot must NOT be mounted to any pods.")
                 while True:
                     proceed = input("Are you sure that you want to proceed? (yes/no): ")
                     if proceed in ("yes", "Yes", "YES"):
@@ -2269,7 +2268,7 @@ if __name__ == '__main__':
                     elif proceed in ("no", "No", "NO"):
                         sys.exit(0)
                     else:
-                        logger.error("Invalid value. Must enter 'yes' or 'no'.")
+                        logger.error("Invalid value. Must enter \'yes\' or \'no\'.")
 
             # Restore snapshot
             try:
@@ -2290,7 +2289,7 @@ if __name__ == '__main__':
             # Parse command line options
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextRestoreJupyterLabSnapshot)
+                    logger.info(helpTextRestoreJupyterLabSnapshot)
                     sys.exit(0)
                 elif opt in ("-s", "--snapshot-name"):
                     snapshotName = arg
@@ -2333,7 +2332,7 @@ if __name__ == '__main__':
 
             for opt, arg in opts:
                 if opt in ("-h", "--help"):
-                    print(helpTextShowS3Job)
+                    logger.info(helpTextShowS3Job)
                     sys.exit(0)
                 elif opt in ("-n", "--namespace"):
                     namespace = arg
@@ -2347,7 +2346,7 @@ if __name__ == '__main__':
             try:
                 mover_job = DataMoverJob(namespace=namespace, print_output=True)
                 job_status = mover_job.get_job_status(job=job_name)
-                logger.info("Job {} status:\n{}".format(job_name, job_status))
+                logger.info("Job %s status:\n%s", job_name, job_status)
             except (InvalidConfigError, APIConnectionError):
                 logger.error(f"Unable to get status of job {job_name}")
                 sys.exit(1)
@@ -2357,4 +2356,3 @@ if __name__ == '__main__':
 
     else:
         handleInvalidCommand()
-

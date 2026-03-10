@@ -9,6 +9,14 @@ The NetApp DataOps Toolkit is a collection of Python-based client tools that sim
 
 The toolkit includes [MCP Servers](mcp_servers.md) that expose many of these capabilities as "tools" that can be utilized by AI agents.
 
+## Highlighted Features
+
+### 🗂️ Dataset Manager
+
+The **Dataset Manager** is a powerful module in the Traditional Environments toolkit that provides a simplified, intuitive interface for managing datasets backed by NetApp ONTAP storage. It abstracts away volume management complexity and exposes datasets as simple directories, with built-in support for instant cloning, snapshots, and space efficiency — all through a clean Python API.
+
+➡️ See the [Dataset Manager README](netapp_dataops_traditional/docs/dataset_manager_readme.md) to get started.
+
 ## Getting Started
 
 The NetApp DataOps Toolkit includes the following client tools:

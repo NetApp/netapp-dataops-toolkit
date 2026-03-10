@@ -2,6 +2,14 @@
 
 The NetApp DataOps Toolkit for Traditional Environments is a Python library that makes it simple for developers, data scientists, DevOps engineers, and data engineers to perform various data management tasks, such as provisioning a new data volume, near-instantaneously cloning a data volume, and near-instantaneously snapshotting a data volume for traceability/baselining. This Python library can function as either a [command line utility](#command-line-functionality) or a [library of functions](#library-of-functions) that can be imported into any Python program or Jupyter Notebook. The toolkit also includes an [MCP Server](mcp_server.md) that exposes many of the capabilities as "tools" that can be utilized by AI agents. The ONTAP module provides this functionality for standard ONTAP instances.
 
+## Highlighted Features
+
+### 🗂️ Dataset Manager
+
+The **Dataset Manager** is a powerful module that provides a simplified, intuitive interface for managing datasets backed by NetApp ONTAP storage. It presents datasets as plain directories on your local filesystem while leveraging the full power of ONTAP under the hood — instant clones, point-in-time snapshots, and space efficiency — all through a clean Python API purpose-built for data scientists and data engineers.
+
+➡️ See the [Dataset Manager README](dataset_manager_readme.md) to get started.
+
 ## Compatibility
 
 The NetApp DataOps Toolkit for Traditional Environments supports Linux and macOS hosts.
@@ -95,12 +103,26 @@ Data volume management operations:
 - [Mount an existing data volume locally as "read-only" or "read-write".](#cli-mount-volume)
 - [Unmount an existing data volume.](#cli-unmount-volume)
 - [Create a new flexcache volume.](#cli-create-flexcache)
+- [List all FlexCache volumes.](#cli-list-flexcaches)
+- [Get origin details for a FlexCache volume.](#cli-get-flexcache-origin)
+- [Update a FlexCache volume.](#cli-update-flexcache)
 
 Snapshot management operations:
 - [Create a new snapshot for a data volume.](#cli-create-snapshot)
 - [Delete an existing snapshot for a data volume.](#cli-delete-snapshot)
 - [List all snapshots for a data volume.](#cli-list-snapshots)
 - [Restore a snapshot for a data volume.](#cli-restore-snapshot)
+
+CIFS share management operations:
+- [Create a new CIFS share.](#cli-create-cifs-share)
+- [List all CIFS shares.](#cli-list-cifs-shares)
+- [Get an existing CIFS share.](#cli-get-cifs-share)
+
+Qtree management operations:
+- [Create a new qtree.](#cli-create-qtree)
+- [List all qtrees.](#cli-list-qtrees)
+- [Get qtree details.](#cli-get-qtree)
+- [Get qtree performance metrics.](#cli-get-qtree-metrics)
 
 Data fabric operations:
 - [List all Cloud Sync relationships.](#cli-list-cloud-sync-relationships)
@@ -353,6 +375,8 @@ team1_ws1      300.0GB   5%              285.0GB     15.04GB   2.87GB       flex
 
 The NetApp DataOps Toolkit can be used to mount an existing data volume on your local host. The command for mounting an existing volume locally is `netapp_dataops_cli.py mount volume`. If executed on a Linux host, this command must be run as root. It is usually not necessary to run this command as root on macOS hosts.
 
+**Note:** When mounting volumes, the toolkit must be configured for the user executing the mount command. If running as root (using `sudo`), run `sudo netapp_dataops_cli.py config` to create a configuration file for the root user before attempting to mount volumes.
+
 The following options/arguments are required:
 
 ```
@@ -386,6 +410,8 @@ Volume mounted successfully.
 #### Unmount an Existing Data Volume
 
 The NetApp DataOps Toolkit can be used to unmount an existing data volume that is currently on your local host. The command for unmounting an existing volume is `netapp_dataops_cli.py unmount volume`. If executed on a Linux host, this command must be run as root. It is usually not necessary to run this command as root on macOS hosts.
+
+**Note:** When unmounting volumes, the toolkit must be configured for the user executing the unmount command. If running as root (using `sudo`), run `sudo netapp_dataops_cli.py config` to create a configuration file for the root user before attempting to unmount volumes.
 
 The following options/arguments are required:
 
@@ -447,6 +473,113 @@ Create a FlexCache volume named 'cache2' in SVM 'svm0' for the source volume 'so
 netapp_dataops_cli.py create flexcache --flexcache-vol=cache2 --flexcache-svm=svm0 --source-volume=source2 --source-svm=svm1 --flexcache-size=500GB
 Creating FlexCache: svm1:source2 -> svm0:cache2
 FlexCache created successfully.
+```
+
+<a name="cli-list-flexcaches"></a>
+
+#### List All FlexCache Volumes
+
+The NetApp DataOps Toolkit can be used to retrieve a list of all existing FlexCache volumes along with their origin volume information. The command for listing all FlexCache volumes is `netapp_dataops_cli.py list flexcaches`.
+
+The following options/arguments are optional:
+
+```
+    -u, --cluster-name=     Non-default hosting cluster.
+    -s, --svm-name=         Non-default SVM name.
+    -h, --help              Print help text.
+```
+
+##### Example Usage
+
+List all FlexCache volumes in the configured SVM.
+
+```sh
+netapp_dataops_cli.py list flexcaches
+FlexCache Name    FlexCache SVM    Size     Origin Volume    Origin SVM    Origin Cluster    Origin IP      Origin Size    Origin State
+----------------  ---------------  -------  ---------------  ------------  ----------------  -------------  -------------  --------------
+cache1            svm0             100GB    source1          svm1          cluster1          10.0.0.1       1TB            online
+cache2            svm0             500GB    source2          svm1          cluster1          10.0.0.1       5TB            online
+```
+
+<a name="cli-get-flexcache-origin"></a>
+
+#### Get Origin Details for a FlexCache Volume
+
+The NetApp DataOps Toolkit can be used to retrieve detailed origin information for a specific FlexCache volume. The command for getting FlexCache origin details is `netapp_dataops_cli.py get flexcache-origin`.
+
+The following options/arguments are required:
+
+```
+    -n, --volume-name=      Name of the FlexCache volume.
+```
+
+The following options/arguments are optional:
+
+```
+    -s, --svm-name=         Non-default SVM name.
+    -u, --cluster-name=     Non-default hosting cluster.
+    -h, --help              Print help text.
+```
+
+##### Example Usage
+
+Get origin details for the FlexCache volume named 'cache1'.
+
+```sh
+netapp_dataops_cli.py get flexcache-origin --volume-name=cache1
+FlexCache Volume: cache1 (SVM: svm0)
+
+Origin Details:
+Origin Volume    Origin UUID                           Origin SVM    Origin SVM UUID                       Origin Cluster    Origin Cluster UUID                   IP Address    Size    State     Create Time
+---------------  ------------------------------------  ------------  ------------------------------------  ----------------  ------------------------------------  ------------  ------  --------  -------------------------
+source1          12345678-1234-1234-1234-123456789abc  svm1          87654321-4321-4321-4321-cba987654321  cluster1          abcdef01-2345-6789-abcd-ef0123456789  10.0.0.1      1TB     online    2024-01-15 10:30:00+00:00
+```
+
+<a name="cli-update-flexcache"></a>
+
+#### Update a FlexCache Volume
+
+The NetApp DataOps Toolkit can be used to update the configuration and properties of an existing FlexCache volume. The command for updating a FlexCache volume is `netapp_dataops_cli.py update flexcache`.
+
+The following options/arguments are required (one of the following):
+
+```
+    -i, --uuid=                         UUID of the FlexCache volume.
+    -n, --volume-name=                  Name of the FlexCache volume (requires --svm-name).
+```
+
+The following options/arguments are optional:
+
+```
+    -s, --svm-name=                     Non-default SVM name (required with --volume-name).
+    -u, --cluster-name=                 Non-default hosting cluster.
+    -p, --prepopulate-paths=            Comma-separated list of directory paths to prepopulate.
+    -x, --prepopulate-exclude-paths=    Comma-separated list of directory paths to exclude from prepopulation.
+    -w, --writeback-enabled=            Enable or disable writeback (true/false).
+    -r, --relative-size-enabled=        Enable or disable relative sizing (true/false).
+    -e, --relative-size-percentage=     Percentage size of FlexCache relative to origin (1-100).
+    -a, --atime-scrub-enabled=          Enable or disable atime-based scrubbing (true/false).
+    -t, --atime-scrub-period=           Duration in days for atime scrubbing (1-365).
+    -c, --cifs-change-notify-enabled=   Enable or disable CIFS change notification (true/false).
+    -h, --help                          Print help text.
+```
+
+##### Example Usage
+
+Update a FlexCache volume to prepopulate specific paths.
+
+```sh
+netapp_dataops_cli.py update flexcache --volume-name=cache1 --svm-name=svm0 --prepopulate-paths=/data/models,/data/datasets
+Updating FlexCache volume (UUID: 12345678-1234-1234-1234-123456789abc)...
+FlexCache volume updated successfully.
+```
+
+Enable writeback on a FlexCache volume.
+
+```sh
+netapp_dataops_cli.py update flexcache --uuid=12345678-1234-1234-1234-123456789abc --writeback-enabled=true
+Updating FlexCache volume (UUID: 12345678-1234-1234-1234-123456789abc)...
+FlexCache volume updated successfully.
 ```
 
 ### Snapshot Management Operations
@@ -595,6 +728,319 @@ Warning: When you restore a snapshot, all subsequent snapshots are deleted.
 Are you sure that you want to proceed? (yes/no): yes
 Restoring snapshot 'initial_dataset'.
 Snapshot restored successfully.
+```
+
+### CIFS Share Management Operations
+
+**Prerequisites:** The SVM must be configured for CIFS protocol before using CIFS share commands. 
+
+<a name="cli-create-cifs-share"></a>
+
+#### Create a New CIFS Share
+
+The NetApp DataOps Toolkit can be used to create a new CIFS share for an existing data volume. The command for creating a new CIFS share is `netapp_dataops_cli.py create cifs-share`.
+
+The following options/arguments are required:
+
+```
+    -n, --name=         Name of the CIFS share.
+    -v, --volume=       Name of the volume to share.
+    -s, --svm=          Existing SVM in which to create the CIFS share.
+```
+
+The following options/arguments are optional:
+
+```
+    -u, --cluster-name= Non-default hosting cluster.
+    -c, --comment=      Comment/ description for the CIFS share.
+    -a, --acls=         Comma-separated list of ACLs to apply to the share. 
+    -l, --properties=   Comma-separated list of properties to apply to the share ('browsable', 'oplocks', 'showsnapshot', 'changenotify', 'attributecache', 'continuously_available', 'encryption').
+    -h, --help          Print help text.
+```
+
+##### Example Usage
+
+Create a CIFS share named 'cifs-share-vol-1' for volume 'cifsshare_test_vol_1'.
+
+```sh
+netapp_dataops_cli.py create cifs-share -n cifs-share-vol-1 -v cifsshare_test_vol_1 -s svm0
+Creating CIFS share cifs-share-vol-1 for volume cifsshare_test_vol_1 on SVM svm0
+Using path /cifsshare_test_vol_1 from volume cifsshare_test_vol_1
+CIFS share created successfully.
+```
+
+Create a CIFS share named 'cifs-share-vol-2' for the volume 'cifsshare_test_vol_2' with a comment.
+
+```sh
+netapp_dataops_cli.py create cifs-share --name=cifs-share-vol-2 --volume=cifsshare_test_vol_2 --comment="Data access share" --svm=svm0
+Creating CIFS share 'cifs-share-vol-2' for volume cifsshare_test_vol_2 on SVM svm0
+Using path /cifsshare_test_vol_2 from volume cifsshare_test_vol_2
+CIFS share created successfully.
+```
+
+<a name="cli-list-cifs-shares"></a>
+
+#### List All CIFS Shares
+
+The NetApp DataOps Toolkit can be used to print a list of all existing CIFS shares. The command for printing a list of all existing CIFS shares is `netapp_dataops_cli.py list cifs-shares`.
+
+Note: Administrative shares (c$, ipc$, admin$, print$) are filtered out from the results.
+
+No options/arguments are required for this command.
+
+The following options/arguments are optional:
+
+```
+    -s, --svm=          Existing SVM in which to create the CIFS share.
+    -n, --name-pattern= Pattern to filter share names by (supports wildcard '*').
+    -u, --cluster-name= Non-default hosting cluster.
+    -h, --help          Print help text.
+```
+
+##### Example Usage
+
+List all CIFS shares.
+
+```sh
+netapp_dataops_cli.py list cifs-shares
+Retrieving CIFS shares...
+Share Name        SVM    Volume Name           Path                   Comment    Properties
+----------------  -----  --------------------  ---------------------  ---------  ------------
+cifs-share-vol-1  svm0   cifsshare_test_vol_1  /cifsshare_test_vol_1
+```
+
+List all CIFS shares on a specific SVM.
+
+```sh
+netapp_dataops_cli.py list cifs-shares --svm=svm0
+Retrieving CIFS shares...
+Share Name        SVM    Volume Name           Path                   Comment    Properties
+----------------  -----  --------------------  ---------------------  ---------  ------------
+cifs-share-vol-1  svm0   cifsshare_test_vol_1  /cifsshare_test_vol_1             browsable,oplocks
+```
+
+<a name="cli-get-cifs-share"></a>
+
+#### Get an existing CIFS Share
+
+The NetApp DataOps Toolkit can be used to retrieve details of a specific CIFS share. The command for getting the information of an existing CIFS shares is `netapp_dataops_cli.py get cifs-share`.
+
+The following options/arguments are required:
+
+```
+    -n, --name=         Name of the CIFS share to retrieve.
+    -s, --svm=          Existing SVM in which the CIFS share resides.
+```
+
+The following options/arguments are optional:
+
+```
+    -u, --cluster-name= Non-default hosting cluster.
+    -h, --help          Print help text.
+```
+
+##### Example Usage
+
+Get details for the CIFS share named 'cifs-share-vol-1'.
+
+```sh
+netapp_dataops_cli.py get cifs-share --name=cifs-share-vol-1 --svm=svm0
+Retrieving CIFS share cifs-share-vol-1 from SVM svm0
+Share Name: cifs-share-vol-1
+SVM: svm0
+Volume Name: cifsshare_test_vol_1
+Path: /cifsshare_test_vol_1
+ACLs: [ShareAcl({'permission': 'full_control', 'type': 'windows', 'user_or_group': 'Everyone', 'win_sid_unix_id': 'S-1-1-0'})]
+Successfully retrieved CIFS share cifs-share-vol-1
+```
+
+### Qtree Management Operations
+
+<a name="cli-create-qtree"></a>
+
+#### Create a New Qtree
+
+The NetApp DataOps Toolkit can be used to create a new qtree within an existing volume. Qtrees are lightweight, flexible containers that can be used to organize data within a volume. They support independent security styles, UNIX permissions, and export policies. The command for creating a new qtree is `netapp_dataops_cli.py create qtree`.
+
+The following options/arguments are required:
+
+```
+    -n, --name=             Name of new qtree.
+    -v, --volume=           Name of volume in which to create the qtree.
+```
+
+The following options/arguments are optional:
+
+```
+    -l, --cluster-name=     Non-default hosting cluster.
+    -s, --svm=              Non-default SVM name.
+    -t, --security-style=   Security style for the qtree (unix/ntfs/mixed).
+    -p, --permissions=      UNIX permissions for the qtree (ex. '0755' for read/write/execute for owner, read/execute for group and others).
+    -e, --export-policy=    NFS export policy to use for the qtree.
+    -h, --help              Print help text.
+```
+
+##### Example Usage
+
+Create a qtree named 'dataset1' in volume 'project1'.
+
+```sh
+netapp_dataops_cli.py create qtree --name=dataset1 --volume=project1
+Creating qtree 'dataset1' in volume 'project1' on SVM 'svm1'.
+Qtree 'dataset1' created successfully.
+Qtree ID: 1
+```
+
+Create a qtree named 'dataset2' in volume 'project1' with UNIX security style and custom permissions.
+
+```sh
+netapp_dataops_cli.py create qtree --name=dataset2 --volume=project1 --security-style=unix --permissions=0755
+Creating qtree 'dataset2' in volume 'project1' on SVM 'svm1'.
+Qtree 'dataset2' created successfully.
+Qtree ID: 2
+```
+
+Create a qtree with a specific export policy.
+
+```sh
+netapp_dataops_cli.py create qtree --name=dataset3 --volume=project1 --export-policy=restricted
+Creating qtree 'dataset3' in volume 'project1' on SVM 'svm1'.
+Qtree 'dataset3' created successfully.
+Qtree ID: 3
+```
+
+<a name="cli-list-qtrees"></a>
+
+#### List All Qtrees
+
+The NetApp DataOps Toolkit can be used to print a list of all existing qtrees, either for a specific volume or across all volumes in an SVM. The command for printing a list of qtrees is `netapp_dataops_cli.py list qtrees`.
+
+No options/arguments are required for this command.
+
+The following options/arguments are optional:
+
+```
+    -v, --volume=           List qtrees only for the specified volume.
+    -l, --cluster-name=     Non-default hosting cluster.
+    -s, --svm=              Non-default SVM name.
+    -h, --help              Print help text.
+```
+
+##### Example Usage
+
+List all qtrees across all volumes in the SVM.
+
+```sh
+netapp_dataops_cli.py list qtrees
+ID  Name       Volume    SVM    Security Style    UNIX Permissions    NAS Path                Export Policy    QoS Policy
+--  ---------  --------  -----  ----------------  ------------------  ----------------------  ---------------  ------------
+0   <root>     project1  svm1   unix              755                 /project1               default          None
+1   dataset1   project1  svm1   unix              755                 /project1/dataset1      default          None
+2   dataset2   project1  svm1   unix              755                 /project1/dataset2      restricted       None
+```
+
+List all qtrees in a specific volume.
+
+```sh
+netapp_dataops_cli.py list qtrees --volume=project1
+ID  Name       Volume    SVM    Security Style    UNIX Permissions    NAS Path                Export Policy    QoS Policy
+--  ---------  --------  -----  ----------------  ------------------  ----------------------  ---------------  ------------
+0   <root>     project1  svm1   unix              755                 /project1               default          None
+1   dataset1   project1  svm1   unix              755                 /project1/dataset1      default          None
+2   dataset2   project1  svm1   unix              755                 /project1/dataset2      restricted       None
+```
+
+<a name="cli-get-qtree"></a>
+
+#### Get Qtree Details
+
+The NetApp DataOps Toolkit can be used to retrieve detailed information about a specific qtree. The command for retrieving qtree details is `netapp_dataops_cli.py get qtree`.
+
+Note: To use this command, you need the volume UUID and qtree ID. You can obtain these by running `netapp_dataops_cli.py list qtrees`.
+
+The following options/arguments are required:
+
+```
+    -v, --volume-uuid=      UUID of the volume containing the qtree.
+    -i, --qtree-id=         ID of the qtree.
+```
+
+The following options/arguments are optional:
+
+```
+    -l, --cluster-name=     Non-default hosting cluster.
+    -h, --help              Print help text.
+```
+
+##### Example Usage
+
+Get details for qtree with ID 1 in a specific volume.
+
+```sh
+netapp_dataops_cli.py get qtree --volume-uuid=12345678-1234-1234-1234-123456789abc --qtree-id=1
+Qtree Details:
+  ID: 1
+  Name: dataset1
+  Volume: project1 (UUID: 12345678-1234-1234-1234-123456789abc)
+  SVM: svm1 (UUID: 87654321-4321-4321-4321-cba987654321)
+  Security Style: unix
+  UNIX Permissions: 755
+  NAS Path: /project1/dataset1
+  Export Policy: default
+```
+
+<a name="cli-get-qtree-metrics"></a>
+
+#### Get Qtree Performance Metrics
+
+The NetApp DataOps Toolkit can be used to retrieve historical performance metrics for a specific qtree. This is useful for monitoring qtree usage patterns and performance characteristics. The command for retrieving qtree metrics is `netapp_dataops_cli.py get qtree-metrics`.
+
+Note: Performance metrics require extended performance monitoring to be enabled on the qtree. If no metrics are available, the command will return a message indicating that no data is available.
+
+The following options/arguments are required:
+
+```
+    -v, --volume-uuid=      UUID of the volume containing the qtree.
+    -i, --qtree-id=         ID of the qtree.
+```
+
+The following options/arguments are optional:
+
+```
+    -l, --cluster-name=     Non-default hosting cluster.
+    -h, --help              Print help text.
+```
+
+##### Example Usage
+
+Get performance metrics for qtree with ID 1.
+
+```sh
+netapp_dataops_cli.py get qtree-metrics --volume-uuid=12345678-1234-1234-1234-123456789abc --qtree-id=1
+Qtree Performance Metrics:
+  Volume UUID: 12345678-1234-1234-1234-123456789abc
+  Qtree ID: 1
+  Number of data points: 10
+  Data point 1:
+    Timestamp: 2024-01-15 10:30:00
+    Duration: PT15S
+    Status: ok
+    Qtree Name: dataset1
+    SVM: svm1 (UUID: 87654321-4321-4321-4321-cba987654321)
+    Volume: project1 (UUID: 12345678-1234-1234-1234-123456789abc)
+    IOPS:
+      Read: 150
+      Write: 75
+      Other: 10
+      Total: 235
+    Latency:
+      Read: 1.5
+      Write: 2.3
+      Other: 0.8
+      Total: 1.8
+    Throughput:
+      Read: 15728640
+      Write: 7864320
 ```
 
 ### Data Fabric Operations
@@ -992,7 +1438,7 @@ Setting state to snapmirrored, action:resync
 The NetApp DataOps Toolkit can also be utilized as a library of functions that can be imported into any Python program or Jupyter Notebook. In this manner, data scientists and data engineers can easily incorporate data management tasks into their existing projects, programs, and workflows. This functionality is only recommended for advanced users who are proficient in Python.
 
 ```py
-from netapp_dataops.traditional import clone_volume, create_volume, delete_volume, list_volumes, mount_volume, create_snapshot, delete_snapshot, list_snapshots, restore_snapshot, list_cloud_sync_relationships, sync_cloud_sync_relationship, list_snap_mirror_relationships, sync_snap_mirror_relationship, create_flexcache, prepopulate_flex_cache, push_directory_to_s3, push_file_to_s3, pull_bucket_from_s3, pull_object_from_s3
+from netapp_dataops.traditional import clone_volume, create_volume, delete_volume, list_volumes, mount_volume, create_snapshot, delete_snapshot, list_snapshots, restore_snapshot, create_qtree, list_qtrees, get_qtree, get_qtree_metrics, list_cloud_sync_relationships, sync_cloud_sync_relationship, list_snap_mirror_relationships, sync_snap_mirror_relationship, create_flexcache, prepopulate_flex_cache, push_directory_to_s3, push_file_to_s3, pull_bucket_from_s3, pull_object_from_s3, create_cifs_share, list_cifs_shares, get_cifs_share
 ```
 
 Note: The prerequisite steps outlined in the [Getting Started](#getting-started) section still appy when the toolkit is being utilized as an importable library of functions.
@@ -1007,12 +1453,26 @@ Data volume management operations:
 - [Mount an existing data volume locally as read-only or read-write.](#lib-mount-volume)
 - [Unmount an existing data volume.](#lib-unmount-volume)
 - [Create a new flexcache volume.](#lib-create-flexcache)
+- [List all FlexCache volumes.](#lib-list-flexcaches)
+- [Get origin details for a FlexCache volume.](#lib-get-flexcache-origin)
+- [Update a FlexCache volume.](#lib-update-flexcache)
 
 Snapshot management operations:
 - [Create a new snapshot for a data volume.](#lib-create-snapshot)
 - [Delete an existing snapshot for a data volume.](#lib-delete-snapshot)
 - [List all snapshots for a data volume.](#lib-list-snapshots)
 - [Restore a snapshot for a data volume.](#lib-restore-snapshot)
+
+CIFS share management operations:
+- [Create a new CIFS share.](#lib-create-cifs-share)
+- [List all CIFS shares.](#lib-list-cifs-shares)
+- [Get an existing CIFS share.](#lib-get-cifs-share)
+
+Qtree management operations:
+- [Create a new qtree.](#lib-create-qtree)
+- [List all qtrees.](#lib-list-qtrees)
+- [Get qtree details.](#lib-get-qtree)
+- [Get qtree performance metrics.](#lib-get-qtree-metrics)
 
 Data fabric operations:
 - [List all Cloud Sync relationships.](#lib-list-cloud-sync-relationships)
@@ -1215,6 +1675,9 @@ APIConnectionError              # The storage system/service API returned an err
 #### Mount an Existing Data Volume Locally
 
 The NetApp DataOps Toolkit can be used to mount an existing data volume as "read-only" or "read-write" on your local host as part of any Python program or workflow. On Linux hosts, mounting requires root privileges, so any Python program that invokes this function must be run as root. It is usually not necessary to invoke this function as root on macOS hosts.
+
+**Note:** When mounting volumes programmatically, the toolkit must be configured for the user executing the program. If the program runs as root (using `sudo`), run `sudo netapp_dataops_cli.py config` to create a configuration file for the root user before attempting to mount volumes.
+
 ##### Function Definition
 
 ```py
@@ -1249,6 +1712,8 @@ MountOperationError             # The volume was not succesfully mounted locally
 #### Unmount an Existing Data Volume
 
 The NetApp DataOps Toolkit can be used to near-instantaneously unmount an existing data volume (that is currently mounted on your local host) as part of any Python program or workflow.
+
+**Note:** When unmounting volumes programmatically, the toolkit must be configured for the user executing the program. If the program runs as root (using `sudo`), run `sudo netapp_dataops_cli.py config` to create a configuration file for the root user before attempting to unmount volumes.
 
 ##### Function Definition
 
@@ -1309,6 +1774,109 @@ If an error is encountered, the function will raise an exception of one of the f
 InvalidConfigError              # Config file is missing or contains an invalid value.
 APIConnectionError              # The storage system/service API returned an error.
 InvalidVolumeParameterError     # An invalid parameter was specified.
+```
+
+<a name="lib-list-flexcaches"></a>
+
+#### List All FlexCache Volumes
+
+The NetApp DataOps Toolkit can be used to retrieve a list of all existing FlexCache volumes along with their origin volume information as part of any Python program or workflow.
+
+##### Function Definition
+
+```py
+def list_flexcaches(
+    cluster_name: str = None,           # Non-default cluster name, same credentials as the default credentials should be used (optional).
+    svm_name: str = None,               # Non-default SVM name, same credentials as the default credentials should be used (optional).
+    print_output: bool = False          # Denotes whether or not to print messages to the console during execution.
+) -> list:
+```
+
+##### Return Value
+
+The function returns a list of all existing FlexCache volumes with their origin information. Each item in the list will be a dictionary containing details regarding a specific FlexCache volume and its origin. The keys for the values in this dictionary are "FlexCache Name", "FlexCache SVM", "Size", "Origin Volume", "Origin SVM", "Origin Cluster", "Origin IP", "Origin Size", "Origin State".
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError              # Config file is missing or contains an invalid value.
+APIConnectionError              # The storage system/service API returned an error.
+ConnectionTypeError             # The connection type is not ONTAP.
+```
+
+<a name="lib-get-flexcache-origin"></a>
+
+#### Get Origin Details for a FlexCache Volume
+
+The NetApp DataOps Toolkit can be used to retrieve detailed origin information for a specific FlexCache volume as part of any Python program or workflow.
+
+##### Function Definition
+
+```py
+def get_flexcache_origin(
+    volume_name: str,                   # Name of the FlexCache volume (required).
+    svm_name: str = None,               # Name of the SVM containing the FlexCache; defaults to configured SVM if omitted (optional).
+    cluster_name: str = None,           # Non-default cluster name, same credentials as the default credentials should be used (optional).
+    print_output: bool = False          # Denotes whether or not to print messages to the console during execution.
+) -> list:
+```
+
+##### Return Value
+
+The function returns a list of origin details for the specified FlexCache volume. Each item in the list will be a dictionary containing details regarding a specific origin. The keys for the values in this dictionary are "Origin Volume", "Origin UUID", "Origin SVM", "Origin SVM UUID", "Origin Cluster", "Origin Cluster UUID", "IP Address", "Size", "State", "Create Time".
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError              # Config file is missing or contains an invalid value.
+APIConnectionError              # The storage system/service API returned an error.
+ConnectionTypeError             # The connection type is not ONTAP.
+InvalidVolumeParameterError     # FlexCache volume name not found or invalid.
+```
+
+<a name="lib-update-flexcache"></a>
+
+#### Update a FlexCache Volume
+
+The NetApp DataOps Toolkit can be used to update the configuration and properties of an existing FlexCache volume as part of any Python program or workflow. This includes operations like prepopulating specific paths, enabling writeback, configuring relative sizing, enabling atime scrubbing, and managing CIFS change notifications.
+
+##### Function Definition
+
+```py
+def update_flexcache(
+    uuid: str = None,                           # UUID of the FlexCache volume (required if volume_name not provided).
+    volume_name: str = None,                    # Name of the FlexCache volume (required if uuid not provided).
+    svm_name: str = None,                       # Name of the SVM containing the FlexCache (used with volume_name).
+    cluster_name: str = None,                   # Non-default cluster name, same credentials as the default credentials should be used (optional).
+    prepopulate_paths: list = None,             # List of directory paths to prepopulate in the FlexCache (optional).
+    prepopulate_exclude_paths: list = None,     # List of directory paths to exclude from prepopulation (optional).
+    writeback_enabled: bool = None,             # Enable or disable writeback for the FlexCache volume (optional).
+    relative_size_enabled: bool = None,         # Enable or disable relative sizing for the FlexCache volume (optional).
+    relative_size_percentage: int = None,       # Percentage size of FlexCache relative to origin (1-100) (optional).
+    atime_scrub_enabled: bool = None,           # Enable or disable atime-based scrubbing of inactive files (optional).
+    atime_scrub_period: int = None,             # Duration in days after which inactive files can be scrubbed (1-365) (optional).
+    cifs_change_notify_enabled: bool = None,    # Enable or disable CIFS change notification (optional).
+    print_output: bool = False                  # Denotes whether or not to print messages to the console during execution.
+):
+```
+
+##### Return Value
+
+None
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError              # Config file is missing or contains an invalid value.
+APIConnectionError              # The storage system/service API returned an error.
+ConnectionTypeError             # The connection type is not ONTAP.
+InvalidVolumeParameterError     # Invalid volume identifiers or parameters.
 ``` 
 
 ### Snapshot Management Operations
@@ -1447,6 +2015,241 @@ InvalidConfigError              # Config file is missing or contains an invalid 
 APIConnectionError              # The storage system/service API returned an error.
 InvalidSnapshotParameterError   # An invalid parameter was specified.
 InvalidVolumeParameterError     # An invalid parameter was specified.
+```
+
+### CIFS Share Management Operations
+
+**Prerequisites:** The SVM must be configured for CIFS protocol before using CIFS share commands. 
+
+<a name="lib-create-cifs-share"></a>
+
+#### Create a New CIFS Share
+
+The NetApp DataOps Toolkit can be used to create a new CIFS share for an existing data volume as part of any Python program or workflow.
+
+##### Function Definition
+
+```py
+def create_cifs_share(
+    name: str,                           # Name of the CIFS share (required).
+    volume_name: str,                    # Name of the volume to share. 
+    svm: str,                            # Existing SVM in which to create the CIFS share (required).
+    comment: str = None,                 # Comment for the share (optional).
+    acls: List[Dict] = None,             # Access Control List entries (optional).
+    properties: List[str] = None,        # Share properties (e.g., ['browsable', 'oplocks']) (optional).
+    cluster_name: str = None,            # Non-default cluster name.
+    print_output: bool = False           # Denotes whether or not to print messages to the console during execution.
+) -> NetAppCifsShare:
+```
+
+##### Return Value
+
+The function returns a NetAppCifsShare object representing the created CIFS share.
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError                  # Config file is missing or contains an invalid value.
+APIConnectionError                  # The storage system/service API returned an error.
+InvalidCifsShareParameterError      # An invalid parameter was specified.
+ConnectionTypeError                 # Invalid connection type specified.
+```
+
+<a name="lib-list-cifs-shares"></a>
+
+#### List All CIFS Shares
+
+The NetApp DataOps Toolkit can be used to retrieve a list of all existing CIFS shares as part of any Python program or workflow.
+
+##### Function Definition
+
+```py
+def list_cifs_shares(
+    svm: str = None,                     # Name of the SVM to filter shares (optional).
+    name_pattern: str = None,            # Pattern to filter share names (optional).
+    cluster_name: str = None,            # Non-default cluster name.
+    print_output: bool = False           # Denotes whether or not to print messages to the console during execution.
+) -> List[NetAppCifsShare]:
+```
+
+##### Return Value
+
+The function returns a list of NetAppCifsShare objects representing all existing CIFS shares. Administrative shares (c$, ipc$, admin$, print$) are filtered out from the results.
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError                  # Config file is missing or contains an invalid value.
+APIConnectionError                  # The storage system/service API returned an error.
+InvalidCifsShareParameterError      # An invalid parameter was specified.
+ConnectionTypeError                 # Invalid connection type specified.
+```
+
+<a name="lib-get-cifs-share"></a>
+
+#### Get an Existing CIFS Share
+
+The NetApp DataOps Toolkit can be used to retrieve details of a specific CIFS share as part of any Python program or workflow.
+
+##### Function Definition
+
+```py
+def get_cifs_share(
+    name: str,                           # Name of the CIFS share (required).
+    svm: str,                            # Name of the Storage Virtual Machine (SVM) (required).
+    cluster_name: str = None,            # Non-default cluster name.
+    print_output: bool = False           # Denotes whether or not to print messages to the console during execution.
+) -> NetAppCifsShare:
+```
+
+##### Return Value
+
+The function returns a NetAppCifsShare object containing detailed configuration of the specific CIFS share.
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError                  # Config file is missing or contains an invalid value.
+APIConnectionError                  # The storage system/service API returned an error.
+InvalidCifsShareParameterError      # If share or SVM not found.
+ConnectionTypeError                 # Invalid connection type specified.
+```
+
+### Qtree Management Operations
+
+<a name="lib-create-qtree"></a>
+
+#### Create a New Qtree
+
+The NetApp DataOps Toolkit can be used to create a new qtree within an existing volume as part of any Python program or workflow. Qtrees are lightweight, flexible containers that can be used to organize data within a volume.
+
+##### Function Definition
+
+```py
+def create_qtree(
+    qtree_name: str,                 # Name of the qtree to create (required).
+    volume_name: str,                # Name of the volume in which to create the qtree (required).
+    cluster_name: str = None,        # Non-default cluster name, same credentials as the default credentials should be used.
+    svm_name: str = None,            # Non-default SVM name, same credentials as the default credentials should be used.
+    security_style: str = None,      # Security style for the qtree (unix/ntfs/mixed).
+    unix_permissions: str = None,    # UNIX permissions for the qtree (ex. '0755').
+    export_policy: str = None,       # Export policy of the SVM for the qtree.
+    print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
+):
+```
+
+##### Return Value
+
+None
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError              # Config file is missing or contains an invalid value.
+APIConnectionError              # The storage system/service API returned an error.
+InvalidVolumeParameterError     # An invalid parameter was specified.
+```
+
+<a name="lib-list-qtrees"></a>
+
+#### List All Qtrees
+
+The NetApp DataOps Toolkit can be used to retrieve a list of all existing qtrees, either for a specific volume or across all volumes in an SVM, as part of any Python program or workflow.
+
+##### Function Definition
+
+```py
+def list_qtrees(
+    volume_name: str = None,         # Name of the volume to list qtrees from. If not specified, lists qtrees from all volumes.
+    cluster_name: str = None,        # Non-default cluster name, same credentials as the default credentials should be used.
+    svm_name: str = None,            # Non-default SVM name, same credentials as the default credentials should be used.
+    print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
+) -> list:
+```
+
+##### Return Value
+
+The function returns a list of all qtrees. Each item in the list will be a dictionary containing details regarding a specific qtree. The keys for the values in this dictionary are "id", "name", "volume", "svm", "security_style", "unix_permissions", "nas_path", "export_policy", "qos_policy".
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError              # Config file is missing or contains an invalid value.
+APIConnectionError              # The storage system/service API returned an error.
+```
+
+<a name="lib-get-qtree"></a>
+
+#### Get Qtree Details
+
+The NetApp DataOps Toolkit can be used to retrieve detailed information about a specific qtree as part of any Python program or workflow.
+
+##### Function Definition
+
+```py
+def get_qtree(
+    volume_uuid: str,                # UUID of the volume containing the qtree (required).
+    qtree_id: int,                   # ID of the qtree to retrieve (required).
+    cluster_name: str = None,        # Non-default cluster name, same credentials as the default credentials should be used.
+    print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
+) -> dict:
+```
+
+##### Return Value
+
+The function returns a dictionary containing detailed information about the qtree. The dictionary contains the following keys: "id", "name", "volume" (dict with "uuid" and "name"), "svm" (dict with "uuid" and "name"), "security_style", "unix_permissions", "nas_path", "export_policy" (dict with "id" and "name"), "qos_policy" (dict with "uuid" and "name"), "user" (dict with "name"), "group" (dict with "name").
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError              # Config file is missing or contains an invalid value.
+APIConnectionError              # The storage system/service API returned an error.
+InvalidVolumeParameterError     # An invalid parameter was specified (qtree not found).
+```
+
+<a name="lib-get-qtree-metrics"></a>
+
+#### Get Qtree Performance Metrics
+
+The NetApp DataOps Toolkit can be used to retrieve historical performance metrics for a specific qtree as part of any Python program or workflow.
+
+Note: Performance metrics require extended performance monitoring to be enabled on the qtree.
+
+##### Function Definition
+
+```py
+def get_qtree_metrics(
+    volume_uuid: str,                # UUID of the volume containing the qtree (required).
+    qtree_id: int,                   # ID of the qtree to retrieve metrics for (required).
+    cluster_name: str = None,        # Non-default cluster name, same credentials as the default credentials should be used.
+    print_output: bool = False       # Denotes whether or not to print messages to the console during execution.
+) -> dict:
+```
+
+##### Return Value
+
+The function returns a dictionary containing performance metrics for the qtree. The dictionary has a "records" key containing a list of metric data points. Each data point includes timestamp, duration, status, IOPS (read/write/other/total), latency (read/write/other/total), and throughput (read/write) information. If no metrics are available, returns {"records": [], "message": "No metrics data available"}.
+
+##### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types. These exception types are defined in `netapp_dataops.traditional`.
+
+```py
+InvalidConfigError              # Config file is missing or contains an invalid value.
+APIConnectionError              # The storage system/service API returned an error.
+InvalidVolumeParameterError     # An invalid parameter was specified (qtree not found or metrics not available).
 ```
 
 ### Data Fabric Operations
