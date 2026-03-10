@@ -7,6 +7,7 @@
 - [Key Features](#key-features)
 - [Architecture Overview](#architecture-overview)
 - [Prerequisites](#prerequisites)
+- [Installation](#installation)
 - [Getting Started](#getting-started)
   - [Initial Configuration](#initial-configuration)
   - [Creating Your First Dataset](#creating-your-first-dataset)
@@ -129,6 +130,10 @@ Root Volume (e.g., "dataset_mgr_root")
 - NetApp Cloud Volumes ONTAP (ONTAP 9.7+)
 - Amazon FSx for NetApp ONTAP
 
+**Python:**
+- Python 3.8–3.13
+- `pip` (usually bundled with Python; verify with `pip --version`)
+
 **Required Utilities:**
 - `mount` (for checking mount status)
 - `mountpoint` (for validating mount points)
@@ -154,6 +159,66 @@ Your ONTAP user account needs permissions to:
 - Network connectivity from your host to the ONTAP data LIF
 - NFS protocol enabled on the ONTAP SVM
 - Appropriate export policy rules for your host's IP address
+
+## Installation
+
+### Step 1: Install NFS Client Utilities (if not already installed)
+
+Dataset Manager mounts ONTAP volumes via NFS, so the NFS client utilities must be installed on your system.
+
+**Ubuntu / Debian:**
+```bash
+sudo apt-get update && sudo apt-get install -y nfs-common
+```
+
+**RHEL / CentOS / Fedora:**
+```bash
+sudo dnf install -y nfs-utils
+```
+
+**macOS:**
+
+NFS client support is built in to macOS — no additional installation is required.
+
+### Step 2: Install the Package
+
+It is recommended to install the toolkit inside a Python virtual environment to keep dependencies isolated.
+
+**Create and activate a virtual environment:**
+```bash
+python3 -m venv ~/netapp-dataops-venv
+source ~/netapp-dataops-venv/bin/activate
+```
+
+**Install the toolkit:**
+```bash
+pip install netapp-dataops-traditional
+```
+
+This installs the package with support for NetApp ONTAP (AFF, FAS, Cloud Volumes ONTAP, Amazon FSx for NetApp ONTAP, and ONTAP Select).
+
+> **Tip:** Add `source ~/netapp-dataops-venv/bin/activate` to your shell's startup file (e.g., `~/.bashrc` or `~/.zshrc`) so the environment is activated automatically in new terminal sessions.
+
+### Step 3: Verify Installation
+
+Confirm that the toolkit was installed correctly:
+
+```bash
+netapp_dataops_cli.py --help
+```
+
+You should see the toolkit's help output. If the command is not found, ensure the virtual environment is activated and that its `bin` directory is on your `PATH`.
+
+You can also verify the Python library is importable:
+
+```python
+from netapp_dataops.traditional.datasets import Dataset
+print("Installation successful!")
+```
+
+> **Note:** Python 3.8–3.13 is required.
+
+---
 
 ## Getting Started
 
