@@ -167,8 +167,9 @@ class DatasetManagerConfigurator:
             volume_info = self._get_volume_info(root_volume_name)
             
             if volume_info is None:
-                logger.info(f"  Warning: Volume '{root_volume_name}' not found on ONTAP.")
-                logger.info("  Configuration has been saved. Please verify the volume name and try setup again.")
+                logger.info(f"  Note: Cannot validate volume '{root_volume_name}' on ONTAP at this time.")
+                logger.info("  Configuration has been saved. Volume validation will occur when you use Dataset Manager.")
+                # Skip mounting setup since we can't validate the volume
                 return
             
             # Check junction path
@@ -197,11 +198,38 @@ class DatasetManagerConfigurator:
         self._handle_root_volume_mounting(root_volume_name, root_mountpoint)
 
     def _setup_new_root_volume(self, config: DatasetManagerConfig) -> None:
-        """Perform operations for new root volume after config is saved."""
+        """Perform operations for new root volume after config is saved.
+        
+        Note: This method assumes the base ONTAP configuration has already been
+        saved to disk before being called, as it needs to access ONTAP APIs.
+        """
         root_volume_name = config.root_volume_name
         root_mountpoint = config.root_mountpoint
         
         logger.info(f"\n  Setting up new Dataset Manager root volume '{root_volume_name}'...")
+        
+        # Verify we can connect to ONTAP before proceeding
+        try:
+            from ..traditional.core import _retrieve_config
+            from ..traditional.exceptions import InvalidConfigError
+            
+            # Try to retrieve config to verify it exists and is valid
+            try:
+                ontap_config = _retrieve_config(print_output=False)
+                # Verify we have the minimum required fields
+                if not all(k in ontap_config for k in ['hostname', 'svm', 'dataLif']):
+                    raise InvalidConfigError("Missing required ONTAP configuration fields")
+            except (InvalidConfigError, FileNotFoundError, KeyError) as e:
+                logger.info(f"  Note: Cannot create root volume - ONTAP configuration not available yet.")
+                logger.info(f"  Dataset Manager configuration has been saved.")
+                logger.info(f"  The root volume will be created when you first use Dataset Manager,")
+                logger.info(f"  or you can create it manually: netapp_dataops_cli.py create volume -n {root_volume_name} -s 1GB")
+                return
+        except Exception as e:
+            logger.info(f"  Note: Cannot validate ONTAP connection: {e}")
+            logger.info(f"  Dataset Manager configuration has been saved.")
+            logger.info(f"  Please create the root volume manually or reconfigure later.")
+            return
         
         while True:  # Loop for retrying with different names if needed
             try:
@@ -250,7 +278,10 @@ class DatasetManagerConfigurator:
         self._handle_root_volume_mounting(root_volume_name, root_mountpoint)
     
     def _get_volume_info(self, volume_name: str) -> Optional[Dict[str, Any]]:
-        """Get volume information from ONTAP."""
+        """Get volume information from ONTAP.
+        
+        Returns None if ONTAP connection cannot be established or volume not found.
+        """
         try:
             # Use list_volumes to find the specific volume
             # Always suppress output to avoid displaying volume lists during user input
@@ -260,12 +291,17 @@ class DatasetManagerConfigurator:
                     return volume
             return None
         except Exception as e:
+            # Could be a connection error or other issue
+            # Return None to allow graceful handling by caller
             if self.print_output:
-                logger.info(f"Error retrieving volume information: {e}")
+                logger.info(f"  Note: Could not retrieve volume information: {e}")
             return None
     
     def _junction_path_exists(self, junction_path: str, exclude_volume: str = None) -> bool:
-        """Check if a junction path is already in use by any volume."""
+        """Check if a junction path is already in use by any volume.
+        
+        Returns False if ONTAP connection cannot be established or on error.
+        """
         try:
             # Always suppress output to avoid displaying volume lists during validation
             volumes = volume_operations.list_volumes(print_output=False)
@@ -308,36 +344,31 @@ class DatasetManagerConfigurator:
             return False
     
     def _is_mounted(self, mountpoint: str) -> bool:
-        """Check if a mountpoint is currently in use."""
+        """Check if a mountpoint is currently in use (cross-platform)."""
         try:
-            # Check if mountpoint utility is available
-            self._check_required_utilities('mountpoint')
-            
-            result = subprocess.run(['mountpoint', '-q', mountpoint], 
-                                  capture_output=True, text=True)
-            return result.returncode == 0
-        except RuntimeError as e:
-            # Re-raise utility check errors
-            raise
+            # Use mount command which is available on both Linux and macOS
+            result = subprocess.run(['mount'], capture_output=True, text=True)
+            if result.returncode == 0:
+                # Check if mountpoint appears in mount output
+                for line in result.stdout.split('\n'):
+                    # Match " on <mountpoint> " pattern to avoid false positives
+                    if f" on {mountpoint} " in line or line.endswith(f" on {mountpoint}"):
+                        return True
+            return False
         except Exception:
             return False
     
     def _get_mount_target(self, mountpoint: str) -> str:
-        """Get what is currently mounted at the given mountpoint."""
+        """Get what is currently mounted at the given mountpoint (cross-platform)."""
         try:
-            # Check if mount utility is available
-            self._check_required_utilities('mount')
-            
             result = subprocess.run(['mount'], capture_output=True, text=True)
             if result.returncode == 0:
                 for line in result.stdout.split('\n'):
-                    if f" {mountpoint} " in line:
+                    # Match " on <mountpoint> " pattern
+                    if f" on {mountpoint} " in line or line.endswith(f" on {mountpoint}"):
                         # Extract the source (first part before " on ")
                         return line.split(' on ')[0]
             return "unknown"
-        except RuntimeError as e:
-            # Re-raise utility check errors
-            raise
         except Exception:
             return "unknown"
     
@@ -365,6 +396,8 @@ class DatasetManagerConfigurator:
             # Add to fstab FIRST, then mount using fstab entry
             if self._add_to_fstab(volume_name, mountpoint, expected_nfs_target):
                 logger.info(f"  Volume '{volume_name}' added to fstab")
+                # Now mount the volume using the fstab entry
+                self._mount_from_fstab(mountpoint)
     
     def _add_to_fstab(self, volume_name: str, mountpoint: str, nfs_target: str) -> bool:
         """Add volume to fstab first, then mount using fstab entry (following requirements)."""
@@ -392,6 +425,43 @@ class DatasetManagerConfigurator:
             logger.info(f"  Error in fstab setup and mount: {e}")
             return False
 
+    def _mount_from_fstab(self, mountpoint: str) -> bool:
+        """
+        Mount a volume using its fstab entry.
+        
+        Args:
+            mountpoint: The mountpoint path to mount
+            
+        Returns:
+            bool: True if mount successful, False otherwise
+        """
+        try:
+            logger.info(f"  Mounting volume at '{mountpoint}'...")
+            
+            # Check if we need sudo
+            needs_sudo = not os.access('/etc', os.W_OK)
+            
+            if needs_sudo:
+                result = subprocess.run(['sudo', 'mount', mountpoint],
+                                      capture_output=True, text=True)
+            else:
+                result = subprocess.run(['mount', mountpoint],
+                                      capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                logger.info(f"  Successfully mounted volume at '{mountpoint}'")
+                return True
+            else:
+                error_msg = result.stderr.strip()
+                logger.info(f"  Warning: Failed to mount volume: {error_msg}")
+                logger.info(f"  You can manually mount it later with: sudo mount {mountpoint}")
+                return False
+                
+        except Exception as e:
+            logger.info(f"  Warning: Error mounting volume: {e}")
+            logger.info(f"  You can manually mount it later with: sudo mount {mountpoint}")
+            return False
+    
     def _get_expected_nfs_target(self, volume_name: str) -> str:
         """Get the expected NFS target for a volume."""
         try:

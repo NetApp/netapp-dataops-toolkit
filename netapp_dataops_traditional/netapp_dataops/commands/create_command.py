@@ -373,7 +373,7 @@ class CreateCommand(BaseCommand):
         try:
             opts, _ = getopt.getopt(
                 self.args[3:], 
-                "u:h:s:n:l:a:v:c:", 
+                "u:hs:n:l:a:v:c:", 
                 ["cluster-name=", "help", "svm=", "name=", "properties=", "acls=", "volume=", "comment="]
             )
         except Exception as err:

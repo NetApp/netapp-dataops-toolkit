@@ -367,6 +367,8 @@ team1_ws1      300.0GB   5%              285.0GB     15.04GB   2.87GB       flex
 
 The NetApp DataOps Toolkit can be used to mount an existing data volume on your local host. The command for mounting an existing volume locally is `netapp_dataops_cli.py mount volume`. If executed on a Linux host, this command must be run as root. It is usually not necessary to run this command as root on macOS hosts.
 
+**Note:** When mounting volumes, the toolkit must be configured for the user executing the mount command. If running as root (using `sudo`), run `sudo netapp_dataops_cli.py config` to create a configuration file for the root user before attempting to mount volumes.
+
 The following options/arguments are required:
 
 ```
@@ -400,6 +402,8 @@ Volume mounted successfully.
 #### Unmount an Existing Data Volume
 
 The NetApp DataOps Toolkit can be used to unmount an existing data volume that is currently on your local host. The command for unmounting an existing volume is `netapp_dataops_cli.py unmount volume`. If executed on a Linux host, this command must be run as root. It is usually not necessary to run this command as root on macOS hosts.
+
+**Note:** When unmounting volumes, the toolkit must be configured for the user executing the unmount command. If running as root (using `sudo`), run `sudo netapp_dataops_cli.py config` to create a configuration file for the root user before attempting to unmount volumes.
 
 The following options/arguments are required:
 
@@ -1663,6 +1667,9 @@ APIConnectionError              # The storage system/service API returned an err
 #### Mount an Existing Data Volume Locally
 
 The NetApp DataOps Toolkit can be used to mount an existing data volume as "read-only" or "read-write" on your local host as part of any Python program or workflow. On Linux hosts, mounting requires root privileges, so any Python program that invokes this function must be run as root. It is usually not necessary to invoke this function as root on macOS hosts.
+
+**Note:** When mounting volumes programmatically, the toolkit must be configured for the user executing the program. If the program runs as root (using `sudo`), run `sudo netapp_dataops_cli.py config` to create a configuration file for the root user before attempting to mount volumes.
+
 ##### Function Definition
 
 ```py
@@ -1697,6 +1704,8 @@ MountOperationError             # The volume was not succesfully mounted locally
 #### Unmount an Existing Data Volume
 
 The NetApp DataOps Toolkit can be used to near-instantaneously unmount an existing data volume (that is currently mounted on your local host) as part of any Python program or workflow.
+
+**Note:** When unmounting volumes programmatically, the toolkit must be configured for the user executing the program. If the program runs as root (using `sudo`), run `sudo netapp_dataops_cli.py config` to create a configuration file for the root user before attempting to unmount volumes.
 
 ##### Function Definition
 
