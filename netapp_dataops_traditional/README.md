@@ -9,6 +9,8 @@ The NetApp DataOps Toolkit for Traditional Environments is a Python library that
 
 The **Dataset Manager** is a powerful module that provides a simplified, intuitive interface for managing datasets backed by NetApp ONTAP storage. It presents datasets as plain directories on your local filesystem while leveraging the full power of ONTAP under the hood — instant clones, point-in-time snapshots, and space efficiency — all through a clean Python API purpose-built for data scientists and data engineers.
 
+> **Note:** The Dataset Manager only supports NetApp AFX, AFF, FAS, Amazon FSx for NetApp ONTAP, Cloud Volumes ONTAP, and ONTAP Select. It does not support Azure NetApp Files (ANF) or Google Cloud NetApp Volumes (GCNV).
+
 ➡️ See the [Dataset Manager README](docs/dataset_manager_readme.md) to get started.
 
 ## Compatibility
@@ -21,6 +23,7 @@ The toolkit must be used in conjunction with a data storage system or service in
 - NetApp AFF (running ONTAP 9.7 and above)
 - NetApp FAS (running ONTAP 9.7 and above)
 - Amazon FSx for NetApp ONTAP
+- Azure NetApp Files
 - Google Cloud NetApp Volumes
 - NetApp Cloud Volumes ONTAP (running ONTAP 9.7 and above)
 - NetApp ONTAP Select (running ONTAP 9.7 and above)
@@ -28,5 +31,7 @@ The toolkit must be used in conjunction with a data storage system or service in
 ## Getting Started.
 
 If you are working with AFX, AFF, FAS, Amazon FSx for NetApp ONTAP, Cloud Volumes ONTAP, or ONTAP Select, use the [ONTAP module](docs/ontap_readme.md).
+
+If you are working with Azure NetApp Files, use the [ANF module](docs/anf_readme.md).
 
 If you are working with Google Cloud NetApp Volumes, use the [GCNV module](docs/gcnv_readme.md).
