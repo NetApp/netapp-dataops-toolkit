@@ -22,7 +22,6 @@ def create_snapshot(
     account_name: str = None,
     pool_name: str = None,
     location: str = None,
-    subscription_id: str = None,
     print_output: bool = False
 ) -> Dict[str, Any]:
     """
@@ -41,13 +40,11 @@ def create_snapshot(
             Optional. The name of the capacity pool. Will use config default if not provided.
         location (str):
             Optional. Azure region. Will use config default if not provided.
-        subscription_id (str):
-            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
 
-    Returns:
+    Returns:    Returns:
         Dictionary with status and snapshot details
 
     Raises:
@@ -65,7 +62,6 @@ def create_snapshot(
 
     # Resolve parameters from function arguments or config
     try:
-        resolved_subscription_id = get_config_value('subscription_id', subscription_id, config, print_output)
         resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
         resolved_account_name = get_config_value('account_name', account_name, config, print_output)
         resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
@@ -84,8 +80,8 @@ def create_snapshot(
     )
 
     try:
-        # Get ANF client and subscription ID (using resolved value)
-        client, final_subscription_id = get_anf_client(resolved_subscription_id, print_output=print_output)
+        # Get ANF client
+        client, _ = get_anf_client(print_output=print_output)
 
         # Build snapshot properties (using resolved values)
         snapshot_properties = {
@@ -145,7 +141,6 @@ def delete_snapshot(
     resource_group_name: str = None,
     account_name: str = None,
     pool_name: str = None,
-    subscription_id: str = None,
     print_output: bool = False
 ) -> Dict[str, Any]:
     """
@@ -162,8 +157,6 @@ def delete_snapshot(
             Optional. The name of the NetApp account. Will use config default if not provided.
         pool_name (str):
             Optional. The name of the capacity pool. Will use config default if not provided.
-        subscription_id (str):
-            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -185,7 +178,6 @@ def delete_snapshot(
 
     # Resolve parameters from function arguments or config
     try:
-        resolved_subscription_id = get_config_value('subscription_id', subscription_id, config, print_output)
         resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
         resolved_account_name = get_config_value('account_name', account_name, config, print_output)
         resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
@@ -202,8 +194,8 @@ def delete_snapshot(
     )
 
     try:
-        # Get ANF client and subscription ID (using resolved value)
-        client, _ = get_anf_client(resolved_subscription_id, print_output=print_output)
+        # Get ANF client
+        client, _ = get_anf_client(print_output=print_output)
 
         # Check if snapshot exists before attempting deletion
         try:
@@ -261,7 +253,6 @@ def list_snapshots(
     resource_group_name: str = None,
     account_name: str = None,
     pool_name: str = None,
-    subscription_id: str = None,
     print_output: bool = False
 ) -> Dict[str, Any]:
     """
@@ -276,13 +267,11 @@ def list_snapshots(
             Optional. The name of the NetApp account. Will use config default if not provided.
         pool_name (str):
             Optional. The name of the capacity pool. Will use config default if not provided.
-        subscription_id (str):
-            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
 
-    Returns:
+    Returns:    Returns:
         Dictionary with status and list of snapshots.
 
     Raises:
@@ -299,7 +288,6 @@ def list_snapshots(
 
     # Resolve parameters from function arguments or config
     try:
-        resolved_subscription_id = get_config_value('subscription_id', subscription_id, config, print_output)
         resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
         resolved_account_name = get_config_value('account_name', account_name, config, print_output)
         resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
@@ -315,8 +303,8 @@ def list_snapshots(
     )
 
     try:
-        # Get ANF client and subscription ID (using resolved value)
-        client, final_subscription_id = get_anf_client(resolved_subscription_id, print_output=print_output)
+        # Get ANF client
+        client, _ = get_anf_client(print_output=print_output)
 
         # List all snapshots for the volume (using resolved values)
         snapshots = client.snapshots.list(

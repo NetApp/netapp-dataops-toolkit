@@ -26,7 +26,6 @@ class InvalidConfigError(Exception):
 
 
 def create_anf_config(
-    subscription_id: str = None,
     resource_group_name: str = None, 
     account_name: str = None,
     pool_name: str = None,
@@ -44,7 +43,6 @@ def create_anf_config(
     2. Interactive mode: When no parameters are provided (backward compatibility)
     
     Args:
-        subscription_id (str): Optional. Azure subscription ID. If None, runs in interactive mode.
         resource_group_name (str): Optional. The name of the resource group.
         account_name (str): Optional. The name of the NetApp account.
         pool_name (str): Optional. The name of the capacity pool.
@@ -63,9 +61,9 @@ def create_anf_config(
         InvalidConfigError: If there's an error creating the config file.
     """
     # If all required parameters for programmatic mode are provided, use programmatic mode
-    if all([subscription_id, resource_group_name, account_name, pool_name, location, virtual_network_name]):
+    if all([resource_group_name, account_name, pool_name, location, virtual_network_name]):
         return _create_anf_config_programmatic(
-            subscription_id, resource_group_name, account_name, pool_name, 
+            resource_group_name, account_name, pool_name, 
             location, virtual_network_name, subnet_name, protocol_types, 
             print_output, config_dir_path, config_filename
         )
@@ -76,7 +74,6 @@ def create_anf_config(
 
 
 def _create_anf_config_programmatic(
-    subscription_id: str,
     resource_group_name: str, 
     account_name: str,
     pool_name: str,
@@ -92,7 +89,6 @@ def _create_anf_config_programmatic(
     Create an ANF configuration file with provided parameters (programmatic mode).
     
     Args:
-        subscription_id (str): Azure subscription ID.
         resource_group_name (str): The name of the resource group.
         account_name (str): The name of the NetApp account.
         pool_name (str): The name of the capacity pool.
@@ -124,7 +120,6 @@ def _create_anf_config_programmatic(
         
         # Create configuration dictionary
         config = {
-            "subscriptionId": subscription_id,
             "resourceGroupName": resource_group_name,
             "accountName": account_name,
             "poolName": pool_name,
@@ -214,11 +209,11 @@ def create_anf_config_interactive(config_dir_path: str = DEFAULT_CONFIG_DIR, con
     # Instantiate dict for storing connection details
     config = dict()
 
-    # Prompt user to enter Azure subscription details
-    print("\n" + "=" * 40)
-    print("=== Azure Subscription Configuration ===")
-    print("=" * 40)
-    config["subscriptionId"] = input("Enter your Azure subscription ID: ")
+    print("\n" + "=" * 60)
+    print("Note: Subscription ID is no longer needed in the config.")
+    print("It will be automatically retrieved from Azure CLI.")
+    print("Make sure you've run: az login --tenant <TENANT_ID>")
+    print("=" * 60)
 
     # Prompt user to enter infrastructure config details
     print("\n" + "=" * 35)
@@ -265,10 +260,6 @@ def create_anf_config_interactive(config_dir_path: str = DEFAULT_CONFIG_DIR, con
     print("=== Configuration Summary ===")
     print("=" * 35)
     
-    # Mask subscription ID for display
-    masked_subscription = config["subscriptionId"][:8] + "-****-****-****-********" + config["subscriptionId"][-4:]
-    
-    print(f"Subscription ID: {masked_subscription}")
     print(f"Resource Group: {config['resourceGroupName']}")
     print(f"NetApp Account: {config['accountName']}")
     print(f"Capacity Pool: {config['poolName']}")
@@ -276,6 +267,7 @@ def create_anf_config_interactive(config_dir_path: str = DEFAULT_CONFIG_DIR, con
     print(f"Virtual Network: {config['virtualNetworkName']}")
     print(f"Subnet: {config['subnetName']}")
     print(f"Protocol Types: {config['protocolTypes']}")
+    print("\nNote: Subscription ID will be retrieved automatically from Azure CLI")
 
     # Confirm before saving
     while True:
@@ -374,7 +366,7 @@ def _retrieve_anf_config(config_dir_path: str = DEFAULT_CONFIG_DIR, config_filen
         raise InvalidConfigError(error_msg)
     
     # Validate required config fields
-    required_fields = ["subscriptionId", "resourceGroupName", "accountName", "poolName", 
+    required_fields = ["resourceGroupName", "accountName", "poolName", 
                       "location", "virtualNetworkName", "subnetName", "protocolTypes"]
     
     missing_fields = [field for field in required_fields if field not in config or not config[field]]
@@ -413,7 +405,6 @@ def get_config_value(parameter_name: str, function_value: Any, config: Dict[str,
     
     # Map function parameter names to config keys
     config_key_map = {
-        'subscription_id': 'subscriptionId',
         'resource_group_name': 'resourceGroupName', 
         'account_name': 'accountName',
         'pool_name': 'poolName',

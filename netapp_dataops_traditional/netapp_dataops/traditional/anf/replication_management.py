@@ -41,7 +41,6 @@ def create_replication(
     account_name: str = None,
     pool_name: str = None,
     # Common parameters
-    subscription_id: str = None,
     print_output: bool = False
 ) -> Dict[str, Any]:
     """
@@ -90,9 +89,6 @@ def create_replication(
             Optional. Source volume NetApp account name. Will use config default if not provided.
         pool_name (str):
             Optional. Source volume capacity pool name. Will use config default if not provided.
-
-        subscription_id (str):
-            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -120,7 +116,6 @@ def create_replication(
 
     # Resolve source volume parameters from function arguments or config
     try:
-        resolved_subscription_id = get_config_value('subscription_id', subscription_id, config, print_output)
         resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
         resolved_account_name = get_config_value('account_name', account_name, config, print_output)
         resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
@@ -166,11 +161,11 @@ def create_replication(
                 print(error_message)
             return {"status": "error", "details": error_message}
         
-        # Get ANF client and subscription ID (using resolved value)
-        client, final_subscription_id = get_anf_client(resolved_subscription_id, print_output=print_output)
+        # Get ANF client and subscription ID (automatically retrieved from Azure CLI)
+        client, subscription_id = get_anf_client(print_output=print_output)
 
         # Construct source volume resource ID (using resolved values)
-        source_volume_resource_id = f"/subscriptions/{final_subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{resolved_account_name}/capacityPools/{resolved_pool_name}/volumes/{volume_name}"
+        source_volume_resource_id = f"/subscriptions/{subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{resolved_account_name}/capacityPools/{resolved_pool_name}/volumes/{volume_name}"
         
         # Initialize destination volume resource ID
         destination_volume_resource_id = None
@@ -219,7 +214,7 @@ def create_replication(
                 volume_type="DataProtection",
                 zones=destination_zones,
                 data_protection=data_protection,
-                subscription_id=final_subscription_id
+                subscription_id=subscription_id
             )
             
             if volume_result.get('status') != 'success':
@@ -230,7 +225,7 @@ def create_replication(
                 return {"status": "error", "details": error_message}
             
             # Construct destination volume resource ID
-            destination_volume_resource_id = f"/subscriptions/{final_subscription_id}/resourceGroups/{destination_resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{destination_account_name}/capacityPools/{destination_pool_name}/volumes/{destination_volume_name}"
+            destination_volume_resource_id = f"/subscriptions/{subscription_id}/resourceGroups/{destination_resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{destination_account_name}/capacityPools/{destination_pool_name}/volumes/{destination_volume_name}"
         
         # Ensure destination volume resource ID is set
         if not destination_volume_resource_id:

@@ -65,7 +65,6 @@ def create_volume(
     network_features: str = None,
     encryption_key_source: str = None,
     enable_subvolumes: str = None,
-    subscription_id: str = None,
     print_output: bool = False
 ) -> Dict[str, Any]:
     """
@@ -185,8 +184,6 @@ def create_volume(
         enable_subvolumes (str):
             Optional. Flag indicating whether subvolume operations are enabled on the volume. Known values are: "Enabled" and "Disabled".
             Defaults to Disabled.
-        subscription_id (str):
-            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -208,7 +205,6 @@ def create_volume(
 
     # Resolve parameters from function arguments or config
     try:
-        resolved_subscription_id = get_config_value('subscription_id', subscription_id, config, print_output)
         resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
         resolved_account_name = get_config_value('account_name', account_name, config, print_output)
         resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
@@ -250,11 +246,11 @@ def create_volume(
     )
 
     try:
-        # Get ANF client and subscription ID (using resolved value)
-        client, final_subscription_id = get_anf_client(resolved_subscription_id, print_output=print_output)
+        # Get ANF client and subscription ID (automatically retrieved from Azure CLI)
+        client, subscription_id = get_anf_client(print_output=print_output)
 
         # Construct subnet ID from resolved parameters
-        subnet_id = f"/subscriptions/{final_subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.Network/virtualNetworks/{resolved_virtual_network_name}/subnets/{resolved_subnet_name}"
+        subnet_id = f"/subscriptions/{subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.Network/virtualNetworks/{resolved_virtual_network_name}/subnets/{resolved_subnet_name}"
         
         # Create export policy using helper function
         export_policy = _create_export_policy_rules(export_policy_rules, resolved_protocol_types)
@@ -392,7 +388,6 @@ def clone_volume(
     network_features: str = None,
     encryption_key_source: str = None,
     enable_subvolumes: str = None,
-    subscription_id: str = None,
     print_output: bool = False
 ) -> Dict[str, Any]:
     """
@@ -511,8 +506,6 @@ def clone_volume(
         enable_subvolumes (bool):
             Optional. Flag indicating whether subvolume operations are enabled on the volume. Known values are: "Enabled" and "Disabled".
             Defaults to Disabled.
-        subscription_id (str):
-            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -534,7 +527,6 @@ def clone_volume(
 
     # Resolve parameters from function arguments or config
     try:
-        resolved_subscription_id = get_config_value('subscription_id', subscription_id, config, print_output)
         resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
         resolved_account_name = get_config_value('account_name', account_name, config, print_output)
         resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
@@ -576,14 +568,14 @@ def clone_volume(
     )
 
     try:
-        # Get ANF client and subscription ID (using resolved value)
-        client, final_subscription_id = get_anf_client(resolved_subscription_id, print_output=print_output)
+        # Get ANF client and subscription ID (automatically retrieved from Azure CLI)
+        client, subscription_id = get_anf_client(print_output=print_output)
 
         # Construct subnet ID from resolved parameters
-        subnet_id = f"/subscriptions/{final_subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.Network/virtualNetworks/{resolved_virtual_network_name}/subnets/{resolved_subnet_name}"
+        subnet_id = f"/subscriptions/{subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.Network/virtualNetworks/{resolved_virtual_network_name}/subnets/{resolved_subnet_name}"
 
         # Construct snapshot ID from resolved parameters
-        snapshot_id = f"/subscriptions/{final_subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{resolved_account_name}/capacityPools/{resolved_pool_name}/volumes/{source_volume_name}/snapshots/{snapshot_name}"
+        snapshot_id = f"/subscriptions/{subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{resolved_account_name}/capacityPools/{resolved_pool_name}/volumes/{source_volume_name}/snapshots/{snapshot_name}"
 
         # Set default protocol types and get usage_threshold from source volume if not provided
         source_volume = None
@@ -765,7 +757,6 @@ def delete_volume(
     account_name: str = None,
     pool_name: str = None,
     force_delete: bool = None,
-    subscription_id: str = None,
     print_output: bool = False
 ) -> Dict[str, Any]:
     """
@@ -784,8 +775,6 @@ def delete_volume(
             Optional. An option to force delete the volume. 
             Will cleanup resources connected to the particular volume.
             Default value is None.
-        subscription_id (str):
-            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -806,7 +795,6 @@ def delete_volume(
 
     # Resolve parameters from function arguments or config
     try:
-        resolved_subscription_id = get_config_value('subscription_id', subscription_id, config, print_output)
         resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
         resolved_account_name = get_config_value('account_name', account_name, config, print_output)
         resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
@@ -822,8 +810,8 @@ def delete_volume(
     )
 
     try:
-        # Get ANF client and subscription ID (using resolved value)
-        client, _ = get_anf_client(resolved_subscription_id, print_output=print_output)
+        # Get ANF client
+        client, _ = get_anf_client(print_output=print_output)
 
         # Check if volume exists before attempting deletion
         try:
@@ -887,7 +875,6 @@ def list_volumes(
     resource_group_name: str = None,
     account_name: str = None,
     pool_name: str = None,
-    subscription_id: Optional[str] = None,
     print_output: bool = False
 ) -> Dict[str, Any]:
     """
@@ -900,13 +887,11 @@ def list_volumes(
             Optional. The name of the NetApp account. Will use config default if not provided.
         pool_name (str):
             Optional. The name of the capacity pool. Will use config default if not provided.
-        subscription_id (str):
-            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
 
-    Returns:
+    Returns:    Returns:
         Dictionary with status and list of volumes
 
     Raises:
@@ -921,7 +906,6 @@ def list_volumes(
 
     # Resolve parameters from function arguments or config
     try:
-        resolved_subscription_id = get_config_value('subscription_id', subscription_id, config, print_output)
         resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
         resolved_account_name = get_config_value('account_name', account_name, config, print_output)
         resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
@@ -936,8 +920,8 @@ def list_volumes(
     )
 
     try:
-        # Get ANF client and subscription ID (using resolved value)
-        client, _ = get_anf_client(resolved_subscription_id, print_output=print_output)
+        # Get ANF client
+        client, _ = get_anf_client(print_output=print_output)
 
         # List all volumes in the pool (using resolved values)
         volumes = client.volumes.list(

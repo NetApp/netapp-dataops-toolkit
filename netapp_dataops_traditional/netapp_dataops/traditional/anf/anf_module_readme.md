@@ -112,8 +112,9 @@ from netapp_dataops.traditional.anf import create_anf_config
 create_anf_config()
 ```
 
+**Note:** You'll need to run `az login --tenant <TENANT_ID>` first to authenticate with Azure.
+
 This will prompt you for:
-- Azure subscription ID
 - Resource group name
 - NetApp account name
 - Capacity pool name
@@ -121,6 +122,8 @@ This will prompt you for:
 - Virtual network name
 - Subnet name
 - Default protocol types (NFSv3, NFSv4.1, SMB)
+
+**Subscription ID is NOT needed** - it's automatically detected from your Azure CLI session.
 
 The configuration is saved to `~/.netapp_dataops/anf_config.json` and allows you to call functions with minimal parameters:
 
@@ -148,8 +151,7 @@ volume = anf.create_volume(
     pool_name="my-pool",
     location="eastus",
     protocol_types=["NFSv3"],
-    virtual_network_name="my-vnet",
-    subscription_id="your-subscription-id"
+    virtual_network_name="my-vnet"
 )
 ```
 
@@ -159,7 +161,6 @@ The configuration file (`~/.netapp_dataops/anf_config.json`) contains:
 
 ```json
 {
-  "subscriptionId": "your-azure-subscription-id",
   "resourceGroupName": "your-resource-group",
   "accountName": "your-netapp-account",
   "poolName": "your-capacity-pool",
@@ -170,6 +171,8 @@ The configuration file (`~/.netapp_dataops/anf_config.json`) contains:
 }
 ```
 
+**Note:** Subscription ID is not stored in the config file. It's automatically retrieved from your Azure CLI session via `az account show`.
+
 ### Parameter Precedence
 
 When both config file and function parameters are available:
@@ -177,29 +180,67 @@ When both config file and function parameters are available:
 2. **Config file values** are used when function parameters are `None` or not provided
 3. **Error** is raised if parameter is required but not found in either location
 
-### Environment Variables
+### Authentication
 
-**Required for Service Principal Authentication:**
+The ANF module uses **Azure CLI authentication** (`AzureCliCredential`) and automatically retrieves your subscription ID from the active Azure CLI session.
+
+**Required Setup:**
 ```bash
-export AZURE_CLIENT_ID="your-client-id"
-export AZURE_CLIENT_SECRET="your-client-secret"
-export AZURE_TENANT_ID="your-tenant-id"
-export AZURE_SUBSCRIPTION_ID="your-subscription-id"  # Optional default
+# Login to Azure
+az login
+
+# Or if you have access to multiple tenants, specify the tenant ID
+az login --tenant <TENANT-ID>
+
+# If you have multiple subscriptions, set the active one
+az account set --subscription <SUBSCRIPTION_ID>
+
+# Verify your active subscription
+az account show
 ```
 
+**How It Works:**
+- The toolkit automatically runs `az account show` to detect your active subscription
+- Subscription ID is retrieved dynamically on each operation
+- Respects your Azure CLI tenant and subscription context
+- No need to configure or store subscription ID in config files or environment variables
+
+**Benefits:**
+- ✅ **Simplified Setup**: No subscription ID in config files
+- ✅ **Better Security**: Subscription ID not stored anywhere
+- ✅ **Multi-tenant Support**: Automatically respects `az login --tenant`
+- ✅ **Multi-subscription Support**: Honors `az account set --subscription`
+- ✅ **Consistent Authentication**: Uses same credentials as Azure CLI
+
 **Alternative Authentication Methods:**
-- Azure CLI: `az login`
+The Azure SDK's `AzureCliCredential` also supports:
 - Managed Identity (when running on Azure resources)
+- Azure Cloud Shell
 - Visual Studio Code Azure Account extension
-- Azure PowerShell authentication
+- Any authentication method that works with `az login`
 
 ### Complete Usage Examples
 
-#### Basic Volume Management with Configuration
+#### Step 0: Authenticate with Azure CLI (Required First!)
+```bash
+# Login to Azure
+az login
+
+# Or if you have access to multiple tenants, specify the tenant ID
+az login --tenant <TENANT_ID>
+
+# If you have multiple subscriptions, set the active one
+az account set --subscription <SUBSCRIPTION_ID>
+
+# Verify your authentication and active subscription
+az account show
+```
+
+#### Step 1: Basic Volume Management with Configuration
 ```python
 from netapp_dataops.traditional import anf
 
-# First-time setup: create configuration
+# First-time setup: create configuration (no subscription ID needed!)
 anf.create_anf_config()
 
 # After configuration, simplified usage
@@ -217,22 +258,16 @@ snapshot = anf.create_snapshot(
     volume_name="data-volume"
     # location, resource_group_name, account_name, pool_name from config
 )
-
-# Clone the volume
-clone = anf.clone_volume(
-    source_volume_name="data-volume",
-    volume_name="data-clone",
-    creation_token="data-clone-01",
-    snapshot_name="backup-001"
-    # Other parameters from config
-)
 ```
 
-#### Usage Without Configuration (Manual Parameters)
+#### Step 2: Usage Without Configuration (Manual Parameters)
 ```python
 from netapp_dataops.traditional import anf
 
-# Manual parameter specification
+# Ensure you're authenticated with Azure CLI first!
+# az login --tenant <TENANT_ID>
+
+# Manual parameter specification (subscription_id NOT needed - auto-detected!)
 volume = anf.create_volume(
     volume_name="data-volume",
     creation_token="data-vol-01",
@@ -252,71 +287,5 @@ snapshot = anf.create_snapshot(
     account_name="my-account",
     pool_name="my-pool",
     location="eastus"
-)
-```
-
-### Cross-Region Replication
-```python
-from netapp_dataops.traditional import anf
-
-# Create a new volume
-volume = anf.create_volume(
-    volume_name="data-volume",
-    creation_token="data-vol-01",
-    usage_threshold=107374182400,  # 100 GiB
-    resource_group_name="my-rg",
-    account_name="my-account",
-    pool_name="my-pool",
-    location="eastus",
-    protocol_types=["NFSv3"],
-    virtual_network_name="my-vnet"
-)
-
-# Create a snapshot
-snapshot = anf.create_snapshot(
-    snapshot_name="backup-001",
-    volume_name="data-volume",
-    resource_group_name="my-rg",
-    account_name="my-account",
-    pool_name="my-pool",
-    location="eastus"
-)
-
-# Clone the volume
-clone = anf.clone_volume(
-    source_volume_name="data-volume",
-    volume_name="data-clone",
-    creation_token="data-clone-01",
-    snapshot_name="backup-001",
-    resource_group_name="my-rg",
-    account_name="my-account",
-    pool_name="my-pool",
-    location="eastus",
-    virtual_network_name="my-vnet"
-)
-```
-
-### Cross-Region Replication
-```python
-# Set up disaster recovery replication
-replication = anf.create_replication(
-    # Source volume (required)
-    volume_name="critical-data",
-    
-    # Destination volume parameters (required)
-    destination_resource_group_name="dr-westus-rg",
-    destination_account_name="dr-account",
-    destination_pool_name="dr-pool",
-    destination_volume_name="critical-data-replica",
-    destination_location="westus",
-    destination_creation_token="critical-data-dr",
-    destination_usage_threshold=107374182400,  # 100 GiB
-    destination_protocol_types=["NFSv3"],
-    destination_virtual_network_name="dr-vnet",
-    
-    # Source volume parameters (optional - can use config)
-    resource_group_name="prod-eastus-rg",
-    account_name="prod-account",
-    pool_name="prod-pool"
 )
 ```
