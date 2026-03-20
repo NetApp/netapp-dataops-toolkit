@@ -1,10 +1,13 @@
 """Configuration data models for NetApp DataOps Toolkit"""
 
+import logging
 import re
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
 
 from .exceptions import ConfigValidationError
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -15,7 +18,7 @@ class ONTAPConfig:
     hostname: str
     svm: str
     data_lif: str
-    verify_ssl_cert: bool = True
+    ssl_cert_path: str = ""
     
     # Default settings for volume operations
     default_volume_type: str = "flexgroup"
@@ -86,7 +89,7 @@ class ONTAPConfig:
             "hostname": self.hostname,
             "svm": self.svm,
             "dataLif": self.data_lif,
-            "verifySSLCert": self.verify_ssl_cert,
+            "sslCertPath": self.ssl_cert_path,
             "defaultVolumeType": self.default_volume_type,
             "defaultExportPolicy": self.default_export_policy,
             "defaultSnapshotPolicy": self.default_snapshot_policy,
@@ -99,11 +102,12 @@ class ONTAPConfig:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ONTAPConfig':
         """Create ONTAPConfig from dictionary."""
+        ssl_cert_path = cls._migrate_ssl_config(data)
         return cls(
             hostname=data.get("hostname", ""),
             svm=data.get("svm", ""),
             data_lif=data.get("dataLif", ""),
-            verify_ssl_cert=data.get("verifySSLCert", True),
+            ssl_cert_path=ssl_cert_path,
             default_volume_type=data.get("defaultVolumeType", "flexgroup"),
             default_export_policy=data.get("defaultExportPolicy", "default"),
             default_snapshot_policy=data.get("defaultSnapshotPolicy", "none"),
@@ -112,6 +116,32 @@ class ONTAPConfig:
             default_unix_permissions=data.get("defaultUnixPermissions", "0777"),
             default_aggregate=data.get("defaultAggregate", "")
         )
+
+    @staticmethod
+    def _migrate_ssl_config(data: Dict[str, Any]) -> str:
+        """Resolve SSL config from current or legacy keys.
+
+        New key ``sslCertPath`` takes precedence.  If only the legacy
+        ``verifySSLCert`` boolean is present, it is migrated: ``True``
+        becomes ``""`` (system CA) and ``False`` is overridden to ``""``
+        with a deprecation warning since SSL verification can no longer
+        be disabled.
+        """
+        if "sslCertPath" in data:
+            return data["sslCertPath"]
+
+        if "verifySSLCert" in data:
+            legacy = data["verifySSLCert"]
+            if legacy is False:
+                logger.warning(
+                    "Legacy config key 'verifySSLCert' is set to false. "
+                    "SSL verification can no longer be disabled; "
+                    "using system CA bundle instead. "
+                    "Re-run 'netapp_dataops_cli.py config' to provide a custom SSL certificate path."
+                )
+            return ""
+
+        return ""
 
 
 @dataclass

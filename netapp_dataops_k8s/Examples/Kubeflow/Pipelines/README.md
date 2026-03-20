@@ -137,7 +137,7 @@ Python script that creates a Kubeflow pipeline definition for a workflow that ca
 - destination_ontap_cluster_or_svm_mgmt_hostname: The host name or IP address of the ONTAP cluster or SVM management LIF corresponding to the cluster/SVM on which the destination volume resides.
 - destination_ontap_cluster_or_svm_admin_acct_k8s_secret: The name of the Kubernetes secret containing the ONTAP cluster or SVM admin account details for the cluster/SVM on which the destination volume resides.
 - destination_svm: The name of the SVM on which the destination volume resides.
-- ontap_api_verify_ssl_cert__yes_or_no: Denotes whether or not to verify the SSL certificate when communicating with the ONTAP API (yes/no).
+- ontap_api_ssl_cert_path: Path to a custom CA certificate file for ONTAP API SSL verification. Leave empty to use the system CA bundle.
 
 #### Pipeline Steps
 1. Perform a sync operation for the specified asynchronous SnapMirror relationship.

@@ -11,13 +11,34 @@ from netapp_ontap.host_connection import HostConnection as NetAppHostConnection
 from ..exceptions import InvalidConfigError, ConnectionTypeError
 
 
+def _resolve_ssl_verify(config: Dict[str, Any]) -> "bool | str":
+    """Return the value to pass as ``verify`` to NetAppHostConnection.
+
+    Supports both the new ``sslCertPath`` key and the legacy
+    ``verifySSLCert`` boolean.  SSL verification is always enforced;
+    the only choice is between the system CA bundle (``True``) and a
+    user-supplied certificate file path.
+    """
+    if "sslCertPath" in config:
+        path = config["sslCertPath"]
+        return path if path else True
+
+    if "verifySSLCert" in config and config["verifySSLCert"] is False:
+        import logging
+        logging.getLogger(__name__).warning(
+            "Legacy config key 'verifySSLCert' is set to false. "
+            "SSL verification can no longer be disabled; using system CA bundle."
+        )
+
+    return True
+
+
 def _instantiate_connection(config: Dict[str, Any], connectionType: str = "ONTAP", print_output: bool = False) -> None:
     if connectionType == "ONTAP":
         try:
             ontapClusterMgmtHostname = config["hostname"]
             ontapClusterAdminUsername = config["username"]
             ontapClusterAdminPassword = config["password"]
-            verifySSLCert = config["verifySSLCert"]
         except KeyError:
             if print_output:
                 from .config import _print_invalid_config_error
@@ -28,7 +49,7 @@ def _instantiate_connection(config: Dict[str, Any], connectionType: str = "ONTAP
             host=ontapClusterMgmtHostname,
             username=ontapClusterAdminUsername,
             password=ontapClusterAdminPassword,
-            verify=verifySSLCert
+            verify=_resolve_ssl_verify(config)
         )
 
     else:

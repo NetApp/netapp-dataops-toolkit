@@ -69,7 +69,7 @@ Enter unix filesystem permissions to apply by default when creating new volumes 
 Enter aggregate to use by default when creating new FlexVol volumes: vsim_ontap97_01_FC_1
 Enter ONTAP API username (Recommendation: Use SVM account): vsadmin
 Enter ONTAP API password (Recommendation: Use SVM account):
-Verify SSL certificate when calling ONTAP API (true/false): false
+Enter path to SSL certificate file for ONTAP API verification (leave blank to use system CA bundle) []:
 Do you intend to use this toolkit to trigger Cloud Sync operations? (yes/no): yes
 Note: If you do not have a Cloud Central refresh token, visit https://services.cloud.netapp.com/refresh-token to create one.
 Enter Cloud Central refresh token:

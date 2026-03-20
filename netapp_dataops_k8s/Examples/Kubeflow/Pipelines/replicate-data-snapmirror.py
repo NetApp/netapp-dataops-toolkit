@@ -10,7 +10,7 @@ def netappSnapMirrorUpdate(
     destinationOntapClusterOrSvmMgmtHostname: str, 
     destinationSvm: str,
     uuid: str,
-    verifySSLCert: str = 'no',
+    sslCertPath: str = '',
     waitUntilComplete: bool = True,
 
 ) :
@@ -27,11 +27,6 @@ def netappSnapMirrorUpdate(
         ontapAdminPasswordString = passwordSecret.read().strip()
     
     # Create NetApp Data Science Toolkit config file
-    if verifySSLCert == "no" : 
-        verifySSLCertBool = False
-    else : 
-        verifySSLCertBool = True
-
     ontapAdminPasswordBytes = ontapAdminPasswordString.encode("ascii") 
     ontapAdminPasswordBase64Bytes = base64.b64encode(ontapAdminPasswordBytes)
 
@@ -41,7 +36,7 @@ def netappSnapMirrorUpdate(
         "svm": destinationSvm, 
         "username": ontapAdminUsername, 
         "password": ontapAdminPasswordBase64Bytes.decode("ascii"),
-        "verifySSLCert": verifySSLCertBool
+        "sslCertPath": sslCertPath
     }
 
     configDirPath = os.path.expanduser("~/.netapp_dataops")
@@ -68,7 +63,7 @@ def replicate_data_snapmirror(
     destination_ontap_cluster_or_svm_mgmt_hostname: str = "10.61.188.118", 
     destination_ontap_cluster_or_svm_admin_acct_k8s_secret: str = "ontap-admin-account",
     destination_svm: str = "svm0",
-    ontap_api_verify_ssl_cert__yes_or_no: str = "yes"
+    ontap_api_ssl_cert_path: str = ""
 ) :
     # Pipeline Steps:
 
@@ -77,7 +72,7 @@ def replicate_data_snapmirror(
         destination_ontap_cluster_or_svm_mgmt_hostname, 
         destination_svm,
         snapmirror_relationship_uuid,
-        ontap_api_verify_ssl_cert__yes_or_no
+        ontap_api_ssl_cert_path
     )
     # Mount k8s secret containing ONTAP cluster admin account details
     replicate.add_pvolumes({

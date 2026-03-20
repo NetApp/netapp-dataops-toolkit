@@ -564,43 +564,60 @@ def _get_trident_backend_config(backend_config_name: str, namespace: str = "trid
     username = base64.b64decode(secret.data['username']).decode('utf-8')
     password = base64.b64decode(secret.data['password']).decode('utf-8')
 
-    # Extract verifyssl if available, default to False if not present
-    verifyssl = secret.data.get('verifyssl')
-    if verifyssl:
-        verifyssl = base64.b64decode(verifyssl).decode('utf-8').lower() == 'true'
+    # Extract SSL certificate path if available; falls back to system CA bundle.
+    # The legacy 'verifyssl' boolean key is ignored — SSL is always enforced.
+    ssl_cert_path_b64 = secret.data.get('sslcertpath')
+    if ssl_cert_path_b64:
+        ssl_cert_path = base64.b64decode(ssl_cert_path_b64).decode('utf-8')
     else:
-        verifyssl = False
+        ssl_cert_path = ""
 
     return {
         'username': username,
         'password': password,
         'hostname': managementLIF,
-        'verifySSLCert': verifyssl,
+        'sslCertPath': ssl_cert_path,
         'dataLIF': dataLIF,
         'storage_driver_name': storage_driver_name,
         'svm': svm
     }
 
 
+def _resolve_ssl_verify(config: dict):
+    """Return the ``verify`` value for NetAppHostConnection.
+
+    Supports both the new ``sslCertPath`` key and the legacy
+    ``verifySSLCert`` boolean.  SSL verification is always enforced.
+    """
+    if "sslCertPath" in config:
+        path = config["sslCertPath"]
+        return path if path else True
+
+    if "verifySSLCert" in config and config["verifySSLCert"] is False:
+        logger.warning(
+            "Legacy config key 'verifySSLCert' is set to false. "
+            "SSL verification can no longer be disabled; using system CA bundle."
+        )
+
+    return True
+
+
 def _instantiate_connection(config: dict, connectionType: str = "ONTAP", print_output: bool = False):
     if connectionType == "ONTAP":
-        ## Connection details for ONTAP cluster
         try:
             ontapClusterMgmtHostname = config["hostname"]
             ontapClusterAdminUsername = config["username"]
             ontapClusterAdminPassword = config["password"]
-            verifySSLCert = config["verifySSLCert"]
         except:
             if print_output:
                 _print_invalid_config_error()
             raise InvalidConfigError()
 
-        # Instantiate connection to ONTAP cluster
         netappConfig.CONNECTION = NetAppHostConnection(
             host=ontapClusterMgmtHostname,
             username=ontapClusterAdminUsername,
             password=ontapClusterAdminPassword,
-            verify=verifySSLCert
+            verify=_resolve_ssl_verify(config)
         )
 
     else:
