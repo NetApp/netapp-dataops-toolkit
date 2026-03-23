@@ -45,11 +45,13 @@ After installation, the `netapp_dataops_gcnv_mcp.py` command will be available i
 
 ### Google Cloud Authentication
 
-Before the MCP server can be used to perform GCNV operations, you must authenticate with Google Cloud and ensure proper setup:
+The MCP server uses **Application Default Credentials (ADC)** with **service account impersonation**, Google's recommended secure authentication approach that eliminates the need for service account key files.
+
+#### Step 1: User Authentication
 
 1. **Install Google Cloud SDK**: Follow the [installation guide](https://cloud.google.com/sdk/docs/install)
 
-2. **Authenticate with Google Cloud**:
+2. **Authenticate with your Google account**:
    ```bash
    gcloud auth login
    ```
@@ -64,15 +66,63 @@ Before the MCP server can be used to perform GCNV operations, you must authentic
    gcloud auth application-default login
    ```
 
-4. **Enable the NetApp API**:
+#### Step 2: Service Account Setup (One-time Admin Task)
+
+1. **Create a dedicated service account for GCNV operations**:
+   ```bash
+   gcloud iam service-accounts create gcnv-dataops \
+       --display-name="GCNV DataOps Service Account"
+   ```
+
+2. **Grant NetApp Cloud Volumes Admin role to the service account**:
+   ```bash
+   gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+       --member="serviceAccount:gcnv-dataops@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+       --role="roles/netappcloudvolumes.admin"
+   ```
+
+3. **Grant impersonation permission to your user account**:
+   ```bash
+   gcloud iam service-accounts add-iam-policy-binding \
+       gcnv-dataops@YOUR_PROJECT_ID.iam.gserviceaccount.com \
+       --member="user:YOUR_EMAIL@company.com" \
+       --role="roles/iam.serviceAccountTokenCreator"
+   ```
+
+#### Step 3: Configure Auto-Impersonation
+
+1. **Enable automatic service account impersonation**:
+   ```bash
+   gcloud config set auth/impersonate_service_account \
+       gcnv-dataops@YOUR_PROJECT_ID.iam.gserviceaccount.com
+   ```
+
+2. **Verify configuration**:
+   ```bash
+   gcloud config get-value auth/impersonate_service_account
+   ```
+
+#### Step 4: Enable NetApp API
+
+1. **Enable the NetApp API**:
    ```bash
    gcloud services enable netapp.googleapis.com
    ```
 
-5. **Verify API is enabled**:
+2. **Verify API is enabled**:
    ```bash
    gcloud services list --enabled --filter="name:netapp.googleapis.com"
    ```
+
+#### Benefits of Service Account Impersonation
+
+- **No Key Files**: Eliminates security risks from leaked service account keys
+- **Automatic Expiration**: Tokens expire automatically (no perpetual credentials)
+- **Centralized Access Control**: Manage permissions via IAM, not key files
+- **Audit Trail**: All operations traced to your user account
+- **Principle of Least Privilege**: Users get only what they need via impersonation
+
+> **Security Warning**: Never use service account key files in production. They can be leaked, never expire, and violate Google Cloud security best practices.
 
 ### Example JSON Config
 
@@ -127,28 +177,85 @@ For development or testing purposes:
 }
 ```
 
-## Environment Variables
-
-You can optionally set these environment variables:
-
-- `GOOGLE_APPLICATION_CREDENTIALS`: Path to service account key file (if not using default credentials)
-- `GOOGLE_CLOUD_PROJECT`: Default project ID to use
-
 ## Troubleshooting
 
 ### Common Issues
 
 1. **Authentication Failed**:
    ```bash
+   # Re-authenticate your user account
    gcloud auth login
+   gcloud auth application-default login
+   
+   # Verify impersonation is configured
+   gcloud config get-value auth/impersonate_service_account
    ```
 
-2. **API Not Enabled**:
+2. **Permission Denied Errors**:
+   ```bash
+   # Verify your user has Token Creator role
+   gcloud iam service-accounts get-iam-policy \
+       gcnv-dataops@YOUR_PROJECT_ID.iam.gserviceaccount.com
+   
+   # Verify service account has NetApp permissions
+   gcloud projects get-iam-policy YOUR_PROJECT_ID \
+       --flatten="bindings[].members" \
+       --filter="bindings.members:serviceAccount:gcnv-dataops@YOUR_PROJECT_ID.iam.gserviceaccount.com"
+   ```
+
+3. **API Not Enabled**:
    ```bash
    gcloud services enable netapp.googleapis.com --project=YOUR_PROJECT_ID
+   gcloud services list --enabled --filter="name:netapp.googleapis.com"
    ```
 
-3. **Module Not Found**: Ensure the package is properly installed or use the full path
+4. **Impersonation Not Working**:
+   ```bash
+   # Test impersonation
+   gcloud projects describe YOUR_PROJECT_ID --impersonate-service-account=gcnv-dataops@YOUR_PROJECT_ID.iam.gserviceaccount.com
+   
+   # If it fails, re-grant Token Creator role
+   gcloud iam service-accounts add-iam-policy-binding \
+       gcnv-dataops@YOUR_PROJECT_ID.iam.gserviceaccount.com \
+       --member="user:YOUR_EMAIL@company.com" \
+       --role="roles/iam.serviceAccountTokenCreator"
+   ```
+
+5. **Module Not Found**: 
+   ```bash
+   # Ensure the package is properly installed with GCP extras
+   pip install 'netapp-dataops-traditional[gcp]'
+   ```
+
+### Security Best Practices
+
+- **Use service account impersonation** (eliminates key file risks)
+- **Grant minimal permissions** (principle of least privilege)
+- **Enable audit logging** for compliance and security monitoring
+- **Regularly review IAM permissions** and remove unnecessary access
+- **Never use service account key files** (they can be leaked and never expire)
+- **Never commit credentials** to version control
+
+### Validation Commands
+
+Before using the MCP server, validate your setup:
+
+```bash
+# Check authentication
+gcloud auth list
+
+# Verify project configuration
+gcloud config get-value project
+
+# Verify impersonation configuration
+gcloud config get-value auth/impersonate_service_account
+
+# Test API access with impersonation
+gcloud services list --enabled --filter="name:netapp.googleapis.com"
+
+# Verify service account exists
+gcloud iam service-accounts describe gcnv-dataops@YOUR_PROJECT_ID.iam.gserviceaccount.com
+```
 
 ## Support
 
