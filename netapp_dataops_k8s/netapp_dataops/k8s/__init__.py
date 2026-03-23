@@ -130,10 +130,49 @@ def _get_labels(operation: str) -> dict:
     }
 
 
+def _kubeconfig_file_paths():
+    """Paths from KUBECONFIG or the default location (~/.kube/config), per client conventions."""
+    raw = os.environ.get("KUBECONFIG", "").strip()
+    if raw:
+        sep = ";" if os.name == "nt" else ":"
+        return [os.path.expanduser(p.strip()) for p in raw.split(sep) if p.strip()]
+    return [os.path.join(os.path.expanduser("~"), ".kube", "config")]
+
+
+def _ensure_kubeconfig_file_permissions():
+    """Restrict kubeconfig files to owner read/write (0600) on POSIX hosts.
+
+    Mitigates local theft or leakage via overly permissive file modes. On Windows,
+    filesystem permission semantics differ; this step is skipped there.
+    """
+    if os.name == "nt":
+        return
+    paths = [p for p in _kubeconfig_file_paths() if os.path.isfile(p)]
+    if not paths:
+        return
+    for path in paths:
+        try:
+            st = os.stat(path)
+            if (st.st_mode & 0o777) == 0o600:
+                continue
+            os.chmod(path, 0o600)
+            logger.info(
+                "Set kubeconfig file permissions to 0600 (user read/write only): %s", path
+            )
+        except OSError as err:
+            msg = (
+                f"Kubeconfig '{path}' must be accessible only by its owner (chmod 600). "
+                f"Fix permissions with: chmod 600 '{path}'. Underlying error: {err}"
+            )
+            logger.error(msg)
+            raise InvalidConfigError(msg) from err
+
+
 def _load_kube_config():
     try:
         config.load_incluster_config()
     except:
+        _ensure_kubeconfig_file_permissions()
         config.load_kube_config()
 
 
@@ -145,7 +184,10 @@ def _load_kube_config2(print_output: bool = False):
         configured = False
     if not configured:
         try:
+            _ensure_kubeconfig_file_permissions()
             config.load_kube_config()
+        except InvalidConfigError:
+            raise
         except:
             if print_output:
                 _print_invalid_config_error()
@@ -169,7 +211,9 @@ def _retrieve_image_for_jupyter_lab_deployment(workspaceName: str, namespace: st
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if printOutput:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -191,7 +235,9 @@ def _retrieve_jupyter_lab_url(workspaceName: str, namespace: str = "default", pr
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if printOutput:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -265,7 +311,9 @@ def _retrieve_triton_endpoints(server_name: str, namespace: str = "default", pri
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if printOutput:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -343,7 +391,9 @@ def _retrieve_jupyter_lab_workspace_for_pvc(pvcName: str, namespace: str = "defa
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if printOutput:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -365,7 +415,9 @@ def _retrieve_size_for_pvc(pvcName: str, namespace: str = "default", printOutput
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if printOutput:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -388,7 +440,9 @@ def _retrieve_source_volume_details_for_volume_snapshot(snapshotName: str, names
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if printOutput:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -413,7 +467,9 @@ def _retrieve_storage_class_for_pvc(pvcName: str, namespace: str = "default", pr
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if printOutput:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -435,7 +491,9 @@ def _scale_jupyter_lab_deployment(workspaceName: str, numPods: int, namespace: s
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if printOutput:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -474,7 +532,9 @@ def _wait_for_jupyter_lab_deployment_ready(workspaceName: str, namespace: str = 
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if printOutput:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -501,7 +561,9 @@ def _wait_for_triton_dev_deployment(server_name: str, namespace: str = "default"
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if printOutput:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -528,7 +590,9 @@ def _get_trident_backend_config(backend_config_name: str, namespace: str = "trid
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -793,7 +857,9 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -1053,7 +1119,9 @@ def create_triton_server(server_name: str, model_pvc_name: str, load_balancer_se
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -1323,6 +1391,10 @@ def create_k8s_opaque_secret(name: str, data: dict, namespace: str = 'default', 
                              print_output: bool = False) -> V1Secret:
     """Create a K8s secret with the provided data.
 
+    Values are base64-encoded for the Kubernetes API; that is not encryption. Cluster administrators
+    should enable etcd encryption at rest and restrict Secret access with RBAC. See
+    https://kubernetes.io/docs/concepts/security/secrets-good-practices/
+
     :param name: The name of the secret to be created.
     :param data: A dictionary of key-value pairs to be set as the data in the secret.
     :param namespace: The namespace for which the secret should be associated.
@@ -1364,7 +1436,9 @@ def create_volume(pvc_name: str, volume_size: str, storage_class: str = None, na
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -1437,7 +1511,9 @@ def create_volume_snapshot(pvc_name: str, snapshot_name: str = None, volume_snap
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -1505,7 +1581,9 @@ def delete_jupyter_lab(workspace_name: str, namespace: str = "default", preserve
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -1546,7 +1624,9 @@ def delete_triton_server(server_name: str, namespace: str = "default",
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -1612,7 +1692,9 @@ def delete_volume(pvc_name: str, namespace: str = "default", preserve_snapshots:
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -1696,7 +1778,9 @@ def delete_flexcache_volume(
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -1829,7 +1913,9 @@ def delete_volume_snapshot(snapshot_name: str, namespace: str = "default", print
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -1865,7 +1951,9 @@ def list_jupyter_labs(namespace: str = "default", include_astra_app_id: bool = F
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -1967,7 +2055,9 @@ def list_triton_servers(namespace: str = "default", print_output: bool = False) 
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -2043,7 +2133,9 @@ def list_volumes(namespace: str = "default", print_output: bool = False) -> list
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -2134,7 +2226,9 @@ def list_volume_snapshots(pvc_name: str = None, namespace: str = "default", prin
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -2404,7 +2498,9 @@ def create_flexcache(
         # Retrieve kubeconfig
         try:
             _load_kube_config()
-        except:
+        except InvalidConfigError:
+            raise
+        except Exception:
             if print_output:
                 _print_invalid_config_error()
             raise InvalidConfigError()
