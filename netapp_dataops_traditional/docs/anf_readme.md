@@ -39,7 +39,8 @@ Built on the [Azure NetApp Files Python SDK](https://docs.microsoft.com/en-us/py
   - [🗑️ Delete an Existing Snapshot for a Data Volume](#delete-an-existing-snapshot-for-a-data-volume)
   - [📋 List All Snapshots for a Data Volume](#list-all-snapshots-for-a-data-volume)
 - [4. Replication Management](#4-replication-management)
-  - [🔗 Create a Replication of a Data Volume](#create-a-cross-region-replication)
+  - [🔗 Create a Cross-Region Replication](#create-a-cross-region-replication)
+  - [🔗 Create a Cross-Zone Replication](#create-a-cross-zone-replication)
 - [Reference Links](#reference-links)
 - [Support](#support)
 
@@ -1183,7 +1184,128 @@ replication_result = anf.create_replication(
 }
 ```
 
+<a name="create-a-cross-zone-replication"></a>
 
+### 🔗 Create a Cross-Zone Replication
+
+Set up cross-zone replication (CZR) relationships between Azure NetApp Files volumes within the same region for high availability and local disaster recovery. Cross-zone replication provides zonal redundancy by replicating data between different availability zones in the same Azure region.
+
+#### Function Definition
+```python
+def create_replication(
+    # Source volume parameters
+    volume_name: str,                                        # Required. Source volume name.
+    # Destination volume parameters  
+    destination_resource_group_name: str,                   # Required. Destination resource group name.
+    destination_account_name: str,                          # Required. Destination NetApp account name.
+    destination_pool_name: str,                             # Required. Destination capacity pool name.
+    destination_volume_name: str,                           # Required. Destination volume name.
+    destination_location: str,                              # Required. Destination Azure region (same as source for CZR).
+    destination_creation_token: str,                        # Required. Destination volume file path.
+    destination_usage_threshold: int,                       # Required. Destination volume quota in bytes.
+    destination_protocol_types: list,                       # Required. Destination protocol types.
+    destination_virtual_network_name: str,                  # Required. Destination virtual network.
+    destination_subnet_name: str = "default",               # Optional. Destination subnet name.
+    destination_service_level: str = None,                  # Optional. Destination service level.
+    destination_zones: list = None,                         # Required for CZR. Destination availability zone (e.g., ["2"]).
+    # Source volume parameters (optional - will use config defaults)
+    resource_group_name: str = None,                        # Optional. Source volume resource group name.
+    account_name: str = None,                               # Optional. Source volume NetApp account name.
+    pool_name: str = None,                                  # Optional. Source volume capacity pool name.
+    # Common parameters
+    print_output: bool = False                              # Optional. Print log messages to console.
+) -> Dict[str, Any]:
+```
+
+#### Return Values
+```python
+dict: Dictionary with keys
+  - 'status': 'success' or 'error'
+  - 'details': Replication setup result (if successful)
+  - 'message': Error message (if failed)
+```
+
+#### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types:
+```python
+ValueError            # If required parameters are missing or invalid
+ResourceNotFoundError # If source volume does not exist
+Exception             # If there is an error during the replication setup process
+```
+
+#### Key Differences: Cross-Zone vs Cross-Region Replication
+
+| Feature | Cross-Zone Replication (CZR) | Cross-Region Replication (CRR) |
+|---------|------------------------------|--------------------------------|
+| **Location** | Same Azure region, different zones | Different Azure regions |
+| **Latency** | Ultra-low (< 1ms) | Higher (depends on region distance) |
+| **Use Case** | High availability, local DR | Disaster recovery, geo-redundancy |
+| **Cost** | Lower (same region) | Higher (cross-region bandwidth) |
+| **Zone Parameter** | `destination_zones` required | `destination_zones` optional |
+
+#### Example Usage
+
+**Example 1: Cross-Zone Replication for High Availability**
+
+Set up replication between zones in the same region (East US):
+
+```python
+from netapp_dataops.traditional import anf
+
+# Create cross-zone replication within East US
+czr_result = anf.create_replication(
+    # Source volume (East US - Zone 1)
+    volume_name="production-data-zone1",
+    
+    # Destination volume (East US - Zone 2) - will be created
+    destination_resource_group_name="prod-eastus-rg",
+    destination_account_name="prod-netapp-account", 
+    destination_pool_name="ha-capacity-pool-zone2",
+    destination_volume_name="production-data-zone2",
+    destination_location="eastus",  # Same region as source
+    destination_creation_token="prod-data-zone2-path",
+    destination_usage_threshold=214748364800,  # 200 GiB
+    destination_protocol_types=["NFSv3"],
+    destination_virtual_network_name="prod-vnet",
+    destination_subnet_name="netapp-zone2-subnet",
+    destination_zones=["2"],  # Availability Zone 2
+    
+    # Source volume location (optional - uses config defaults)
+    resource_group_name="prod-eastus-rg",
+    account_name="prod-netapp-account",
+    pool_name="primary-capacity-pool-zone1",
+    
+    print_output=True
+)
+```
+
+**Expected Output:**
+```json
+{
+  "status": "success",
+  "details": {
+    "replication_id": "/subscriptions/.../replicationVolumeReplication",
+    "source_volume": "production-data-zone1",
+    "destination_volume": "production-data-zone2",
+    "replication_schedule": "_10minutely",
+    "mirror_state": "Mirrored",
+    "relationship_status": "Idle",
+    "destination_location": "eastus",
+    "destination_zone": "2",
+    "replication_type": "cross_zone"
+  }
+}
+```
+
+#### Requirements for Cross-Zone Replication
+
+- Source and destination volumes must be in the **same Azure region**
+- Source volume must be in one availability zone
+- Destination volume must be in a **different** availability zone
+- Both volumes must use the same protocol types
+- Region must support availability zones for Azure NetApp Files
+- Proper network connectivity between zones (typically automatic within VNet)
 
 <a name="reference-links"></a>
 
