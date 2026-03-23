@@ -19,7 +19,7 @@ Built on the [Google Cloud NetApp Python SDK](https://cloud.google.com/python/do
   - [Prerequisites](#prerequisites)
   - [Installation Instructions](#installation-instructions)
 - [Authentication](#authentication)
-  - [Secure Authentication](#secure-authentication-setup-recommended)
+  - [Secure Authentication](#secure-authentication-setup)
 - [Available Functions](#available-functions)
   - [Function Categories](#function-categories)
 - [API Reference](#api-reference)
@@ -99,7 +99,7 @@ python3 -m pip install 'netapp-dataops-traditional[gcp]'
 
 The GCNV module uses **Application Default Credentials (ADC)** with **service account impersonation**, Google's recommended secure authentication approach.
 
-<a name="option-1-application-default-credentials-recommended"></a>
+<a name="secure-authentication-setup"></a>
 
 ### Secure Authentication
 
