@@ -30,16 +30,16 @@ Built on the [Azure NetApp Files Python SDK](https://docs.microsoft.com/en-us/py
 - [1. Configuration Management](#1-configuration-management)
   - [Create ANF Configuration](#create-anf-configuration)
 - [2. Volume Management](#2-volume-management)
-  - [🚀 Create a volume](#create-a-volume)
-  - [🔄 Clone a volume](#clone-a-volume)
-  - [📋 List volumes](#list-volumes)
-  - [🗑️ Delete a volume](#delete-a-volume)
+  - [🚀 Create a New Data Volume](#create-a-new-data-volume)
+  - [🔄 Clone an Existing Data Volume](#clone-an-existing-data-volume)
+  - [🗑️ Delete an Existing Data Volume](#delete-an-existing-data-volume)
+  - [📋 List All Data Volumes](#list-all-data-volumes)
 - [3. Snapshot Management](#3-snapshot-management)
-  - [📸 Create a snapshot](#create-a-snapshot)
-  - [📋 List snapshots](#list-snapshots)
-  - [🗑️ Delete a snapshot](#delete-a-snapshot)
+  - [📸 Create a New Snapshot for a Data Volume](#create-a-new-snapshot-for-a-data-volume)
+  - [🗑️ Delete an Existing Snapshot for a Data Volume](#delete-an-existing-snapshot-for-a-data-volume)
+  - [📋 List All Snapshots for a Data Volume](#list-all-snapshots-for-a-data-volume)
 - [4. Replication Management](#4-replication-management)
-  - [🔗 Create replication](#create-replication)
+  - [🔗 Create a Replication of a Data Volume](#create-a-cross-region-replication)
 - [Reference Links](#reference-links)
 - [Support](#support)
 
@@ -311,7 +311,7 @@ from netapp_dataops.traditional.anf import (
 
 <a name="create-anf-configuration"></a>
 
-### Create ANF Configuration
+### ⚙️ Create ANF Configuration
 
 Create an ANF configuration file through interactive prompts to simplify subsequent function calls by storing common Azure infrastructure details.
 
