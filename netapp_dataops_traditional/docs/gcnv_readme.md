@@ -19,8 +19,7 @@ Built on the [Google Cloud NetApp Python SDK](https://cloud.google.com/python/do
   - [Prerequisites](#prerequisites)
   - [Installation Instructions](#installation-instructions)
 - [Authentication](#authentication)
-  - [Secure Authentication Setup (Recommended)](#secure-authentication-setup-recommended)
-  - [Legacy Method (Not Recommended)](#legacy-method-not-recommended)
+  - [Secure Authentication](#secure-authentication-setup-recommended)
 - [Available Functions](#available-functions)
   - [Function Categories](#function-categories)
 - [API Reference](#api-reference)
@@ -102,7 +101,7 @@ The GCNV module uses **Application Default Credentials (ADC)** with **service ac
 
 <a name="option-1-application-default-credentials-recommended"></a>
 
-### Secure Authentication Setup (Recommended)
+### Secure Authentication
 
 This approach eliminates the need for service account key files, which can be leaked or never expire.
 
@@ -159,57 +158,6 @@ gcloud services enable netapp.googleapis.com
 gcloud services list --enabled --filter="name:netapp.googleapis.com"
 ```
 
-### How It Works
-
-**Before (Insecure - NOT RECOMMENDED):**
-```python
-from google.oauth2 import service_account
-from google.cloud import netapp_v1
-
-# SECURITY RISK: Key file can be leaked and never expires!
-credentials = service_account.Credentials.from_service_account_file(
-    'service-account-key.json'
-)
-client = netapp_v1.NetAppClient(credentials=credentials)
-```
-
-**After (Secure - RECOMMENDED):**
-```python
-from google.cloud import netapp_v1
-
-# No key files needed! Uses Application Default Credentials
-# Automatically impersonates the configured service account
-client = netapp_v1.NetAppClient()
-```
-
-### Benefits
-
-- **No Key Files**: No service account keys to manage or leak
-- **Automatic Rotation**: Credentials are short-lived and automatically refreshed
-- **Audit Trail**: All actions logged with your user identity
-- **Revocable**: Admin can revoke impersonation without key rotation
-- **Google Best Practice**: Recommended by Google Cloud security team
-- **Principle of Least Privilege**: Service account has only GCNV permissions
-
-### Team Setup
-
-For multiple team members:
-
-```bash
-# Grant impersonation to additional users
-gcloud iam service-accounts add-iam-policy-binding \
-    gcnv-dataops@YOUR_PROJECT_ID.iam.gserviceaccount.com \
-    --member="user:TEAMMATE_EMAIL@company.com" \
-    --role="roles/iam.serviceAccountTokenCreator"
-```
-
-Each team member then runs:
-```bash
-gcloud auth application-default login
-gcloud config set auth/impersonate_service_account \
-    gcnv-dataops@YOUR_PROJECT_ID.iam.gserviceaccount.com
-```
-
 ### Troubleshooting
 
 **Issue:** "Permission denied" errors
@@ -231,24 +179,6 @@ gcloud config unset auth/impersonate_service_account
 gcloud config set auth/impersonate_service_account \
     gcnv-dataops@YOUR_PROJECT_ID.iam.gserviceaccount.com
 ```
-
-### Legacy Method (Not Recommended)
-
-<a name="option-2-service-account-json"></a>
-
-> ⚠️ **Security Warning**: Using service account key files is not recommended by Google Cloud. Keys never expire and can be accidentally leaked in version control or logs.
-
-If you must use key files (e.g., for CI/CD with no other option):
-
-```bash
-# Set the path to your service account key
-export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service_account.json"
-```
-
-**Better alternatives for CI/CD:**
-- Use Workload Identity Federation
-- Use Google Cloud Build with default service accounts
-- Use Cloud Run/Cloud Functions with attached service accounts
 
 <a name="available-functions"></a>
 
