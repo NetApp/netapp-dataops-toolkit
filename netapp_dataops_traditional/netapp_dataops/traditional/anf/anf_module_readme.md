@@ -214,11 +214,11 @@ az account show
 - No need to configure or store subscription ID in config files or environment variables
 
 **Benefits:**
-- ✅ **Simplified Setup**: No subscription ID in config files
-- ✅ **Better Security**: Subscription ID not stored anywhere
-- ✅ **Multi-tenant Support**: Automatically respects `az login --tenant`
-- ✅ **Multi-subscription Support**: Honors `az account set --subscription`
-- ✅ **Consistent Authentication**: Uses same credentials as Azure CLI
+- **Simplified Setup**: No subscription ID in config files
+- **Better Security**: Subscription ID not stored anywhere
+- **Multi-tenant Support**: Automatically respects `az login --tenant`
+- **Multi-subscription Support**: Honors `az account set --subscription`
+- **Consistent Authentication**: Uses same credentials as Azure CLI
 
 **Alternative Authentication Methods:**
 The Azure SDK's `AzureCliCredential` also supports:
