@@ -100,8 +100,20 @@ def _get_clean_error_message(exception: Exception) -> str:
         Returns:
             (ResourceNotFound) Resource not found
     """
-    # Try to get the message attribute from Azure SDK exceptions
+    # For Azure SDK exceptions, the full string has multiple lines with Code/Message
+    # Extract just the first line which contains the main error message
+    error_str = str(exception)
+    if '\nCode:' in error_str or '\nMessage:' in error_str:
+        # Return only the first line (before the Code: field)
+        return error_str.split('\n')[0]
+    
+    # Try to get the message attribute from Azure SDK exceptions as fallback
     if hasattr(exception, 'message'):
-        return exception.message
-    # Fallback to string representation
-    return str(exception)
+        msg = exception.message
+        # Check if message itself has Code/Message duplication
+        if isinstance(msg, str) and ('\nCode:' in msg or '\nMessage:' in msg):
+            return msg.split('\n')[0]
+        return str(msg)
+    
+    # Fallback to full string representation for other exceptions
+    return error_str
