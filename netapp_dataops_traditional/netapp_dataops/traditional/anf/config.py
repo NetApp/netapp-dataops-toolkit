@@ -213,24 +213,41 @@ def create_anf_config_interactive(config_dir_path: str = DEFAULT_CONFIG_DIR, con
                 sys.exit(0)
             else:
                 print("Please enter 'yes' or 'no'.")
-    else:
-        input("\nPress Enter to continue...")
 
     config = dict()
 
     # Infrastructure
     print("\nInfrastructure")
     print("--------------")
-    config["resourceGroupName"] = input("  Enter resource group name           : ")
-    config["accountName"] = input("  Enter NetApp account name           : ")
-    config["poolName"] = input("  Enter capacity pool name            : ")
-    config["location"] = input("  Enter Azure region (e.g., eastus)   : ")
+    config["resourceGroupName"] = input("  Enter resource group name           : ").strip()
+    if not config["resourceGroupName"]:
+        print("\nError: Resource group name is required.")
+        sys.exit(1)
+    
+    config["accountName"] = input("  Enter NetApp account name           : ").strip()
+    if not config["accountName"]:
+        print("\nError: NetApp account name is required.")
+        sys.exit(1)
+    
+    config["poolName"] = input("  Enter capacity pool name            : ").strip()
+    if not config["poolName"]:
+        print("\nError: Capacity pool name is required.")
+        sys.exit(1)
+    
+    config["location"] = input("  Enter Azure region (e.g., eastus)   : ").strip()
+    if not config["location"]:
+        print("\nError: Azure region is required.")
+        sys.exit(1)
 
     # Network
     print("\nNetwork")
     print("-------")
-    config["virtualNetworkName"] = input("  Enter virtual network name          : ")
-    config["subnetName"] = input("  Enter subnet name [default]         : ") or "default"
+    config["virtualNetworkName"] = input("  Enter virtual network name          : ").strip()
+    if not config["virtualNetworkName"]:
+        print("\nError: Virtual network name is required.")
+        sys.exit(1)
+    
+    config["subnetName"] = input("  Enter subnet name [default]         : ").strip() or "default"
 
     # Protocols
     print("\nProtocols")
