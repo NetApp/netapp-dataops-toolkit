@@ -339,14 +339,10 @@ def create_volume(
     except ResourceExistsError as e:
         error_message = f"Volume '{volume_name}' already exists: {str(e)}"
         logger.error(error_message)
-        if print_output:
-            print(error_message)
         return {"status": "error", "details": str(e)}
     except Exception as e:
         error_message = f"Failed to create volume: {str(e)}"
         logger.error(error_message)
-        if print_output:
-            print(error_message)
         return {"status": "error", "details": str(e)}
 
 
@@ -737,14 +733,10 @@ def clone_volume(
     except ResourceExistsError as e:
         error_message = f"Volume '{volume_name}' already exists: {str(e)}"
         logger.error(error_message)
-        if print_output:
-            print(error_message)
         return {"status": "error", "details": str(e)}
     except Exception as e:
         error_message = f"Failed to clone volume: {str(e)}"
         logger.error(error_message)
-        if print_output:
-            print(error_message)
         return {"status": "error", "details": str(e)}
 
 
@@ -857,14 +849,10 @@ def delete_volume(
     except ResourceNotFoundError as e:
         error_message = f"Volume '{volume_name}' not found"
         logger.error(error_message)
-        if print_output:
-            print(error_message)
         return {"status": "error", "details": str(e)}
     except Exception as e:
         error_message = f"Failed to delete volume: {str(e)}"
         logger.error(error_message)
-        if print_output:
-            print(error_message)
         return {"status": "error", "details": str(e)}
 
 
@@ -945,8 +933,6 @@ def list_volumes(
     except Exception as e:
         error_message = f"Failed to list volumes: {str(e)}"
         logger.error(error_message)
-        if print_output:
-            print(error_message)
         return {"status": "error", "details": str(e)}
 
 

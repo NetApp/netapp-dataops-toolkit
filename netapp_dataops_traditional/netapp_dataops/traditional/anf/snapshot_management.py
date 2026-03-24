@@ -124,14 +124,10 @@ def create_snapshot(
     except ResourceNotFoundError as e:
         error_message = f"Source volume '{volume_name}' not found: {str(e)}"
         logger.error(error_message)
-        if print_output:
-            print(error_message)
         return {"status": "error", "details": str(e)}
     except Exception as e:
         error_message = f"Failed to create snapshot: {str(e)}"
         logger.error(error_message)
-        if print_output:
-            print(error_message)
         return {"status": "error", "details": str(e)}
 
 
@@ -237,14 +233,10 @@ def delete_snapshot(
     except ResourceNotFoundError as e:
         error_message = f"Snapshot '{snapshot_name}' not found"
         logger.error(error_message)
-        if print_output:
-            print(error_message)
         return {"status": "error", "details": str(e)}
     except Exception as e:
         error_message = f"Failed to delete snapshot: {str(e)}"
         logger.error(error_message)
-        if print_output:
-            print(error_message)
         return {"status": "error", "details": str(e)}
 
 
@@ -332,13 +324,9 @@ def list_snapshots(
     except ResourceNotFoundError as e:
         error_message = f"Volume '{volume_name}' not found"
         logger.error(error_message)
-        if print_output:
-            print(error_message)
         return {"status": "error", "details": str(e)}
     except Exception as e:
         error_message = f"Failed to list snapshots: {str(e)}"
         logger.error(error_message)
-        if print_output:
-            print(error_message)
         return {"status": "error", "details": str(e)}
         

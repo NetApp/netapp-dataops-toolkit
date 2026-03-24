@@ -296,8 +296,6 @@ def create_replication(
     except ResourceNotFoundError as e:
         error_message = f"Volume '{volume_name}' not found: {str(e)}"
         logger.error(error_message)
-        if print_output:
-            print(error_message)
         return {"status": "error", "details": error_message}
     except Exception as e:
         error_message = str(e)
@@ -313,6 +311,4 @@ def create_replication(
             error_details = f"Failed to setup replication: {error_message}"
 
         logger.error(error_details)
-        if print_output:
-            print(error_details)
         return {"status": "error", "details": error_details}
