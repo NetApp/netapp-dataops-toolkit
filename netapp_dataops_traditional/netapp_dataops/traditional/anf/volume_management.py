@@ -12,7 +12,7 @@ from azure.mgmt.netapp.models import (
 )
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 from .client import _get_anf_client
-from .base import _serialize, _validate_required_params
+from .base import _serialize, _validate_required_params, _get_clean_error_message
 from .config import _retrieve_anf_config, _get_config_value, InvalidConfigError
 
 from netapp_dataops.logging_utils import setup_logger
@@ -28,6 +28,7 @@ DEFAULT_AVS_DATA_STORE = "Disabled"
 DEFAULT_ENABLE_SUBVOLUMES = "Disabled"
 DEFAULT_PROTOCOL_TYPES = ["NFSv3"]
 DEFAULT_SUBNET_NAME = "default"
+
 
 def create_volume(
     volume_name: str,
@@ -337,14 +338,13 @@ def create_volume(
         return {"status": "success", "details": _serialize(result)}
        
     except ResourceExistsError as e:
-        # Extract just the message without duplicating the full error details
-        error_msg = getattr(e, 'message', str(e))
-        logger.error(f"Volume '{volume_name}' already exists: {error_msg}")
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Volume '{volume_name}' already exists: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
     except Exception as e:
-        # Log the error - Azure SDK exceptions already include Code and Message
-        logger.error(f"Failed to create volume: {str(e)}")
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Failed to create volume: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
 
 
 def clone_volume(
@@ -732,12 +732,13 @@ def clone_volume(
         return {"status": "success", "details": _serialize(result)}
             
     except ResourceExistsError as e:
-        error_msg = getattr(e, 'message', str(e))
-        logger.error(f"Volume '{volume_name}' already exists: {error_msg}")
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Volume '{volume_name}' already exists: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
     except Exception as e:
-        logger.error(f"Failed to clone volume: {str(e)}")
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Failed to clone volume: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
 
 
 def delete_volume(
@@ -847,11 +848,13 @@ def delete_volume(
         return {"status": "success", "details": f"Volume '{volume_name}' deleted successfully"}
     
     except ResourceNotFoundError as e:
-        logger.error(f"Volume '{volume_name}' not found")
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Volume '{volume_name}' not found: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
     except Exception as e:
-        logger.error(f"Failed to delete volume: {str(e)}")
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Failed to delete volume: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
 
 
 def list_volumes(
@@ -929,8 +932,9 @@ def list_volumes(
         return {"status": "success", "details": serialized_volumes}
 
     except Exception as e:
-        logger.error(f"Failed to list volumes: {str(e)}")
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Failed to list volumes: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
 
 
 def _create_export_policy_rules(export_policy_rules: Optional[List[Dict[str, Any]]], protocol_types: List[str]) -> Optional[VolumePropertiesExportPolicy]:

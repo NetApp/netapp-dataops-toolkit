@@ -75,3 +75,33 @@ def _serialize(obj: Any) -> Any:
     except (TypeError, ValueError):
         # If not serializable, convert to string
         return str(obj)
+
+
+def _get_clean_error_message(exception: Exception) -> str:
+    """
+    Extract clean error message from Azure SDK exceptions.
+    
+    Azure SDK exceptions contain Code and Message fields that duplicate information
+    when converted to string. This function extracts just the core error message
+    without the Code/Message duplication.
+    
+    Args:
+        exception: The exception object
+        
+    Returns:
+        str: Clean error message without Code/Message duplication
+        
+    Example:
+        Instead of:
+            (ResourceNotFound) Resource not found
+            Code: ResourceNotFound
+            Message: Resource not found
+        
+        Returns:
+            (ResourceNotFound) Resource not found
+    """
+    # Try to get the message attribute from Azure SDK exceptions
+    if hasattr(exception, 'message'):
+        return exception.message
+    # Fallback to string representation
+    return str(exception)

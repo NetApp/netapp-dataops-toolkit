@@ -8,12 +8,13 @@ from typing import Dict, Any
 from azure.mgmt.netapp.models import Snapshot
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 from .client import _get_anf_client
-from .base import _serialize, _validate_required_params
+from .base import _serialize, _validate_required_params, _get_clean_error_message
 from .config import _retrieve_anf_config, _get_config_value, InvalidConfigError
 
 from netapp_dataops.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
+
 
 def create_snapshot(
     snapshot_name: str,
@@ -116,17 +117,17 @@ def create_snapshot(
         return {"status": "success", "details": _serialize(result)}
         
     except ResourceExistsError as e:
-        error_message = f"Snapshot '{snapshot_name}' already exists: {str(e)}"
-        logger.error(error_message)
-        if print_output:
-            print(error_message)
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Snapshot '{snapshot_name}' already exists: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
     except ResourceNotFoundError as e:
-        logger.error(f"Source volume '{volume_name}' not found: {str(e)}")
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Source volume '{volume_name}' not found: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
     except Exception as e:
-        logger.error(f"Failed to create snapshot: {str(e)}")
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Failed to create snapshot: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
 
 
 def delete_snapshot(
@@ -229,11 +230,13 @@ def delete_snapshot(
         return {"status": "success", "details": f"Snapshot '{snapshot_name}' deleted successfully"}
 
     except ResourceNotFoundError as e:
-        logger.error(f"Snapshot '{snapshot_name}' not found")
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Snapshot '{snapshot_name}' not found: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
     except Exception as e:
-        logger.error(f"Failed to delete snapshot: {str(e)}")
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Failed to delete snapshot: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
 
 
 def list_snapshots(
@@ -318,9 +321,11 @@ def list_snapshots(
         return {"status": "success", "details": serialized_snapshots}
 
     except ResourceNotFoundError as e:
-        logger.error(f"Volume '{volume_name}' not found")
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Volume '{volume_name}' not found: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
     except Exception as e:
-        logger.error(f"Failed to list snapshots: {str(e)}")
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Failed to list snapshots: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
         

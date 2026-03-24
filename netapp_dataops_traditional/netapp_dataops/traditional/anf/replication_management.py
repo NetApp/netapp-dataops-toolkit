@@ -8,7 +8,7 @@ from typing import Dict, List, Any
 from azure.mgmt.netapp.models import AuthorizeRequest
 from azure.core.exceptions import ResourceNotFoundError
 from .client import _get_anf_client
-from .base import _serialize, _validate_required_params
+from .base import _serialize, _validate_required_params, _get_clean_error_message
 from .config import _retrieve_anf_config, _get_config_value, InvalidConfigError
 
 from netapp_dataops.logging_utils import setup_logger
@@ -294,20 +294,21 @@ def create_replication(
     except InvalidConfigError:
         raise
     except ResourceNotFoundError as e:
-        logger.error(f"Volume '{volume_name}' not found: {str(e)}")
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Volume '{volume_name}' not found: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
     except Exception as e:
-        error_message = str(e)
+        clean_msg = _get_clean_error_message(e)
         
         # Provide specific guidance for common replication errors
-        if "cannot be authorized for replication against itself" in error_message.lower():
-            error_details = f"Replication authorization failed: A volume cannot replicate to itself. Please create a data protection volume in a different Azure region. Original error: {error_message}"
-        elif "data protection volume" in error_message.lower():
-            error_details = f"Replication authorization failed: The destination volume must be a data protection volume. Create the destination volume with volume_type='DataProtection' in a different region. Original error: {error_message}"
-        elif "different region" in error_message.lower():
-            error_details = f"Replication authorization failed: Source and destination volumes must be in different Azure regions. Original error: {error_message}"
+        if "cannot be authorized for replication against itself" in clean_msg.lower():
+            error_details = f"Replication authorization failed: A volume cannot replicate to itself. Please create a data protection volume in a different Azure region. Original error: {clean_msg}"
+        elif "data protection volume" in clean_msg.lower():
+            error_details = f"Replication authorization failed: The destination volume must be a data protection volume. Create the destination volume with volume_type='DataProtection' in a different region. Original error: {clean_msg}"
+        elif "different region" in clean_msg.lower():
+            error_details = f"Replication authorization failed: Source and destination volumes must be in different Azure regions. Original error: {clean_msg}"
         else:
-            error_details = f"Failed to setup replication: {error_message}"
+            error_details = f"Failed to setup replication: {clean_msg}"
 
         logger.error(error_details)
         return {"status": "error", "details": error_details}
