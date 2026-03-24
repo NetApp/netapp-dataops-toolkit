@@ -17,7 +17,7 @@ logger = setup_logger(__name__)
 
 # Constants for validation
 VALID_PROTOCOL_TYPES = ["NFSv3", "NFSv4.1", "CIFS"]
-VALID_SERVICE_LEVELS = ["Standard", "Premium", "Ultra", "StandardZRS", "Flexible"]
+VALID_SERVICE_LEVELS = ["Standard", "Premium", "Ultra", "Flexible"]
 DEFAULT_SERVICE_LEVEL = "Premium"
 
 def create_replication(
