@@ -4,12 +4,12 @@ NetApp DataOps Toolkit - Azure NetApp Files (ANF) Snapshot Management
 This module provides snapshot management operations for Azure NetApp Files.
 """
 
-from typing import Dict, Optional, Any
+from typing import Dict, Any
 from azure.mgmt.netapp.models import Snapshot
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
-from .client import get_anf_client
-from .base import _serialize, validate_required_params
-from .config import _retrieve_anf_config, get_config_value, InvalidConfigError
+from .client import _get_anf_client
+from .base import _serialize, _validate_required_params
+from .config import _retrieve_anf_config, _get_config_value, InvalidConfigError
 
 from netapp_dataops.logging_utils import setup_logger
 
@@ -62,15 +62,15 @@ def create_snapshot(
 
     # Resolve parameters from function arguments or config
     try:
-        resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
-        resolved_account_name = get_config_value('account_name', account_name, config, print_output)
-        resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
-        resolved_location = get_config_value('location', location, config, print_output)
+        resolved_resource_group_name = _get_config_value('resource_group_name', resource_group_name, config, print_output)
+        resolved_account_name = _get_config_value('account_name', account_name, config, print_output)
+        resolved_pool_name = _get_config_value('pool_name', pool_name, config, print_output)
+        resolved_location = _get_config_value('location', location, config, print_output)
     except InvalidConfigError:
         raise
 
     # Validate input parameters (now using resolved values)
-    validate_required_params(
+    _validate_required_params(
         resource_group_name=resolved_resource_group_name,
         account_name=resolved_account_name,
         pool_name=resolved_pool_name,
@@ -81,7 +81,7 @@ def create_snapshot(
 
     try:
         # Get ANF client
-        client, _ = get_anf_client(print_output=print_output)
+        client, _ = _get_anf_client(print_output=print_output)
 
         # Build snapshot properties (using resolved values)
         snapshot_properties = {
@@ -178,14 +178,14 @@ def delete_snapshot(
 
     # Resolve parameters from function arguments or config
     try:
-        resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
-        resolved_account_name = get_config_value('account_name', account_name, config, print_output)
-        resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
+        resolved_resource_group_name = _get_config_value('resource_group_name', resource_group_name, config, print_output)
+        resolved_account_name = _get_config_value('account_name', account_name, config, print_output)
+        resolved_pool_name = _get_config_value('pool_name', pool_name, config, print_output)
     except InvalidConfigError:
         raise
 
     # Validate input parameters (now using resolved values)
-    validate_required_params(
+    _validate_required_params(
         resource_group_name=resolved_resource_group_name,
         account_name=resolved_account_name,
         pool_name=resolved_pool_name,
@@ -195,7 +195,7 @@ def delete_snapshot(
 
     try:
         # Get ANF client
-        client, _ = get_anf_client(print_output=print_output)
+        client, _ = _get_anf_client(print_output=print_output)
 
         # Check if snapshot exists before attempting deletion
         try:
@@ -271,7 +271,7 @@ def list_snapshots(
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
 
-    Returns:    Returns:
+    Returns:
         Dictionary with status and list of snapshots.
 
     Raises:
@@ -288,14 +288,14 @@ def list_snapshots(
 
     # Resolve parameters from function arguments or config
     try:
-        resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
-        resolved_account_name = get_config_value('account_name', account_name, config, print_output)
-        resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
+        resolved_resource_group_name = _get_config_value('resource_group_name', resource_group_name, config, print_output)
+        resolved_account_name = _get_config_value('account_name', account_name, config, print_output)
+        resolved_pool_name = _get_config_value('pool_name', pool_name, config, print_output)
     except InvalidConfigError:
         raise
 
     # Validate input parameters (now using resolved values)
-    validate_required_params(
+    _validate_required_params(
         resource_group_name=resolved_resource_group_name,
         account_name=resolved_account_name,
         pool_name=resolved_pool_name,
@@ -304,7 +304,7 @@ def list_snapshots(
 
     try:
         # Get ANF client
-        client, _ = get_anf_client(print_output=print_output)
+        client, _ = _get_anf_client(print_output=print_output)
 
         # List all snapshots for the volume (using resolved values)
         snapshots = client.snapshots.list(

@@ -7,9 +7,9 @@ This module provides replication management operations for Azure NetApp Files.
 from typing import Dict, List, Any
 from azure.mgmt.netapp.models import AuthorizeRequest
 from azure.core.exceptions import ResourceNotFoundError
-from .client import get_anf_client
-from .base import _serialize, validate_required_params
-from .config import _retrieve_anf_config, get_config_value, InvalidConfigError
+from .client import _get_anf_client
+from .base import _serialize, _validate_required_params
+from .config import _retrieve_anf_config, _get_config_value, InvalidConfigError
 
 from netapp_dataops.logging_utils import setup_logger
 
@@ -116,15 +116,15 @@ def create_replication(
 
     # Resolve source volume parameters from function arguments or config
     try:
-        resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
-        resolved_account_name = get_config_value('account_name', account_name, config, print_output)
-        resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
+        resolved_resource_group_name = _get_config_value('resource_group_name', resource_group_name, config, print_output)
+        resolved_account_name = _get_config_value('account_name', account_name, config, print_output)
+        resolved_pool_name = _get_config_value('pool_name', pool_name, config, print_output)
     except InvalidConfigError:
         raise
 
     try:
         # Validate input parameters (using resolved values for source volume)
-        validate_required_params(
+        _validate_required_params(
             resource_group_name=resolved_resource_group_name,
             account_name=resolved_account_name,
             pool_name=resolved_pool_name,
@@ -162,7 +162,7 @@ def create_replication(
             return {"status": "error", "details": error_message}
         
         # Get ANF client and subscription ID (automatically retrieved from Azure CLI)
-        client, subscription_id = get_anf_client(print_output=print_output)
+        client, subscription_id = _get_anf_client(print_output=print_output)
 
         # Construct source volume resource ID (using resolved values)
         source_volume_resource_id = f"/subscriptions/{subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{resolved_account_name}/capacityPools/{resolved_pool_name}/volumes/{volume_name}"

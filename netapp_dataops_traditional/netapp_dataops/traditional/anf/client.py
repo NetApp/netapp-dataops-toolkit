@@ -5,8 +5,6 @@ This module handles Azure client authentication and management for ANF operation
 
 from typing import Tuple, Optional
 from azure.identity import AzureCliCredential
-# Required: pip install azure-mgmt-resource-subscriptions
-from azure.mgmt.resource.subscriptions import SubscriptionClient
 from azure.mgmt.netapp import NetAppManagementClient
 from azure.core.exceptions import ClientAuthenticationError
 
@@ -25,7 +23,7 @@ class ANFClientManager:
             cls._instance = super().__new__(cls)
         return cls._instance
     
-    def get_client(self, subscription_id: str, print_output: bool = False) -> NetAppManagementClient:
+    def get_client(self, subscription_id: str, print_output: Optional[bool] = False) -> NetAppManagementClient:
         """
         Get or create an authenticated NetApp Management Client.
         """
@@ -40,7 +38,7 @@ class ANFClientManager:
         return self._client
 
 
-def get_anf_client(print_output: bool = False) -> Tuple[NetAppManagementClient, str]:
+def _get_anf_client(print_output: bool = False) -> Tuple[NetAppManagementClient, str]:
     """
     Convenience function to get an authenticated ANF client.
     Automatically fetches the active Subscription ID and Tenant ID from the 'az account show' context.
@@ -60,11 +58,9 @@ def get_anf_client(print_output: bool = False) -> Tuple[NetAppManagementClient, 
         
         account_info = json.loads(result.stdout)
         subscription_id = account_info['id']
-        tenant_id = account_info['tenantId']
-        subscription_name = account_info['name']
         
         if print_output:
-            logger.info(f"Detected Tenant from CLI: {tenant_id}")
+            subscription_name = account_info['name']
             logger.info(f"Connected to ANF via Active Subscription: {subscription_name} ({subscription_id})")
     
     except subprocess.CalledProcessError as e:

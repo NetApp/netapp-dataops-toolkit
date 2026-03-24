@@ -153,11 +153,23 @@ The ANF module supports **simplified configuration** through an interactive setu
 
 Set up a configuration file with your Azure infrastructure details:
 
+**Method 1: Run as Python Module (Recommended)**
+```bash
+# Run the configuration wizard directly
+python3 -m netapp_dataops.traditional.anf.cli_config
+```
+
+**Method 2: Import and Call in Python**
 ```python
 from netapp_dataops.traditional.anf.config import create_anf_config
 
 # Run interactive configuration setup
 create_anf_config()
+```
+
+**Method 3: Python One-liner**
+```bash
+python3 -c "from netapp_dataops.traditional.anf.config import create_anf_config; create_anf_config()"
 ```
 
 **Note:** You'll need to run `az login --tenant <TENANT_ID>` first to authenticate with Azure.

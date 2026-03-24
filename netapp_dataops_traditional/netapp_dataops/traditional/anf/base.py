@@ -7,7 +7,7 @@ This module contains base utilities and helper functions for ANF operations.
 from typing import Any, Dict
 
 
-def validate_required_params(**params) -> None:
+def _validate_required_params(**params) -> None:
     """Validate that all required parameters are provided.
     
     Args:

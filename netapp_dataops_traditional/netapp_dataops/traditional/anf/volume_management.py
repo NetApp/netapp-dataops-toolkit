@@ -11,16 +11,15 @@ from azure.mgmt.netapp.models import (
     ExportPolicyRule,
 )
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
-from .client import get_anf_client
-from .base import _serialize, validate_required_params
-from .config import _retrieve_anf_config, get_config_value, InvalidConfigError
+from .client import _get_anf_client
+from .base import _serialize, _validate_required_params
+from .config import _retrieve_anf_config, _get_config_value, InvalidConfigError
 
 from netapp_dataops.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
 
 # Default values
-DEFAULT_SERVICE_LEVEL = "Premium"
 DEFAULT_SECURITY_STYLE = "unix"
 DEFAULT_UNIX_PERMISSIONS = "0770"
 DEFAULT_NETWORK_FEATURES = "Basic"
@@ -96,7 +95,7 @@ def create_volume(
             Optional. The name of a delegated Azure subnet to construct the Azure Resource ID for a delegated subnet.
             Will use config default if not provided, otherwise defaults to "default".
         service_level (str):
-            Optional. Service level (Standard, Premium, Ultra, StandardZRS, Flexible).
+            Optional. Service level (Standard, Premium, Ultra, Flexible).
             Defaults to Premium.
         tags (Dict[str, str]):
             Optional. Resource tags.
@@ -205,19 +204,18 @@ def create_volume(
 
     # Resolve parameters from function arguments or config
     try:
-        resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
-        resolved_account_name = get_config_value('account_name', account_name, config, print_output)
-        resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
-        resolved_location = get_config_value('location', location, config, print_output)
-        resolved_virtual_network_name = get_config_value('virtual_network_name', virtual_network_name, config, print_output)
-        resolved_subnet_name = get_config_value('subnet_name', subnet_name, config, print_output) if subnet_name is not None else config.get('subnet_name', DEFAULT_SUBNET_NAME)
-        resolved_protocol_types = get_config_value('protocol_types', protocol_types, config, print_output) if protocol_types is not None else config.get('protocol_types', DEFAULT_PROTOCOL_TYPES)
+        resolved_resource_group_name = _get_config_value('resource_group_name', resource_group_name, config, print_output)
+        resolved_account_name = _get_config_value('account_name', account_name, config, print_output)
+        resolved_pool_name = _get_config_value('pool_name', pool_name, config, print_output)
+        resolved_location = _get_config_value('location', location, config, print_output)
+        resolved_virtual_network_name = _get_config_value('virtual_network_name', virtual_network_name, config, print_output)
+        resolved_subnet_name = _get_config_value('subnet_name', subnet_name, config, print_output) if subnet_name is not None else config.get('subnet_name', DEFAULT_SUBNET_NAME)
+        resolved_protocol_types = _get_config_value('protocol_types', protocol_types, config, print_output) if protocol_types is not None else config.get('protocol_types', DEFAULT_PROTOCOL_TYPES)
+        resolved_service_level = _get_config_value('service_level', service_level, config, print_output)
     except InvalidConfigError:
         raise
     
-    # Apply default values for parameters with documented defaults  
-    if service_level is None:
-        service_level = DEFAULT_SERVICE_LEVEL
+    # Apply default values for other parameters with documented defaults  
     if security_style is None:
         security_style = DEFAULT_SECURITY_STYLE  
     # Only set unix_permissions default for unix security style volumes
@@ -233,7 +231,7 @@ def create_volume(
         enable_subvolumes = DEFAULT_ENABLE_SUBVOLUMES
 
     # Validate input parameters (now using resolved values)
-    validate_required_params(
+    _validate_required_params(
         resource_group_name=resolved_resource_group_name,
         account_name=resolved_account_name,
         pool_name=resolved_pool_name,
@@ -247,7 +245,7 @@ def create_volume(
 
     try:
         # Get ANF client and subscription ID (automatically retrieved from Azure CLI)
-        client, subscription_id = get_anf_client(print_output=print_output)
+        client, subscription_id = _get_anf_client(print_output=print_output)
 
         # Construct subnet ID from resolved parameters
         subnet_id = f"/subscriptions/{subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.Network/virtualNetworks/{resolved_virtual_network_name}/subnets/{resolved_subnet_name}"
@@ -286,7 +284,7 @@ def create_volume(
             'creation_token': creation_token,
             'subnet_id': subnet_id,
             'usage_threshold': usage_threshold,
-            'service_level': service_level,
+            'service_level': resolved_service_level,
             'protocol_types': resolved_protocol_types,
             'security_style': security_style,
             'smb_encryption': smb_encryption,
@@ -416,7 +414,7 @@ def clone_volume(
             Optional. The name of a delegated Azure subnet to construct the Azure Resource ID for a delegated subnet.
             Will use config default if not provided, otherwise defaults to "default".
         service_level (str):
-            Optional. Service level (Standard, Premium, Ultra, StandardZRS, Flexible).
+            Optional. Service level (Standard, Premium, Ultra, Flexible).
             Defaults to Premium.
         protocol_types (List[str]):
             Optional. List of protocol types (NFSv3, NFSv4.1, SMB). Will use config default if not provided.
@@ -527,19 +525,18 @@ def clone_volume(
 
     # Resolve parameters from function arguments or config
     try:
-        resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
-        resolved_account_name = get_config_value('account_name', account_name, config, print_output)
-        resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
-        resolved_location = get_config_value('location', location, config, print_output)
-        resolved_virtual_network_name = get_config_value('virtual_network_name', virtual_network_name, config, print_output)
-        resolved_subnet_name = get_config_value('subnet_name', subnet_name, config, print_output) if subnet_name is not None else config.get('subnet_name', DEFAULT_SUBNET_NAME)
-        resolved_protocol_types = get_config_value('protocol_types', protocol_types, config, print_output) if protocol_types is not None else config.get('protocol_types', DEFAULT_PROTOCOL_TYPES)
+        resolved_resource_group_name = _get_config_value('resource_group_name', resource_group_name, config, print_output)
+        resolved_account_name = _get_config_value('account_name', account_name, config, print_output)
+        resolved_pool_name = _get_config_value('pool_name', pool_name, config, print_output)
+        resolved_location = _get_config_value('location', location, config, print_output)
+        resolved_virtual_network_name = _get_config_value('virtual_network_name', virtual_network_name, config, print_output)
+        resolved_subnet_name = _get_config_value('subnet_name', subnet_name, config, print_output) if subnet_name is not None else config.get('subnet_name', DEFAULT_SUBNET_NAME)
+        resolved_protocol_types = _get_config_value('protocol_types', protocol_types, config, print_output) if protocol_types is not None else config.get('protocol_types', DEFAULT_PROTOCOL_TYPES)
+        resolved_service_level = _get_config_value('service_level', service_level, config, print_output)
     except InvalidConfigError:
         raise
         
-    # Apply default values for parameters with documented defaults  
-    if service_level is None:
-        service_level = DEFAULT_SERVICE_LEVEL
+    # Apply default values for other parameters with documented defaults  
     if security_style is None:
         security_style = DEFAULT_SECURITY_STYLE  
     # Only set unix_permissions default for unix security style volumes  
@@ -555,7 +552,7 @@ def clone_volume(
         enable_subvolumes = DEFAULT_ENABLE_SUBVOLUMES
 
     # Validate input parameters (now using resolved values)
-    validate_required_params(
+    _validate_required_params(
         resource_group_name=resolved_resource_group_name,
         account_name=resolved_account_name,
         pool_name=resolved_pool_name,
@@ -569,7 +566,7 @@ def clone_volume(
 
     try:
         # Get ANF client and subscription ID (automatically retrieved from Azure CLI)
-        client, subscription_id = get_anf_client(print_output=print_output)
+        client, subscription_id = _get_anf_client(print_output=print_output)
 
         # Construct subnet ID from resolved parameters
         subnet_id = f"/subscriptions/{subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.Network/virtualNetworks/{resolved_virtual_network_name}/subnets/{resolved_subnet_name}"
@@ -649,11 +646,11 @@ def clone_volume(
                 # Calculate minimum throughput based on service level and size
                 # This is a fallback - user should ideally provide explicit value
                 size_gib = usage_threshold / (1024 * 1024 * 1024)
-                if service_level.lower() == "standard":
+                if resolved_service_level.lower() == "standard":
                     throughput_mibps = max(16, size_gib * 0.016)  # 16 MiB/s per TiB, min 16
-                elif service_level.lower() == "premium":
+                elif resolved_service_level.lower() == "premium":
                     throughput_mibps = max(64, size_gib * 0.064)  # 64 MiB/s per TiB, min 64
-                elif service_level.lower() == "ultra":
+                elif resolved_service_level.lower() == "ultra":
                     throughput_mibps = max(128, size_gib * 0.128)  # 128 MiB/s per TiB, min 128
                 else:
                     throughput_mibps = 64  # Default fallback
@@ -683,7 +680,7 @@ def clone_volume(
             'creation_token': creation_token,
             'subnet_id': subnet_id,
             'usage_threshold': usage_threshold,
-            'service_level': service_level,
+            'service_level': resolved_service_level,
             'protocol_types': resolved_protocol_types,
             'security_style': security_style,
             'smb_encryption': smb_encryption,
@@ -795,14 +792,14 @@ def delete_volume(
 
     # Resolve parameters from function arguments or config
     try:
-        resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
-        resolved_account_name = get_config_value('account_name', account_name, config, print_output)
-        resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
+        resolved_resource_group_name = _get_config_value('resource_group_name', resource_group_name, config, print_output)
+        resolved_account_name = _get_config_value('account_name', account_name, config, print_output)
+        resolved_pool_name = _get_config_value('pool_name', pool_name, config, print_output)
     except InvalidConfigError:
         raise
 
     # Validate input parameters (now using resolved values)
-    validate_required_params(
+    _validate_required_params(
         resource_group_name=resolved_resource_group_name,
         account_name=resolved_account_name,
         pool_name=resolved_pool_name,
@@ -811,7 +808,7 @@ def delete_volume(
 
     try:
         # Get ANF client
-        client, _ = get_anf_client(print_output=print_output)
+        client, _ = _get_anf_client(print_output=print_output)
 
         # Check if volume exists before attempting deletion
         try:
@@ -906,14 +903,14 @@ def list_volumes(
 
     # Resolve parameters from function arguments or config
     try:
-        resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
-        resolved_account_name = get_config_value('account_name', account_name, config, print_output)
-        resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
+        resolved_resource_group_name = _get_config_value('resource_group_name', resource_group_name, config, print_output)
+        resolved_account_name = _get_config_value('account_name', account_name, config, print_output)
+        resolved_pool_name = _get_config_value('pool_name', pool_name, config, print_output)
     except InvalidConfigError:
         raise
 
     # Validate input parameters (now using resolved values)
-    validate_required_params(
+    _validate_required_params(
         resource_group_name=resolved_resource_group_name,
         account_name=resolved_account_name,
         pool_name=resolved_pool_name
@@ -921,7 +918,7 @@ def list_volumes(
 
     try:
         # Get ANF client
-        client, _ = get_anf_client(print_output=print_output)
+        client, _ = _get_anf_client(print_output=print_output)
 
         # List all volumes in the pool (using resolved values)
         volumes = client.volumes.list(
