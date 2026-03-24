@@ -337,12 +337,13 @@ def create_volume(
         return {"status": "success", "details": _serialize(result)}
        
     except ResourceExistsError as e:
-        error_message = f"Volume '{volume_name}' already exists: {str(e)}"
-        logger.error(error_message)
+        # Extract just the message without duplicating the full error details
+        error_msg = getattr(e, 'message', str(e))
+        logger.error(f"Volume '{volume_name}' already exists: {error_msg}")
         return {"status": "error", "details": str(e)}
     except Exception as e:
-        error_message = f"Failed to create volume: {str(e)}"
-        logger.error(error_message)
+        # Log the error - Azure SDK exceptions already include Code and Message
+        logger.error(f"Failed to create volume: {str(e)}")
         return {"status": "error", "details": str(e)}
 
 
@@ -731,12 +732,11 @@ def clone_volume(
         return {"status": "success", "details": _serialize(result)}
             
     except ResourceExistsError as e:
-        error_message = f"Volume '{volume_name}' already exists: {str(e)}"
-        logger.error(error_message)
+        error_msg = getattr(e, 'message', str(e))
+        logger.error(f"Volume '{volume_name}' already exists: {error_msg}")
         return {"status": "error", "details": str(e)}
     except Exception as e:
-        error_message = f"Failed to clone volume: {str(e)}"
-        logger.error(error_message)
+        logger.error(f"Failed to clone volume: {str(e)}")
         return {"status": "error", "details": str(e)}
 
 
@@ -847,12 +847,10 @@ def delete_volume(
         return {"status": "success", "details": f"Volume '{volume_name}' deleted successfully"}
     
     except ResourceNotFoundError as e:
-        error_message = f"Volume '{volume_name}' not found"
-        logger.error(error_message)
+        logger.error(f"Volume '{volume_name}' not found")
         return {"status": "error", "details": str(e)}
     except Exception as e:
-        error_message = f"Failed to delete volume: {str(e)}"
-        logger.error(error_message)
+        logger.error(f"Failed to delete volume: {str(e)}")
         return {"status": "error", "details": str(e)}
 
 
@@ -931,8 +929,7 @@ def list_volumes(
         return {"status": "success", "details": serialized_volumes}
 
     except Exception as e:
-        error_message = f"Failed to list volumes: {str(e)}"
-        logger.error(error_message)
+        logger.error(f"Failed to list volumes: {str(e)}")
         return {"status": "error", "details": str(e)}
 
 

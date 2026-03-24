@@ -122,12 +122,10 @@ def create_snapshot(
             print(error_message)
         return {"status": "error", "details": str(e)}
     except ResourceNotFoundError as e:
-        error_message = f"Source volume '{volume_name}' not found: {str(e)}"
-        logger.error(error_message)
+        logger.error(f"Source volume '{volume_name}' not found: {str(e)}")
         return {"status": "error", "details": str(e)}
     except Exception as e:
-        error_message = f"Failed to create snapshot: {str(e)}"
-        logger.error(error_message)
+        logger.error(f"Failed to create snapshot: {str(e)}")
         return {"status": "error", "details": str(e)}
 
 
@@ -231,12 +229,10 @@ def delete_snapshot(
         return {"status": "success", "details": f"Snapshot '{snapshot_name}' deleted successfully"}
 
     except ResourceNotFoundError as e:
-        error_message = f"Snapshot '{snapshot_name}' not found"
-        logger.error(error_message)
+        logger.error(f"Snapshot '{snapshot_name}' not found")
         return {"status": "error", "details": str(e)}
     except Exception as e:
-        error_message = f"Failed to delete snapshot: {str(e)}"
-        logger.error(error_message)
+        logger.error(f"Failed to delete snapshot: {str(e)}")
         return {"status": "error", "details": str(e)}
 
 
@@ -322,11 +318,9 @@ def list_snapshots(
         return {"status": "success", "details": serialized_snapshots}
 
     except ResourceNotFoundError as e:
-        error_message = f"Volume '{volume_name}' not found"
-        logger.error(error_message)
+        logger.error(f"Volume '{volume_name}' not found")
         return {"status": "error", "details": str(e)}
     except Exception as e:
-        error_message = f"Failed to list snapshots: {str(e)}"
-        logger.error(error_message)
+        logger.error(f"Failed to list snapshots: {str(e)}")
         return {"status": "error", "details": str(e)}
         

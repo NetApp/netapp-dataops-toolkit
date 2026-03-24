@@ -294,9 +294,8 @@ def create_replication(
     except InvalidConfigError:
         raise
     except ResourceNotFoundError as e:
-        error_message = f"Volume '{volume_name}' not found: {str(e)}"
-        logger.error(error_message)
-        return {"status": "error", "details": error_message}
+        logger.error(f"Volume '{volume_name}' not found: {str(e)}")
+        return {"status": "error", "details": str(e)}
     except Exception as e:
         error_message = str(e)
         
