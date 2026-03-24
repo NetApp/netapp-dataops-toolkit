@@ -12,6 +12,7 @@ netapp_dataops/traditional/anf/
 ├── base.py                        # Common utilities and helper functions
 ├── client.py                      # Azure client authentication and management
 ├── config.py                      # Configuration management functions
+├── cli_config.py                  # CLI entry point for configuration wizard
 ├── volume_management.py           # Volume management functions
 ├── snapshot_management.py         # Snapshot management functions
 └── replication_management.py      # Replication management functions
@@ -105,11 +106,18 @@ The ANF module supports two configuration approaches for streamlined usage:
 
 Create a configuration file with your Azure infrastructure details to simplify function calls:
 
+**Method 1: Using Python**
 ```python
 from netapp_dataops.traditional.anf import create_anf_config
 
 # Run interactive configuration setup
 create_anf_config()
+```
+
+**Method 2: Using Command Line**
+```bash
+# Run the configuration wizard from command line
+python3 -m netapp_dataops.traditional.anf.cli_config
 ```
 
 **Note:** You'll need to run `az login --tenant <TENANT_ID>` first to authenticate with Azure.
