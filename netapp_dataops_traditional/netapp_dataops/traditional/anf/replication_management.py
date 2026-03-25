@@ -36,6 +36,7 @@ def create_replication(
     destination_subnet_name: str = "default",
     destination_service_level: str = None,
     destination_zones: List[str] = None,
+    destination_throughput_mibps: float = None,
     # Source volume parameters (optional - will use config defaults)
     resource_group_name: str = None,
     account_name: str = None,
@@ -81,6 +82,10 @@ def create_replication(
             Defaults to "Premium".
         destination_zones (List[str]):
             Optional. Availability zones for destination volume. If None, defaults to ["1"].
+        destination_throughput_mibps (float):
+            Optional. Throughput in MiB/s for destination volume.
+            Required when destination pool has manual QoS type.
+            Not applicable for auto QoS pools.
         
         # Source volume parameters (optional - will use config defaults)
         resource_group_name (str):
@@ -181,6 +186,74 @@ def create_replication(
             if destination_zones is None:
                 destination_zones = ["1"]
             
+            # Check destination pool QoS type and handle throughput_mibps
+            try:
+                destination_pool = client.pools.get(
+                    resource_group_name=destination_resource_group_name,
+                    account_name=destination_account_name,
+                    pool_name=destination_pool_name
+                )
+                destination_qos_type = destination_pool.qos_type
+                
+                if print_output:
+                    logger.info(f"Destination pool '{destination_pool_name}' QoS type: {destination_qos_type}")
+                
+                # If destination pool is manual QoS and no throughput_mibps provided,
+                # try to get it from source volume or calculate default
+                if destination_qos_type and str(destination_qos_type).lower() == "manual" and destination_throughput_mibps is None:
+                    # Try to get throughput from source volume if it has one
+                    try:
+                        source_volume = client.volumes.get(
+                            resource_group_name=resolved_resource_group_name,
+                            account_name=resolved_account_name,
+                            pool_name=resolved_pool_name,
+                            volume_name=volume_name
+                        )
+                        
+                        if hasattr(source_volume, 'throughput_mibps') and source_volume.throughput_mibps:
+                            destination_throughput_mibps = source_volume.throughput_mibps
+                            if print_output:
+                                logger.info(f"Using throughput_mibps from source volume: {destination_throughput_mibps}")
+                        else:
+                            # Calculate minimum throughput based on service level and size
+                            # This is a fallback - user should ideally provide explicit value
+                            size_gib = destination_usage_threshold / (1024 * 1024 * 1024)
+                            if destination_service_level.lower() == "standard":
+                                destination_throughput_mibps = max(16, size_gib * 0.016)  # 16 MiB/s per TiB, min 16
+                            elif destination_service_level.lower() == "premium":
+                                destination_throughput_mibps = max(64, size_gib * 0.064)  # 64 MiB/s per TiB, min 64
+                            elif destination_service_level.lower() == "ultra":
+                                destination_throughput_mibps = max(128, size_gib * 0.128)  # 128 MiB/s per TiB, min 128
+                            else:
+                                destination_throughput_mibps = 64  # Default fallback
+                            
+                            if print_output:
+                                logger.info(f"Calculated destination throughput_mibps for manual QoS: {destination_throughput_mibps}")
+                    except Exception as e:
+                        # If we can't get source volume info, calculate based on destination size
+                        size_gib = destination_usage_threshold / (1024 * 1024 * 1024)
+                        if destination_service_level.lower() == "standard":
+                            destination_throughput_mibps = max(16, size_gib * 0.016)
+                        elif destination_service_level.lower() == "premium":
+                            destination_throughput_mibps = max(64, size_gib * 0.064)
+                        elif destination_service_level.lower() == "ultra":
+                            destination_throughput_mibps = max(128, size_gib * 0.128)
+                        else:
+                            destination_throughput_mibps = 64
+                        
+                        if print_output:
+                            logger.info(f"Calculated destination throughput_mibps for manual QoS (source unavailable): {destination_throughput_mibps}")
+                
+                elif destination_qos_type and str(destination_qos_type).lower() == "auto":
+                    if print_output:
+                        logger.info(f"Destination pool is auto QoS; 'destination_throughput_mibps' is not required.")
+                    # Set to None to ensure it's not passed to create_volume
+                    destination_throughput_mibps = None
+                    
+            except Exception as e:
+                if print_output:
+                    logger.warning(f"Could not retrieve destination pool QoS type: {str(e)}")
+            
             # Create replication object pointing to the source volume
             replication_object = ReplicationObject(
                 replication_id=f"repl-{destination_volume_name}",
@@ -207,7 +280,8 @@ def create_replication(
                 service_level=destination_service_level,
                 volume_type="DataProtection",
                 zones=destination_zones,
-                data_protection=data_protection
+                data_protection=data_protection,
+                throughput_mibps=destination_throughput_mibps
             )
             
             if volume_result.get('status') != 'success':
