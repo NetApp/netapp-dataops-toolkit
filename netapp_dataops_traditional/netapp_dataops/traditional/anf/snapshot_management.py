@@ -205,8 +205,6 @@ def delete_snapshot(
         except ResourceNotFoundError:
             error_message = f"Snapshot '{snapshot_name}' not found"
             logger.error(error_message)
-            if print_output:
-                print(error_message)
             return {"status": "error", "details": f"Snapshot '{snapshot_name}' does not exist"}
 
         # Delete the snapshot (using resolved values)
