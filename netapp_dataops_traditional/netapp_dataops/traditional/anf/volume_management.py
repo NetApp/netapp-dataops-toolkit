@@ -815,8 +815,6 @@ def delete_volume(
         except ResourceNotFoundError:
             error_message = f"Volume '{volume_name}' not found"
             logger.error(error_message)
-            if print_output:
-                print(error_message)
             return {"status": "error", "details": f"Volume '{volume_name}' does not exist"}
 
         # Delete the volume (using resolved values)
