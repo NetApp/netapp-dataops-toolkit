@@ -195,12 +195,15 @@ def create_replication(
                 )
                 destination_qos_type = destination_pool.qos_type
                 
+                # Extract QoS type value (e.g., "manual" from "QosType.MANUAL")
+                qos_type_str = str(destination_qos_type).split('.')[-1].lower() if destination_qos_type else ""
+
                 if print_output:
-                    logger.info(f"Destination pool '{destination_pool_name}' QoS type: {destination_qos_type}")
+                    logger.info(f"Destination pool '{destination_pool_name}' QoS type: {qos_type_str}")
                 
                 # If destination pool is manual QoS and no throughput_mibps provided,
                 # try to get it from source volume or calculate default
-                if destination_qos_type and str(destination_qos_type).lower() == "manual" and destination_throughput_mibps is None:
+                if qos_type_str == "manual" and destination_throughput_mibps is None:
                     # Try to get throughput from source volume if it has one
                     try:
                         source_volume = client.volumes.get(
@@ -243,7 +246,7 @@ def create_replication(
                         if print_output:
                             logger.info(f"Calculated destination throughput_mibps for manual QoS (source unavailable): {destination_throughput_mibps}")
                 
-                elif destination_qos_type and str(destination_qos_type).lower() == "auto":
+                elif qos_type_str == "auto":
                     if print_output:
                         logger.info(f"Destination pool is auto QoS; 'destination_throughput_mibps' is not required.")
                     # Set to None to ensure it's not passed to create_volume

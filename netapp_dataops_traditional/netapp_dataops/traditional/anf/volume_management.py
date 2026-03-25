@@ -261,11 +261,15 @@ def create_volume(
             pool_name=resolved_pool_name
         )
         qos_type = getattr(pool, 'qos_type', None)
+        
+        # Extract QoS type value (e.g., "manual" from "QosType.MANUAL")
+        qos_type_str = str(qos_type).split('.')[-1].lower() if qos_type else ""
+
         if print_output:
-            logger.info(f"Pool '{resolved_pool_name}' QoS type: {qos_type}")
+            logger.info(f"Pool '{resolved_pool_name}' QoS type: {qos_type_str}")
 
         # If pool is manual QoS, throughput_mibps is required
-        if qos_type and qos_type.lower() == "manual":
+        if qos_type_str == "manual":
             if throughput_mibps is None:
                 error_message = (
                     "Parameter 'throughput_mibps' is required for pools with manual QoS type."
@@ -273,7 +277,7 @@ def create_volume(
                 logger.error(error_message)
                 raise ValueError(error_message)
         # If pool is auto QoS, ignore throughput_mibps if not provided
-        elif qos_type and qos_type.lower() == "auto":
+        elif qos_type_str == "auto":
             if throughput_mibps is None:
                 # Not required, but it is best to log this for the information of the user
                 if print_output:
@@ -628,12 +632,16 @@ def clone_volume(
             pool_name=resolved_pool_name
         )
         qos_type = getattr(pool, 'qos_type', None)
+        
+        # Extract QoS type value (e.g., "manual" from "QosType.MANUAL")
+        qos_type_str = str(qos_type).split('.')[-1].lower() if qos_type else ""
+        
         if print_output:
-            logger.info(f"Pool '{resolved_pool_name}' QoS type: {qos_type}")
+            logger.info(f"Pool '{resolved_pool_name}' QoS type: {qos_type_str}")
 
         # If destination pool is manual QoS and no throughput_mibps provided,
         # try to get it from source volume or calculate default
-        if qos_type and qos_type.lower() == "manual" and throughput_mibps is None:
+        if qos_type_str == "manual" and throughput_mibps is None:
             # Try to get throughput from source volume if it has one
             if hasattr(source_volume, 'throughput_mibps') and source_volume.throughput_mibps:
                 throughput_mibps = source_volume.throughput_mibps
@@ -656,14 +664,14 @@ def clone_volume(
                     logger.info(f"Calculated throughput_mibps for manual QoS: {throughput_mibps}")
 
         # If pool is manual QoS, throughput_mibps is required
-        if qos_type and qos_type.lower() == "manual":
+        if qos_type_str == "manual":
             if throughput_mibps is None:
                 error_message = (
                     "Parameter 'throughput_mibps' is required for pools with manual QoS type."
                 )
                 logger.error(error_message)
                 raise ValueError(error_message)
-        elif qos_type and qos_type.lower() == "auto":
+        elif qos_type_str == "auto":
             if throughput_mibps is None:
                 if print_output:
                     logger.info("Pool is auto QoS; 'throughput_mibps' is not required.")
