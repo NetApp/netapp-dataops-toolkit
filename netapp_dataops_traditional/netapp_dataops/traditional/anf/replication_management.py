@@ -216,16 +216,15 @@ def create_replication(
                                 logger.info(f"Using throughput_mibps from source volume: {destination_throughput_mibps}")
                         else:
                             # Calculate minimum throughput based on service level and size
-                            # This is a fallback - user should ideally provide explicit value
                             size_gib = destination_usage_threshold / (1024 * 1024 * 1024)
                             if destination_service_level.lower() == "standard":
-                                destination_throughput_mibps = max(16, size_gib * 0.016)  # 16 MiB/s per TiB, min 16
+                                destination_throughput_mibps = max(16.0, size_gib * 0.016)
                             elif destination_service_level.lower() == "premium":
-                                destination_throughput_mibps = max(64, size_gib * 0.064)  # 64 MiB/s per TiB, min 64
+                                destination_throughput_mibps = max(64.0, size_gib * 0.064)
                             elif destination_service_level.lower() == "ultra":
-                                destination_throughput_mibps = max(128, size_gib * 0.128)  # 128 MiB/s per TiB, min 128
+                                destination_throughput_mibps = max(128.0, size_gib * 0.128)
                             else:
-                                destination_throughput_mibps = 64  # Default fallback
+                                destination_throughput_mibps = 64.0
                             
                             if print_output:
                                 logger.info(f"Calculated destination throughput_mibps for manual QoS: {destination_throughput_mibps}")
@@ -233,13 +232,13 @@ def create_replication(
                         # If we can't get source volume info, calculate based on destination size
                         size_gib = destination_usage_threshold / (1024 * 1024 * 1024)
                         if destination_service_level.lower() == "standard":
-                            destination_throughput_mibps = max(16, size_gib * 0.016)
+                            destination_throughput_mibps = max(16.0, size_gib * 0.016)
                         elif destination_service_level.lower() == "premium":
-                            destination_throughput_mibps = max(64, size_gib * 0.064)
+                            destination_throughput_mibps = max(64.0, size_gib * 0.064)
                         elif destination_service_level.lower() == "ultra":
-                            destination_throughput_mibps = max(128, size_gib * 0.128)
+                            destination_throughput_mibps = max(128.0, size_gib * 0.128)
                         else:
-                            destination_throughput_mibps = 64
+                            destination_throughput_mibps = 64.0
                         
                         if print_output:
                             logger.info(f"Calculated destination throughput_mibps for manual QoS (source unavailable): {destination_throughput_mibps}")
@@ -253,6 +252,21 @@ def create_replication(
             except Exception as e:
                 if print_output:
                     logger.warning(f"Could not retrieve destination pool QoS type: {str(e)}")
+                # If we can't get pool info and throughput is still None, set a safe default
+                # This is important for manual QoS pools
+                if destination_throughput_mibps is None:
+                    size_gib = destination_usage_threshold / (1024 * 1024 * 1024)
+                    if destination_service_level.lower() == "standard":
+                        destination_throughput_mibps = max(16.0, size_gib * 0.016)
+                    elif destination_service_level.lower() == "premium":
+                        destination_throughput_mibps = max(64.0, size_gib * 0.064)
+                    elif destination_service_level.lower() == "ultra":
+                        destination_throughput_mibps = max(128.0, size_gib * 0.128)
+                    else:
+                        destination_throughput_mibps = 64.0
+                    
+                    if print_output:
+                        logger.info(f"Using calculated throughput_mibps (pool QoS type unavailable): {destination_throughput_mibps}")
             
             # Create replication object pointing to the source volume
             replication_object = ReplicationObject(
