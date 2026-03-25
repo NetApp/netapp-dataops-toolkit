@@ -193,6 +193,14 @@ def create_replication(
                     account_name=destination_account_name,
                     pool_name=destination_pool_name
                 )
+
+                # If service level not provided, get it from destination pool
+                if destination_service_level == DEFAULT_SERVICE_LEVEL:
+                    if hasattr(destination_pool, 'service_level') and destination_pool.service_level:
+                        destination_service_level = destination_pool.service_level
+                        if print_output:
+                            logger.info(f"Using service level from destination pool: {destination_service_level}")
+
                 destination_qos_type = destination_pool.qos_type
                 
                 # Extract QoS type value (e.g., "manual" from "QosType.MANUAL")
