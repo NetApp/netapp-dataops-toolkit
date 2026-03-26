@@ -122,18 +122,18 @@ gcloud auth application-default login
 
 ```bash
 # Create a dedicated service account for GCNV operations
-gcloud iam service-accounts create gcnv-dataops \
-    --display-name="GCNV DataOps Service Account"
+gcloud iam service-accounts create YOUR_SERVICE_ACCOUNT_NAME \
+    --display-name="YOUR_DISPLAY_NAME"
 
 # Grant NetApp Cloud Volumes Admin role to the service account
 gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
-    --member="serviceAccount:gcnv-dataops@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+    --member="serviceAccount:YOUR_SERVICE_ACCOUNT_NAME@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
     --role="roles/netappcloudvolumes.admin"
 
 # Grant impersonation permission to your user account
 gcloud iam service-accounts add-iam-policy-binding \
-    gcnv-dataops@YOUR_PROJECT_ID.iam.gserviceaccount.com \
-    --member="user:YOUR_EMAIL@company.com" \
+    YOUR_SERVICE_ACCOUNT_NAME@YOUR_PROJECT_ID.iam.gserviceaccount.com \
+    --member="user:YOUR_EMAIL@YOUR_DOMAIN.com" \
     --role="roles/iam.serviceAccountTokenCreator"
 ```
 
@@ -142,7 +142,7 @@ gcloud iam service-accounts add-iam-policy-binding \
 ```bash
 # Enable automatic service account impersonation
 gcloud config set auth/impersonate_service_account \
-    gcnv-dataops@YOUR_PROJECT_ID.iam.gserviceaccount.com
+    YOUR_SERVICE_ACCOUNT_NAME@YOUR_PROJECT_ID.iam.gserviceaccount.com
 
 # Verify configuration
 gcloud config get-value auth/impersonate_service_account
@@ -167,7 +167,7 @@ gcloud config get-value auth/impersonate_service_account
 
 # Check if you have the TokenCreator role
 gcloud iam service-accounts get-iam-policy \
-    gcnv-dataops@YOUR_PROJECT_ID.iam.gserviceaccount.com
+    YOUR_SERVICE_ACCOUNT_NAME@YOUR_PROJECT_ID.iam.gserviceaccount.com
 ```
 
 **Issue:** Need to temporarily disable impersonation
@@ -177,7 +177,7 @@ gcloud config unset auth/impersonate_service_account
 
 # Re-enable when needed
 gcloud config set auth/impersonate_service_account \
-    gcnv-dataops@YOUR_PROJECT_ID.iam.gserviceaccount.com
+    YOUR_SERVICE_ACCOUNT_NAME@YOUR_PROJECT_ID.iam.gserviceaccount.com
 ```
 
 <a name="available-functions"></a>
