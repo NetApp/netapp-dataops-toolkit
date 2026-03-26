@@ -81,6 +81,107 @@ Verify SSL certificate when calling S3 API (true/false): false
 Created config file: '/Users/moglesby/.netapp_dataops/config.json'.
 ```
 
+<a name="ssl-certificate-configuration"></a>
+
+### SSL Certificate Configuration
+
+The toolkit connects to the ONTAP API over HTTPS and always verifies the server's SSL certificate to ensure secure communication. During configuration you are prompted for the path to an SSL certificate file:
+
+```
+Enter path to SSL certificate file for ONTAP API verification (leave blank to use system CA bundle) []:
+```
+
+**Provide a certificate file path when:**
+
+- Your ONTAP cluster uses a **self-signed certificate** (the default for most ONTAP deployments).
+- Your ONTAP cluster uses a certificate signed by an **internal or private Certificate Authority** that is not in your operating system's default CA bundle.
+
+**Leave it blank when:**
+
+- Your ONTAP cluster uses a certificate signed by a well-known public Certificate Authority (e.g. DigiCert, Let's Encrypt) that is already trusted by your system.
+
+#### Obtaining the Certificate from Your ONTAP Cluster
+
+If your ONTAP cluster uses a self-signed certificate, follow these steps to download and configure it.
+
+**Step 1 — Download the certificate**
+
+Run the following command, replacing `<ONTAP_HOST>` with your ONTAP cluster management LIF hostname or IP address:
+
+```sh
+echo | openssl s_client -connect <ONTAP_HOST>:443 -showcerts 2>/dev/null \
+  | openssl x509 > ~/.netapp_dataops/ontap_cert.pem
+```
+
+**Step 2 — Verify the downloaded certificate**
+
+```sh
+openssl x509 -in ~/.netapp_dataops/ontap_cert.pem -noout -subject -issuer
+```
+
+For a self-signed certificate the subject and issuer will be identical:
+
+```
+subject= /CN=YOUR-ONTAP-CLUSTER/C=US
+issuer= /CN=YOUR-ONTAP-CLUSTER/C=US
+```
+
+**Step 3 — Configure the toolkit**
+
+Run the config command and provide the full path to the certificate when prompted:
+
+```sh
+netapp_dataops_cli.py config
+```
+
+```
+Enter path to SSL certificate file for ONTAP API verification (leave blank to use system CA bundle) []: /home/youruser/.netapp_dataops/ontap_cert.pem
+```
+
+**Step 4 — Verify the connection**
+
+```sh
+netapp_dataops_cli.py list volumes
+```
+
+#### How Certificate Verification Works
+
+| Configuration | What the toolkit does |
+|---|---|
+| Certificate path provided | Verifies the certificate chain against the pinned CA cert file. Hostname/SAN matching is skipped because many ONTAP self-signed certificates lack Subject Alternative Name entries, which modern Python/OpenSSL requires. The pinned certificate itself proves the server's identity. |
+| Certificate path blank | Uses the system CA bundle with full hostname verification. Works for ONTAP clusters whose certificates are signed by a well-known CA and include proper SAN entries. |
+
+In both cases, SSL verification is always enforced — the toolkit never sends credentials over an unverified connection.
+
+#### For Existing Users Upgrading from a Previous Version
+
+Previous versions of the toolkit prompted:
+
+```
+Verify SSL certificate? (yes/no)
+```
+
+This prompt has been removed. If your existing `~/.netapp_dataops/config.json` contains `"verifySSLCert": false`, the toolkit will log a warning and fall back to the system CA bundle. To configure a custom certificate:
+
+1. Download the certificate using the steps above.
+2. Re-run the configuration command:
+
+```sh
+netapp_dataops_cli.py config
+```
+
+Alternatively, you can edit `~/.netapp_dataops/config.json` directly and replace:
+
+```json
+"verifySSLCert": false
+```
+
+with:
+
+```json
+"sslCertPath": "/home/youruser/.netapp_dataops/ontap_cert.pem"
+```
+
 ## Troubleshooting Errors
 
 If you experience an error and do not know how to resolve it, visit the [Troubleshooting](troubleshooting.md) page.
