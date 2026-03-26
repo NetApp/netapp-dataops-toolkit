@@ -18,9 +18,7 @@ Built on the [Azure NetApp Files Python SDK](https://docs.microsoft.com/en-us/py
   - [Prerequisites](#prerequisites)
   - [Installation Instructions](#installation-instructions)
 - [Authentication](#authentication)
-  - [Option 1: Azure CLI (Recommended)](#option-1-azure-cli-recommended)
-  - [Option 2: Service Principal](#option-2-service-principal)
-  - [Option 3: Environment Variables](#option-3-environment-variables)
+  - [Azure CLI Authentication (Required)](#azure-cli-authentication-required)
 - [Configuration](#configuration)
   - [Option 1: Interactive Configuration (Recommended)](#option-1-interactive-configuration-recommended)
   - [Option 2: Manual Configuration](#option-2-manual-configuration)
@@ -110,7 +108,7 @@ The ANF module uses **Azure CLI authentication** (`AzureCliCredential`) and auto
 
 <a name="option-1-azure-cli-recommended"></a>
 
-### Option 1: Azure CLI (Recommended)
+### Azure CLI Authentication (Required)
 
 **Required Setup:**
 ```bash
