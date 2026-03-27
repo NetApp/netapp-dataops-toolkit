@@ -912,6 +912,15 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
             "--ServerApp.keyfile=/certs/jupyter.key",
         ])
 
+    # Build init container args (generate TLS cert before copying workspace if HTTPS)
+    init_jupyterlab_args = "cp -au /workspace/. /vol/ || true"
+    if enable_https:
+        init_jupyterlab_args = (
+            "openssl req -x509 -nodes -days 365 -newkey rsa:2048 "
+            "-keyout /certs/jupyter.key -out /certs/jupyter.crt "
+            "-subj '/CN=jupyterlab' && " + init_jupyterlab_args
+        )
+
     # Construct deployment
     deployment = client.V1Deployment(
         metadata=client.V1ObjectMeta(
@@ -943,7 +952,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
                             name="init-jupyterlab",
                             image=workspace_image,
                             command=["/bin/bash", "-c"],
-                            args=["cp -au /workspace/. /vol/ || true"],
+                            args=[init_jupyterlab_args],
                             volume_mounts=[
                                 client.V1VolumeMount(
                                     name="workspace",
@@ -1019,7 +1028,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
                 )
             )
 
-    # Add TLS certificate generation for HTTPS
+    # Add TLS volumes and mounts for HTTPS
     if enable_https:
         deployment.spec.template.spec.volumes.append(
             client.V1Volume(
@@ -1027,22 +1036,10 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
                 empty_dir=client.V1EmptyDirVolumeSource()
             )
         )
-        deployment.spec.template.spec.init_containers.insert(0,
-            client.V1Container(
-                name="init-tls-certs",
-                image=workspace_image,
-                command=["/bin/bash", "-c"],
-                args=[
-                    "openssl req -x509 -nodes -days 365 -newkey rsa:2048 "
-                    "-keyout /certs/jupyter.key -out /certs/jupyter.crt "
-                    "-subj '/CN=jupyterlab'"
-                ],
-                volume_mounts=[
-                    client.V1VolumeMount(
-                        name="tls-certs",
-                        mount_path="/certs"
-                    )
-                ]
+        deployment.spec.template.spec.init_containers[0].volume_mounts.append(
+            client.V1VolumeMount(
+                name="tls-certs",
+                mount_path="/certs"
             )
         )
         deployment.spec.template.spec.containers[0].volume_mounts.append(
