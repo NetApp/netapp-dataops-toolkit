@@ -242,7 +242,25 @@ def create_volume(
 
         # Build SnapshotPolicy if provided
         if snapshot_policy:
-            volume.snapshot_policy = netapp_v1.SnapshotPolicy(**snapshot_policy)
+            volume.snapshot_policy = netapp_v1.SnapshotPolicy(
+                enabled=snapshot_policy.get("enabled", False),
+                schedule=snapshot_policy.get("schedule", ""),
+                retention_policy=snapshot_policy.get("retention_policy", ""),
+                snapshot_count=snapshot_policy.get("snapshot_count", 0),
+                labels=snapshot_policy.get("labels", {}),
+                description=snapshot_policy.get("description", "")
+            )
+
+            # Fix weekly schedule day field mapping
+            if 'weekly_schedule' in snapshot_policy:
+                weekly = snapshot_policy['weekly_schedule']
+                weekly_schedule = netapp_v1.WeeklySchedule(
+                    snapshots_to_keep=weekly.get('snapshots_to_keep'),
+                    day=weekly.get('day', 'Sunday'),
+                    hour=weekly.get('hour'),
+                    minute=weekly.get('minute')
+                )
+                volume.snapshot_policy.weekly_schedule = weekly_schedule
 
         # Build TieringPolicy if provided
         if tiering_enabled:
@@ -539,7 +557,25 @@ def clone_volume(
     
         # Build SnapshotPolicy if provided
         if snapshot_policy:
-            volume.snapshot_policy = netapp_v1.SnapshotPolicy(**snapshot_policy)
+            volume.snapshot_policy = netapp_v1.SnapshotPolicy(
+                enabled=snapshot_policy.get("enabled", False),
+                schedule=snapshot_policy.get("schedule", ""),
+                retention_policy=snapshot_policy.get("retention_policy", ""),
+                snapshot_count=snapshot_policy.get("snapshot_count", 0),
+                labels=snapshot_policy.get("labels", {}),
+                description=snapshot_policy.get("description", "")
+            )
+
+            # Fix weekly schedule day field mapping
+            if 'weekly_schedule' in snapshot_policy:
+                weekly = snapshot_policy['weekly_schedule']
+                weekly_schedule = netapp_v1.WeeklySchedule(
+                    snapshots_to_keep=weekly.get('snapshots_to_keep'),
+                    day=weekly.get('day', 'Sunday'),
+                    hour=weekly.get('hour'),
+                    minute=weekly.get('minute')
+                )
+                volume.snapshot_policy.weekly_schedule = weekly_schedule
     
         # Build TieringPolicy if provided
         if tiering_enabled:
