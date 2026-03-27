@@ -87,6 +87,8 @@ gcloud services list --enabled --filter="name:netapp.googleapis.com"
 gcloud auth application-default login
 
 # Secure the credentials file
+# Default location: ~/.config/gcloud/application_default_credentials.json
+# If CLOUDSDK_CONFIG env var is set, credentials will be in that directory instead
 chmod 600 ~/.config/gcloud/application_default_credentials.json
 ```
 
@@ -98,6 +100,8 @@ gcloud iam service-accounts create YOUR_SERVICE_ACCOUNT_NAME \
 ```
 
 #### Step 6: Grant NetApp Permissions
+
+> **📝 Note:** Run as your user account (before or without impersonation active).
 
 ```bash
 gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
@@ -133,6 +137,8 @@ Run the provided setup script to configure all steps automatically:
 ```bash
 python3 -m netapp_dataops.traditional.gcnv.setup_gcnv_auth
 ```
+
+> **📝 Note:** The module name matches the script filename: `setup_gcnv_auth.py`.
 
 The script will prompt for:
 - **Project ID** – Your GCP project (e.g., `my-project`)
@@ -253,6 +259,9 @@ gcloud iam service-accounts get-iam-policy \
 ```
 
 **Issue:** Need to temporarily disable impersonation
+
+> **📝 Note:** Some GCP admin or billing actions require impersonation to be disabled. Re-disable it before running those commands.
+
 ```bash
 # Disable impersonation
 gcloud config unset auth/impersonate_service_account
@@ -260,6 +269,18 @@ gcloud config unset auth/impersonate_service_account
 # Re-enable when needed
 gcloud config set auth/impersonate_service_account \
     YOUR_SERVICE_ACCOUNT_NAME@YOUR_PROJECT_ID.iam.gserviceaccount.com
+```
+
+**Issue:** `gcloud` not found or project ID missing
+```bash
+# Verify gcloud is installed and in PATH
+gcloud --version
+
+# Verify your active project is set (must not be empty)
+gcloud config get-value project
+
+# If unset, configure it
+gcloud config set project YOUR_PROJECT_ID
 ```
 
 **Issue:** Module Not Found
