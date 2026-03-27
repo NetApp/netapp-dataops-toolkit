@@ -1,4 +1,11 @@
 from google.cloud import netapp_v1
+from google.cloud.netapp_v1.types import (
+    SnapshotPolicy,
+    HourlySchedule,
+    DailySchedule,
+    WeeklySchedule,
+    MonthlySchedule,
+)
 from typing import Dict, Any
 from .base import _serialize, create_client, validate_required_params
 
@@ -242,25 +249,17 @@ def create_volume(
 
         # Build SnapshotPolicy if provided
         if snapshot_policy:
-            volume.snapshot_policy = netapp_v1.SnapshotPolicy(
-                enabled=snapshot_policy.get("enabled", False),
-                schedule=snapshot_policy.get("schedule", ""),
-                retention_policy=snapshot_policy.get("retention_policy", ""),
-                snapshot_count=snapshot_policy.get("snapshot_count", 0),
-                labels=snapshot_policy.get("labels", {}),
-                description=snapshot_policy.get("description", "")
+            hourly = snapshot_policy.get('hourly_schedule')
+            daily = snapshot_policy.get('daily_schedule')
+            weekly = snapshot_policy.get('weekly_schedule')
+            monthly = snapshot_policy.get('monthly_schedule')
+            volume.snapshot_policy = SnapshotPolicy(
+                enabled=snapshot_policy.get('enabled', True),
+                hourly_schedule=HourlySchedule(**hourly) if hourly else None,
+                daily_schedule=DailySchedule(**daily) if daily else None,
+                weekly_schedule=WeeklySchedule(**weekly) if weekly else None,
+                monthly_schedule=MonthlySchedule(**monthly) if monthly else None,
             )
-
-            # Fix weekly schedule day field mapping
-            if 'weekly_schedule' in snapshot_policy:
-                weekly = snapshot_policy['weekly_schedule']
-                weekly_schedule = netapp_v1.WeeklySchedule(
-                    snapshots_to_keep=weekly.get('snapshots_to_keep'),
-                    day=weekly.get('day', 'Sunday'),
-                    hour=weekly.get('hour'),
-                    minute=weekly.get('minute')
-                )
-                volume.snapshot_policy.weekly_schedule = weekly_schedule
 
         # Build TieringPolicy if provided
         if tiering_enabled:
@@ -557,25 +556,17 @@ def clone_volume(
     
         # Build SnapshotPolicy if provided
         if snapshot_policy:
-            volume.snapshot_policy = netapp_v1.SnapshotPolicy(
-                enabled=snapshot_policy.get("enabled", False),
-                schedule=snapshot_policy.get("schedule", ""),
-                retention_policy=snapshot_policy.get("retention_policy", ""),
-                snapshot_count=snapshot_policy.get("snapshot_count", 0),
-                labels=snapshot_policy.get("labels", {}),
-                description=snapshot_policy.get("description", "")
+            hourly = snapshot_policy.get('hourly_schedule')
+            daily = snapshot_policy.get('daily_schedule')
+            weekly = snapshot_policy.get('weekly_schedule')
+            monthly = snapshot_policy.get('monthly_schedule')
+            volume.snapshot_policy = SnapshotPolicy(
+                enabled=snapshot_policy.get('enabled', True),
+                hourly_schedule=HourlySchedule(**hourly) if hourly else None,
+                daily_schedule=DailySchedule(**daily) if daily else None,
+                weekly_schedule=WeeklySchedule(**weekly) if weekly else None,
+                monthly_schedule=MonthlySchedule(**monthly) if monthly else None,
             )
-
-            # Fix weekly schedule day field mapping
-            if 'weekly_schedule' in snapshot_policy:
-                weekly = snapshot_policy['weekly_schedule']
-                weekly_schedule = netapp_v1.WeeklySchedule(
-                    snapshots_to_keep=weekly.get('snapshots_to_keep'),
-                    day=weekly.get('day', 'Sunday'),
-                    hour=weekly.get('hour'),
-                    minute=weekly.get('minute')
-                )
-                volume.snapshot_policy.weekly_schedule = weekly_schedule
     
         # Build TieringPolicy if provided
         if tiering_enabled:
