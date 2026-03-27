@@ -5,8 +5,8 @@ NetApp DataOps Toolkit - GCNV Authentication Setup
 Configures secure authentication using service account impersonation.
 
 Usage:
-    python3 setup_auth.py
-    python3 -m netapp_dataops.traditional.gcnv.setup_auth
+    python3 setup_gcnv_auth.py
+    python3 -m netapp_dataops.traditional.gcnv.setup_gcnv_auth
 """
 
 import subprocess
@@ -16,8 +16,11 @@ import os
 
 def run(cmd: list, capture: bool = False) -> subprocess.CompletedProcess:
     if capture:
-        return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                              text=True, check=True)
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                text=True, check=False)
+        if result.returncode != 0:
+            raise subprocess.CalledProcessError(result.returncode, cmd, result.stdout, result.stderr)
+        return result
     return subprocess.run(cmd, text=True, check=True)
 
 
@@ -97,7 +100,8 @@ def setup_gcnv_auth() -> None:
     # Step 4: Application Default Credentials
     print("\nStep 4/8  Application Default Credentials (browser will open)...")
     run(['gcloud', 'auth', 'application-default', 'login'], capture=True)
-    adc_file = os.path.expanduser("~/.config/gcloud/application_default_credentials.json")
+    cloudsdk_config = os.environ.get("CLOUDSDK_CONFIG", os.path.expanduser("~/.config/gcloud"))
+    adc_file = os.path.join(cloudsdk_config, "application_default_credentials.json")
     if os.path.exists(adc_file):
         os.chmod(adc_file, 0o600)
     print("ADC configured and credentials secured (chmod 600)")
@@ -115,8 +119,7 @@ def setup_gcnv_auth() -> None:
     print("\nStep 6/8  Grant NetApp permissions...")
     run(['gcloud', 'projects', 'add-iam-policy-binding', project_id,
          f'--member=serviceAccount:{sa_email}',
-         '--role=roles/netappcloudvolumes.admin',
-         '--condition=None'],
+         '--role=roles/netappcloudvolumes.admin'],
         capture=True)
     print("roles/netappcloudvolumes.admin granted")
 
