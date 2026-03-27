@@ -43,6 +43,12 @@ The NetApp DataOps Toolkit for Kubernetes can be utilized from any Linux or macO
 
 The toolkit requires that a valid kubeconfig file be present on the client, located at `$HOME/.kube/config` or at another path specified by the `KUBECONFIG` environment variable. Refer to the [Kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/) for more information regarding kubeconfig files.
 
+### Security considerations
+
+**Kubeconfig on the client:** On Linux and macOS, before loading kubeconfig from disk, the toolkit sets each kubeconfig file it finds (from `KUBECONFIG` or `~/.kube/config`) to mode `0600` (read and write for the owner only). If the process cannot apply that mode—for example, the file is owned by another user—it fails with an error that explains how to run `chmod 600` manually. That reduces the risk of unauthorized cluster access from overly permissive local files. For additional protection if a workstation is lost or stolen, use full-disk encryption—for example [LUKS / dm-crypt](https://wiki.archlinux.org/title/Dm-crypt) on Linux, or [FileVault](https://support.apple.com/guide/mac-help/protect-data-filevault-macmh11732/mac) on macOS.
+
+**Secrets in the cluster:** Kubernetes `Secret` objects use base64 encoding in the API; that does not provide confidentiality. Cluster administrators should configure [encryption at rest for etcd](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/) so sensitive data is not stored in plaintext in etcd and backups. Use [Role-Based Access Control (RBAC)](https://kubernetes.io/docs/reference/access-authn-authz/rbac/) so only intended identities can read `Secret` objects. For operational guidance, see [Good practices for Kubernetes Secrets](https://kubernetes.io/docs/concepts/security/secrets-good-practices/). Example RBAC for running this toolkit inside the cluster is in [Examples/service-account-netapp-dataops.yaml](Examples/service-account-netapp-dataops.yaml).
+
 ## Getting Started: In-cluster Usage (for advanced Kubernetes users)
 
 The NetApp DataOps Toolkit for Kubernetes can also be utilized from within a pod that is running in the Kubernetes cluster. If the toolkit is being utilized within a pod in the Kubernetes cluster, then the pod's ServiceAccount must have the following permissions:
@@ -63,7 +69,7 @@ The NetApp DataOps Toolkit for Kubernetes can also be utilized from within a pod
 ```
 
 In the [Examples](Examples/) directory, you will find the following examples pertaining to utilizing the toolkit within a pod in the Kubernetes cluster:
-- [service-account-netapp-dataops.yaml](Examples/service-account-netapp-dataops.yaml): Manifest for a Kubernetes ServiceAccount named 'netapp-dataops' that has all of the required permissions for executing toolkit operations.
+- [service-account-netapp-dataops.yaml](Examples/service-account-netapp-dataops.yaml): Manifest for a Kubernetes ServiceAccount named 'netapp-dataops' with RBAC (ClusterRole and ClusterRoleBinding) scoped to the permissions required for toolkit operations. Narrow or replace these rules in production if your workflows allow.
 - [job-netapp-dataops.yaml](Examples/job-netapp-dataops.yaml): Manifest for a Kubernetes Job named 'netapp-dataops' that can be used as a template for executing toolkit operations.
 
 Refer to the [Kubernetes documentation](https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/) for more information on accessing the Kubernetes API from within a pod.

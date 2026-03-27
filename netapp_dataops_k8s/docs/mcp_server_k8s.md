@@ -38,6 +38,8 @@ The MCP server provides the following tools for managing JupyterLab workspaces a
 
 To run the MCP tools from the MCP server, a valid kubeconfig file must be present on the local host. Refer to [the "Getting Started: Standard Usage" section from the main README](../README.md#getting-started) of the NetApp DataOps Toolkit for Kubernetes to learn more.
 
+On Linux and macOS, the toolkit enforces kubeconfig file mode `0600` when loading from disk when possible. For full-disk encryption, etcd encryption at rest, and RBAC guidance for Secrets, see [Security considerations in the main README](../README.md#security-considerations).
+
 ### Usage Instructions
 
 #### Run with uv (recommended)
