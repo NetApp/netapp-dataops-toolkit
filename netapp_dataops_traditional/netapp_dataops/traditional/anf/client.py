@@ -38,10 +38,10 @@ class ANFClientManager:
         return self._client
 
 
-def _get_anf_client(print_output: bool = False) -> Tuple[NetAppManagementClient, str]:
+def get_anf_client(print_output: bool = False) -> Tuple[NetAppManagementClient, str]:
     """
     Convenience function to get an authenticated ANF client.
-    Automatically fetches the active Subscription ID and Tenant ID from the 'az account show' context.
+    Automatically fetches the active Subscription ID from the 'az account show' context.
     """
     import subprocess
     import json
@@ -57,20 +57,30 @@ def _get_anf_client(print_output: bool = False) -> Tuple[NetAppManagementClient,
         )
         
         account_info = json.loads(result.stdout)
+
+        if 'id' not in account_info:
+            raise ClientAuthenticationError(
+                "Azure CLI output did not contain a subscription 'id'. "
+                "Please run: az login --tenant <TENANT_ID>"
+            )
+
         subscription_id = account_info['id']
         
         if print_output:
-            subscription_name = account_info['name']
+            subscription_name = account_info.get('name', 'unknown')
             logger.info(f"Connected to ANF via Active Subscription: {subscription_name} ({subscription_id})")
     
     except subprocess.CalledProcessError as e:
+        logger.error(f"Azure CLI returned error: {e.stderr}")
         raise ClientAuthenticationError(
             f"Failed to get active subscription from Azure CLI: {e.stderr}\n"
             "Please run: az login --tenant <TENANT_ID>"
         )
     except json.JSONDecodeError as e:
+        logger.error(f"Azure CLI output not valid JSON: {str(e)}")
         raise ClientAuthenticationError(f"Failed to parse Azure CLI output: {str(e)}")
     except FileNotFoundError:
+        logger.error("Azure CLI (az) not found in PATH")
         raise ClientAuthenticationError(
             "Azure CLI (az) not found. Please install it from: "
             "https://docs.microsoft.com/en-us/cli/azure/install-azure-cli"

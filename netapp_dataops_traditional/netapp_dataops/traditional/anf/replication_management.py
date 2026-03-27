@@ -7,7 +7,7 @@ This module provides replication management operations for Azure NetApp Files.
 from typing import Dict, List, Any
 from azure.mgmt.netapp.models import AuthorizeRequest
 from azure.core.exceptions import ResourceNotFoundError
-from .client import _get_anf_client
+from .client import get_anf_client
 from .base import _serialize, _validate_required_params, _get_clean_error_message
 from .config import _retrieve_anf_config, _get_config_value, InvalidConfigError
 
@@ -163,7 +163,7 @@ def create_replication(
             return {"status": "error", "details": error_message}
         
         # Get ANF client and subscription ID (automatically retrieved from Azure CLI)
-        client, subscription_id = _get_anf_client(print_output=print_output)
+        client, subscription_id = get_anf_client(print_output=print_output)
 
         # Construct source volume resource ID (using resolved values)
         source_volume_resource_id = f"/subscriptions/{subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{resolved_account_name}/capacityPools/{resolved_pool_name}/volumes/{volume_name}"

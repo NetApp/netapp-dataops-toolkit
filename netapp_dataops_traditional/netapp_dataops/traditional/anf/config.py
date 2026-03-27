@@ -451,10 +451,10 @@ def _get_service_level_from_pool(
     """
     try:
         # Import here to avoid circular dependency
-        from .client import _get_anf_client
+        from .client import get_anf_client
         
         # Get authenticated client and subscription ID
-        client, _ = _get_anf_client(print_output=print_output)
+        client, _ = get_anf_client(print_output=print_output)
         
         # Retrieve the capacity pool
         pool = client.pools.get(

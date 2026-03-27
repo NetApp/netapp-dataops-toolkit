@@ -7,7 +7,7 @@ This module provides snapshot management operations for Azure NetApp Files.
 from typing import Dict, Any
 from azure.mgmt.netapp.models import Snapshot
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
-from .client import _get_anf_client
+from .client import get_anf_client
 from .base import _serialize, _validate_required_params, _get_clean_error_message
 from .config import _retrieve_anf_config, _get_config_value, InvalidConfigError
 
@@ -82,7 +82,7 @@ def create_snapshot(
 
     try:
         # Get ANF client
-        client, _ = _get_anf_client(print_output=print_output)
+        client, _ = get_anf_client(print_output=print_output)
 
         # Build snapshot properties (using resolved values)
         snapshot_properties = {
@@ -190,7 +190,7 @@ def delete_snapshot(
 
     try:
         # Get ANF client
-        client, _ = _get_anf_client(print_output=print_output)
+        client, _ = get_anf_client(print_output=print_output)
 
         # Check if snapshot exists before attempting deletion
         try:
@@ -293,7 +293,7 @@ def list_snapshots(
 
     try:
         # Get ANF client
-        client, _ = _get_anf_client(print_output=print_output)
+        client, _ = get_anf_client(print_output=print_output)
 
         # List all snapshots for the volume (using resolved values)
         snapshots = client.snapshots.list(

@@ -11,7 +11,7 @@ from azure.mgmt.netapp.models import (
     ExportPolicyRule,
 )
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
-from .client import _get_anf_client
+from .client import get_anf_client
 from .base import _serialize, _validate_required_params, _get_clean_error_message
 from .config import _retrieve_anf_config, _get_config_value, InvalidConfigError
 
@@ -246,7 +246,7 @@ def create_volume(
 
     try:
         # Get ANF client and subscription ID (automatically retrieved from Azure CLI)
-        client, subscription_id = _get_anf_client(print_output=print_output)
+        client, subscription_id = get_anf_client(print_output=print_output)
 
         # Construct subnet ID from resolved parameters
         subnet_id = f"/subscriptions/{subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.Network/virtualNetworks/{resolved_virtual_network_name}/subnets/{resolved_subnet_name}"
@@ -567,7 +567,7 @@ def clone_volume(
 
     try:
         # Get ANF client and subscription ID (automatically retrieved from Azure CLI)
-        client, subscription_id = _get_anf_client(print_output=print_output)
+        client, subscription_id = get_anf_client(print_output=print_output)
 
         # Construct subnet ID from resolved parameters
         subnet_id = f"/subscriptions/{subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.Network/virtualNetworks/{resolved_virtual_network_name}/subnets/{resolved_subnet_name}"
@@ -809,7 +809,7 @@ def delete_volume(
 
     try:
         # Get ANF client
-        client, _ = _get_anf_client(print_output=print_output)
+        client, _ = get_anf_client(print_output=print_output)
 
         # Check if volume exists before attempting deletion
         try:
@@ -913,7 +913,7 @@ def list_volumes(
 
     try:
         # Get ANF client
-        client, _ = _get_anf_client(print_output=print_output)
+        client, _ = get_anf_client(print_output=print_output)
 
         # List all volumes in the pool (using resolved values)
         volumes = client.volumes.list(
