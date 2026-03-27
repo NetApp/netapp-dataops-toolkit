@@ -883,7 +883,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
 
     # Create service
     if print_output:
-        logger.info("Creating Service '%s' in namespace '%s'.", workspaceName=workspace_name, namespace=namespace)
+        logger.info("Creating Service '%s' in namespace '%s'.", _get_jupyter_lab_service(workspaceName=workspace_name), namespace)
     try:
         api = client.CoreV1Api()
         api.create_namespaced_service(namespace=namespace, body=service)
