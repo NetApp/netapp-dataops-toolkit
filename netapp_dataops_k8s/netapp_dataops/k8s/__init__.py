@@ -918,7 +918,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
         init_jupyterlab_args = (
             "openssl req -x509 -nodes -days 365 -newkey rsa:2048 "
             "-keyout /certs/jupyter.key -out /certs/jupyter.crt "
-            "-subj '/CN=jupyterlab' && " + init_jupyterlab_args
+            "-subj '/CN=jupyterlab' && (" + init_jupyterlab_args + ")"
         )
 
     # Construct deployment
