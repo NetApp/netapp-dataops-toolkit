@@ -105,42 +105,74 @@ The GCNV module uses **Application Default Credentials (ADC)** with **service ac
 
 This approach eliminates the need for service account key files, which can be leaked or never expire.
 
+---
+
+### Option 1: Manual Setup
+
 #### Step 1: User Authentication
 
 ```bash
+# Disable any existing impersonation before starting
+gcloud config unset auth/impersonate_service_account
+
 # Authenticate with your Google account
 gcloud auth login
-
-# Set your default project
-gcloud config set project YOUR_PROJECT_ID
-
-# Authenticate application default credentials
-gcloud auth application-default login
 ```
 
-#### Step 2: Service Account Setup (One-time Admin Task)
+#### Step 2: Set Project
 
 ```bash
-# Create a dedicated service account for GCNV operations
+gcloud config set project YOUR_PROJECT_ID
+```
+
+#### Step 3: Enable Required APIs
+
+> **📝 Note:** Must run as your user account, before impersonation is configured.
+
+```bash
+gcloud services enable netapp.googleapis.com iamcredentials.googleapis.com
+
+# Verify APIs are enabled
+gcloud services list --enabled --filter="name:netapp.googleapis.com"
+```
+
+#### Step 4: Application Default Credentials
+
+```bash
+# Authenticate application default credentials
+gcloud auth application-default login
+
+# Secure the credentials file
+chmod 600 ~/.config/gcloud/application_default_credentials.json
+```
+
+#### Step 5: Create Service Account
+
+```bash
 gcloud iam service-accounts create YOUR_SERVICE_ACCOUNT_NAME \
     --display-name="YOUR_DISPLAY_NAME"
+```
 
-# Grant NetApp Cloud Volumes Admin role to the service account
+#### Step 6: Grant NetApp Permissions
+
+```bash
 gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
     --member="serviceAccount:YOUR_SERVICE_ACCOUNT_NAME@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
     --role="roles/netappcloudvolumes.admin"
+```
 
-# Grant impersonation permission to your user account
+#### Step 7: Grant Impersonation Permission
+
+```bash
 gcloud iam service-accounts add-iam-policy-binding \
     YOUR_SERVICE_ACCOUNT_NAME@YOUR_PROJECT_ID.iam.gserviceaccount.com \
     --member="user:YOUR_EMAIL@YOUR_DOMAIN.com" \
     --role="roles/iam.serviceAccountTokenCreator"
 ```
 
-#### Step 3: Configure Auto-Impersonation
+#### Step 8: Configure Auto-Impersonation
 
 ```bash
-# Enable automatic service account impersonation
 gcloud config set auth/impersonate_service_account \
     YOUR_SERVICE_ACCOUNT_NAME@YOUR_PROJECT_ID.iam.gserviceaccount.com
 
@@ -148,15 +180,68 @@ gcloud config set auth/impersonate_service_account \
 gcloud config get-value auth/impersonate_service_account
 ```
 
-#### Step 4: Enable Required APIs
+---
+
+### Option 2: Automated Setup Script
+
+Run the provided setup script to configure all steps automatically:
 
 ```bash
-# Enable the NetApp API
-gcloud services enable netapp.googleapis.com
-
-# Verify API is enabled
-gcloud services list --enabled --filter="name:netapp.googleapis.com"
+python3 -m netapp_dataops.traditional.gcnv.setup_gcnv_auth
 ```
+
+The script will prompt for:
+- **Project ID** – Your GCP project (e.g., `my-project`)
+- **Your email** – Your Google Cloud user account email
+- **Service account name** – Name for the service account (default: `gcnv-dataops`)
+
+It will then execute all 8 setup steps automatically:
+
+```
+NetApp DataOps Toolkit - GCNV Authentication Setup
+====================================================
+
+gcloud CLI exists: Google Cloud SDK 548.0.0
+
+Configuration
+-------------
+  Enter Project ID: my-project
+  Enter Your email: user@example.com
+  Enter Service account name [gcnv-dataops]:
+
+Continue? (yes/no): yes
+
+Step 1/8  User authentication (browser will open)...
+Authenticated
+
+Step 2/8  Set project...
+Project set to 'my-project'
+
+Step 3/8  Enable APIs (running as your user account)...
+netapp.googleapis.com enabled
+iamcredentials.googleapis.com enabled
+
+Step 4/8  Application Default Credentials (browser will open)...
+ADC configured and credentials secured (chmod 600)
+
+Step 5/8  Create service account...
+Created: gcnv-dataops@my-project.iam.gserviceaccount.com
+
+Step 6/8  Grant NetApp permissions...
+roles/netappcloudvolumes.admin granted
+
+Step 7/8  Grant impersonation permission...
+user@example.com can impersonate gcnv-dataops@my-project.iam.gserviceaccount.com
+
+Step 8/8  Configure impersonation...
+Impersonation active: gcnv-dataops@my-project.iam.gserviceaccount.com
+
+====================================================
+Setup Complete!
+====================================================
+```
+
+> **📝 Note:** The browser will open twice - once for user authentication (Step 1) and once for Application Default Credentials (Step 4).
 
 ### Troubleshooting
 
