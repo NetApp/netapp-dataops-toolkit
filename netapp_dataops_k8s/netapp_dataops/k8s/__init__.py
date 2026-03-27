@@ -1970,12 +1970,8 @@ def list_jupyter_labs(namespace: str = "default", include_astra_app_id: bool = F
         # Retrieve access URL
         try :
             workspaceDict["Access URL"] = _retrieve_jupyter_lab_url(workspaceName=workspaceName, namespace=namespace, printOutput=False)
-        except ServiceUnavailableError :
+        except (ServiceUnavailableError, APIConnectionError) :
             workspaceDict["Access URL"] = "unavailable"
-        except APIConnectionError as err:
-            if print_output:
-                logger.error("Error: Kubernetes API Error: %s", err)
-            raise APIConnectionError(err)
 
         # Retrieve clone details
         try:
