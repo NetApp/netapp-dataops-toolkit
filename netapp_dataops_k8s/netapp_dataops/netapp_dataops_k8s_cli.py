@@ -115,6 +115,7 @@ Optional Options/Arguments:
 \t-s, --source-snapshot-name=\tName of Kubernetes VolumeSnapshot to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
 \t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
 \t-r, --allocate-resource=\tOption to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
+\t    --no-https\t\t\tDisable HTTPS for the workspace. By default, HTTPS is enabled with a self-signed TLS certificate to prevent password sniffing.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment1 --source-workspace-name=project1 --nvidia-gpu=1
@@ -179,6 +180,7 @@ Optional Options/Arguments:
 \t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
 \t-v, --mount-pvc=\t\tOption to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: -v/--mount-pvc=existing_pvc_name:mount_point. If not specified, no additional PVC will be attached.
 \t-r, --allocate-resource=\tOption to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
+\t    --no-https\t\t\tDisable HTTPS for the workspace. By default, HTTPS is enabled with a self-signed TLS certificate to prevent password sniffing.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py create jupyterlab --workspace-name=mike --size=10Gi --nvidia-gpu=2
@@ -815,13 +817,14 @@ if __name__ == '__main__':
             requestCpu = None
             load_balancer_service= False
             allocate_resource = None
+            enable_https = True
 
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hw:c:n:s:j:g:m:p:br:",
                                            ["help", "new-workspace-name=", "volume-snapshot-class=", "namespace=",
                                             "source-snapshot-name=", "source-workspace-name=", "nvidia-gpu=", "memory=",
-                                            "cpu=", "load-balancer", "allocate-resource="])
+                                            "cpu=", "load-balancer", "allocate-resource=", "no-https"])
             except:
                 handleInvalidCommand(helpText=helpTextCloneJupyterLab, invalidOptArg=True)
 
@@ -850,6 +853,8 @@ if __name__ == '__main__':
                     load_balancer_service = True
                 elif opt in ("-r", "--allocate-resource"):
                     allocate_resource = arg
+                elif opt in ("--no-https",):
+                    enable_https = False
 
             # Check for required options
             if not newWorkspaceName or (not sourceSnapshotName and not sourceWorkspaceName):
@@ -863,7 +868,8 @@ if __name__ == '__main__':
                 clone_jupyter_lab(new_workspace_name=newWorkspaceName, source_workspace_name=sourceWorkspaceName, load_balancer_service=load_balancer_service,
                                   source_snapshot_name=sourceSnapshotName, volume_snapshot_class=volumeSnapshotClass,
                                   namespace=namespace, request_cpu=requestCpu, request_memory=requestMemory,
-                                  request_nvidia_gpu=requestNvidiaGpu, allocate_resource=allocate_resource, print_output=True)
+                                  request_nvidia_gpu=requestNvidiaGpu, allocate_resource=allocate_resource,
+                                  enable_https=enable_https, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -976,12 +982,13 @@ if __name__ == '__main__':
             load_balancer_service = False
             mount_pvc = None
             allocate_resource = None
+            enable_https = True
 
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hw:s:n:c:i:g:m:p:abv:r:",
                                            ["help", "workspace-name=", "size=", "namespace=", "storage-class=",
-                                            "image=", "nvidia-gpu=", "memory=", "cpu=", "register-with-astra", "load-balancer", "mount-pvc=", "allocate-resource="])
+                                            "image=", "nvidia-gpu=", "memory=", "cpu=", "register-with-astra", "load-balancer", "mount-pvc=", "allocate-resource=", "no-https"])
             except:
                 handleInvalidCommand(helpText=helpTextCreateJupyterLab, invalidOptArg=True)
 
@@ -1014,6 +1021,8 @@ if __name__ == '__main__':
                     mount_pvc = arg
                 elif opt in ("-r", "--allocate-resource"):
                     allocate_resource = arg
+                elif opt in ("--no-https",):
+                    enable_https = False
 
             # Check for required options
             if not workspaceName or not workspaceSize:
@@ -1023,7 +1032,8 @@ if __name__ == '__main__':
             try:
                 create_jupyter_lab(workspace_name=workspaceName, workspace_size=workspaceSize, storage_class=storageClass,
                                    load_balancer_service=load_balancer_service, namespace=namespace, workspace_image=workspaceImage, request_cpu=requestCpu, mount_pvc=mount_pvc,
-                                   request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu, register_with_astra=register_with_astra, allocate_resource=allocate_resource, print_output=True)
+                                   request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu, register_with_astra=register_with_astra, allocate_resource=allocate_resource,
+                                   enable_https=enable_https, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 

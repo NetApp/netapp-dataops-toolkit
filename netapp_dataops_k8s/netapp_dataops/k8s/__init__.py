@@ -201,6 +201,9 @@ def _retrieve_jupyter_lab_url(workspaceName: str, namespace: str = "default", pr
         serviceStatus = api.read_namespaced_service(namespace=namespace,
                                                     name=_get_jupyter_lab_service(workspaceName=workspaceName))
 
+        # Determine URL scheme based on service port name
+        scheme = "https" if serviceStatus.spec.ports[0].name == "https" else "http"
+
         # Check if service type is LoadBalancer
         if serviceStatus.spec.type == "LoadBalancer":
             # Construct and return url
@@ -210,7 +213,7 @@ def _retrieve_jupyter_lab_url(workspaceName: str, namespace: str = "default", pr
                 if printOutput :
                     logger.error("Error: Kubernetes Service for workspace is not available.")
                 raise ServiceUnavailableError()
-            return "http://" + loadBalancerIP
+            return scheme + "://" + loadBalancerIP
         else:
             # Retrieve access port
             port = serviceStatus.spec.ports[0].node_port
@@ -224,7 +227,7 @@ def _retrieve_jupyter_lab_url(workspaceName: str, namespace: str = "default", pr
                 ip = "<IP address of Kubernetes node>"
                 pass
             # Construct and return url
-            return "http://" + ip + ":" + str(port)
+            return scheme + "://" + ip + ":" + str(port)
     except ApiException as err:
         if printOutput:
             logger.error("Error: Kubernetes API Error: %s", err)
@@ -695,7 +698,8 @@ class CAConfigMap:
 def clone_jupyter_lab(new_workspace_name: str, source_workspace_name: str, source_snapshot_name: str = None,
                       load_balancer_service: bool = False, new_workspace_password: str = None, volume_snapshot_class: str = "csi-snapclass",
                       namespace: str = "default", request_cpu: str = None, request_memory: str = None,
-                      request_nvidia_gpu: str = None, allocate_resource: str = None, print_output: bool = False):
+                      request_nvidia_gpu: str = None, allocate_resource: str = None, print_output: bool = False,
+                      enable_https: bool = True):
     # Determine source PVC details
     if source_snapshot_name:
         sourcePvcName, workspaceSize = _retrieve_source_volume_details_for_volume_snapshot(snapshotName=source_snapshot_name,
@@ -740,7 +744,7 @@ def clone_jupyter_lab(new_workspace_name: str, source_workspace_name: str, sourc
     url = create_jupyter_lab(workspace_name=new_workspace_name, workspace_size=workspaceSize, namespace=namespace,
                        workspace_password=new_workspace_password, workspace_image=sourceWorkspaceImage, request_cpu=request_cpu,
                        load_balancer_service=load_balancer_service, request_memory=request_memory, request_nvidia_gpu=request_nvidia_gpu, allocate_resource=allocate_resource, print_output=print_output,
-                       pvc_already_exists=True, labels=labels)
+                       pvc_already_exists=True, labels=labels, enable_https=enable_https)
 
     if print_output:
         logger.info("JupyterLab workspace successfully cloned.")
@@ -789,7 +793,8 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
                        load_balancer_service: bool = False, namespace: str = "default",
                        workspace_password: str = None, workspace_image: str = "nvcr.io/nvidia/tensorflow:22.05-tf2-py3",
                        request_cpu: str = None, request_memory: str = None, request_nvidia_gpu: str = None, allocate_resource: str = None, register_with_astra: bool = False,
-                       print_output: bool = False, pvc_already_exists: bool = False, labels: dict = None) -> str:
+                       print_output: bool = False, pvc_already_exists: bool = False, labels: dict = None,
+                       enable_https: bool = True) -> str:
     # Retrieve kubeconfig
     try:
         _load_kube_config()
@@ -823,6 +828,14 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
 
     # Step 2 - Create service for workspace
 
+    # Determine port configuration based on HTTPS setting
+    if enable_https:
+        svc_port_name = "https"
+        lb_external_port = 443
+    else:
+        svc_port_name = "http"
+        lb_external_port = 80
+
     # Construct service
     if load_balancer_service:
         service = client.V1Service(
@@ -837,8 +850,8 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
                 },
                 ports=[
                     client.V1ServicePort(
-                        name="http",
-                        port=80,
+                        name=svc_port_name,
+                        port=lb_external_port,
                         target_port=8888,
                         protocol="TCP"
                     )
@@ -858,7 +871,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
                 },
                 ports=[
                     client.V1ServicePort(
-                        name="http",
+                        name=svc_port_name,
                         port=8888,
                         target_port=8888,
                         protocol="TCP"
@@ -870,7 +883,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
 
     # Create service
     if print_output:
-        logger.info("Creating Service '%s' in namespace '%s'.", workspaceName=workspace_name, namespace=namespace)
+        logger.info("Creating Service '%s' in namespace '%s'.", _get_jupyter_lab_service(workspaceName=workspace_name), namespace)
     try:
         api = client.CoreV1Api()
         api.create_namespaced_service(namespace=namespace, body=service)
@@ -884,6 +897,29 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
         logger.info("Service successfully created.")
 
     # Step 3 - Create deployment
+
+    # Build JupyterLab startup command
+    jupyter_cmd = [
+        "jupyter", "lab",
+        "--LabApp.password=" + hashedPassword,
+        "--LabApp.ip='0.0.0.0'",
+        "--no-browser",
+        "--notebook-dir=/workspace",
+    ]
+    if enable_https:
+        jupyter_cmd.extend([
+            "--ServerApp.certfile=/certs/jupyter.crt",
+            "--ServerApp.keyfile=/certs/jupyter.key",
+        ])
+
+    # Build init container args (generate TLS cert before copying workspace if HTTPS)
+    init_jupyterlab_args = "cp -au /workspace/. /vol/ || true"
+    if enable_https:
+        init_jupyterlab_args = (
+            "openssl req -x509 -nodes -days 365 -newkey rsa:2048 "
+            "-keyout /certs/jupyter.key -out /certs/jupyter.crt "
+            "-subj '/CN=jupyterlab' && (" + init_jupyterlab_args + ")"
+        )
 
     # Construct deployment
     deployment = client.V1Deployment(
@@ -916,7 +952,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
                             name="init-jupyterlab",
                             image=workspace_image,
                             command=["/bin/bash", "-c"],
-                            args=["cp -au /workspace/. /vol/ || true"],
+                            args=[init_jupyterlab_args],
                             volume_mounts=[
                                 client.V1VolumeMount(
                                     name="workspace",
@@ -943,8 +979,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
                                     value="yes"
                                 )
                             ],
-                            command=["jupyter", "lab", "--LabApp.password=" + hashedPassword, "--LabApp.ip='0.0.0.0'",
-                                  "--no-browser", "--notebook-dir=/workspace"],
+                            command=jupyter_cmd,
                             ports=[
                                 client.V1ContainerPort(container_port=8888)
                             ],
@@ -992,6 +1027,28 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
                 mount_path=user_pvc_mountpoint
                 )
             )
+
+    # Add TLS volumes and mounts for HTTPS
+    if enable_https:
+        deployment.spec.template.spec.volumes.append(
+            client.V1Volume(
+                name="tls-certs",
+                empty_dir=client.V1EmptyDirVolumeSource()
+            )
+        )
+        deployment.spec.template.spec.init_containers[0].volume_mounts.append(
+            client.V1VolumeMount(
+                name="tls-certs",
+                mount_path="/certs"
+            )
+        )
+        deployment.spec.template.spec.containers[0].volume_mounts.append(
+            client.V1VolumeMount(
+                name="tls-certs",
+                mount_path="/certs",
+                read_only=True
+            )
+        )
 
     # Apply resource requests/limits
     if request_cpu:
@@ -1913,12 +1970,8 @@ def list_jupyter_labs(namespace: str = "default", include_astra_app_id: bool = F
         # Retrieve access URL
         try :
             workspaceDict["Access URL"] = _retrieve_jupyter_lab_url(workspaceName=workspaceName, namespace=namespace, printOutput=False)
-        except ServiceUnavailableError :
+        except (ServiceUnavailableError, APIConnectionError) :
             workspaceDict["Access URL"] = "unavailable"
-        except APIConnectionError as err:
-            if print_output:
-                logger.error("Error: Kubernetes API Error: %s", err)
-            raise APIConnectionError(err)
 
         # Retrieve clone details
         try:
