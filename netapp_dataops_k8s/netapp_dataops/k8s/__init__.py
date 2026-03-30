@@ -564,19 +564,10 @@ def _get_trident_backend_config(backend_config_name: str, namespace: str = "trid
     username = base64.b64decode(secret.data['username']).decode('utf-8')
     password = base64.b64decode(secret.data['password']).decode('utf-8')
 
-    # Extract SSL certificate path if available; falls back to system CA bundle.
-    # The legacy 'verifyssl' boolean key is ignored — SSL is always enforced.
-    ssl_cert_path_b64 = secret.data.get('sslcertpath')
-    if ssl_cert_path_b64:
-        ssl_cert_path = base64.b64decode(ssl_cert_path_b64).decode('utf-8')
-    else:
-        ssl_cert_path = ""
-
     return {
         'username': username,
         'password': password,
         'hostname': managementLIF,
-        'sslCertPath': ssl_cert_path,
         'dataLIF': dataLIF,
         'storage_driver_name': storage_driver_name,
         'svm': svm
@@ -1732,6 +1723,7 @@ def delete_flexcache_volume(
         backend_name: str,
         namespace: str = "default",
         trident_namespace: str = "trident",
+        ssl_cert_path: str = "",
         print_output: bool = False
 ):
     """
@@ -1742,6 +1734,7 @@ def delete_flexcache_volume(
     - backend_name (str): Name of the tridentbackendconfig.
     - namespace (str, optional): Kubernetes namespace. Default is "default".
     - trident_namespace (str, optional): Kubernetes namespace where Trident is installed. Default is "trident".
+    - ssl_cert_path (str, optional): Path to a CA certificate file for ONTAP API SSL verification. Default is "" (use system CA bundle).
     - print_output (bool, optional): Whether to print output messages. Default is False.
     """
     # Retrieve kubeconfig
@@ -1820,7 +1813,9 @@ def delete_flexcache_volume(
             if print_output:
                 _print_invalid_config_error()
             raise InvalidConfigError()
-        
+
+        config["sslCertPath"] = ssl_cert_path
+
         if "ontap" in storage_driver_name.lower():
 
             # Instantiate connection to ONTAP cluster
@@ -2335,6 +2330,7 @@ def create_flexcache(
     junction: str = None,
     namespace: str = "default",
     trident_namespace: str = "trident",
+    ssl_cert_path: str = "",
     print_output: bool = False
 ):
     """
@@ -2351,6 +2347,7 @@ def create_flexcache(
     - junction (str, optional): The junction path for the FlexCache volume. Default is None.
     - namespace (str, optional): Kubernetes namespace to create the new PersistentVolumeClaim (PVC) in. Default is "default".
     - trident_namespace (str, optional): Kubernetes namespace where Trident is installed. Default is "trident".
+    - ssl_cert_path (str, optional): Path to a CA certificate file for ONTAP API SSL verification. Default is "" (use system CA bundle).
     - print_output (bool, optional): Whether to print output messages. Default is False.
 
     Returns:
@@ -2381,6 +2378,8 @@ def create_flexcache(
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
+
+    config["sslCertPath"] = ssl_cert_path
 
     if "ontap" in storage_driver_name.lower():
 
