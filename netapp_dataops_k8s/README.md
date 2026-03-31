@@ -108,6 +108,75 @@ The NetApp DataOps Toolkit provides the ability to manage NVIDIA Triton Inferenc
 Refer to the [NetApp DataOps Toolkit for NVIDIA Triton Inference Server Management](docs/inference_server_management.md) documentation for more details.
 
 
+## SSL Certificate Configuration for ONTAP API Access
+
+Some toolkit operations (e.g. FlexCache create/delete) connect directly to the ONTAP REST API over HTTPS. If your ONTAP cluster uses a self-signed certificate, you must provide the certificate so the toolkit can verify the server's identity.
+
+The SSL certificate path is passed as a **command-line argument** (`--ssl-cert-path`) or **function parameter** (`ssl_cert_path`) to the operations that require it. If omitted, the system CA bundle is used.
+
+### Obtaining the Certificate from Your ONTAP Cluster
+
+**Step 1 — Download the certificate from any machine that can reach the ONTAP management LIF:**
+
+```sh
+echo | openssl s_client -connect <ONTAP_HOST>:443 -showcerts 2>/dev/null \
+  | openssl x509 > ontap_cert.pem
+```
+
+**Step 2 — Make the certificate available inside the cluster.**
+
+The certificate file must exist at the configured path every time a pod starts. Use one of the following approaches (listed from most to least recommended):
+
+1. **Kubernetes Secret or ConfigMap (recommended)** — Store the certificate content in a Secret or ConfigMap and mount it as a volume. This is the most reliable approach: Kubernetes re-mounts the volume automatically on every pod start, and it works regardless of which node the pod is scheduled on.
+
+   ```sh
+   kubectl create secret generic ontap-ca-cert \
+     --from-file=ontap_cert.pem=ontap_cert.pem -n <your-namespace>
+   ```
+
+   Then mount it in your pod spec:
+
+   ```yaml
+   volumes:
+     - name: ontap-ca-cert
+       secret:
+         secretName: ontap-ca-cert
+   containers:
+     - volumeMounts:
+         - name: ontap-ca-cert
+           mountPath: /etc/ssl/certs/ontap_cert.pem
+           subPath: ontap_cert.pem
+           readOnly: true
+   ```
+
+2. **Container image** — Bake the certificate into a custom container image at a known path. Survives restarts but requires an image rebuild if the certificate changes.
+
+3. **`hostPath` volume** — Place the file on the node filesystem. Survives pod restarts but **not rescheduling to a different node** unless the file is present on all nodes.
+
+> **Note:** Do not manually copy the certificate into a running pod (e.g. via `kubectl cp`). Manually copied files are lost when the pod restarts.
+
+**Step 3 — Pass the certificate path when running toolkit commands:**
+
+```sh
+netapp_dataops_k8s_cli.py create flexcache \
+  --flexcache-vol=cache1 --flexcache-size=50Gi \
+  --source-vol=origin1 --source-svm=svm1 --backend-name=backend1 \
+  --ssl-cert-path=/etc/ssl/certs/ontap_cert.pem
+```
+
+Or when using the toolkit as a Python library:
+
+```python
+from netapp_dataops.k8s import create_flexcache
+create_flexcache(..., ssl_cert_path="/etc/ssl/certs/ontap_cert.pem")
+```
+
+### How Certificate Verification Works
+
+When a certificate path is provided, the toolkit verifies the ONTAP server's certificate chain against the pinned CA cert file. Hostname/SAN matching is skipped because many ONTAP self-signed certificates lack Subject Alternative Name entries. When no certificate path is provided, the system CA bundle is used with full hostname verification.
+
+In both cases SSL verification is always enforced — the toolkit never sends credentials over an unverified connection.
+
 ## Tips and Tricks
 
 - [Use the NetApp DataOps Toolkit in conjunction with Kubeflow.](Examples/Kubeflow/)

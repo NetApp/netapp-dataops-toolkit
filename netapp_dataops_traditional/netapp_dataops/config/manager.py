@@ -179,7 +179,7 @@ class ConfigManager:
         if passwordString is not None:
             keyring.set_password(KEYRING_SERVICE_NAME, "password", passwordString)
 
-        verify_ssl = self._prompt_yes_no("Verify SSL certificate when calling ONTAP API", default=True)
+        ssl_cert_path = self._prompt_ssl_cert_path()
         
         logger.info("\nVolume Defaults:")
         
@@ -200,7 +200,7 @@ class ConfigManager:
             hostname=hostname,
             svm=svm,
             data_lif=data_lif,
-            verify_ssl_cert=verify_ssl,
+            ssl_cert_path=ssl_cert_path,
             default_volume_type=volume_type,
             default_export_policy=export_policy,
             default_snapshot_policy=snapshot_policy,
@@ -320,6 +320,22 @@ class ConfigManager:
             else:
                 logger.info("  Error: Please enter 'y' or 'n'.")
     
+    def _prompt_ssl_cert_path(self) -> str:
+        """Prompt for an optional SSL certificate file path with validation."""
+        while True:
+            path = self._prompt_with_default(
+                "Enter path to SSL certificate file for ONTAP API verification "
+                "(leave blank to use system CA bundle)",
+                ""
+            )
+            if not path:
+                return ""
+            expanded = os.path.expanduser(path)
+            if not os.path.isfile(expanded):
+                logger.info("  Error: File not found: %s", expanded)
+                continue
+            return expanded
+
     def _prompt_choice(self, prompt: str, choices: List[str], default: Optional[str] = None) -> str:
         """
         Prompt for choice from list of options.
@@ -363,6 +379,8 @@ class ConfigManager:
         summary.append(f"  SVM: {config.ontap.svm}")
         summary.append(f"  Data LIF: {config.ontap.data_lif}")
         summary.append(f"  Volume Type: {config.ontap.default_volume_type}")
+        ssl_display = config.ontap.ssl_cert_path or "System CA bundle"
+        summary.append(f"  SSL Verification: {ssl_display}")
         summary.append("  Credentials: Stored securely in system keyring")
         
         if config.s3:

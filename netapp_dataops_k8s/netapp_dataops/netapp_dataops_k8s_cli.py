@@ -431,10 +431,11 @@ Optional Options/Arguments:
 \t-h, --help\t\t\tPrint help text.
 \t-n, --namespace=\t\tKubernetes namespace that PersistentVolumeClaim (PVC) is located in. If not specified, namespace "default" will be used.
 \t-t, --trident-namespace=\tKubernetes namespace where Trident is installed. If not specified, the namespace "trident" will be used.
+\t    --ssl-cert-path=\t\tPath to CA certificate file for ONTAP API SSL verification. If not specified, system CA bundle will be used.
 
 Examples:
-\tnetapp_dataops_k8s_cli.py delete flexcache-volume --pvc-name=cache1
-\tnetapp_dataops_k8s_cli.py delete flexcache-volume -p cache2 -n team1
+\tnetapp_dataops_k8s_cli.py delete flexcache-volume --pvc-name=cache1 --backend-name=backend1
+\tnetapp_dataops_k8s_cli.py delete flexcache-volume -p cache2 -b backend1 -n team1 --ssl-cert-path=/path/to/cert.pem
 '''
 helpTextGetS3Bucket = '''
 Command: get-s3 bucket
@@ -707,10 +708,11 @@ Optional Options/Arguments:
 \t-c, --junction=\t\t\tThe junction path for the FlexCache volume.
 \t-n, --namespace=\t\tKubernetes namespace to create the new PersistentVolumeClaim (PVC) in. If not specified, the PVC will be created in the "default" namespace.
 \t-t, --trident-namespace=\tKubernetes namespace where Trident is installed. If not specified, the namespace "trident" will be used.
+\t    --ssl-cert-path=\t\tPath to CA certificate file for ONTAP API SSL verification. If not specified, system CA bundle will be used.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py create flexcache --flexcache-vol=cache1 --flexcache-size=50Gi --source-vol=origin1 --source-svm=svm1 --backend-name=backend1
-\tnetapp_dataops_k8s_cli.py create flexcache -s svm1 -v vol1 -n vol2 -b backend1 -z 100Gi -c /cache1
+\tnetapp_dataops_k8s_cli.py create flexcache -s svm1 -v vol1 -n vol2 -b backend1 -z 100Gi -c /cache1 --ssl-cert-path=/path/to/cert.pem
 '''
 
 
@@ -1229,10 +1231,11 @@ if __name__ == '__main__':
             flexCacheSize = None
             backendName = None
             tridentNamespace = "trident"
+            sslCertPath = ""
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:f:z:v:s:b:n:c:t:", ["help", "flexcache-vol=", "flexcache-size=", "source-vol=", "source-svm=", "backend-name=", "namespace=", "junction=", "trident-namespace="])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:f:z:v:s:b:n:c:t:", ["help", "flexcache-vol=", "flexcache-size=", "source-vol=", "source-svm=", "backend-name=", "namespace=", "junction=", "trident-namespace=", "ssl-cert-path="])
             except getopt.GetoptError:
                 handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
 
@@ -1257,6 +1260,8 @@ if __name__ == '__main__':
                     junction = arg
                 elif opt in ("-t", "--trident-namespace"):
                     tridentNamespace = arg
+                elif opt in ("--ssl-cert-path",):
+                    sslCertPath = arg
 
             # Check for required options
             if not flexCacheVol or not sourceVol or not sourceSvm or not flexCacheSize or not backendName:
@@ -1264,7 +1269,7 @@ if __name__ == '__main__':
 
             # Create FlexCache volume
             try:
-                create_flexcache(flexcache_vol=flexCacheVol, flexcache_size=flexCacheSize, source_vol=sourceVol, source_svm=sourceSvm, backend_name=backendName, namespace=namespace, junction=junction, trident_namespace=tridentNamespace, print_output=True)
+                create_flexcache(flexcache_vol=flexCacheVol, flexcache_size=flexCacheSize, source_vol=sourceVol, source_svm=sourceSvm, backend_name=backendName, namespace=namespace, junction=junction, trident_namespace=tridentNamespace, ssl_cert_path=sslCertPath, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
         
@@ -1380,12 +1385,13 @@ if __name__ == '__main__':
             backendName = None
             namespace = "default"
             tridentNamespace = "trident"
+            sslCertPath = ""
             force = False
 
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hp:b:fn:t:",
-                                        ["help", "pvc-name=", "backend-name=", "force", "namespace=", "trident-namespace="])
+                                        ["help", "pvc-name=", "backend-name=", "force", "namespace=", "trident-namespace=", "ssl-cert-path="])
             except:
                 handleInvalidCommand(helpText=helpTextDeleteFlexCacheVolume, invalidOptArg=True)
 
@@ -1402,6 +1408,8 @@ if __name__ == '__main__':
                     namespace = arg
                 elif opt in ("-t", "--trident-namespace"):
                     tridentNamespace = arg
+                elif opt in ("--ssl-cert-path",):
+                    sslCertPath = arg
                 elif opt in ("-f", "--force"):
                     force = True
 
@@ -1424,7 +1432,7 @@ if __name__ == '__main__':
             # Delete FlexCache volume
             try:
                 delete_flexcache_volume(pvc_name=pvcName, backend_name=backendName, namespace=namespace,
-                                        trident_namespace=tridentNamespace, print_output=True)
+                                        trident_namespace=tridentNamespace, ssl_cert_path=sslCertPath, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
