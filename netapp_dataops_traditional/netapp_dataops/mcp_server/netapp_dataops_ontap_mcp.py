@@ -540,7 +540,7 @@ async def create_cifs_share_tool(
         raise
 
 
-@mcp.tool(name="ListCIFSShare")
+@mcp.tool(name="ListCIFSShares")
 async def list_cifs_shares_tool(
     svm : Optional[str] = None,
     name_pattern : Optional[str] = None,
