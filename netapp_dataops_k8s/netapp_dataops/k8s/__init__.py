@@ -171,7 +171,7 @@ def _ensure_kubeconfig_file_permissions():
 def _load_kube_config():
     try:
         config.load_incluster_config()
-    except:
+    except Exception:
         _ensure_kubeconfig_file_permissions()
         config.load_kube_config()
 
@@ -180,7 +180,7 @@ def _load_kube_config2(print_output: bool = False):
     try:
         config.load_incluster_config()
         configured = True
-    except:
+    except Exception:
         configured = False
     if not configured:
         try:
@@ -188,7 +188,7 @@ def _load_kube_config2(print_output: bool = False):
             config.load_kube_config()
         except InvalidConfigError:
             raise
-        except:
+        except Exception:
             if print_output:
                 _print_invalid_config_error()
             raise InvalidConfigError()
