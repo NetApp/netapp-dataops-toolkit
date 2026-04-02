@@ -44,7 +44,7 @@ def create_snapshot(
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
 
-    Returns:    Returns:
+    Returns:
         Dictionary with status and snapshot details
 
     Raises:
