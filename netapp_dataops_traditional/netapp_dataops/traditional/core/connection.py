@@ -75,6 +75,10 @@ def _instantiate_connection(config: Dict[str, Any], connectionType: str = "ONTAP
 
         ssl_cert_path = _get_ssl_cert_path(config)
 
+        # Security: verify is always True to enforce SSL certificate validation.
+        # When ssl_cert_path is provided, _apply_custom_ssl_context pins the
+        # CA cert and relaxes hostname/SAN checks (common for ONTAP self-signed
+        # certs) while still verifying the certificate chain.
         netappConfig.CONNECTION = NetAppHostConnection(
             host=ontapClusterMgmtHostname,
             username=ontapClusterAdminUsername,
