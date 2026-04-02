@@ -447,7 +447,7 @@ def _get_service_level_from_pool(
         str: The service level of the capacity pool (Standard, Premium, or Ultra).
         
     Raises:
-        Exception: If there's an error retrieving the capacity pool information.
+        InvalidConfigError: If there's an error retrieving the capacity pool information.
     """
     try:
         # Import here to avoid circular dependency
@@ -480,4 +480,4 @@ def _get_service_level_from_pool(
         error_msg = f"Failed to retrieve service level from capacity pool '{pool_name}': {str(e)}"
         if print_output:
             logger.error(error_msg)
-        raise Exception(error_msg)
+        raise InvalidConfigError(error_msg)

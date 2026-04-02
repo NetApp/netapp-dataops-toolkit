@@ -7,8 +7,8 @@ This module provides replication management operations for Azure NetApp Files.
 from typing import Dict, List, Any
 from azure.mgmt.netapp.models import AuthorizeRequest
 from azure.core.exceptions import ResourceNotFoundError
-from .client import get_anf_client
-from .base import _serialize, _validate_required_params, _get_clean_error_message
+from .client import _get_anf_client
+from .base import _serialize, _validate_required_params, _get_clean_error_message, _calculate_min_throughput_mibps
 from .config import _retrieve_anf_config, _get_config_value, InvalidConfigError
 
 from netapp_dataops.logging_utils import setup_logger
@@ -18,7 +18,6 @@ logger = setup_logger(__name__)
 # Constants for validation
 VALID_PROTOCOL_TYPES = ["NFSv3", "NFSv4.1", "CIFS"]
 VALID_SERVICE_LEVELS = ["Standard", "Premium", "Ultra", "Flexible"]
-DEFAULT_SERVICE_LEVEL = "Premium"
 
 def create_replication(
     # Source volume parameters
@@ -78,8 +77,9 @@ def create_replication(
         destination_subnet_name (str):
             Optional. Destination subnet name. Defaults to "default".
         destination_service_level (str):
-            Optional. Destination service level (Standard/Premium/Ultra).
-            Defaults to "Premium".
+            Optional. Destination service level (Standard/Premium/Ultra/Flexible).
+            If not provided, it will be retrieved from the destination capacity pool.
+            Must be one of: Standard, Premium, Ultra, Flexible.
         destination_zones (List[str]):
             Optional. Availability zones for destination volume. If None, defaults to ["1"].
         destination_throughput_mibps (float):
@@ -145,20 +145,10 @@ def create_replication(
             destination_virtual_network_name=destination_virtual_network_name
         )
         
-        # Set default service level if not provided
-        if destination_service_level is None:
-            destination_service_level = DEFAULT_SERVICE_LEVEL
-        
         # Validate protocol types
         invalid_protocols = [pt for pt in destination_protocol_types if pt not in VALID_PROTOCOL_TYPES]
         if invalid_protocols:
             error_message = f"Invalid protocol types: {invalid_protocols}. Valid options are: {VALID_PROTOCOL_TYPES}"
-            logger.error(error_message)
-            return {"status": "error", "details": error_message}
-        
-        # Validate service level
-        if destination_service_level not in VALID_SERVICE_LEVELS:
-            error_message = f"Invalid service level: '{destination_service_level}'. Valid options are: {VALID_SERVICE_LEVELS}"
             logger.error(error_message)
             return {"status": "error", "details": error_message}
         
@@ -195,11 +185,21 @@ def create_replication(
                 )
 
                 # If service level not provided, get it from destination pool
-                if destination_service_level == DEFAULT_SERVICE_LEVEL:
+                if destination_service_level is None:
                     if hasattr(destination_pool, 'service_level') and destination_pool.service_level:
-                        destination_service_level = destination_pool.service_level
+                        destination_service_level = str(destination_pool.service_level).split('.')[-1].capitalize()
                         if print_output:
                             logger.info(f"Using service level from destination pool: {destination_service_level}")
+
+                # Validate service level after pool-lookup override
+                if destination_service_level is None:
+                    error_message = "destination_service_level is required and could not be retrieved from the destination pool"
+                    logger.error(error_message)
+                    return {"status": "error", "details": error_message}
+                if destination_service_level not in VALID_SERVICE_LEVELS:
+                    error_message = f"Invalid service level: '{destination_service_level}'. Valid options are: {VALID_SERVICE_LEVELS}"
+                    logger.error(error_message)
+                    return {"status": "error", "details": error_message}
 
                 destination_qos_type = destination_pool.qos_type
                 
@@ -227,30 +227,16 @@ def create_replication(
                                 logger.info(f"Using throughput_mibps from source volume: {destination_throughput_mibps}")
                         else:
                             # Calculate minimum throughput based on service level and size
-                            size_gib = destination_usage_threshold / (1024 * 1024 * 1024)
-                            if destination_service_level.lower() == "standard":
-                                destination_throughput_mibps = max(16.0, size_gib * 0.016)
-                            elif destination_service_level.lower() == "premium":
-                                destination_throughput_mibps = max(64.0, size_gib * 0.064)
-                            elif destination_service_level.lower() == "ultra":
-                                destination_throughput_mibps = max(128.0, size_gib * 0.128)
-                            else:
-                                destination_throughput_mibps = 64.0
-                            
+                            destination_throughput_mibps = _calculate_min_throughput_mibps(
+                                destination_service_level, destination_usage_threshold
+                            )
                             if print_output:
                                 logger.info(f"Calculated destination throughput_mibps for manual QoS: {destination_throughput_mibps}")
                     except Exception as e:
                         # If we can't get source volume info, calculate based on destination size
-                        size_gib = destination_usage_threshold / (1024 * 1024 * 1024)
-                        if destination_service_level.lower() == "standard":
-                            destination_throughput_mibps = max(16.0, size_gib * 0.016)
-                        elif destination_service_level.lower() == "premium":
-                            destination_throughput_mibps = max(64.0, size_gib * 0.064)
-                        elif destination_service_level.lower() == "ultra":
-                            destination_throughput_mibps = max(128.0, size_gib * 0.128)
-                        else:
-                            destination_throughput_mibps = 64.0
-                        
+                        destination_throughput_mibps = _calculate_min_throughput_mibps(
+                            destination_service_level, destination_usage_threshold
+                        )
                         if print_output:
                             logger.info(f"Calculated destination throughput_mibps for manual QoS (source unavailable): {destination_throughput_mibps}")
                 
@@ -266,16 +252,9 @@ def create_replication(
                 # If we can't get pool info and throughput is still None, set a safe default
                 # This is important for manual QoS pools
                 if destination_throughput_mibps is None:
-                    size_gib = destination_usage_threshold / (1024 * 1024 * 1024)
-                    if destination_service_level.lower() == "standard":
-                        destination_throughput_mibps = max(16.0, size_gib * 0.016)
-                    elif destination_service_level.lower() == "premium":
-                        destination_throughput_mibps = max(64.0, size_gib * 0.064)
-                    elif destination_service_level.lower() == "ultra":
-                        destination_throughput_mibps = max(128.0, size_gib * 0.128)
-                    else:
-                        destination_throughput_mibps = 64.0
-                    
+                    destination_throughput_mibps = _calculate_min_throughput_mibps(
+                        destination_service_level, destination_usage_threshold
+                    )
                     if print_output:
                         logger.info(f"Using calculated throughput_mibps (pool QoS type unavailable): {destination_throughput_mibps}")
             

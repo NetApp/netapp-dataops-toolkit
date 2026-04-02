@@ -15,7 +15,6 @@ from netapp_dataops.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
 
-
 def create_snapshot(
     snapshot_name: str,
     volume_name: str,

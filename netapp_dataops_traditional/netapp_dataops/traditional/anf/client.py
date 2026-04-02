@@ -1,93 +1,96 @@
 """
 NetApp DataOps Toolkit - Azure NetApp Files (ANF) Client Management
 This module handles Azure client authentication and management for ANF operations.
+
+Authentication is handled via DefaultAzureCredential, which automatically chains
+through the following methods (in order) without requiring environment variables:
+  1. Managed Identity (production: Azure VMs, AKS, App Service, etc.)
+  2. Workload Identity (Kubernetes with Azure AD Workload Identity)
+  3. Azure CLI ('az login' for local development)
+  4. Azure Developer CLI, VS Code, PowerShell, and others
+
+No secrets or environment variables are required. For local development, run:
+  az login --tenant <TENANT_ID>
+  az account set --subscription <SUBSCRIPTION_ID>
 """
 
 from typing import Tuple, Optional
-from azure.identity import AzureCliCredential
+from azure.identity import DefaultAzureCredential
 from azure.mgmt.netapp import NetAppManagementClient
+from azure.mgmt.resource.subscriptions import SubscriptionClient
 from azure.core.exceptions import ClientAuthenticationError
 
 from netapp_dataops.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
 
+
 class ANFClientManager:
     """Singleton class for managing Azure NetApp Files client connections."""
-    
+
     _instance: Optional['ANFClientManager'] = None
     _client: Optional[NetAppManagementClient] = None
-    
+    _subscription_id: Optional[str] = None
+
     def __new__(cls) -> 'ANFClientManager':
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
-    
-    def get_client(self, subscription_id: str, print_output: Optional[bool] = False) -> NetAppManagementClient:
+
+    def get_client(self, subscription_id: str, credential: DefaultAzureCredential, print_output: Optional[bool] = False) -> NetAppManagementClient:
         """
-        Get or create an authenticated NetApp Management Client.
+        Get or create an authenticated NetApp Management Client using DefaultAzureCredential.
+        Re-creates the client if the subscription ID has changed.
         """
-        if self._client is None or self._client._config.subscription_id != subscription_id:
-            # Use AzureCliCredential to specifically respect 'az login' and 'az account set'
-            credential = AzureCliCredential()
+        if self._client is None or self._subscription_id != subscription_id:
+            if self._client is not None and self._subscription_id != subscription_id:
+                if print_output:
+                    logger.info(f"Subscription changed from '{self._subscription_id}' to '{subscription_id}'. Re-initializing ANF client.")
             try:
                 self._client = NetAppManagementClient(credential, subscription_id)
+                self._subscription_id = subscription_id
             except Exception as e:
                 raise ClientAuthenticationError(f"Failed to initialize ANF client: {str(e)}")
-        
+
         return self._client
 
 
 def get_anf_client(print_output: bool = False) -> Tuple[NetAppManagementClient, str]:
     """
     Convenience function to get an authenticated ANF client.
-    Automatically fetches the active Subscription ID from the 'az account show' context.
-    """
-    import subprocess
-    import json
-    
-    try:
-        # Get the currently active subscription from Azure CLI
-        # This respects 'az account set --subscription <id>'
-        result = subprocess.run(
-            ['az', 'account', 'show'],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        
-        account_info = json.loads(result.stdout)
 
-        if 'id' not in account_info:
+    Uses DefaultAzureCredential for authentication and SubscriptionClient to
+    resolve the active subscription ID — no dependency on the az CLI at runtime.
+    """
+    try:
+        credential = DefaultAzureCredential()
+
+        # Resolve the active subscription via the Azure SDK (no az CLI required)
+        subscription_client = SubscriptionClient(credential)
+        subscriptions = list(subscription_client.subscriptions.list())
+
+        if not subscriptions:
             raise ClientAuthenticationError(
-                "Azure CLI output did not contain a subscription 'id'. "
-                "Please run: az login --tenant <TENANT_ID>"
+                "No Azure subscriptions found for the authenticated identity. "
+                "Ensure the credential has access to at least one subscription."
             )
 
-        subscription_id = account_info['id']
-        
+        # Use the first available subscription (respects az account set via CLI credential)
+        subscription = subscriptions[0]
+        subscription_id = subscription.subscription_id
+
         if print_output:
-            subscription_name = account_info.get('name', 'unknown')
-            logger.info(f"Connected to ANF via Active Subscription: {subscription_name} ({subscription_id})")
-    
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Azure CLI returned error: {e.stderr}")
+            logger.info(f"Connected to ANF via Active Subscription: {subscription.display_name} ({subscription_id})")
+
+    except ClientAuthenticationError:
+        raise
+    except Exception as e:
         raise ClientAuthenticationError(
-            f"Failed to get active subscription from Azure CLI: {e.stderr}\n"
-            "Please run: az login --tenant <TENANT_ID>"
+            f"Failed to authenticate with Azure: {str(e)}\n"
+            "Please run: az login or az login --tenant <TENANT_ID>\n"
         )
-    except json.JSONDecodeError as e:
-        logger.error(f"Azure CLI output not valid JSON: {str(e)}")
-        raise ClientAuthenticationError(f"Failed to parse Azure CLI output: {str(e)}")
-    except FileNotFoundError:
-        logger.error("Azure CLI (az) not found in PATH")
-        raise ClientAuthenticationError(
-            "Azure CLI (az) not found. Please install it from: "
-            "https://docs.microsoft.com/en-us/cli/azure/install-azure-cli"
-        )
-    
-    # Use AzureCliCredential with the detected subscription
     manager = ANFClientManager()
-    client = manager.get_client(subscription_id, print_output=print_output)
-    
+    client = manager.get_client(subscription_id, credential, print_output=print_output)
+
     return client, subscription_id
+

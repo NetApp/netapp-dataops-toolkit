@@ -86,7 +86,7 @@ async def create_volume_tool(
             Optional. The name of a delegated Azure subnet to construct the Azure Resource ID for a delegated subnet.
             Will use config default if not provided, otherwise defaults to "default".
         service_level (str):
-            Optional. Service level (Standard, Premium, Ultra, StandardZRS, Flexible).
+            Optional. Service level (Standard, Premium, Ultra, Flexible).
             Defaults to Premium.
         tags (Dict[str, str]):
             Optional. Resource tags.
@@ -303,7 +303,7 @@ async def clone_volume_tool(
             Optional. The name of a delegated Azure subnet to construct the Azure Resource ID for a delegated subnet.
             Will use config default if not provided, otherwise defaults to "default".
         service_level (str):
-            Optional. Service level (Standard, Premium, Ultra, StandardZRS, Flexible).
+            Optional. Service level (Standard, Premium, Ultra, Flexible).
             Defaults to Premium.
         protocol_types (List[str]):
             Optional. List of protocol types (NFSv3, NFSv4.1, CIFS). Will use config default if not provided.
@@ -680,8 +680,9 @@ async def create_replication_tool(
         destination_subnet_name (str):
             Optional. Destination subnet name. Defaults to "default".
         destination_service_level (str):
-            Optional. Destination service level (Standard/Premium/Ultra).
-            Defaults to "Premium".
+            Optional. Destination service level (Standard/Premium/Ultra/Flexible).
+            If not provided, it will be retrieved from the destination capacity pool.
+            Must be one of: Standard, Premium, Ultra, Flexible.
         destination_zones (list):
             Optional. Availability zones for destination volume. If None, defaults to ["1"].
         

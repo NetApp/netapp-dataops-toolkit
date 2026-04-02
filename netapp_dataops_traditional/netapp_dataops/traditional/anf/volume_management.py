@@ -11,8 +11,8 @@ from azure.mgmt.netapp.models import (
     ExportPolicyRule,
 )
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
-from .client import get_anf_client
-from .base import _serialize, _validate_required_params, _get_clean_error_message
+from .client import _get_anf_client
+from .base import _serialize, _validate_required_params, _get_clean_error_message, _calculate_min_throughput_mibps
 from .config import _retrieve_anf_config, _get_config_value, InvalidConfigError
 
 from netapp_dataops.logging_utils import setup_logger
@@ -176,7 +176,7 @@ def create_volume(
             If enabled (true) the volume will contain a read-only snapshot directory which provides access to each of the volume's snapshots.
             Defaults to true.
         network_features (str):
-            Optional. Network features (Basic, Standard, Basic_Standard, Standard_Basic).
+            Optional. Network features (Basic, Standard).
             Defaults to Basic.
         encryption_key_source (str):
             Optional. Key source for encryption (Microsoft.NetApp, Microsoft.KeyVault).
@@ -649,17 +649,7 @@ def clone_volume(
                     logger.info(f"Using throughput_mibps from source volume: {throughput_mibps}")
             else:
                 # Calculate minimum throughput based on service level and size
-                # This is a fallback - user should ideally provide explicit value
-                size_gib = usage_threshold / (1024 * 1024 * 1024)
-                if resolved_service_level.lower() == "standard":
-                    throughput_mibps = max(16, size_gib * 0.016)  # 16 MiB/s per TiB, min 16
-                elif resolved_service_level.lower() == "premium":
-                    throughput_mibps = max(64, size_gib * 0.064)  # 64 MiB/s per TiB, min 64
-                elif resolved_service_level.lower() == "ultra":
-                    throughput_mibps = max(128, size_gib * 0.128)  # 128 MiB/s per TiB, min 128
-                else:
-                    throughput_mibps = 64  # Default fallback
-                
+                throughput_mibps = _calculate_min_throughput_mibps(resolved_service_level, usage_threshold)
                 if print_output:
                     logger.info(f"Calculated throughput_mibps for manual QoS: {throughput_mibps}")
 
@@ -883,7 +873,7 @@ def list_volumes(
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
 
-    Returns:    Returns:
+    Returns:
         Dictionary with status and list of volumes
 
     Raises:

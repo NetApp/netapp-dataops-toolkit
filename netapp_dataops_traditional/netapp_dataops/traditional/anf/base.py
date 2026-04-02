@@ -7,6 +7,30 @@ This module contains base utilities and helper functions for ANF operations.
 from typing import Any, Dict
 
 
+def _calculate_min_throughput_mibps(service_level: str, usage_threshold_bytes: int) -> float:
+    """
+    Calculate the minimum throughput in MiB/s for a manual QoS volume based on
+    service level and size.
+
+    Args:
+        service_level (str): One of Standard, Premium, Ultra, Flexible.
+        usage_threshold_bytes (int): Volume quota in bytes.
+
+    Returns:
+        float: Minimum throughput in MiB/s.
+    """
+    size_gib = usage_threshold_bytes / (1024 * 1024 * 1024)
+    level = service_level.lower()
+    if level == "standard":
+        return max(16.0, size_gib * 0.016)
+    elif level == "premium":
+        return max(64.0, size_gib * 0.064)
+    elif level == "ultra":
+        return max(128.0, size_gib * 0.128)
+    else:
+        return 64.0
+
+
 def _validate_required_params(**params) -> None:
     """Validate that all required parameters are provided.
     

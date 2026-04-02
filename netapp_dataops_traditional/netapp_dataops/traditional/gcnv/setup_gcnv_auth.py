@@ -58,13 +58,12 @@ def setup_gcnv_auth() -> None:
     print("Configuration")
     print("-" * 13)
 
-    
-    project_id = input(f"  Enter Project ID: ").strip()
+    project_id = input("  Enter Project ID: ").strip()
     if not project_id:
         print("Error: Project ID is required.")
         sys.exit(1)
 
-    user_email = input(f"  Enter Your email: ").strip()
+    user_email = input("  Enter Your email: ").strip()
     if not user_email:
         print("Error: Email is required.")
         sys.exit(1)
