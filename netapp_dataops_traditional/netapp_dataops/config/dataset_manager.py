@@ -570,7 +570,20 @@ class DatasetManagerConfigurator:
             except Exception as e:
                 logger.info(f"  ERROR: Failed to write temporary file: {e}")
                 return False
-            
+
+            # Step 6b: Create /etc/fstab if it does not exist
+            if not os.path.exists(fstab_path):
+                try:
+                    if needs_sudo:
+                        subprocess.run(['sudo', 'touch', fstab_path], check=True,
+                                      capture_output=True, text=True)
+                    else:
+                        open(fstab_path, 'w').close()
+                    logger.info(f"  Created new /etc/fstab")
+                except Exception as e:
+                    logger.info(f"  ERROR: Failed to create /etc/fstab: {e}")
+                    return False
+
             # Step 7: Execute all operations in a single sudo session if needed
             if needs_sudo:
                 logger.info("  Elevated privileges required to modify /etc/fstab...")

@@ -75,16 +75,38 @@ def _instantiate_connection(config: Dict[str, Any], connectionType: str = "ONTAP
 
         ssl_cert_path = _get_ssl_cert_path(config)
 
-        # Security: verify is always True to enforce SSL certificate validation.
-        # When ssl_cert_path is provided, _apply_custom_ssl_context pins the
-        # CA cert and relaxes hostname/SAN checks (common for ONTAP self-signed
-        # certs) while still verifying the certificate chain.
-        netappConfig.CONNECTION = NetAppHostConnection(
+        # Extract a custom port if the hostname is in "host:port" format.
+        # This avoids the double-port URL issue (e.g., host:8001:443) that
+        # occurs when the ONTAP SDK appends its default port 443 to a hostname
+        # that already contains a port number.
+        custom_port = None
+        if ":" in ontapClusterMgmtHostname:
+            host_part, port_part = ontapClusterMgmtHostname.rsplit(":", 1)
+            if port_part.isdigit():
+                port_num = int(port_part)
+                if 1 <= port_num <= 65535:
+                    ontapClusterMgmtHostname = host_part
+                    custom_port = port_num
+                else:
+                    raise InvalidConfigError(
+                        f"Invalid port number '{port_num}' in hostname '{config['hostname']}'. "
+                        "Port must be between 1 and 65535."
+                    )
+
+        connection_kwargs = dict(
             host=ontapClusterMgmtHostname,
             username=ontapClusterAdminUsername,
             password=ontapClusterAdminPassword,
             verify=True,
         )
+        if custom_port is not None:
+            connection_kwargs["port"] = custom_port
+
+        # Security: verify is always True to enforce SSL certificate validation.
+        # When ssl_cert_path is provided, _apply_custom_ssl_context pins the
+        # CA cert and relaxes hostname/SAN checks (common for ONTAP self-signed
+        # certs) while still verifying the certificate chain.
+        netappConfig.CONNECTION = NetAppHostConnection(**connection_kwargs)
 
         if ssl_cert_path:
             _apply_custom_ssl_context(netappConfig.CONNECTION, ssl_cert_path)
