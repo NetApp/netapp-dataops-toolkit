@@ -7,7 +7,7 @@ This module provides replication management operations for Azure NetApp Files.
 from typing import Dict, List, Any
 from azure.mgmt.netapp.models import AuthorizeRequest
 from azure.core.exceptions import ResourceNotFoundError
-from .client import _get_anf_client
+from .client import get_anf_client
 from .base import _serialize, _validate_required_params, _get_clean_error_message, _calculate_min_throughput_mibps
 from .config import _retrieve_anf_config, _get_config_value, InvalidConfigError
 
