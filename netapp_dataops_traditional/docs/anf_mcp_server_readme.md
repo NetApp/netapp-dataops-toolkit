@@ -47,9 +47,9 @@ After installation, the `netapp_dataops_anf_mcp.py` command will be available in
 
 ### Azure Authentication
 
-Before the MCP server can be used to perform ANF operations, you must authenticate with Azure and ensure proper setup:
+The MCP server uses **Azure CLI authentication** (`AzureCliCredential`) and automatically retrieves your subscription ID from the active Azure CLI session.
 
-#### Option 1: Azure CLI Authentication (Recommended)
+#### Required Setup
 
 1. **Install Azure CLI**: Follow the [installation guide](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli)
 
@@ -58,35 +58,34 @@ Before the MCP server can be used to perform ANF operations, you must authentica
    az login
    ```
 
-3. **Set your default subscription**:
+3. **If you have access to multiple tenants, specify the tenant ID**:
    ```bash
-   az account set --subscription "YOUR_SUBSCRIPTION_ID"
+   az login --tenant <TENANT-ID>
    ```
 
-4. **Register NetApp resource provider** (if not already registered):
+4. **If you have multiple subscriptions, set the active one**:
    ```bash
-   az provider register --namespace Microsoft.NetApp
+   az account set --subscription <SUBSCRIPTION_ID>
    ```
 
-5. **Verify NetApp provider is registered**:
+5. **Verify your active subscription**:
    ```bash
-   az provider show --namespace Microsoft.NetApp --query "registrationState"
+   az account show
    ```
 
-#### Option 2: Service Principal Authentication
+#### How It Works
 
-1. **Create a service principal**:
-   ```bash
-   az ad sp create-for-rbac --name "netapp-dataops-sp" --role "NetApp Contributor" --scopes /subscriptions/YOUR_SUBSCRIPTION_ID
-   ```
+- The MCP server automatically runs `az account show` to detect your active subscription
+- Subscription ID is retrieved dynamically on each operation
+- Respects your Azure CLI tenant and subscription context
+- No need to configure or store subscription ID in config files or environment variables
 
-2. **Set environment variables**:
-   ```bash
-   export AZURE_CLIENT_ID="service-principal-app-id"
-   export AZURE_CLIENT_SECRET="service-principal-password"
-   export AZURE_TENANT_ID="your-tenant-id"
-   export AZURE_SUBSCRIPTION_ID="your-subscription-id"
-   ```
+#### Benefits
+
+- **Simplified Setup**: No subscription ID in config files or function parameters
+- **Better Security**: Subscription ID not stored anywhere
+- **Multi-Tenant Support**: Easy switching between tenants/subscriptions with Azure CLI
+- **Automatic Detection**: Works seamlessly with your Azure CLI context
 
 ### ANF Configuration (Optional)
 
@@ -103,7 +102,6 @@ create_anf_config()
 ```
 
 This interactive setup will prompt you for:
-- Azure Subscription ID
 - Resource Group Name
 - NetApp Account Name
 - Capacity Pool Name
@@ -122,7 +120,6 @@ The configuration file is stored at `~/.netapp_dataops/anf_config.json` and cont
 
 ```json
 {
-  "subscriptionId": "your-azure-subscription-id",
   "resourceGroupName": "your-resource-group",
   "accountName": "your-netapp-account", 
   "poolName": "your-capacity-pool",
@@ -132,6 +129,8 @@ The configuration file is stored at `~/.netapp_dataops/anf_config.json` and cont
   "protocolTypes": ["NFSv3"]
 }
 ```
+
+> **📝 Note:** The subscription ID is **not** stored in the configuration file. It is automatically retrieved from your active Azure CLI session using `az account show`.
 
 #### Configuration Benefits and Usage
 
@@ -226,19 +225,6 @@ For development or testing purposes:
   }
 }
 ```
-
-## Environment Variables
-
-You can optionally set these environment variables for authentication:
-
-### Azure CLI Authentication
-- `AZURE_SUBSCRIPTION_ID`: Your Azure subscription ID
-
-### Service Principal Authentication
-- `AZURE_CLIENT_ID`: Service principal application (client) ID
-- `AZURE_CLIENT_SECRET`: Service principal password/secret
-- `AZURE_TENANT_ID`: Azure Active Directory tenant ID
-- `AZURE_SUBSCRIPTION_ID`: Azure subscription ID
 
 ## Tool Examples
 
@@ -370,7 +356,8 @@ az network vnet subnet show --resource-group YOUR_RG --vnet-name YOUR_VNET --nam
 # Test ANF configuration (if using config file)
 python -c "
 from netapp_dataops.traditional.anf.config import get_config_value
-print('Config test:', get_config_value('subscriptionId'))
+print('Config test - Resource Group:', get_config_value('resource_group_name'))
+print('Config test - Account:', get_config_value('account_name'))
 "
 ```
 
@@ -388,10 +375,12 @@ print('Config test:', get_config_value('subscriptionId'))
 - Volume cloning is near-instantaneous but requires snapshots
 
 ### Security Best Practices
-- Use service principals for production environments
+- Use Azure CLI authentication for secure, credential-free access
+- Regularly review and update Azure role assignments
 - Implement proper network security groups and access controls
 - Enable encryption at rest and in transit where required
-- Regularly rotate authentication credentials
+- Use Azure managed identities for production workloads where possible
+- Leverage Azure Active Directory for centralized authentication
 
 ## Support
 

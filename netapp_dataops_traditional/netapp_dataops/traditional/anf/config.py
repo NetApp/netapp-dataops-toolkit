@@ -26,7 +26,6 @@ class InvalidConfigError(Exception):
 
 
 def create_anf_config(
-    subscription_id: str = None,
     resource_group_name: str = None, 
     account_name: str = None,
     pool_name: str = None,
@@ -44,7 +43,6 @@ def create_anf_config(
     2. Interactive mode: When no parameters are provided (backward compatibility)
     
     Args:
-        subscription_id (str): Optional. Azure subscription ID. If None, runs in interactive mode.
         resource_group_name (str): Optional. The name of the resource group.
         account_name (str): Optional. The name of the NetApp account.
         pool_name (str): Optional. The name of the capacity pool.
@@ -59,13 +57,17 @@ def create_anf_config(
     Returns:
         Dict[str, Any]: Status and details in programmatic mode, None in interactive mode.
         
+    Note:
+        Service level is automatically retrieved from the capacity pool during config creation
+        and stored in the config file for future use.
+        
     Raises:
         InvalidConfigError: If there's an error creating the config file.
     """
     # If all required parameters for programmatic mode are provided, use programmatic mode
-    if all([subscription_id, resource_group_name, account_name, pool_name, location, virtual_network_name]):
+    if all([resource_group_name, account_name, pool_name, location, virtual_network_name]):
         return _create_anf_config_programmatic(
-            subscription_id, resource_group_name, account_name, pool_name, 
+            resource_group_name, account_name, pool_name, 
             location, virtual_network_name, subnet_name, protocol_types, 
             print_output, config_dir_path, config_filename
         )
@@ -76,7 +78,6 @@ def create_anf_config(
 
 
 def _create_anf_config_programmatic(
-    subscription_id: str,
     resource_group_name: str, 
     account_name: str,
     pool_name: str,
@@ -92,7 +93,6 @@ def _create_anf_config_programmatic(
     Create an ANF configuration file with provided parameters (programmatic mode).
     
     Args:
-        subscription_id (str): Azure subscription ID.
         resource_group_name (str): The name of the resource group.
         account_name (str): The name of the NetApp account.
         pool_name (str): The name of the capacity pool.
@@ -122,15 +122,26 @@ def _create_anf_config_programmatic(
         if print_output:
             logger.info(f"Creating ANF configuration file: {config_file_path}")
         
+        # Retrieve service level from capacity pool
+        if print_output:
+            logger.info(f"Retrieving service level from capacity pool '{pool_name}'...")
+        
+        service_level = _get_service_level_from_pool(
+            resource_group_name=resource_group_name,
+            account_name=account_name,
+            pool_name=pool_name,
+            print_output=print_output
+        )
+        
         # Create configuration dictionary
         config = {
-            "subscriptionId": subscription_id,
             "resourceGroupName": resource_group_name,
             "accountName": account_name,
             "poolName": pool_name,
             "location": location,
             "virtualNetworkName": virtual_network_name,
             "subnetName": subnet_name,
+            "serviceLevel": service_level,
             "protocolTypes": protocol_types
         }
         
@@ -188,105 +199,112 @@ def create_anf_config_interactive(config_dir_path: str = DEFAULT_CONFIG_DIR, con
     config_file_path = os.path.join(config_dir_path, config_filename)
     
     # Print welcome banner
-    print("\n" + "=" * 60)
-    print("=== NetApp DataOps Toolkit - ANF Configuration Setup ===")
+    print("NetApp DataOps Toolkit - ANF Configuration")
     print("=" * 60)
-    print("\nThis wizard will help you create a configuration file for Azure NetApp Files.")
-    print(f"The configuration will be saved to: {config_file_path}")
     
     if os.path.isfile(config_file_path):
-        print(f"\nWARNING: An existing config file was found at {config_file_path}")
-        print("Creating a new config file will overwrite the existing configuration.")
-        
-        # If existing config file is present, ask user if they want to proceed
+        print(f"\nWarning: Existing config found at {config_file_path}")
         while True:
-            proceed = input("\nAre you sure that you want to proceed? (yes/no): ").lower()
+            proceed = input("Overwrite? (yes/no): ").lower()
             if proceed == "yes":
                 break
             elif proceed == "no":
-                print("Configuration setup cancelled.")
+                print("Cancelled.")
                 sys.exit(0)
             else:
-                print("Invalid value. Must enter 'yes' or 'no'.")
-    else:
-        input("\nPress Enter to continue or Ctrl+C to cancel...")
+                print("Please enter 'yes' or 'no'.")
 
-    # Instantiate dict for storing connection details
     config = dict()
 
-    # Prompt user to enter Azure subscription details
-    print("\n" + "=" * 40)
-    print("=== Azure Subscription Configuration ===")
-    print("=" * 40)
-    config["subscriptionId"] = input("Enter your Azure subscription ID: ")
+    # Infrastructure
+    print("\nInfrastructure")
+    print("--------------")
+    config["resourceGroupName"] = input("  Enter resource group name           : ").strip()
+    if not config["resourceGroupName"]:
+        print("\nError: Resource group name is required.")
+        sys.exit(1)
+    
+    config["accountName"] = input("  Enter NetApp account name           : ").strip()
+    if not config["accountName"]:
+        print("\nError: NetApp account name is required.")
+        sys.exit(1)
+    
+    config["poolName"] = input("  Enter capacity pool name            : ").strip()
+    if not config["poolName"]:
+        print("\nError: Capacity pool name is required.")
+        sys.exit(1)
+    
+    config["location"] = input("  Enter Azure region (e.g., eastus)   : ").strip()
+    if not config["location"]:
+        print("\nError: Azure region is required.")
+        sys.exit(1)
 
-    # Prompt user to enter infrastructure config details
-    print("\n" + "=" * 35)
-    print("=== Infrastructure Configuration ===")
-    print("=" * 35)
-    config["resourceGroupName"] = input("Enter resource group name: ")
-    config["accountName"] = input("Enter NetApp account name: ")
-    config["poolName"] = input("Enter capacity pool name: ")
-    config["location"] = input("Enter Azure region (e.g., 'eastus', 'westus2'): ")
+    # Network
+    print("\nNetwork")
+    print("-------")
+    config["virtualNetworkName"] = input("  Enter virtual network name          : ").strip()
+    if not config["virtualNetworkName"]:
+        print("\nError: Virtual network name is required.")
+        sys.exit(1)
+    
+    config["subnetName"] = input("  Enter subnet name [default]         : ").strip() or "default"
 
-    # Prompt user to enter network configuration
-    print("\n" + "=" * 30)
-    print("=== Network Configuration ===")
-    print("=" * 30)
-    config["virtualNetworkName"] = input("Enter virtual network name: ")
-    config["subnetName"] = input("Enter subnet name [default]: ") or "default"
-
-    # Prompt user to enter default protocol types
-    print("\n" + "=" * 30)
-    print("=== Protocol Configuration ===")
-    print("=" * 30)
-    print("Enter default protocol types (comma-separated):")
-    print("  Available options: NFSv3, NFSv4.1, CIFS")
-    print("  Example: NFSv3,NFSv4.1")
+    # Protocols
+    print("\nProtocols")
+    print("---------")
+    print("  Options: NFSv3, NFSv4.1, CIFS (comma-separated)")
     
     while True:
-        protocol_input = input("  Default [NFSv3]: ") or "NFSv3"
-        # Parse comma-separated input
+        protocol_input = input("  Enter protocols (default [NFSv3])   : ") or "NFSv3"
         protocol_types = [p.strip() for p in protocol_input.split(',')]
         
-        # Validate protocol types
         valid_protocols = ["NFSv3", "NFSv4.1", "CIFS"]
         invalid_protocols = [p for p in protocol_types if p not in valid_protocols]
         
         if invalid_protocols:
-            print(f"Error: Invalid protocol types: {invalid_protocols}")
-            print(f"Valid options are: {valid_protocols}")
+            print(f"Invalid: {invalid_protocols}. Valid: {valid_protocols}")
         else:
             config["protocolTypes"] = protocol_types
             break
 
-    # Display configuration summary
-    print("\n" + "=" * 35)
-    print("=== Configuration Summary ===")
-    print("=" * 35)
-    
-    # Mask subscription ID for display
-    masked_subscription = config["subscriptionId"][:8] + "-****-****-****-********" + config["subscriptionId"][-4:]
-    
-    print(f"Subscription ID: {masked_subscription}")
-    print(f"Resource Group: {config['resourceGroupName']}")
-    print(f"NetApp Account: {config['accountName']}")
-    print(f"Capacity Pool: {config['poolName']}")
-    print(f"Location: {config['location']}")
-    print(f"Virtual Network: {config['virtualNetworkName']}")
-    print(f"Subnet: {config['subnetName']}")
-    print(f"Protocol Types: {config['protocolTypes']}")
+    # Retrieve service level
+    try:
+        service_level = _get_service_level_from_pool(
+            resource_group_name=config["resourceGroupName"],
+            account_name=config["accountName"],
+            pool_name=config["poolName"],
+            print_output=False
+        )
+        config["serviceLevel"] = service_level
+    except Exception as e:
+        print(f"ERROR: {str(e)}")
+        print("\nFailed to retrieve service level (required).")
+        print("Check: 1) az login, 2) pool exists, 3) permissions")
+        logger.error(f"Service level retrieval failed: {str(e)}")
+        sys.exit(1)
+
+    # Summary
+    print("\nConfiguration Summary")
+    print("=====================")
+    print(f"  Resource Group  : {config['resourceGroupName']}")
+    print(f"  Account         : {config['accountName']}")
+    print(f"  Pool            : {config['poolName']}")
+    print(f"  Location        : {config['location']}")
+    print(f"  VNet            : {config['virtualNetworkName']}")
+    print(f"  Subnet          : {config['subnetName']}")
+    print(f"  Service Level   : {config.get('serviceLevel', 'N/A')}")
+    print(f"  Protocols       : {', '.join(config['protocolTypes'])}")
 
     # Confirm before saving
     while True:
-        save_config = input("\nSave this configuration? [y/N]: ").lower()
+        save_config = input("\nSave configuration? [y/N]: ").lower()
         if save_config in ['y', 'yes']:
             break
         elif save_config in ['n', 'no', '']:
-            print("Configuration setup cancelled.")
+            print("Cancelled.")
             sys.exit(0)
         else:
-            print("Please enter 'y' for yes or 'n' for no.")
+            print("Enter 'y' or 'n'.")
 
     # Create config dir if it doesn't already exist
     try:
@@ -304,32 +322,6 @@ def create_anf_config_interactive(config_dir_path: str = DEFAULT_CONFIG_DIR, con
         raise InvalidConfigError(f"Failed to write config file: {str(e)}")
 
     print(f"\nConfiguration saved successfully to: {config_file_path}")
-    
-    # Display next steps
-    print("\n" + "=" * 20)
-    print("=== Next Steps ===")
-    print("=" * 20)
-    print("You can now use simplified function calls:")
-    print("  ")
-    print("  # Before config - specify all parameters")
-    print("  create_volume(")
-    print('      volume_name="my-volume",')
-    print('      creation_token="my-vol-001",')
-    print('      usage_threshold=107374182400,')
-    print(f'      resource_group_name="{config["resourceGroupName"]}",')
-    print(f'      account_name="{config["accountName"]}",')
-    print("      # ... many more parameters")
-    print("  )")
-    print("  ")
-    print("  # After config - specify only unique parameters  ")
-    print("  create_volume(")
-    print('      volume_name="my-volume",')
-    print('      creation_token="my-vol-001",')
-    print('      usage_threshold=107374182400')
-    print("      # All infrastructure parameters loaded from config!")
-    print("  )")
-    print("\nConfiguration setup complete!")
-
     logger.info(f"Created ANF config file: {config_file_path}")
 
 
@@ -374,8 +366,8 @@ def _retrieve_anf_config(config_dir_path: str = DEFAULT_CONFIG_DIR, config_filen
         raise InvalidConfigError(error_msg)
     
     # Validate required config fields
-    required_fields = ["subscriptionId", "resourceGroupName", "accountName", "poolName", 
-                      "location", "virtualNetworkName", "subnetName", "protocolTypes"]
+    required_fields = ["resourceGroupName", "accountName", "poolName", 
+                      "location", "virtualNetworkName", "subnetName", "serviceLevel", "protocolTypes"]
     
     missing_fields = [field for field in required_fields if field not in config or not config[field]]
     if missing_fields:
@@ -390,7 +382,7 @@ def _retrieve_anf_config(config_dir_path: str = DEFAULT_CONFIG_DIR, config_filen
     return config
 
 
-def get_config_value(parameter_name: str, function_value: Any, config: Dict[str, Any], 
+def _get_config_value(parameter_name: str, function_value: Any, config: Dict[str, Any], 
                     print_output: bool = False) -> Any:
     """
     Get parameter value with function parameter taking precedence over config.
@@ -413,13 +405,13 @@ def get_config_value(parameter_name: str, function_value: Any, config: Dict[str,
     
     # Map function parameter names to config keys
     config_key_map = {
-        'subscription_id': 'subscriptionId',
         'resource_group_name': 'resourceGroupName', 
         'account_name': 'accountName',
         'pool_name': 'poolName',
         'location': 'location',
         'virtual_network_name': 'virtualNetworkName',
         'subnet_name': 'subnetName',
+        'service_level': 'serviceLevel',
         'protocol_types': 'protocolTypes'
     }
     
@@ -436,12 +428,56 @@ def get_config_value(parameter_name: str, function_value: Any, config: Dict[str,
     raise InvalidConfigError(error_msg)
 
 
-def _print_invalid_config_error() -> None:
-    """Print detailed error message for invalid config."""
-    print("\nANF Configuration Error")
-    print("Your ANF configuration file is missing or invalid.")
-    print("\nTo fix this issue:")
-    print("1. Run: from netapp_dataops.traditional.anf.config import create_anf_config")
-    print("2. Run: create_anf_config()")
-    print("3. Follow the interactive prompts to set up your ANF environment")
-    print("\nThis will create a config file with your Azure infrastructure details.")
+def _get_service_level_from_pool(
+    resource_group_name: str,
+    account_name: str,
+    pool_name: str,
+    print_output: bool = False
+) -> str:
+    """
+    Retrieve the service level from an Azure NetApp Files capacity pool.
+    
+    Args:
+        resource_group_name (str): The name of the resource group.
+        account_name (str): The name of the NetApp account.
+        pool_name (str): The name of the capacity pool.
+        print_output (bool): Whether to print debug output.
+        
+    Returns:
+        str: The service level of the capacity pool (Standard, Premium, or Ultra).
+        
+    Raises:
+        InvalidConfigError: If there's an error retrieving the capacity pool information.
+    """
+    try:
+        # Import here to avoid circular dependency
+        from .client import get_anf_client
+        
+        # Get authenticated client and subscription ID
+        client, _ = get_anf_client(print_output=print_output)
+        
+        # Retrieve the capacity pool
+        pool = client.pools.get(
+            resource_group_name=resource_group_name,
+            account_name=account_name,
+            pool_name=pool_name
+        )
+        
+        # Extract service level string value (e.g., "Standard" from enum)
+        service_level = str(pool.service_level)
+        # If it's an enum like "ServiceLevel.Standard", extract just "Standard"
+        if '.' in service_level:
+            service_level = service_level.split('.')[-1]
+        # Ensure only first letter is capitalized (e.g., "STANDARD" -> "Standard")
+        service_level = service_level.capitalize()
+        
+        if print_output:
+            logger.info(f"Retrieved service level '{service_level}' from capacity pool '{pool_name}'")
+        
+        return service_level
+        
+    except Exception as e:
+        error_msg = f"Failed to retrieve service level from capacity pool '{pool_name}': {str(e)}"
+        if print_output:
+            logger.error(error_msg)
+        raise InvalidConfigError(error_msg)
