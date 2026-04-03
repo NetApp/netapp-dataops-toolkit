@@ -857,6 +857,7 @@ if __name__ == '__main__':
                     allocate_resource = arg
                 elif opt in ("--no-https",):
                     enable_https = False
+                    logger.warning("WARNING: HTTPS has been disabled. The workspace password will be transmitted in plaintext over HTTP, making it vulnerable to network sniffing.")
 
             # Check for required options
             if not newWorkspaceName or (not sourceSnapshotName and not sourceWorkspaceName):
@@ -1025,6 +1026,7 @@ if __name__ == '__main__':
                     allocate_resource = arg
                 elif opt in ("--no-https",):
                     enable_https = False
+                    logger.warning("WARNING: HTTPS has been disabled. The workspace password will be transmitted in plaintext over HTTP, making it vulnerable to network sniffing.")
 
             # Check for required options
             if not workspaceName or not workspaceSize:
