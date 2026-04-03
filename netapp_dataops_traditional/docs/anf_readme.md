@@ -18,7 +18,7 @@ Built on the [Azure NetApp Files Python SDK](https://docs.microsoft.com/en-us/py
   - [Prerequisites](#prerequisites)
   - [Installation Instructions](#installation-instructions)
 - [Authentication](#authentication)
-  - [Azure CLI Authentication (Required)](#azure-cli-authentication-required)
+  - [Authentication Methods (DefaultAzureCredential)](#authentication-methods-defaultazurecredential)
 - [Configuration](#configuration)
   - [Option 1: Interactive Configuration (Recommended)](#option-1-interactive-configuration-recommended)
   - [Option 2: Manual Configuration](#option-2-manual-configuration)
@@ -104,44 +104,49 @@ python3 -m pip install 'netapp-dataops-traditional[azure]'
 
 ## Authentication
 
-The ANF module uses **Azure CLI authentication** (`AzureCliCredential`) and automatically retrieves your subscription ID from the active Azure CLI session.
+The ANF module uses **`DefaultAzureCredential`** from `azure-identity`, which automatically chains through multiple authentication methods without requiring any environment variables or secrets. The active subscription is resolved via the Azure SDK's `SubscriptionClient`.
 
-<a name="option-1-azure-cli-recommended"></a>
+<a name="authentication-methods-defaultazurecredential"></a>
 
-### Azure CLI Authentication (Required)
+### Authentication Methods (DefaultAzureCredential)
 
-**Required Setup:**
+`DefaultAzureCredential` automatically selects the appropriate credential based on the environment — no configuration required.
+
+> **No secrets or environment variables are required.** The credential resolves automatically based on the environment.
+
+#### Required Setup
+
+Authenticate once via Azure CLI:
+
 ```bash
 # Install Azure CLI (if not already installed)
 # https://docs.microsoft.com/en-us/cli/azure/install-azure-cli
 
-# Login to Azure
+# Login to Azure (opens browser)
 az login
 
 # If you have access to multiple tenants, specify the tenant ID
-az login --tenant <TENANT-ID>
+az login --tenant <TENANT_ID>
 
 # If you have multiple subscriptions, set the active one
 az account set --subscription <SUBSCRIPTION_ID>
 
-# Verify your active subscription
+# Verify active session (optional – subscription is auto-detected via the SDK)
 az account show
 ```
 
 **How It Works:**
-- The toolkit automatically runs `az account show` to detect your active subscription
-- Subscription ID is retrieved dynamically on each operation
-- Respects your Azure CLI tenant and subscription context
-- No need to configure or store subscription ID in config files or environment variables
+- `DefaultAzureCredential` is instantiated and passed to `SubscriptionClient`
+- The first available subscription is resolved via the Azure SDK
+- The resolved `subscription_id` is used to initialize `NetAppManagementClient`
+- The client is cached in a singleton (`ANFClientManager`) and reused across calls
 
 **Benefits:**
-- ✅ **Simplified Setup**: No subscription ID in config files or function parameters
-- ✅ **Better Security**: Subscription ID not stored anywhere
-- ✅ **Multi-tenant Support**: Automatically respects `az login --tenant`
-- ✅ **Multi-subscription Support**: Honors `az account set --subscription`
-- ✅ **Consistent Authentication**: Uses same credentials as Azure CLI
-
-**Note:** Service Principal and environment variable authentication methods are no longer supported. The module now exclusively uses Azure CLI authentication for consistency and security.
+- **Zero secrets** – No `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, or `AZURE_TENANT_ID` needed
+- **Portable** – Works in local dev, CI/CD, containers, and Azure-hosted environments
+- **Subscription auto-resolved** – No subscription ID in config files or function parameters
+- **Multi-tenant support** – Respects `az login --tenant` or workload identity federation
+- **Production-ready** – Managed Identity support means no credential rotation required
 
 ## Configuration
 
@@ -184,10 +189,10 @@ python3 -c "from netapp_dataops.traditional.anf.config import create_anf_config;
 **Note:** Subscription ID is NOT needed - it's automatically detected from your Azure CLI session.
 
 **Benefits:**
-- ⚡ **Simplified function calls** - Pass only unique parameters
-- 🎯 **Consistent defaults** - Reuse infrastructure settings across operations
-- 🛡️ **Reduced errors** - Pre-validated configuration values
-- 📝 **Version control friendly** - Config file can be shared across teams
+- **Simplified function calls** - Pass only unique parameters
+- **Consistent defaults** - Reuse infrastructure settings across operations
+- **Reduced errors** - Pre-validated configuration values
+- **Version control friendly** - Config file can be shared across teams
 
 ### Configuration File Location
 
@@ -209,7 +214,7 @@ The configuration is automatically saved to:
 }
 ```
 
-**Note:** Subscription ID is not stored in the config file. It's automatically retrieved from your Azure CLI session via `az account show`.
+**Note:** Subscription ID is not stored in the config file. It's automatically resolved at runtime via `DefaultAzureCredential` and the Azure SDK's `SubscriptionClient`.
 
 ### Usage with Configuration
 
@@ -1338,7 +1343,7 @@ czr_result = anf.create_replication(
 Report any issues via GitHub: https://github.com/NetApp/netapp-data-science-toolkit/issues.
 
 **Common Issues:**
-- **Authentication failures**: Ensure Azure CLI is logged in or service principal credentials are correct
+- **Authentication failures**: Ensure `az login` has been run for local development, or a Managed Identity is assigned in production
 - **Permission denied**: Verify NetApp Contributor role is assigned to your account/service principal
 - **Resource not found**: Check that NetApp Account, Capacity Pool, and delegated subnet exist
 - **Region limitations**: Verify Azure NetApp Files is available in your target region
