@@ -56,6 +56,9 @@ The MCP server uses **`DefaultAzureCredential`** from `azure-identity`, which au
 Authenticate once via Azure CLI:
 
 ```bash
+# Install Azure CLI (if not already installed)
+# https://docs.microsoft.com/en-us/cli/azure/install-azure-cli
+
 # Login to Azure (opens browser)
 az login
 
