@@ -98,12 +98,13 @@ def setup_gcnv_auth() -> None:
 
     # Step 4: Application Default Credentials
     print("\nStep 4/8  Application Default Credentials (browser will open)...")
-    run(['gcloud', 'auth', 'application-default', 'login'], capture=True)
-    cloudsdk_config = os.environ.get("CLOUDSDK_CONFIG", os.path.expanduser("~/.config/gcloud"))
-    adc_file = os.path.join(cloudsdk_config, "application_default_credentials.json")
-    if os.path.exists(adc_file):
+    run(['gcloud', 'auth', 'application-default', 'login'])
+    adc_file = os.path.realpath(os.path.expanduser("~/.config/gcloud/application_default_credentials.json"))
+    if os.path.isfile(adc_file):
         os.chmod(adc_file, 0o600)
-    print("ADC configured and credentials secured (chmod 600)")
+        print("ADC configured and credentials secured (chmod 600)")
+    else:
+        print("ADC file not found; skipping chmod.")
 
     # Step 5: Create service account
     print("\nStep 5/8  Create service account...")

@@ -47,45 +47,44 @@ After installation, the `netapp_dataops_anf_mcp.py` command will be available in
 
 ### Azure Authentication
 
-The MCP server uses **Azure CLI authentication** (`AzureCliCredential`) and automatically retrieves your subscription ID from the active Azure CLI session.
+The MCP server uses **`DefaultAzureCredential`** from `azure-identity`, which automatically selects the appropriate credential based on the environment — no configuration required. The active subscription is resolved via the Azure SDK's `SubscriptionClient`.
+
+> **No secrets or environment variables are required.** The credential resolves automatically based on the environment.
 
 #### Required Setup
 
-1. **Install Azure CLI**: Follow the [installation guide](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli)
+Authenticate once via Azure CLI:
 
-2. **Login to Azure**:
-   ```bash
-   az login
-   ```
+```bash
+# Install Azure CLI (if not already installed)
+# https://docs.microsoft.com/en-us/cli/azure/install-azure-cli
 
-3. **If you have access to multiple tenants, specify the tenant ID**:
-   ```bash
-   az login --tenant <TENANT-ID>
-   ```
+# Login to Azure (opens browser)
+az login
 
-4. **If you have multiple subscriptions, set the active one**:
-   ```bash
-   az account set --subscription <SUBSCRIPTION_ID>
-   ```
+# If you have access to multiple tenants, specify the tenant ID
+az login --tenant <TENANT_ID>
 
-5. **Verify your active subscription**:
-   ```bash
-   az account show
-   ```
+# If you have multiple subscriptions, set the active one
+az account set --subscription <SUBSCRIPTION_ID>
 
-#### How It Works
+# Verify active session (optional – subscription is auto-detected via the SDK)
+az account show
+```
 
-- The MCP server automatically runs `az account show` to detect your active subscription
-- Subscription ID is retrieved dynamically on each operation
-- Respects your Azure CLI tenant and subscription context
-- No need to configure or store subscription ID in config files or environment variables
 
-#### Benefits
+**How It Works:**
+- `DefaultAzureCredential` is instantiated and passed to `SubscriptionClient`
+- The first available subscription is resolved via the Azure SDK
+- The resolved `subscription_id` is used to initialize `NetAppManagementClient`
+- The client is cached in a singleton (`ANFClientManager`) and reused across calls
 
-- **Simplified Setup**: No subscription ID in config files or function parameters
-- **Better Security**: Subscription ID not stored anywhere
-- **Multi-Tenant Support**: Easy switching between tenants/subscriptions with Azure CLI
-- **Automatic Detection**: Works seamlessly with your Azure CLI context
+**Benefits:**
+- **Zero secrets** – No `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, or `AZURE_TENANT_ID` needed
+- **Portable** – Works in local dev, CI/CD, containers, and Azure-hosted environments
+- **Subscription auto-resolved** – No subscription ID in config files or function parameters
+- **Multi-tenant support** – Respects `az login --tenant`
+
 
 ### ANF Configuration (Optional)
 
@@ -130,7 +129,7 @@ The configuration file is stored at `~/.netapp_dataops/anf_config.json` and cont
 }
 ```
 
-> **📝 Note:** The subscription ID is **not** stored in the configuration file. It is automatically retrieved from your active Azure CLI session using `az account show`.
+> **📝 Note:** The subscription ID is **not** stored in the configuration file. It is automatically resolved at runtime via `DefaultAzureCredential` and the Azure SDK's `SubscriptionClient`.
 
 #### Configuration Benefits and Usage
 
@@ -281,7 +280,9 @@ Set up disaster recovery:
 1. **Authentication Failed**:
    ```bash
    az login
-   # or check service principal credentials
+   # or for a specific tenant
+   az login --tenant <TENANT_ID>
+   # verify active session
    az account show
    ```
 
@@ -379,7 +380,6 @@ print('Config test - Account:', get_config_value('account_name'))
 - Regularly review and update Azure role assignments
 - Implement proper network security groups and access controls
 - Enable encryption at rest and in transit where required
-- Use Azure managed identities for production workloads where possible
 - Leverage Azure Active Directory for centralized authentication
 
 ## Support
