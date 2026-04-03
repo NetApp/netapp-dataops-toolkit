@@ -72,6 +72,7 @@ az account set --subscription <SUBSCRIPTION_ID>
 az account show
 ```
 
+
 **How It Works:**
 - `DefaultAzureCredential` is instantiated and passed to `SubscriptionClient`
 - The first available subscription is resolved via the Azure SDK
@@ -82,7 +83,8 @@ az account show
 - **Zero secrets** – No `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, or `AZURE_TENANT_ID` needed
 - **Portable** – Works in local dev, CI/CD, containers, and Azure-hosted environments
 - **Subscription auto-resolved** – No subscription ID in config files or function parameters
-- **Multi-tenant support** – Respects `az login --tenant` or workload identity federation
+- **Multi-tenant support** – Respects `az login --tenant`
+
 
 ### ANF Configuration (Optional)
 
@@ -378,7 +380,6 @@ print('Config test - Account:', get_config_value('account_name'))
 - Regularly review and update Azure role assignments
 - Implement proper network security groups and access controls
 - Enable encryption at rest and in transit where required
-- Use Azure managed identities for production workloads where possible
 - Leverage Azure Active Directory for centralized authentication
 
 ## Support

@@ -135,6 +135,7 @@ az account set --subscription <SUBSCRIPTION_ID>
 az account show
 ```
 
+
 **How It Works:**
 - `DefaultAzureCredential` is instantiated and passed to `SubscriptionClient`
 - The first available subscription is resolved via the Azure SDK
@@ -145,7 +146,7 @@ az account show
 - **Zero secrets** – No `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, or `AZURE_TENANT_ID` needed
 - **Portable** – Works in local dev, CI/CD, containers, and Azure-hosted environments
 - **Subscription auto-resolved** – No subscription ID in config files or function parameters
-- **Multi-tenant support** – Respects `az login --tenant` or workload identity federation
+- **Multi-tenant support** – Respects `az login --tenant`
 - **Production-ready** – Managed Identity support means no credential rotation required
 
 ## Configuration
