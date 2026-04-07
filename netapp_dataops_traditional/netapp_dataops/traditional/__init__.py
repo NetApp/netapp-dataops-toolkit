@@ -4,7 +4,7 @@ from netapp_dataops.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
 
-__version__ = "3.0.0"
+__version__ = "3.1.0"
 
 from .exceptions import (
     InvalidConfigError,
