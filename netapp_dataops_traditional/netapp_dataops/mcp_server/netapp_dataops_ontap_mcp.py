@@ -489,7 +489,7 @@ async def create_flexcache_tool(
         raise
 
 
-@mcp.tool(name="Create CIFS Share")
+@mcp.tool(name="CreateCIFSShare")
 async def create_cifs_share_tool(
     name : str,
     volume_name : str,
@@ -540,7 +540,7 @@ async def create_cifs_share_tool(
         raise
 
 
-@mcp.tool(name="List CIFS Shares")
+@mcp.tool(name="ListCIFSShares")
 async def list_cifs_shares_tool(
     svm : Optional[str] = None,
     name_pattern : Optional[str] = None,
@@ -601,7 +601,7 @@ async def list_cifs_shares_tool(
         raise
 
 
-@mcp.tool(name="Get CIFS Share")
+@mcp.tool(name="GetCIFSShare")
 async def get_cifs_share_tool(
     name : str,
     svm : str,

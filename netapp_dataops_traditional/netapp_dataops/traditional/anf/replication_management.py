@@ -8,8 +8,8 @@ from typing import Dict, List, Any
 from azure.mgmt.netapp.models import AuthorizeRequest
 from azure.core.exceptions import ResourceNotFoundError
 from .client import get_anf_client
-from .base import _serialize, validate_required_params
-from .config import _retrieve_anf_config, get_config_value, InvalidConfigError
+from .base import _serialize, _validate_required_params, _get_clean_error_message, _calculate_min_throughput_mibps
+from .config import _retrieve_anf_config, _get_config_value, InvalidConfigError
 
 from netapp_dataops.logging_utils import setup_logger
 
@@ -17,8 +17,7 @@ logger = setup_logger(__name__)
 
 # Constants for validation
 VALID_PROTOCOL_TYPES = ["NFSv3", "NFSv4.1", "CIFS"]
-VALID_SERVICE_LEVELS = ["Standard", "Premium", "Ultra", "StandardZRS", "Flexible"]
-DEFAULT_SERVICE_LEVEL = "Premium"
+VALID_SERVICE_LEVELS = ["Standard", "Premium", "Ultra", "Flexible"]
 
 def create_replication(
     # Source volume parameters
@@ -36,12 +35,12 @@ def create_replication(
     destination_subnet_name: str = "default",
     destination_service_level: str = None,
     destination_zones: List[str] = None,
+    destination_throughput_mibps: float = None,
     # Source volume parameters (optional - will use config defaults)
     resource_group_name: str = None,
     account_name: str = None,
     pool_name: str = None,
     # Common parameters
-    subscription_id: str = None,
     print_output: bool = False
 ) -> Dict[str, Any]:
     """
@@ -78,10 +77,15 @@ def create_replication(
         destination_subnet_name (str):
             Optional. Destination subnet name. Defaults to "default".
         destination_service_level (str):
-            Optional. Destination service level (Standard/Premium/Ultra).
-            Defaults to "Premium".
+            Optional. Destination service level (Standard/Premium/Ultra/Flexible).
+            If not provided, it will be retrieved from the destination capacity pool.
+            Must be one of: Standard, Premium, Ultra, Flexible.
         destination_zones (List[str]):
             Optional. Availability zones for destination volume. If None, defaults to ["1"].
+        destination_throughput_mibps (float):
+            Optional. Throughput in MiB/s for destination volume.
+            Required when destination pool has manual QoS type.
+            Not applicable for auto QoS pools.
         
         # Source volume parameters (optional - will use config defaults)
         resource_group_name (str):
@@ -90,9 +94,6 @@ def create_replication(
             Optional. Source volume NetApp account name. Will use config default if not provided.
         pool_name (str):
             Optional. Source volume capacity pool name. Will use config default if not provided.
-
-        subscription_id (str):
-            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -120,16 +121,15 @@ def create_replication(
 
     # Resolve source volume parameters from function arguments or config
     try:
-        resolved_subscription_id = get_config_value('subscription_id', subscription_id, config, print_output)
-        resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
-        resolved_account_name = get_config_value('account_name', account_name, config, print_output)
-        resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
+        resolved_resource_group_name = _get_config_value('resource_group_name', resource_group_name, config, print_output)
+        resolved_account_name = _get_config_value('account_name', account_name, config, print_output)
+        resolved_pool_name = _get_config_value('pool_name', pool_name, config, print_output)
     except InvalidConfigError:
         raise
 
     try:
         # Validate input parameters (using resolved values for source volume)
-        validate_required_params(
+        _validate_required_params(
             resource_group_name=resolved_resource_group_name,
             account_name=resolved_account_name,
             pool_name=resolved_pool_name,
@@ -145,32 +145,18 @@ def create_replication(
             destination_virtual_network_name=destination_virtual_network_name
         )
         
-        # Set default service level if not provided
-        if destination_service_level is None:
-            destination_service_level = DEFAULT_SERVICE_LEVEL
-        
         # Validate protocol types
         invalid_protocols = [pt for pt in destination_protocol_types if pt not in VALID_PROTOCOL_TYPES]
         if invalid_protocols:
             error_message = f"Invalid protocol types: {invalid_protocols}. Valid options are: {VALID_PROTOCOL_TYPES}"
             logger.error(error_message)
-            if print_output:
-                print(error_message)
             return {"status": "error", "details": error_message}
         
-        # Validate service level
-        if destination_service_level not in VALID_SERVICE_LEVELS:
-            error_message = f"Invalid service level: '{destination_service_level}'. Valid options are: {VALID_SERVICE_LEVELS}"
-            logger.error(error_message)
-            if print_output:
-                print(error_message)
-            return {"status": "error", "details": error_message}
-        
-        # Get ANF client and subscription ID (using resolved value)
-        client, final_subscription_id = get_anf_client(resolved_subscription_id, print_output=print_output)
+        # Get ANF client and subscription ID (automatically retrieved from Azure CLI)
+        client, subscription_id = get_anf_client(print_output=print_output)
 
         # Construct source volume resource ID (using resolved values)
-        source_volume_resource_id = f"/subscriptions/{final_subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{resolved_account_name}/capacityPools/{resolved_pool_name}/volumes/{volume_name}"
+        source_volume_resource_id = f"/subscriptions/{subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{resolved_account_name}/capacityPools/{resolved_pool_name}/volumes/{volume_name}"
         
         # Initialize destination volume resource ID
         destination_volume_resource_id = None
@@ -180,8 +166,6 @@ def create_replication(
             if not all([destination_location, destination_creation_token, destination_virtual_network_name, destination_subnet_name]):
                 error_message = "For new destination volume, destination_location, destination_creation_token, destination_virtual_network_name, and destination_subnet_name are required"
                 logger.error(error_message)
-                if print_output:
-                    print(error_message)
                 return {"status": "error", "details": error_message}
             
             # Create the data protection volume
@@ -191,6 +175,88 @@ def create_replication(
             # Set default zones if not provided
             if destination_zones is None:
                 destination_zones = ["1"]
+            
+            # Check destination pool QoS type and handle throughput_mibps
+            try:
+                destination_pool = client.pools.get(
+                    resource_group_name=destination_resource_group_name,
+                    account_name=destination_account_name,
+                    pool_name=destination_pool_name
+                )
+
+                # If service level not provided, get it from destination pool
+                if destination_service_level is None:
+                    if hasattr(destination_pool, 'service_level') and destination_pool.service_level:
+                        destination_service_level = str(destination_pool.service_level).split('.')[-1].capitalize()
+                        if print_output:
+                            logger.info(f"Using service level from destination pool: {destination_service_level}")
+
+                # Validate service level after pool-lookup override
+                if destination_service_level is None:
+                    error_message = "destination_service_level is required and could not be retrieved from the destination pool"
+                    logger.error(error_message)
+                    return {"status": "error", "details": error_message}
+                if destination_service_level not in VALID_SERVICE_LEVELS:
+                    error_message = f"Invalid service level: '{destination_service_level}'. Valid options are: {VALID_SERVICE_LEVELS}"
+                    logger.error(error_message)
+                    return {"status": "error", "details": error_message}
+
+                destination_qos_type = destination_pool.qos_type
+                
+                # Extract QoS type value (e.g., "manual" from "QosType.MANUAL")
+                qos_type_str = str(destination_qos_type).split('.')[-1].lower() if destination_qos_type else ""
+
+                if print_output:
+                    logger.info(f"Destination pool '{destination_pool_name}' QoS type: {qos_type_str}")
+                
+                # If destination pool is manual QoS and no throughput_mibps provided,
+                # try to get it from source volume or calculate default
+                if qos_type_str == "manual" and destination_throughput_mibps is None:
+                    # Try to get throughput from source volume if it has one
+                    try:
+                        source_volume = client.volumes.get(
+                            resource_group_name=resolved_resource_group_name,
+                            account_name=resolved_account_name,
+                            pool_name=resolved_pool_name,
+                            volume_name=volume_name
+                        )
+                        
+                        if hasattr(source_volume, 'throughput_mibps') and source_volume.throughput_mibps:
+                            destination_throughput_mibps = source_volume.throughput_mibps
+                            if print_output:
+                                logger.info(f"Using throughput_mibps from source volume: {destination_throughput_mibps}")
+                        else:
+                            # Calculate minimum throughput based on service level and size
+                            destination_throughput_mibps = _calculate_min_throughput_mibps(
+                                destination_service_level, destination_usage_threshold
+                            )
+                            if print_output:
+                                logger.info(f"Calculated destination throughput_mibps for manual QoS: {destination_throughput_mibps}")
+                    except Exception as e:
+                        # If we can't get source volume info, calculate based on destination size
+                        destination_throughput_mibps = _calculate_min_throughput_mibps(
+                            destination_service_level, destination_usage_threshold
+                        )
+                        if print_output:
+                            logger.info(f"Calculated destination throughput_mibps for manual QoS (source unavailable): {destination_throughput_mibps}")
+                
+                elif qos_type_str == "auto":
+                    if print_output:
+                        logger.info(f"Destination pool is auto QoS; 'destination_throughput_mibps' is not required.")
+                    # Set to None to ensure it's not passed to create_volume
+                    destination_throughput_mibps = None
+                    
+            except Exception as e:
+                if print_output:
+                    logger.warning(f"Could not retrieve destination pool QoS type: {str(e)}")
+                # If we can't get pool info and throughput is still None, set a safe default
+                # This is important for manual QoS pools
+                if destination_throughput_mibps is None:
+                    destination_throughput_mibps = _calculate_min_throughput_mibps(
+                        destination_service_level, destination_usage_threshold
+                    )
+                    if print_output:
+                        logger.info(f"Using calculated throughput_mibps (pool QoS type unavailable): {destination_throughput_mibps}")
             
             # Create replication object pointing to the source volume
             replication_object = ReplicationObject(
@@ -219,25 +285,21 @@ def create_replication(
                 volume_type="DataProtection",
                 zones=destination_zones,
                 data_protection=data_protection,
-                subscription_id=final_subscription_id
+                throughput_mibps=destination_throughput_mibps
             )
             
             if volume_result.get('status') != 'success':
                 error_message = f"Failed to create destination volume: {volume_result.get('details', 'Unknown error')}"
                 logger.error(error_message)
-                if print_output:
-                    print(error_message)
                 return {"status": "error", "details": error_message}
             
             # Construct destination volume resource ID
-            destination_volume_resource_id = f"/subscriptions/{final_subscription_id}/resourceGroups/{destination_resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{destination_account_name}/capacityPools/{destination_pool_name}/volumes/{destination_volume_name}"
+            destination_volume_resource_id = f"/subscriptions/{subscription_id}/resourceGroups/{destination_resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{destination_account_name}/capacityPools/{destination_pool_name}/volumes/{destination_volume_name}"
         
         # Ensure destination volume resource ID is set
         if not destination_volume_resource_id:
             error_message = "Destination volume resource ID could not be determined"
             logger.error(error_message)
-            if print_output:
-                print(error_message)
             return {"status": "error", "details": error_message}
         
         
@@ -245,8 +307,6 @@ def create_replication(
         if destination_volume_resource_id and destination_volume_resource_id.lower() == source_volume_resource_id.lower():
             error_message = "A volume cannot be authorized for replication against itself"
             logger.error(error_message)
-            if print_output:
-                print(error_message)
             return {"status": "error", "details": error_message}
         
         # Create the authorize request object
@@ -299,25 +359,21 @@ def create_replication(
     except InvalidConfigError:
         raise
     except ResourceNotFoundError as e:
-        error_message = f"Volume '{volume_name}' not found: {str(e)}"
-        logger.error(error_message)
-        if print_output:
-            print(error_message)
-        return {"status": "error", "details": error_message}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Volume '{volume_name}' not found: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
     except Exception as e:
-        error_message = str(e)
+        clean_msg = _get_clean_error_message(e)
         
         # Provide specific guidance for common replication errors
-        if "cannot be authorized for replication against itself" in error_message.lower():
-            error_details = f"Replication authorization failed: A volume cannot replicate to itself. Please create a data protection volume in a different Azure region. Original error: {error_message}"
-        elif "data protection volume" in error_message.lower():
-            error_details = f"Replication authorization failed: The destination volume must be a data protection volume. Create the destination volume with volume_type='DataProtection' in a different region. Original error: {error_message}"
-        elif "different region" in error_message.lower():
-            error_details = f"Replication authorization failed: Source and destination volumes must be in different Azure regions. Original error: {error_message}"
+        if "cannot be authorized for replication against itself" in clean_msg.lower():
+            error_details = f"Replication authorization failed: A volume cannot replicate to itself. Please create a data protection volume in a different Azure region. Original error: {clean_msg}"
+        elif "data protection volume" in clean_msg.lower():
+            error_details = f"Replication authorization failed: The destination volume must be a data protection volume. Create the destination volume with volume_type='DataProtection' in a different region. Original error: {clean_msg}"
+        elif "different region" in clean_msg.lower():
+            error_details = f"Replication authorization failed: Source and destination volumes must be in different Azure regions. Original error: {clean_msg}"
         else:
-            error_details = f"Failed to setup replication: {error_message}"
+            error_details = f"Failed to setup replication: {clean_msg}"
 
         logger.error(error_details)
-        if print_output:
-            print(error_details)
         return {"status": "error", "details": error_details}

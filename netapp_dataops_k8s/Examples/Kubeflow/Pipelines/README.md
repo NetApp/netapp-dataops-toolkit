@@ -117,27 +117,3 @@ Python script that creates a Kubeflow pipeline definition for a workflow that ca
 #### Pipeline Steps
 1. Perform a sync operation for the specified Cloud Sync relationship.
 
-### [replicate-data-snapmirror.py](replicate-data-snapmirror.py)
-
-#### Compatiibility
-
-This pipeline is only compatible with ONTAP storage systems/instances runnning ONTAP 9.7 or above.
-
-#### Additional Prerequisites
-
-In addition to the standard prerequisites outlined above, this pipeline requires the following additional prerequisites in order to function correctly.
-
-- A Kubernetes secret containing your ONTAP cluster or SVM admin account details must exist within the namespace that you intend to execute the pipeline in. For an example, see [secret-ontap-admin-account.yaml](secret-ontap-admin-account.yaml). This file contains the manifest for a Kubernetes secret named 'ontap-admin-account' containing ONTAP admin account details.
-
-#### Description
-Python script that creates a Kubeflow pipeline definition for a workflow that can be used to perform a sync operation for an existing asynchronous SnapMirror relationship. This is intended to demonstrate how a data scientist or data engineer could define an automated AI/ML workflow that incorporates SnapMirror replication for data movement across environments (e.g. edge data center, core data center, private cloud, public cloud).
-
-#### Run-time Parameters
-- snapmirror_relationship_id: The UUID of the SnapMirror relationship for which you want to perform a sync operation. If you do not know the UUID, you can retrieve it by using NetApp DataOps Toolkit for Traditional Environments (refer to the 'list all SnapMirror relationships' operation).
-- destination_ontap_cluster_or_svm_mgmt_hostname: The host name or IP address of the ONTAP cluster or SVM management LIF corresponding to the cluster/SVM on which the destination volume resides.
-- destination_ontap_cluster_or_svm_admin_acct_k8s_secret: The name of the Kubernetes secret containing the ONTAP cluster or SVM admin account details for the cluster/SVM on which the destination volume resides.
-- destination_svm: The name of the SVM on which the destination volume resides.
-- ontap_api_verify_ssl_cert__yes_or_no: Denotes whether or not to verify the SSL certificate when communicating with the ONTAP API (yes/no).
-
-#### Pipeline Steps
-1. Perform a sync operation for the specified asynchronous SnapMirror relationship.

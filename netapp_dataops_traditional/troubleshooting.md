@@ -2,6 +2,78 @@
 
 ## Common Errors
 
+### SSL Error: self-signed certificate
+
+#### Error
+
+```sh
+Error: ONTAP Rest API Error: Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate (_ssl.c:1029)'))
+```
+
+You will encounter this error if your ONTAP cluster uses a self-signed certificate and no SSL certificate file path has been configured (i.e. `sslCertPath` is blank in your config).
+
+#### Resolution
+
+Download the ONTAP cluster's certificate and reconfigure the toolkit to use it.
+
+1. Download the certificate (replace `<ONTAP_HOST>` with your management LIF hostname or IP):
+
+```sh
+echo | openssl s_client -connect <ONTAP_HOST>:443 -showcerts 2>/dev/null \
+  | openssl x509 > ~/.netapp_dataops/ontap_cert.pem
+```
+
+2. Re-run configuration and provide the certificate path when prompted:
+
+```sh
+netapp_dataops_cli.py config
+```
+
+See the [SSL Certificate Configuration](docs/ontap_readme.md#ssl-certificate-configuration) section for full details.
+
+### SSL Error: no appropriate subjectAltName fields were found
+
+#### Error
+
+```sh
+Error: ONTAP Rest API Error: Caused by SSLError(CertificateError('no appropriate subjectAltName fields were found'))
+```
+
+You may encounter this error when using an older version of the toolkit (or a custom `verify` configuration) where the ONTAP certificate does not contain Subject Alternative Name (SAN) entries. This is common with default ONTAP self-signed certificates.
+
+#### Resolution
+
+Upgrade to the latest version of the toolkit and download the ONTAP certificate. When a certificate file path is configured, the toolkit verifies the certificate chain against the pinned cert while automatically skipping hostname/SAN checks.
+
+1. Download the certificate:
+
+```sh
+echo | openssl s_client -connect <ONTAP_HOST>:443 -showcerts 2>/dev/null \
+  | openssl x509 > ~/.netapp_dataops/ontap_cert.pem
+```
+
+2. Re-run configuration and provide the certificate path when prompted:
+
+```sh
+netapp_dataops_cli.py config
+```
+
+See the [SSL Certificate Configuration](docs/ontap_readme.md#ssl-certificate-configuration) section for full details.
+
+### SSL Error: hostname mismatch
+
+#### Error
+
+```sh
+Error: ONTAP Rest API Error: Caused by SSLError(SSLCertVerificationError(1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for '<hostname>' (_ssl.c:1029)"))
+```
+
+You may encounter this error when the ONTAP certificate's Common Name (CN) or Subject Alternative Names (SANs) do not match the hostname or IP address used to connect.
+
+#### Resolution
+
+Same as the "subjectAltName" error above — download the ONTAP certificate and configure its path. The toolkit will verify the certificate chain while skipping hostname matching.
+
 ### Mounting within Container
 
 #### Error

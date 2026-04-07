@@ -115,6 +115,7 @@ Optional Options/Arguments:
 \t-s, --source-snapshot-name=\tName of Kubernetes VolumeSnapshot to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
 \t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
 \t-r, --allocate-resource=\tOption to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
+\t    --no-https\t\t\tDisable HTTPS for the workspace. By default, HTTPS is enabled with a self-signed TLS certificate to prevent password sniffing.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py clone jupyterlab --new-workspace-name=project1-experiment1 --source-workspace-name=project1 --nvidia-gpu=1
@@ -179,6 +180,7 @@ Optional Options/Arguments:
 \t-b, --load-balancer\t\tOption to use a LoadBalancer instead of using NodePort service. If not specified, NodePort service will be utilized.
 \t-v, --mount-pvc=\t\tOption to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: -v/--mount-pvc=existing_pvc_name:mount_point. If not specified, no additional PVC will be attached.
 \t-r, --allocate-resource=\tOption to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
+\t    --no-https\t\t\tDisable HTTPS for the workspace. By default, HTTPS is enabled with a self-signed TLS certificate to prevent password sniffing.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py create jupyterlab --workspace-name=mike --size=10Gi --nvidia-gpu=2
@@ -429,10 +431,11 @@ Optional Options/Arguments:
 \t-h, --help\t\t\tPrint help text.
 \t-n, --namespace=\t\tKubernetes namespace that PersistentVolumeClaim (PVC) is located in. If not specified, namespace "default" will be used.
 \t-t, --trident-namespace=\tKubernetes namespace where Trident is installed. If not specified, the namespace "trident" will be used.
+\t    --ssl-cert-path=\t\tPath to CA certificate file for ONTAP API SSL verification. If not specified, system CA bundle will be used.
 
 Examples:
-\tnetapp_dataops_k8s_cli.py delete flexcache-volume --pvc-name=cache1
-\tnetapp_dataops_k8s_cli.py delete flexcache-volume -p cache2 -n team1
+\tnetapp_dataops_k8s_cli.py delete flexcache-volume --pvc-name=cache1 --backend-name=backend1
+\tnetapp_dataops_k8s_cli.py delete flexcache-volume -p cache2 -b backend1 -n team1 --ssl-cert-path=/path/to/cert.pem
 '''
 helpTextGetS3Bucket = '''
 Command: get-s3 bucket
@@ -705,10 +708,11 @@ Optional Options/Arguments:
 \t-c, --junction=\t\t\tThe junction path for the FlexCache volume.
 \t-n, --namespace=\t\tKubernetes namespace to create the new PersistentVolumeClaim (PVC) in. If not specified, the PVC will be created in the "default" namespace.
 \t-t, --trident-namespace=\tKubernetes namespace where Trident is installed. If not specified, the namespace "trident" will be used.
+\t    --ssl-cert-path=\t\tPath to CA certificate file for ONTAP API SSL verification. If not specified, system CA bundle will be used.
 
 Examples:
 \tnetapp_dataops_k8s_cli.py create flexcache --flexcache-vol=cache1 --flexcache-size=50Gi --source-vol=origin1 --source-svm=svm1 --backend-name=backend1
-\tnetapp_dataops_k8s_cli.py create flexcache -s svm1 -v vol1 -n vol2 -b backend1 -z 100Gi -c /cache1
+\tnetapp_dataops_k8s_cli.py create flexcache -s svm1 -v vol1 -n vol2 -b backend1 -z 100Gi -c /cache1 --ssl-cert-path=/path/to/cert.pem
 '''
 
 
@@ -815,13 +819,14 @@ if __name__ == '__main__':
             requestCpu = None
             load_balancer_service= False
             allocate_resource = None
+            enable_https = True
 
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hw:c:n:s:j:g:m:p:br:",
                                            ["help", "new-workspace-name=", "volume-snapshot-class=", "namespace=",
                                             "source-snapshot-name=", "source-workspace-name=", "nvidia-gpu=", "memory=",
-                                            "cpu=", "load-balancer", "allocate-resource="])
+                                            "cpu=", "load-balancer", "allocate-resource=", "no-https"])
             except:
                 handleInvalidCommand(helpText=helpTextCloneJupyterLab, invalidOptArg=True)
 
@@ -850,6 +855,9 @@ if __name__ == '__main__':
                     load_balancer_service = True
                 elif opt in ("-r", "--allocate-resource"):
                     allocate_resource = arg
+                elif opt in ("--no-https",):
+                    enable_https = False
+                    logger.warning("WARNING: HTTPS has been disabled. The workspace password will be transmitted in plaintext over HTTP, making it vulnerable to network sniffing.")
 
             # Check for required options
             if not newWorkspaceName or (not sourceSnapshotName and not sourceWorkspaceName):
@@ -863,7 +871,8 @@ if __name__ == '__main__':
                 clone_jupyter_lab(new_workspace_name=newWorkspaceName, source_workspace_name=sourceWorkspaceName, load_balancer_service=load_balancer_service,
                                   source_snapshot_name=sourceSnapshotName, volume_snapshot_class=volumeSnapshotClass,
                                   namespace=namespace, request_cpu=requestCpu, request_memory=requestMemory,
-                                  request_nvidia_gpu=requestNvidiaGpu, allocate_resource=allocate_resource, print_output=True)
+                                  request_nvidia_gpu=requestNvidiaGpu, allocate_resource=allocate_resource,
+                                  enable_https=enable_https, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -976,12 +985,13 @@ if __name__ == '__main__':
             load_balancer_service = False
             mount_pvc = None
             allocate_resource = None
+            enable_https = True
 
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hw:s:n:c:i:g:m:p:abv:r:",
                                            ["help", "workspace-name=", "size=", "namespace=", "storage-class=",
-                                            "image=", "nvidia-gpu=", "memory=", "cpu=", "register-with-astra", "load-balancer", "mount-pvc=", "allocate-resource="])
+                                            "image=", "nvidia-gpu=", "memory=", "cpu=", "register-with-astra", "load-balancer", "mount-pvc=", "allocate-resource=", "no-https"])
             except:
                 handleInvalidCommand(helpText=helpTextCreateJupyterLab, invalidOptArg=True)
 
@@ -1014,6 +1024,9 @@ if __name__ == '__main__':
                     mount_pvc = arg
                 elif opt in ("-r", "--allocate-resource"):
                     allocate_resource = arg
+                elif opt in ("--no-https",):
+                    enable_https = False
+                    logger.warning("WARNING: HTTPS has been disabled. The workspace password will be transmitted in plaintext over HTTP, making it vulnerable to network sniffing.")
 
             # Check for required options
             if not workspaceName or not workspaceSize:
@@ -1023,7 +1036,8 @@ if __name__ == '__main__':
             try:
                 create_jupyter_lab(workspace_name=workspaceName, workspace_size=workspaceSize, storage_class=storageClass,
                                    load_balancer_service=load_balancer_service, namespace=namespace, workspace_image=workspaceImage, request_cpu=requestCpu, mount_pvc=mount_pvc,
-                                   request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu, register_with_astra=register_with_astra, allocate_resource=allocate_resource, print_output=True)
+                                   request_memory=requestMemory, request_nvidia_gpu=requestNvidiaGpu, register_with_astra=register_with_astra, allocate_resource=allocate_resource,
+                                   enable_https=enable_https, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 
@@ -1219,10 +1233,11 @@ if __name__ == '__main__':
             flexCacheSize = None
             backendName = None
             tridentNamespace = "trident"
+            sslCertPath = ""
 
             # Get command line options
             try:
-                opts, args = getopt.getopt(sys.argv[3:], "hn:f:z:v:s:b:n:c:t:", ["help", "flexcache-vol=", "flexcache-size=", "source-vol=", "source-svm=", "backend-name=", "namespace=", "junction=", "trident-namespace="])
+                opts, args = getopt.getopt(sys.argv[3:], "hn:f:z:v:s:b:n:c:t:", ["help", "flexcache-vol=", "flexcache-size=", "source-vol=", "source-svm=", "backend-name=", "namespace=", "junction=", "trident-namespace=", "ssl-cert-path="])
             except getopt.GetoptError:
                 handleInvalidCommand(helpText=helpTextCreateFlexCache, invalidOptArg=True)
 
@@ -1247,6 +1262,8 @@ if __name__ == '__main__':
                     junction = arg
                 elif opt in ("-t", "--trident-namespace"):
                     tridentNamespace = arg
+                elif opt in ("--ssl-cert-path",):
+                    sslCertPath = arg
 
             # Check for required options
             if not flexCacheVol or not sourceVol or not sourceSvm or not flexCacheSize or not backendName:
@@ -1254,7 +1271,7 @@ if __name__ == '__main__':
 
             # Create FlexCache volume
             try:
-                create_flexcache(flexcache_vol=flexCacheVol, flexcache_size=flexCacheSize, source_vol=sourceVol, source_svm=sourceSvm, backend_name=backendName, namespace=namespace, junction=junction, trident_namespace=tridentNamespace, print_output=True)
+                create_flexcache(flexcache_vol=flexCacheVol, flexcache_size=flexCacheSize, source_vol=sourceVol, source_svm=sourceSvm, backend_name=backendName, namespace=namespace, junction=junction, trident_namespace=tridentNamespace, ssl_cert_path=sslCertPath, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
         
@@ -1370,12 +1387,13 @@ if __name__ == '__main__':
             backendName = None
             namespace = "default"
             tridentNamespace = "trident"
+            sslCertPath = ""
             force = False
 
             # Get command line options
             try:
                 opts, args = getopt.getopt(sys.argv[3:], "hp:b:fn:t:",
-                                        ["help", "pvc-name=", "backend-name=", "force", "namespace=", "trident-namespace="])
+                                        ["help", "pvc-name=", "backend-name=", "force", "namespace=", "trident-namespace=", "ssl-cert-path="])
             except:
                 handleInvalidCommand(helpText=helpTextDeleteFlexCacheVolume, invalidOptArg=True)
 
@@ -1392,6 +1410,8 @@ if __name__ == '__main__':
                     namespace = arg
                 elif opt in ("-t", "--trident-namespace"):
                     tridentNamespace = arg
+                elif opt in ("--ssl-cert-path",):
+                    sslCertPath = arg
                 elif opt in ("-f", "--force"):
                     force = True
 
@@ -1414,7 +1434,7 @@ if __name__ == '__main__':
             # Delete FlexCache volume
             try:
                 delete_flexcache_volume(pvc_name=pvcName, backend_name=backendName, namespace=namespace,
-                                        trident_namespace=tridentNamespace, print_output=True)
+                                        trident_namespace=tridentNamespace, ssl_cert_path=sslCertPath, print_output=True)
             except (InvalidConfigError, APIConnectionError):
                 sys.exit(1)
 

@@ -12,15 +12,14 @@ from azure.mgmt.netapp.models import (
 )
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 from .client import get_anf_client
-from .base import _serialize, validate_required_params
-from .config import _retrieve_anf_config, get_config_value, InvalidConfigError
+from .base import _serialize, _validate_required_params, _get_clean_error_message, _calculate_min_throughput_mibps
+from .config import _retrieve_anf_config, _get_config_value, InvalidConfigError
 
 from netapp_dataops.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
 
 # Default values
-DEFAULT_SERVICE_LEVEL = "Premium"
 DEFAULT_SECURITY_STYLE = "unix"
 DEFAULT_UNIX_PERMISSIONS = "0770"
 DEFAULT_NETWORK_FEATURES = "Basic"
@@ -29,6 +28,7 @@ DEFAULT_AVS_DATA_STORE = "Disabled"
 DEFAULT_ENABLE_SUBVOLUMES = "Disabled"
 DEFAULT_PROTOCOL_TYPES = ["NFSv3"]
 DEFAULT_SUBNET_NAME = "default"
+
 
 def create_volume(
     volume_name: str,
@@ -65,7 +65,6 @@ def create_volume(
     network_features: str = None,
     encryption_key_source: str = None,
     enable_subvolumes: str = None,
-    subscription_id: str = None,
     print_output: bool = False
 ) -> Dict[str, Any]:
     """
@@ -97,7 +96,7 @@ def create_volume(
             Optional. The name of a delegated Azure subnet to construct the Azure Resource ID for a delegated subnet.
             Will use config default if not provided, otherwise defaults to "default".
         service_level (str):
-            Optional. Service level (Standard, Premium, Ultra, StandardZRS, Flexible).
+            Optional. Service level (Standard, Premium, Ultra, Flexible).
             Defaults to Premium.
         tags (Dict[str, str]):
             Optional. Resource tags.
@@ -177,7 +176,7 @@ def create_volume(
             If enabled (true) the volume will contain a read-only snapshot directory which provides access to each of the volume's snapshots.
             Defaults to true.
         network_features (str):
-            Optional. Network features (Basic, Standard, Basic_Standard, Standard_Basic).
+            Optional. Network features (Basic, Standard).
             Defaults to Basic.
         encryption_key_source (str):
             Optional. Key source for encryption (Microsoft.NetApp, Microsoft.KeyVault).
@@ -185,8 +184,6 @@ def create_volume(
         enable_subvolumes (str):
             Optional. Flag indicating whether subvolume operations are enabled on the volume. Known values are: "Enabled" and "Disabled".
             Defaults to Disabled.
-        subscription_id (str):
-            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -208,20 +205,18 @@ def create_volume(
 
     # Resolve parameters from function arguments or config
     try:
-        resolved_subscription_id = get_config_value('subscription_id', subscription_id, config, print_output)
-        resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
-        resolved_account_name = get_config_value('account_name', account_name, config, print_output)
-        resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
-        resolved_location = get_config_value('location', location, config, print_output)
-        resolved_virtual_network_name = get_config_value('virtual_network_name', virtual_network_name, config, print_output)
-        resolved_subnet_name = get_config_value('subnet_name', subnet_name, config, print_output) if subnet_name is not None else config.get('subnet_name', DEFAULT_SUBNET_NAME)
-        resolved_protocol_types = get_config_value('protocol_types', protocol_types, config, print_output) if protocol_types is not None else config.get('protocol_types', DEFAULT_PROTOCOL_TYPES)
+        resolved_resource_group_name = _get_config_value('resource_group_name', resource_group_name, config, print_output)
+        resolved_account_name = _get_config_value('account_name', account_name, config, print_output)
+        resolved_pool_name = _get_config_value('pool_name', pool_name, config, print_output)
+        resolved_location = _get_config_value('location', location, config, print_output)
+        resolved_virtual_network_name = _get_config_value('virtual_network_name', virtual_network_name, config, print_output)
+        resolved_subnet_name = _get_config_value('subnet_name', subnet_name, config, print_output) if subnet_name is not None else config.get('subnet_name', DEFAULT_SUBNET_NAME)
+        resolved_protocol_types = _get_config_value('protocol_types', protocol_types, config, print_output) if protocol_types is not None else config.get('protocol_types', DEFAULT_PROTOCOL_TYPES)
+        resolved_service_level = _get_config_value('service_level', service_level, config, print_output)
     except InvalidConfigError:
         raise
     
-    # Apply default values for parameters with documented defaults  
-    if service_level is None:
-        service_level = DEFAULT_SERVICE_LEVEL
+    # Apply default values for other parameters with documented defaults  
     if security_style is None:
         security_style = DEFAULT_SECURITY_STYLE  
     # Only set unix_permissions default for unix security style volumes
@@ -237,7 +232,7 @@ def create_volume(
         enable_subvolumes = DEFAULT_ENABLE_SUBVOLUMES
 
     # Validate input parameters (now using resolved values)
-    validate_required_params(
+    _validate_required_params(
         resource_group_name=resolved_resource_group_name,
         account_name=resolved_account_name,
         pool_name=resolved_pool_name,
@@ -250,11 +245,11 @@ def create_volume(
     )
 
     try:
-        # Get ANF client and subscription ID (using resolved value)
-        client, final_subscription_id = get_anf_client(resolved_subscription_id, print_output=print_output)
+        # Get ANF client and subscription ID (automatically retrieved from Azure CLI)
+        client, subscription_id = get_anf_client(print_output=print_output)
 
         # Construct subnet ID from resolved parameters
-        subnet_id = f"/subscriptions/{final_subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.Network/virtualNetworks/{resolved_virtual_network_name}/subnets/{resolved_subnet_name}"
+        subnet_id = f"/subscriptions/{subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.Network/virtualNetworks/{resolved_virtual_network_name}/subnets/{resolved_subnet_name}"
         
         # Create export policy using helper function
         export_policy = _create_export_policy_rules(export_policy_rules, resolved_protocol_types)
@@ -266,11 +261,15 @@ def create_volume(
             pool_name=resolved_pool_name
         )
         qos_type = getattr(pool, 'qos_type', None)
+        
+        # Extract QoS type value (e.g., "manual" from "QosType.MANUAL")
+        qos_type_str = str(qos_type).split('.')[-1].lower() if qos_type else ""
+
         if print_output:
-            logger.info(f"Pool '{resolved_pool_name}' QoS type: {qos_type}")
+            logger.info(f"Pool '{resolved_pool_name}' QoS type: {qos_type_str}")
 
         # If pool is manual QoS, throughput_mibps is required
-        if qos_type and qos_type.lower() == "manual":
+        if qos_type_str == "manual":
             if throughput_mibps is None:
                 error_message = (
                     "Parameter 'throughput_mibps' is required for pools with manual QoS type."
@@ -278,7 +277,7 @@ def create_volume(
                 logger.error(error_message)
                 raise ValueError(error_message)
         # If pool is auto QoS, ignore throughput_mibps if not provided
-        elif qos_type and qos_type.lower() == "auto":
+        elif qos_type_str == "auto":
             if throughput_mibps is None:
                 # Not required, but it is best to log this for the information of the user
                 if print_output:
@@ -290,7 +289,7 @@ def create_volume(
             'creation_token': creation_token,
             'subnet_id': subnet_id,
             'usage_threshold': usage_threshold,
-            'service_level': service_level,
+            'service_level': resolved_service_level,
             'protocol_types': resolved_protocol_types,
             'security_style': security_style,
             'smb_encryption': smb_encryption,
@@ -343,17 +342,13 @@ def create_volume(
         return {"status": "success", "details": _serialize(result)}
        
     except ResourceExistsError as e:
-        error_message = f"Volume '{volume_name}' already exists: {str(e)}"
-        logger.error(error_message)
-        if print_output:
-            print(error_message)
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Volume '{volume_name}' already exists: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
     except Exception as e:
-        error_message = f"Failed to create volume: {str(e)}"
-        logger.error(error_message)
-        if print_output:
-            print(error_message)
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Failed to create volume: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
 
 
 def clone_volume(
@@ -392,7 +387,6 @@ def clone_volume(
     network_features: str = None,
     encryption_key_source: str = None,
     enable_subvolumes: str = None,
-    subscription_id: str = None,
     print_output: bool = False
 ) -> Dict[str, Any]:
     """
@@ -421,7 +415,7 @@ def clone_volume(
             Optional. The name of a delegated Azure subnet to construct the Azure Resource ID for a delegated subnet.
             Will use config default if not provided, otherwise defaults to "default".
         service_level (str):
-            Optional. Service level (Standard, Premium, Ultra, StandardZRS, Flexible).
+            Optional. Service level (Standard, Premium, Ultra, Flexible).
             Defaults to Premium.
         protocol_types (List[str]):
             Optional. List of protocol types (NFSv3, NFSv4.1, SMB). Will use config default if not provided.
@@ -511,8 +505,6 @@ def clone_volume(
         enable_subvolumes (bool):
             Optional. Flag indicating whether subvolume operations are enabled on the volume. Known values are: "Enabled" and "Disabled".
             Defaults to Disabled.
-        subscription_id (str):
-            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -534,20 +526,18 @@ def clone_volume(
 
     # Resolve parameters from function arguments or config
     try:
-        resolved_subscription_id = get_config_value('subscription_id', subscription_id, config, print_output)
-        resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
-        resolved_account_name = get_config_value('account_name', account_name, config, print_output)
-        resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
-        resolved_location = get_config_value('location', location, config, print_output)
-        resolved_virtual_network_name = get_config_value('virtual_network_name', virtual_network_name, config, print_output)
-        resolved_subnet_name = get_config_value('subnet_name', subnet_name, config, print_output) if subnet_name is not None else config.get('subnet_name', DEFAULT_SUBNET_NAME)
-        resolved_protocol_types = get_config_value('protocol_types', protocol_types, config, print_output) if protocol_types is not None else config.get('protocol_types', DEFAULT_PROTOCOL_TYPES)
+        resolved_resource_group_name = _get_config_value('resource_group_name', resource_group_name, config, print_output)
+        resolved_account_name = _get_config_value('account_name', account_name, config, print_output)
+        resolved_pool_name = _get_config_value('pool_name', pool_name, config, print_output)
+        resolved_location = _get_config_value('location', location, config, print_output)
+        resolved_virtual_network_name = _get_config_value('virtual_network_name', virtual_network_name, config, print_output)
+        resolved_subnet_name = _get_config_value('subnet_name', subnet_name, config, print_output) if subnet_name is not None else config.get('subnet_name', DEFAULT_SUBNET_NAME)
+        resolved_protocol_types = _get_config_value('protocol_types', protocol_types, config, print_output) if protocol_types is not None else config.get('protocol_types', DEFAULT_PROTOCOL_TYPES)
+        resolved_service_level = _get_config_value('service_level', service_level, config, print_output)
     except InvalidConfigError:
         raise
         
-    # Apply default values for parameters with documented defaults  
-    if service_level is None:
-        service_level = DEFAULT_SERVICE_LEVEL
+    # Apply default values for other parameters with documented defaults  
     if security_style is None:
         security_style = DEFAULT_SECURITY_STYLE  
     # Only set unix_permissions default for unix security style volumes  
@@ -563,7 +553,7 @@ def clone_volume(
         enable_subvolumes = DEFAULT_ENABLE_SUBVOLUMES
 
     # Validate input parameters (now using resolved values)
-    validate_required_params(
+    _validate_required_params(
         resource_group_name=resolved_resource_group_name,
         account_name=resolved_account_name,
         pool_name=resolved_pool_name,
@@ -576,14 +566,14 @@ def clone_volume(
     )
 
     try:
-        # Get ANF client and subscription ID (using resolved value)
-        client, final_subscription_id = get_anf_client(resolved_subscription_id, print_output=print_output)
+        # Get ANF client and subscription ID (automatically retrieved from Azure CLI)
+        client, subscription_id = get_anf_client(print_output=print_output)
 
         # Construct subnet ID from resolved parameters
-        subnet_id = f"/subscriptions/{final_subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.Network/virtualNetworks/{resolved_virtual_network_name}/subnets/{resolved_subnet_name}"
+        subnet_id = f"/subscriptions/{subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.Network/virtualNetworks/{resolved_virtual_network_name}/subnets/{resolved_subnet_name}"
 
         # Construct snapshot ID from resolved parameters
-        snapshot_id = f"/subscriptions/{final_subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{resolved_account_name}/capacityPools/{resolved_pool_name}/volumes/{source_volume_name}/snapshots/{snapshot_name}"
+        snapshot_id = f"/subscriptions/{subscription_id}/resourceGroups/{resolved_resource_group_name}/providers/Microsoft.NetApp/netAppAccounts/{resolved_account_name}/capacityPools/{resolved_pool_name}/volumes/{source_volume_name}/snapshots/{snapshot_name}"
 
         # Set default protocol types and get usage_threshold from source volume if not provided
         source_volume = None
@@ -642,12 +632,16 @@ def clone_volume(
             pool_name=resolved_pool_name
         )
         qos_type = getattr(pool, 'qos_type', None)
+        
+        # Extract QoS type value (e.g., "manual" from "QosType.MANUAL")
+        qos_type_str = str(qos_type).split('.')[-1].lower() if qos_type else ""
+        
         if print_output:
-            logger.info(f"Pool '{resolved_pool_name}' QoS type: {qos_type}")
+            logger.info(f"Pool '{resolved_pool_name}' QoS type: {qos_type_str}")
 
         # If destination pool is manual QoS and no throughput_mibps provided,
         # try to get it from source volume or calculate default
-        if qos_type and qos_type.lower() == "manual" and throughput_mibps is None:
+        if qos_type_str == "manual" and throughput_mibps is None:
             # Try to get throughput from source volume if it has one
             if hasattr(source_volume, 'throughput_mibps') and source_volume.throughput_mibps:
                 throughput_mibps = source_volume.throughput_mibps
@@ -655,29 +649,19 @@ def clone_volume(
                     logger.info(f"Using throughput_mibps from source volume: {throughput_mibps}")
             else:
                 # Calculate minimum throughput based on service level and size
-                # This is a fallback - user should ideally provide explicit value
-                size_gib = usage_threshold / (1024 * 1024 * 1024)
-                if service_level.lower() == "standard":
-                    throughput_mibps = max(16, size_gib * 0.016)  # 16 MiB/s per TiB, min 16
-                elif service_level.lower() == "premium":
-                    throughput_mibps = max(64, size_gib * 0.064)  # 64 MiB/s per TiB, min 64
-                elif service_level.lower() == "ultra":
-                    throughput_mibps = max(128, size_gib * 0.128)  # 128 MiB/s per TiB, min 128
-                else:
-                    throughput_mibps = 64  # Default fallback
-                
+                throughput_mibps = _calculate_min_throughput_mibps(resolved_service_level, usage_threshold)
                 if print_output:
                     logger.info(f"Calculated throughput_mibps for manual QoS: {throughput_mibps}")
 
         # If pool is manual QoS, throughput_mibps is required
-        if qos_type and qos_type.lower() == "manual":
+        if qos_type_str == "manual":
             if throughput_mibps is None:
                 error_message = (
                     "Parameter 'throughput_mibps' is required for pools with manual QoS type."
                 )
                 logger.error(error_message)
                 raise ValueError(error_message)
-        elif qos_type and qos_type.lower() == "auto":
+        elif qos_type_str == "auto":
             if throughput_mibps is None:
                 if print_output:
                     logger.info("Pool is auto QoS; 'throughput_mibps' is not required.")
@@ -691,7 +675,7 @@ def clone_volume(
             'creation_token': creation_token,
             'subnet_id': subnet_id,
             'usage_threshold': usage_threshold,
-            'service_level': service_level,
+            'service_level': resolved_service_level,
             'protocol_types': resolved_protocol_types,
             'security_style': security_style,
             'smb_encryption': smb_encryption,
@@ -746,17 +730,13 @@ def clone_volume(
         return {"status": "success", "details": _serialize(result)}
             
     except ResourceExistsError as e:
-        error_message = f"Volume '{volume_name}' already exists: {str(e)}"
-        logger.error(error_message)
-        if print_output:
-            print(error_message)
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Volume '{volume_name}' already exists: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
     except Exception as e:
-        error_message = f"Failed to clone volume: {str(e)}"
-        logger.error(error_message)
-        if print_output:
-            print(error_message)
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Failed to clone volume: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
 
 
 def delete_volume(
@@ -765,7 +745,6 @@ def delete_volume(
     account_name: str = None,
     pool_name: str = None,
     force_delete: bool = None,
-    subscription_id: str = None,
     print_output: bool = False
 ) -> Dict[str, Any]:
     """
@@ -784,8 +763,6 @@ def delete_volume(
             Optional. An option to force delete the volume. 
             Will cleanup resources connected to the particular volume.
             Default value is None.
-        subscription_id (str):
-            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -806,15 +783,14 @@ def delete_volume(
 
     # Resolve parameters from function arguments or config
     try:
-        resolved_subscription_id = get_config_value('subscription_id', subscription_id, config, print_output)
-        resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
-        resolved_account_name = get_config_value('account_name', account_name, config, print_output)
-        resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
+        resolved_resource_group_name = _get_config_value('resource_group_name', resource_group_name, config, print_output)
+        resolved_account_name = _get_config_value('account_name', account_name, config, print_output)
+        resolved_pool_name = _get_config_value('pool_name', pool_name, config, print_output)
     except InvalidConfigError:
         raise
 
     # Validate input parameters (now using resolved values)
-    validate_required_params(
+    _validate_required_params(
         resource_group_name=resolved_resource_group_name,
         account_name=resolved_account_name,
         pool_name=resolved_pool_name,
@@ -822,8 +798,8 @@ def delete_volume(
     )
 
     try:
-        # Get ANF client and subscription ID (using resolved value)
-        client, _ = get_anf_client(resolved_subscription_id, print_output=print_output)
+        # Get ANF client
+        client, _ = get_anf_client(print_output=print_output)
 
         # Check if volume exists before attempting deletion
         try:
@@ -837,8 +813,6 @@ def delete_volume(
         except ResourceNotFoundError:
             error_message = f"Volume '{volume_name}' not found"
             logger.error(error_message)
-            if print_output:
-                print(error_message)
             return {"status": "error", "details": f"Volume '{volume_name}' does not exist"}
 
         # Delete the volume (using resolved values)
@@ -870,24 +844,19 @@ def delete_volume(
         return {"status": "success", "details": f"Volume '{volume_name}' deleted successfully"}
     
     except ResourceNotFoundError as e:
-        error_message = f"Volume '{volume_name}' not found"
-        logger.error(error_message)
-        if print_output:
-            print(error_message)
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Volume '{volume_name}' not found: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
     except Exception as e:
-        error_message = f"Failed to delete volume: {str(e)}"
-        logger.error(error_message)
-        if print_output:
-            print(error_message)
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Failed to delete volume: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
 
 
 def list_volumes(
     resource_group_name: str = None,
     account_name: str = None,
     pool_name: str = None,
-    subscription_id: Optional[str] = None,
     print_output: bool = False
 ) -> Dict[str, Any]:
     """
@@ -900,8 +869,6 @@ def list_volumes(
             Optional. The name of the NetApp account. Will use config default if not provided.
         pool_name (str):
             Optional. The name of the capacity pool. Will use config default if not provided.
-        subscription_id (str):
-            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -921,23 +888,22 @@ def list_volumes(
 
     # Resolve parameters from function arguments or config
     try:
-        resolved_subscription_id = get_config_value('subscription_id', subscription_id, config, print_output)
-        resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
-        resolved_account_name = get_config_value('account_name', account_name, config, print_output)
-        resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
+        resolved_resource_group_name = _get_config_value('resource_group_name', resource_group_name, config, print_output)
+        resolved_account_name = _get_config_value('account_name', account_name, config, print_output)
+        resolved_pool_name = _get_config_value('pool_name', pool_name, config, print_output)
     except InvalidConfigError:
         raise
 
     # Validate input parameters (now using resolved values)
-    validate_required_params(
+    _validate_required_params(
         resource_group_name=resolved_resource_group_name,
         account_name=resolved_account_name,
         pool_name=resolved_pool_name
     )
 
     try:
-        # Get ANF client and subscription ID (using resolved value)
-        client, _ = get_anf_client(resolved_subscription_id, print_output=print_output)
+        # Get ANF client
+        client, _ = get_anf_client(print_output=print_output)
 
         # List all volumes in the pool (using resolved values)
         volumes = client.volumes.list(
@@ -962,11 +928,9 @@ def list_volumes(
         return {"status": "success", "details": serialized_volumes}
 
     except Exception as e:
-        error_message = f"Failed to list volumes: {str(e)}"
-        logger.error(error_message)
-        if print_output:
-            print(error_message)
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Failed to list volumes: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
 
 
 def _create_export_policy_rules(export_policy_rules: Optional[List[Dict[str, Any]]], protocol_types: List[str]) -> Optional[VolumePropertiesExportPolicy]:

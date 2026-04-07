@@ -4,7 +4,7 @@ This module provides the public functions available to be imported directly
 by applications using the import method of utilizing the toolkit.
 """
 
-__version__ = "3.0.0"
+__version__ = "3.1.0"
 
 import base64
 from datetime import datetime
@@ -130,10 +130,49 @@ def _get_labels(operation: str) -> dict:
     }
 
 
+def _kubeconfig_file_paths():
+    """Paths from KUBECONFIG or the default location (~/.kube/config), per client conventions."""
+    raw = os.environ.get("KUBECONFIG", "").strip()
+    if raw:
+        sep = ";" if os.name == "nt" else ":"
+        return [os.path.expanduser(p.strip()) for p in raw.split(sep) if p.strip()]
+    return [os.path.join(os.path.expanduser("~"), ".kube", "config")]
+
+
+def _ensure_kubeconfig_file_permissions():
+    """Restrict kubeconfig files to owner read/write (0600) on POSIX hosts.
+
+    Mitigates local theft or leakage via overly permissive file modes. On Windows,
+    filesystem permission semantics differ; this step is skipped there.
+    """
+    if os.name == "nt":
+        return
+    paths = [p for p in _kubeconfig_file_paths() if os.path.isfile(p)]
+    if not paths:
+        return
+    for path in paths:
+        try:
+            st = os.stat(path)
+            if (st.st_mode & 0o777) == 0o600:
+                continue
+            os.chmod(path, 0o600)
+            logger.info(
+                "Set kubeconfig file permissions to 0600 (user read/write only): %s", path
+            )
+        except OSError as err:
+            msg = (
+                f"Kubeconfig '{path}' must be accessible only by its owner (chmod 600). "
+                f"Fix permissions with: chmod 600 '{path}'. Underlying error: {err}"
+            )
+            logger.error(msg)
+            raise InvalidConfigError(msg) from err
+
+
 def _load_kube_config():
     try:
         config.load_incluster_config()
-    except:
+    except Exception:
+        _ensure_kubeconfig_file_permissions()
         config.load_kube_config()
 
 
@@ -141,12 +180,15 @@ def _load_kube_config2(print_output: bool = False):
     try:
         config.load_incluster_config()
         configured = True
-    except:
+    except Exception:
         configured = False
     if not configured:
         try:
+            _ensure_kubeconfig_file_permissions()
             config.load_kube_config()
-        except:
+        except InvalidConfigError:
+            raise
+        except Exception:
             if print_output:
                 _print_invalid_config_error()
             raise InvalidConfigError()
@@ -169,7 +211,9 @@ def _retrieve_image_for_jupyter_lab_deployment(workspaceName: str, namespace: st
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if printOutput:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -191,7 +235,9 @@ def _retrieve_jupyter_lab_url(workspaceName: str, namespace: str = "default", pr
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if printOutput:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -200,6 +246,9 @@ def _retrieve_jupyter_lab_url(workspaceName: str, namespace: str = "default", pr
         api = client.CoreV1Api()
         serviceStatus = api.read_namespaced_service(namespace=namespace,
                                                     name=_get_jupyter_lab_service(workspaceName=workspaceName))
+
+        # Determine URL scheme based on service port name
+        scheme = "https" if serviceStatus.spec.ports[0].name == "https" else "http"
 
         # Check if service type is LoadBalancer
         if serviceStatus.spec.type == "LoadBalancer":
@@ -210,7 +259,7 @@ def _retrieve_jupyter_lab_url(workspaceName: str, namespace: str = "default", pr
                 if printOutput :
                     logger.error("Error: Kubernetes Service for workspace is not available.")
                 raise ServiceUnavailableError()
-            return "http://" + loadBalancerIP
+            return scheme + "://" + loadBalancerIP
         else:
             # Retrieve access port
             port = serviceStatus.spec.ports[0].node_port
@@ -224,7 +273,7 @@ def _retrieve_jupyter_lab_url(workspaceName: str, namespace: str = "default", pr
                 ip = "<IP address of Kubernetes node>"
                 pass
             # Construct and return url
-            return "http://" + ip + ":" + str(port)
+            return scheme + "://" + ip + ":" + str(port)
     except ApiException as err:
         if printOutput:
             logger.error("Error: Kubernetes API Error: %s", err)
@@ -265,7 +314,9 @@ def _retrieve_triton_endpoints(server_name: str, namespace: str = "default", pri
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if printOutput:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -343,7 +394,9 @@ def _retrieve_jupyter_lab_workspace_for_pvc(pvcName: str, namespace: str = "defa
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if printOutput:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -365,7 +418,9 @@ def _retrieve_size_for_pvc(pvcName: str, namespace: str = "default", printOutput
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if printOutput:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -388,7 +443,9 @@ def _retrieve_source_volume_details_for_volume_snapshot(snapshotName: str, names
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if printOutput:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -413,7 +470,9 @@ def _retrieve_storage_class_for_pvc(pvcName: str, namespace: str = "default", pr
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if printOutput:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -435,7 +494,9 @@ def _scale_jupyter_lab_deployment(workspaceName: str, numPods: int, namespace: s
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if printOutput:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -474,7 +535,9 @@ def _wait_for_jupyter_lab_deployment_ready(workspaceName: str, namespace: str = 
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if printOutput:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -501,7 +564,9 @@ def _wait_for_triton_dev_deployment(server_name: str, namespace: str = "default"
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if printOutput:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -528,7 +593,9 @@ def _get_trident_backend_config(backend_config_name: str, namespace: str = "trid
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -564,44 +631,90 @@ def _get_trident_backend_config(backend_config_name: str, namespace: str = "trid
     username = base64.b64decode(secret.data['username']).decode('utf-8')
     password = base64.b64decode(secret.data['password']).decode('utf-8')
 
-    # Extract verifyssl if available, default to False if not present
-    verifyssl = secret.data.get('verifyssl')
-    if verifyssl:
-        verifyssl = base64.b64decode(verifyssl).decode('utf-8').lower() == 'true'
-    else:
-        verifyssl = False
-
     return {
         'username': username,
         'password': password,
         'hostname': managementLIF,
-        'verifySSLCert': verifyssl,
         'dataLIF': dataLIF,
         'storage_driver_name': storage_driver_name,
         'svm': svm
     }
 
 
+def _get_ssl_cert_path(config: dict) -> str:
+    """Extract the SSL certificate path from config, handling legacy keys.
+
+    Returns the cert file path if configured, or empty string for system CA.
+    Legacy ``verifySSLCert: false`` is overridden -- SSL is always enforced.
+    """
+    if "sslCertPath" in config:
+        return config["sslCertPath"]
+
+    if "verifySSLCert" in config and config["verifySSLCert"] is False:
+        logger.warning(
+            "Legacy config key 'verifySSLCert' is set to false. "
+            "SSL verification can no longer be disabled; using system CA bundle."
+        )
+
+    return ""
+
+
+def _apply_custom_ssl_context(conn, ca_cert_path: str) -> None:
+    """Patch the connection's session to pin a CA cert while skipping hostname checks.
+
+    ONTAP clusters commonly use self-signed certificates without Subject
+    Alternative Name (SAN) entries.  Modern Python/OpenSSL rejects such certs
+    during hostname verification even when the CA is trusted.  This function
+    reconfigures the underlying urllib3 pool manager to use a custom
+    ``ssl.SSLContext`` that still verifies the certificate chain against the
+    pinned CA cert but disables hostname matching at both the OpenSSL level
+    (``check_hostname=False``) and the urllib3 Python level
+    (``assert_hostname=False``).
+    """
+    import ssl
+
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_REQUIRED
+    ctx.load_verify_locations(ca_cert_path)
+
+    session = conn.session
+    adapter = session.get_adapter(conn.origin)
+    adapter.init_poolmanager(
+        adapter._pool_connections,
+        adapter._pool_maxsize,
+        adapter._pool_block,
+        ssl_context=ctx,
+        assert_hostname=False,
+    )
+
+
 def _instantiate_connection(config: dict, connectionType: str = "ONTAP", print_output: bool = False):
     if connectionType == "ONTAP":
-        ## Connection details for ONTAP cluster
         try:
             ontapClusterMgmtHostname = config["hostname"]
             ontapClusterAdminUsername = config["username"]
             ontapClusterAdminPassword = config["password"]
-            verifySSLCert = config["verifySSLCert"]
         except:
             if print_output:
                 _print_invalid_config_error()
             raise InvalidConfigError()
 
-        # Instantiate connection to ONTAP cluster
+        ssl_cert_path = _get_ssl_cert_path(config)
+
+        # Security: verify is always True to enforce SSL certificate validation.
+        # When ssl_cert_path is provided, _apply_custom_ssl_context pins the
+        # CA cert and relaxes hostname/SAN checks (common for ONTAP self-signed
+        # certs) while still verifying the certificate chain.
         netappConfig.CONNECTION = NetAppHostConnection(
             host=ontapClusterMgmtHostname,
             username=ontapClusterAdminUsername,
             password=ontapClusterAdminPassword,
-            verify=verifySSLCert
+            verify=True,
         )
+
+        if ssl_cert_path:
+            _apply_custom_ssl_context(netappConfig.CONNECTION, ssl_cert_path)
 
     else:
         raise ConnectionTypeError()
@@ -695,7 +808,8 @@ class CAConfigMap:
 def clone_jupyter_lab(new_workspace_name: str, source_workspace_name: str, source_snapshot_name: str = None,
                       load_balancer_service: bool = False, new_workspace_password: str = None, volume_snapshot_class: str = "csi-snapclass",
                       namespace: str = "default", request_cpu: str = None, request_memory: str = None,
-                      request_nvidia_gpu: str = None, allocate_resource: str = None, print_output: bool = False):
+                      request_nvidia_gpu: str = None, allocate_resource: str = None, print_output: bool = False,
+                      enable_https: bool = True):
     # Determine source PVC details
     if source_snapshot_name:
         sourcePvcName, workspaceSize = _retrieve_source_volume_details_for_volume_snapshot(snapshotName=source_snapshot_name,
@@ -740,7 +854,7 @@ def clone_jupyter_lab(new_workspace_name: str, source_workspace_name: str, sourc
     url = create_jupyter_lab(workspace_name=new_workspace_name, workspace_size=workspaceSize, namespace=namespace,
                        workspace_password=new_workspace_password, workspace_image=sourceWorkspaceImage, request_cpu=request_cpu,
                        load_balancer_service=load_balancer_service, request_memory=request_memory, request_nvidia_gpu=request_nvidia_gpu, allocate_resource=allocate_resource, print_output=print_output,
-                       pvc_already_exists=True, labels=labels)
+                       pvc_already_exists=True, labels=labels, enable_https=enable_https)
 
     if print_output:
         logger.info("JupyterLab workspace successfully cloned.")
@@ -789,11 +903,14 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
                        load_balancer_service: bool = False, namespace: str = "default",
                        workspace_password: str = None, workspace_image: str = "nvcr.io/nvidia/tensorflow:22.05-tf2-py3",
                        request_cpu: str = None, request_memory: str = None, request_nvidia_gpu: str = None, allocate_resource: str = None, register_with_astra: bool = False,
-                       print_output: bool = False, pvc_already_exists: bool = False, labels: dict = None) -> str:
+                       print_output: bool = False, pvc_already_exists: bool = False, labels: dict = None,
+                       enable_https: bool = True) -> str:
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -823,6 +940,14 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
 
     # Step 2 - Create service for workspace
 
+    # Determine port configuration based on HTTPS setting
+    if enable_https:
+        svc_port_name = "https"
+        lb_external_port = 443
+    else:
+        svc_port_name = "http"
+        lb_external_port = 80
+
     # Construct service
     if load_balancer_service:
         service = client.V1Service(
@@ -837,8 +962,8 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
                 },
                 ports=[
                     client.V1ServicePort(
-                        name="http",
-                        port=80,
+                        name=svc_port_name,
+                        port=lb_external_port,
                         target_port=8888,
                         protocol="TCP"
                     )
@@ -858,7 +983,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
                 },
                 ports=[
                     client.V1ServicePort(
-                        name="http",
+                        name=svc_port_name,
                         port=8888,
                         target_port=8888,
                         protocol="TCP"
@@ -870,7 +995,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
 
     # Create service
     if print_output:
-        logger.info("Creating Service '%s' in namespace '%s'.", workspaceName=workspace_name, namespace=namespace)
+        logger.info("Creating Service '%s' in namespace '%s'.", _get_jupyter_lab_service(workspaceName=workspace_name), namespace)
     try:
         api = client.CoreV1Api()
         api.create_namespaced_service(namespace=namespace, body=service)
@@ -884,6 +1009,29 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
         logger.info("Service successfully created.")
 
     # Step 3 - Create deployment
+
+    # Build JupyterLab startup command
+    jupyter_cmd = [
+        "jupyter", "lab",
+        "--LabApp.password=" + hashedPassword,
+        "--LabApp.ip='0.0.0.0'",
+        "--no-browser",
+        "--notebook-dir=/workspace",
+    ]
+    if enable_https:
+        jupyter_cmd.extend([
+            "--ServerApp.certfile=/certs/jupyter.crt",
+            "--ServerApp.keyfile=/certs/jupyter.key",
+        ])
+
+    # Build init container args (generate TLS cert before copying workspace if HTTPS)
+    init_jupyterlab_args = "cp -au /workspace/. /vol/ || true"
+    if enable_https:
+        init_jupyterlab_args = (
+            "openssl req -x509 -nodes -days 365 -newkey rsa:2048 "
+            "-keyout /certs/jupyter.key -out /certs/jupyter.crt "
+            "-subj '/CN=jupyterlab' && (" + init_jupyterlab_args + ")"
+        )
 
     # Construct deployment
     deployment = client.V1Deployment(
@@ -916,7 +1064,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
                             name="init-jupyterlab",
                             image=workspace_image,
                             command=["/bin/bash", "-c"],
-                            args=["cp -au /workspace/. /vol/ || true"],
+                            args=[init_jupyterlab_args],
                             volume_mounts=[
                                 client.V1VolumeMount(
                                     name="workspace",
@@ -943,8 +1091,7 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
                                     value="yes"
                                 )
                             ],
-                            command=["jupyter", "lab", "--LabApp.password=" + hashedPassword, "--LabApp.ip='0.0.0.0'",
-                                  "--no-browser", "--notebook-dir=/workspace"],
+                            command=jupyter_cmd,
                             ports=[
                                 client.V1ContainerPort(container_port=8888)
                             ],
@@ -992,6 +1139,28 @@ def create_jupyter_lab(workspace_name: str, workspace_size: str, mount_pvc: str 
                 mount_path=user_pvc_mountpoint
                 )
             )
+
+    # Add TLS volumes and mounts for HTTPS
+    if enable_https:
+        deployment.spec.template.spec.volumes.append(
+            client.V1Volume(
+                name="tls-certs",
+                empty_dir=client.V1EmptyDirVolumeSource()
+            )
+        )
+        deployment.spec.template.spec.init_containers[0].volume_mounts.append(
+            client.V1VolumeMount(
+                name="tls-certs",
+                mount_path="/certs"
+            )
+        )
+        deployment.spec.template.spec.containers[0].volume_mounts.append(
+            client.V1VolumeMount(
+                name="tls-certs",
+                mount_path="/certs",
+                read_only=True
+            )
+        )
 
     # Apply resource requests/limits
     if request_cpu:
@@ -1053,7 +1222,9 @@ def create_triton_server(server_name: str, model_pvc_name: str, load_balancer_se
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -1323,6 +1494,10 @@ def create_k8s_opaque_secret(name: str, data: dict, namespace: str = 'default', 
                              print_output: bool = False) -> V1Secret:
     """Create a K8s secret with the provided data.
 
+    Values are base64-encoded for the Kubernetes API; that is not encryption. Cluster administrators
+    should enable etcd encryption at rest and restrict Secret access with RBAC. See
+    https://kubernetes.io/docs/concepts/security/secrets-good-practices/
+
     :param name: The name of the secret to be created.
     :param data: A dictionary of key-value pairs to be set as the data in the secret.
     :param namespace: The namespace for which the secret should be associated.
@@ -1364,7 +1539,9 @@ def create_volume(pvc_name: str, volume_size: str, storage_class: str = None, na
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -1437,7 +1614,9 @@ def create_volume_snapshot(pvc_name: str, snapshot_name: str = None, volume_snap
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -1505,7 +1684,9 @@ def delete_jupyter_lab(workspace_name: str, namespace: str = "default", preserve
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -1546,7 +1727,9 @@ def delete_triton_server(server_name: str, namespace: str = "default",
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -1612,7 +1795,9 @@ def delete_volume(pvc_name: str, namespace: str = "default", preserve_snapshots:
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -1681,6 +1866,7 @@ def delete_flexcache_volume(
         backend_name: str,
         namespace: str = "default",
         trident_namespace: str = "trident",
+        ssl_cert_path: str = "",
         print_output: bool = False
 ):
     """
@@ -1691,12 +1877,15 @@ def delete_flexcache_volume(
     - backend_name (str): Name of the tridentbackendconfig.
     - namespace (str, optional): Kubernetes namespace. Default is "default".
     - trident_namespace (str, optional): Kubernetes namespace where Trident is installed. Default is "trident".
+    - ssl_cert_path (str, optional): Path to a CA certificate file for ONTAP API SSL verification. Default is "" (use system CA bundle).
     - print_output (bool, optional): Whether to print output messages. Default is False.
     """
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -1769,7 +1958,9 @@ def delete_flexcache_volume(
             if print_output:
                 _print_invalid_config_error()
             raise InvalidConfigError()
-        
+
+        config["sslCertPath"] = ssl_cert_path
+
         if "ontap" in storage_driver_name.lower():
 
             # Instantiate connection to ONTAP cluster
@@ -1829,7 +2020,9 @@ def delete_volume_snapshot(snapshot_name: str, namespace: str = "default", print
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -1865,7 +2058,9 @@ def list_jupyter_labs(namespace: str = "default", include_astra_app_id: bool = F
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -1913,12 +2108,8 @@ def list_jupyter_labs(namespace: str = "default", include_astra_app_id: bool = F
         # Retrieve access URL
         try :
             workspaceDict["Access URL"] = _retrieve_jupyter_lab_url(workspaceName=workspaceName, namespace=namespace, printOutput=False)
-        except ServiceUnavailableError :
+        except (ServiceUnavailableError, APIConnectionError) :
             workspaceDict["Access URL"] = "unavailable"
-        except APIConnectionError as err:
-            if print_output:
-                logger.error("Error: Kubernetes API Error: %s", err)
-            raise APIConnectionError(err)
 
         # Retrieve clone details
         try:
@@ -1967,7 +2158,9 @@ def list_triton_servers(namespace: str = "default", print_output: bool = False) 
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -2043,7 +2236,9 @@ def list_volumes(namespace: str = "default", print_output: bool = False) -> list
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -2134,7 +2329,9 @@ def list_volume_snapshots(pvc_name: str = None, namespace: str = "default", prin
     # Retrieve kubeconfig
     try:
         _load_kube_config()
-    except:
+    except InvalidConfigError:
+        raise
+    except Exception:
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
@@ -2284,6 +2481,7 @@ def create_flexcache(
     junction: str = None,
     namespace: str = "default",
     trident_namespace: str = "trident",
+    ssl_cert_path: str = "",
     print_output: bool = False
 ):
     """
@@ -2300,6 +2498,7 @@ def create_flexcache(
     - junction (str, optional): The junction path for the FlexCache volume. Default is None.
     - namespace (str, optional): Kubernetes namespace to create the new PersistentVolumeClaim (PVC) in. Default is "default".
     - trident_namespace (str, optional): Kubernetes namespace where Trident is installed. Default is "trident".
+    - ssl_cert_path (str, optional): Path to a CA certificate file for ONTAP API SSL verification. Default is "" (use system CA bundle).
     - print_output (bool, optional): Whether to print output messages. Default is False.
 
     Returns:
@@ -2330,6 +2529,8 @@ def create_flexcache(
         if print_output:
             _print_invalid_config_error()
         raise InvalidConfigError()
+
+    config["sslCertPath"] = ssl_cert_path
 
     if "ontap" in storage_driver_name.lower():
 
@@ -2404,7 +2605,9 @@ def create_flexcache(
         # Retrieve kubeconfig
         try:
             _load_kube_config()
-        except:
+        except InvalidConfigError:
+            raise
+        except Exception:
             if print_output:
                 _print_invalid_config_error()
             raise InvalidConfigError()
