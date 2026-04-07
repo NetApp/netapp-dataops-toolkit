@@ -4,7 +4,7 @@ This module provides the public functions available to be imported directly
 by applications using the import method of utilizing the toolkit.
 """
 
-__version__ = "2.7.0"
+__version__ = "3.0.0"
 
 import base64
 from datetime import datetime
@@ -1683,6 +1683,16 @@ def delete_flexcache_volume(
         trident_namespace: str = "trident",
         print_output: bool = False
 ):
+    """
+    Delete a FlexCache volume and its associated Kubernetes resources.
+    
+    Parameters:
+    - pvc_name (str): Name of the PVC to delete.
+    - backend_name (str): Name of the tridentbackendconfig.
+    - namespace (str, optional): Kubernetes namespace. Default is "default".
+    - trident_namespace (str, optional): Kubernetes namespace where Trident is installed. Default is "trident".
+    - print_output (bool, optional): Whether to print output messages. Default is False.
+    """
     # Retrieve kubeconfig
     try:
         _load_kube_config()
