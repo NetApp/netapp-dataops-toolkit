@@ -50,6 +50,7 @@ The following options/arguments are optional:
     -s, --source-snapshot-name=     Name of Kubernetes VolumeSnapshot to use as source for clone. Either -s/--source-snapshot-name or -j/--source-workspace-name must be specified.
     -b, --load-balancer             Option to choose a LoadBalancer service instead of using NodePort service. If not specified, NodePort service will be utilized.
     -r, --allocate-resource=        Option to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
+        --no-https                  Disable HTTPS for the workspace. By default, HTTPS is enabled with a self-signed TLS certificate to prevent password sniffing.
 ```
 
 ##### Example Usage
@@ -142,6 +143,7 @@ The following options/arguments are optional:
     -b, --load-balancer         Option to choose a LoadBalancer service instead of using NodePort service. If not specified, NodePort service will be utilized.
     -v, --mount-pvc         	Option to attach an additional existing PVC that can be mounted at a spefic path whithin the container. Format: -v/--mount-pvc=existing_pvc_name:mount_point. If not specified, no additional PVC will be attached.
     -r, --allocate-resource=    Option to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
+        --no-https              Disable HTTPS for the workspace. By default, HTTPS is enabled with a self-signed TLS certificate to prevent password sniffing.
 ```
 
 ##### Example Usage
@@ -454,7 +456,8 @@ def clone_jupyter_lab(
     request_memory: str = None,                       # Amount of memory to reserve for newe JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
     request_nvidia_gpu: str = None,                   # Number of NVIDIA GPUs to allocate to new JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
     allocate_resource: str = None,                    # Option to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.
-    print_output: bool = False                        # Denotes whether or not to print messages to the console during execution.
+    print_output: bool = False,                       # Denotes whether or not to print messages to the console during execution.
+    enable_https: bool = True                         # Enable HTTPS with a self-signed TLS certificate. If True, JupyterLab will serve over HTTPS to prevent password sniffing. Default is True.
 ) :
 ```
 
@@ -496,7 +499,8 @@ def create_jupyter_lab(
     request_memory: str = None,                                         # Amount of memory to reserve for JupyterLab workspace. Format: '1024Mi', '100Gi', '10Ti', etc. If not specified, no memory will be reserved.
     request_nvidia_gpu: str = None,                                     # Number of NVIDIA GPUs to allocate to JupyterLab workspace. Format: '1', '4', etc. If not specified, no GPUs will be allocated.
     allocate_resource: str = None,                                      # Option to specify custom resource allocations, ex. 'nvidia.com/mig-1g.5gb=1'. If not specified, no custom resource will be allocated.    
-    print_output: bool = False                                          # Denotes whether or not to print messages to the console during execution.
+    print_output: bool = False,                                         # Denotes whether or not to print messages to the console during execution.
+    enable_https: bool = True                                           # Enable HTTPS with a self-signed TLS certificate. If True, JupyterLab will serve over HTTPS to prevent password sniffing. Default is True.
 ) -> str :
 ```
 

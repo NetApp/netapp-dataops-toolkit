@@ -18,9 +18,7 @@ Built on the [Azure NetApp Files Python SDK](https://docs.microsoft.com/en-us/py
   - [Prerequisites](#prerequisites)
   - [Installation Instructions](#installation-instructions)
 - [Authentication](#authentication)
-  - [Option 1: Azure CLI (Recommended)](#option-1-azure-cli-recommended)
-  - [Option 2: Service Principal](#option-2-service-principal)
-  - [Option 3: Environment Variables](#option-3-environment-variables)
+  - [Authentication Methods (DefaultAzureCredential)](#authentication-methods-defaultazurecredential)
 - [Configuration](#configuration)
   - [Option 1: Interactive Configuration (Recommended)](#option-1-interactive-configuration-recommended)
   - [Option 2: Manual Configuration](#option-2-manual-configuration)
@@ -30,16 +28,17 @@ Built on the [Azure NetApp Files Python SDK](https://docs.microsoft.com/en-us/py
 - [1. Configuration Management](#1-configuration-management)
   - [Create ANF Configuration](#create-anf-configuration)
 - [2. Volume Management](#2-volume-management)
-  - [🚀 Create a volume](#create-a-volume)
-  - [🔄 Clone a volume](#clone-a-volume)
-  - [📋 List volumes](#list-volumes)
-  - [🗑️ Delete a volume](#delete-a-volume)
+  - [🚀 Create a New Data Volume](#create-a-new-data-volume)
+  - [🔄 Clone an Existing Data Volume](#clone-an-existing-data-volume)
+  - [🗑️ Delete an Existing Data Volume](#delete-an-existing-data-volume)
+  - [📋 List All Data Volumes](#list-all-data-volumes)
 - [3. Snapshot Management](#3-snapshot-management)
-  - [📸 Create a snapshot](#create-a-snapshot)
-  - [📋 List snapshots](#list-snapshots)
-  - [🗑️ Delete a snapshot](#delete-a-snapshot)
+  - [📸 Create a New Snapshot for a Data Volume](#create-a-new-snapshot-for-a-data-volume)
+  - [🗑️ Delete an Existing Snapshot for a Data Volume](#delete-an-existing-snapshot-for-a-data-volume)
+  - [📋 List All Snapshots for a Data Volume](#list-all-snapshots-for-a-data-volume)
 - [4. Replication Management](#4-replication-management)
-  - [🔗 Create replication](#create-replication)
+  - [🔗 Create a Cross-Region Replication](#create-a-cross-region-replication)
+  - [🔗 Create a Cross-Zone Replication](#create-a-cross-zone-replication)
 - [Reference Links](#reference-links)
 - [Support](#support)
 
@@ -105,57 +104,50 @@ python3 -m pip install 'netapp-dataops-traditional[azure]'
 
 ## Authentication
 
-Choose one of the following authentication methods:
+The ANF module uses **`DefaultAzureCredential`** from `azure-identity`, which automatically chains through multiple authentication methods without requiring any environment variables or secrets. The active subscription is resolved via the Azure SDK's `SubscriptionClient`.
 
-<a name="option-1-azure-cli-recommended"></a>
+<a name="authentication-methods-defaultazurecredential"></a>
 
-### Option 1: Azure CLI (Recommended)
+### Authentication Methods (DefaultAzureCredential)
+
+`DefaultAzureCredential` automatically selects the appropriate credential based on the environment — no configuration required.
+
+> **No secrets or environment variables are required.** The credential resolves automatically based on the environment.
+
+#### Required Setup
+
+Authenticate once via Azure CLI:
 
 ```bash
 # Install Azure CLI (if not already installed)
 # https://docs.microsoft.com/en-us/cli/azure/install-azure-cli
 
-# Login to Azure
+# Login to Azure (opens browser)
 az login
 
-# Set your default subscription
-az account set --subscription "YOUR_SUBSCRIPTION_ID"
+# If you have access to multiple tenants, specify the tenant ID
+az login --tenant <TENANT_ID>
 
-# Register NetApp resource provider (if not already registered)
-az provider register --namespace Microsoft.NetApp
+# If you have multiple subscriptions, set the active one
+az account set --subscription <SUBSCRIPTION_ID>
 
-# Verify NetApp provider is registered
-az provider show --namespace Microsoft.NetApp --query "registrationState"
+# Verify active session (optional – subscription is auto-detected via the SDK)
+az account show
 ```
 
-<a name="option-2-service-principal"></a>
 
-### Option 2: Service Principal
+**How It Works:**
+- `DefaultAzureCredential` is instantiated and passed to `SubscriptionClient`
+- The first available subscription is resolved via the Azure SDK
+- The resolved `subscription_id` is used to initialize `NetAppManagementClient`
+- The client is cached in a singleton (`ANFClientManager`) and reused across calls
 
-```bash
-# Create a service principal
-az ad sp create-for-rbac --name "netapp-dataops-sp" --role "NetApp Contributor" --scopes /subscriptions/YOUR_SUBSCRIPTION_ID
-
-# Set environment variables
-export AZURE_CLIENT_ID="service-principal-app-id"
-export AZURE_CLIENT_SECRET="service-principal-password"
-export AZURE_TENANT_ID="your-tenant-id"
-export AZURE_SUBSCRIPTION_ID="your-subscription-id"
-```
-
-<a name="option-3-environment-variables"></a>
-
-### Option 3: Environment Variables
-
-```bash
-# Set required environment variables
-export AZURE_SUBSCRIPTION_ID="your-subscription-id"
-export AZURE_TENANT_ID="your-tenant-id"
-export AZURE_CLIENT_ID="your-client-id"
-export AZURE_CLIENT_SECRET="your-client-secret"
-```
-
-> **💡 Tip:** For production environments, use Option 2 with a dedicated service principal.
+**Benefits:**
+- **Zero secrets** – No `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, or `AZURE_TENANT_ID` needed
+- **Portable** – Works in local dev, CI/CD, containers, and Azure-hosted environments
+- **Subscription auto-resolved** – No subscription ID in config files or function parameters
+- **Multi-tenant support** – Respects `az login --tenant`
+- **Production-ready** – Managed Identity support means no credential rotation required
 
 ## Configuration
 
@@ -165,6 +157,13 @@ The ANF module supports **simplified configuration** through an interactive setu
 
 Set up a configuration file with your Azure infrastructure details:
 
+**Method 1: Run as Python Module (Recommended)**
+```bash
+# Run the configuration wizard directly
+python3 -m netapp_dataops.traditional.anf.cli_config
+```
+
+**Method 2: Import and Call in Python**
 ```python
 from netapp_dataops.traditional.anf.config import create_anf_config
 
@@ -172,8 +171,14 @@ from netapp_dataops.traditional.anf.config import create_anf_config
 create_anf_config()
 ```
 
+**Method 3: Python One-liner**
+```bash
+python3 -c "from netapp_dataops.traditional.anf.config import create_anf_config; create_anf_config()"
+```
+
+**Note:** You'll need to run `az login --tenant <TENANT_ID>` first to authenticate with Azure.
+
 **Interactive Prompts:**
-- Azure subscription ID
 - Resource group name  
 - NetApp account name
 - Capacity pool name
@@ -182,11 +187,13 @@ create_anf_config()
 - Subnet name (defaults to "default")
 - Default protocol types (defaults to "NFSv3")
 
+**Note:** Subscription ID is NOT needed - it's automatically detected from your Azure CLI session.
+
 **Benefits:**
-- ⚡ **Simplified function calls** - Pass only unique parameters
-- 🎯 **Consistent defaults** - Reuse infrastructure settings across operations
-- 🛡️ **Reduced errors** - Pre-validated configuration values
-- 📝 **Version control friendly** - Config file can be shared across teams
+- **Simplified function calls** - Pass only unique parameters
+- **Consistent defaults** - Reuse infrastructure settings across operations
+- **Reduced errors** - Pre-validated configuration values
+- **Version control friendly** - Config file can be shared across teams
 
 ### Configuration File Location
 
@@ -198,7 +205,6 @@ The configuration is automatically saved to:
 **Example configuration file:**
 ```json
 {
-  "subscriptionId": "12345678-1234-1234-1234-123456789abc",
   "resourceGroupName": "my-production-rg",
   "accountName": "my-netapp-account",
   "poolName": "premium-pool", 
@@ -208,6 +214,8 @@ The configuration is automatically saved to:
   "protocolTypes": ["NFSv3"]
 }
 ```
+
+**Note:** Subscription ID is not stored in the config file. It's automatically resolved at runtime via `DefaultAzureCredential` and the Azure SDK's `SubscriptionClient`.
 
 ### Usage with Configuration
 
@@ -320,7 +328,7 @@ from netapp_dataops.traditional.anf import (
 
 <a name="create-anf-configuration"></a>
 
-### Create ANF Configuration
+### ⚙️ Create ANF Configuration
 
 Create an ANF configuration file through interactive prompts to simplify subsequent function calls by storing common Azure infrastructure details.
 
@@ -366,8 +374,9 @@ The configuration will be saved to: ~/.netapp_dataops/anf_config.json
 
 Press Enter to continue or Ctrl+C to cancel...
 
-=== Azure Subscription Configuration ===
-Enter your Azure subscription ID: 12345678-1234-1234-1234-123456789abc
+Note: Subscription ID is no longer needed in the config.
+It will be automatically retrieved from Azure CLI.
+Make sure you've run: az login --tenant <TENANT_ID>
 
 === Infrastructure Configuration ===
 Enter resource group name: my-production-rg
@@ -386,7 +395,6 @@ Enter default protocol types (comma-separated):
   Default [NFSv3]: NFSv3,NFSv4.1
 
 === Configuration Summary ===
-Subscription ID: 12345678-****-****-****-********9abc
 Resource Group: my-production-rg
 NetApp Account: my-netapp-account
 Capacity Pool: premium-pool
@@ -394,6 +402,8 @@ Location: eastus
 Virtual Network: production-vnet
 Subnet: netapp-subnet
 Protocol Types: ['NFSv3', 'NFSv4.1']
+
+Note: Subscription ID will be retrieved automatically from Azure CLI
 
 Save this configuration? [y/N]: y
 
@@ -429,7 +439,6 @@ Configuration setup complete!
 
 ```json
 {
-  "subscriptionId": "12345678-1234-1234-1234-123456789abc",
   "resourceGroupName": "my-production-rg", 
   "accountName": "my-netapp-account",
   "poolName": "premium-pool",
@@ -439,6 +448,8 @@ Configuration setup complete!
   "protocolTypes": ["NFSv3", "NFSv4.1"]
 }
 ```
+
+**Note:** Subscription ID is not stored. It's automatically retrieved from Azure CLI when functions are called.
 
 #### Configuration Benefits
 
@@ -554,7 +565,6 @@ def create_volume(
     network_features: str = None,                     # Optional. Network features (Basic, Standard).
     encryption_key_source: str = None,                # Optional. Encryption key source.
     enable_subvolumes: str = None,                    # Optional. Subvolume operations flag.
-    subscription_id: str = None,                      # Optional. Azure subscription ID.
     print_output: bool = False                        # Optional. Print log messages to console.
 ) -> Dict[str, Any]:
 ```
@@ -661,7 +671,6 @@ def clone_volume(
     network_features: str = None,                     # Optional. Network features.
     encryption_key_source: str = None,                # Optional. Encryption key source.
     enable_subvolumes: str = None,                    # Optional. Subvolume operations flag.
-    subscription_id: str = None,                      # Optional. Azure subscription ID.
     print_output: bool = False                        # Optional. Print log messages to console.
 ) -> Dict[str, Any]:
 ```
@@ -738,7 +747,6 @@ def delete_volume(
     account_name: str = None,                        # Optional. The name of the NetApp account.
     pool_name: str = None,                           # Optional. The name of the capacity pool.
     force_delete: bool = None,                       # Optional. Force delete even if volume has dependencies.
-    subscription_id: str = None,                     # Optional. Azure subscription ID.
     print_output: bool = False                       # Optional. Print log messages to console.
 ) -> Dict[str, Any]:
 ```
@@ -801,7 +809,6 @@ def list_volumes(
     resource_group_name: str = None,                 # Optional. The name of the resource group.
     account_name: str = None,                        # Optional. The name of the NetApp account.
     pool_name: str = None,                           # Optional. The name of the capacity pool.
-    subscription_id: str = None,                     # Optional. Azure subscription ID.
     print_output: bool = False                       # Optional. Print log messages to console.
 ) -> Dict[str, Any]:
 ```
@@ -889,7 +896,6 @@ def create_snapshot(
     pool_name: str = None,                           # Optional. The name of the capacity pool.
     location: str = None,                            # Optional. Azure region.
     tags: dict = None,                               # Optional. Resource tags.
-    subscription_id: str = None,                     # Optional. Azure subscription ID.
     print_output: bool = False                       # Optional. Print log messages to console.
 ) -> Dict[str, Any]:
 ```
@@ -965,7 +971,6 @@ def delete_snapshot(
     resource_group_name: str = None,                 # Optional. The name of the resource group.
     account_name: str = None,                        # Optional. The name of the NetApp account.
     pool_name: str = None,                           # Optional. The name of the capacity pool.
-    subscription_id: str = None,                     # Optional. Azure subscription ID.
     print_output: bool = False                       # Optional. Print log messages to console.
 ) -> Dict[str, Any]:
 ```
@@ -1030,7 +1035,6 @@ def list_snapshots(
     resource_group_name: str = None,                 # Optional. The name of the resource group.
     account_name: str = None,                        # Optional. The name of the NetApp account.
     pool_name: str = None,                           # Optional. The name of the capacity pool.
-    subscription_id: str = None,                     # Optional. Azure subscription ID.
     print_output: bool = False                       # Optional. Print log messages to console.
 ) -> Dict[str, Any]:
 ```
@@ -1127,7 +1131,6 @@ def create_replication(
     account_name: str = None,                               # Optional. Source volume NetApp account name.
     pool_name: str = None,                                  # Optional. Source volume capacity pool name.
     # Common parameters
-    subscription_id: str = None,                            # Optional. Azure subscription ID.
     print_output: bool = False                              # Optional. Print log messages to console.
 ) -> Dict[str, Any]:
 ```
@@ -1197,7 +1200,128 @@ replication_result = anf.create_replication(
 }
 ```
 
+<a name="create-a-cross-zone-replication"></a>
 
+### 🔗 Create a Cross-Zone Replication
+
+Set up cross-zone replication (CZR) relationships between Azure NetApp Files volumes within the same region for high availability and local disaster recovery. Cross-zone replication provides zonal redundancy by replicating data between different availability zones in the same Azure region.
+
+#### Function Definition
+```python
+def create_replication(
+    # Source volume parameters
+    volume_name: str,                                        # Required. Source volume name.
+    # Destination volume parameters  
+    destination_resource_group_name: str,                   # Required. Destination resource group name.
+    destination_account_name: str,                          # Required. Destination NetApp account name.
+    destination_pool_name: str,                             # Required. Destination capacity pool name.
+    destination_volume_name: str,                           # Required. Destination volume name.
+    destination_location: str,                              # Required. Destination Azure region (same as source for CZR).
+    destination_creation_token: str,                        # Required. Destination volume file path.
+    destination_usage_threshold: int,                       # Required. Destination volume quota in bytes.
+    destination_protocol_types: list,                       # Required. Destination protocol types.
+    destination_virtual_network_name: str,                  # Required. Destination virtual network.
+    destination_subnet_name: str = "default",               # Optional. Destination subnet name.
+    destination_service_level: str = None,                  # Optional. Destination service level.
+    destination_zones: list = None,                         # Required for CZR. Destination availability zone (e.g., ["2"]).
+    # Source volume parameters (optional - will use config defaults)
+    resource_group_name: str = None,                        # Optional. Source volume resource group name.
+    account_name: str = None,                               # Optional. Source volume NetApp account name.
+    pool_name: str = None,                                  # Optional. Source volume capacity pool name.
+    # Common parameters
+    print_output: bool = False                              # Optional. Print log messages to console.
+) -> Dict[str, Any]:
+```
+
+#### Return Values
+```python
+dict: Dictionary with keys
+  - 'status': 'success' or 'error'
+  - 'details': Replication setup result (if successful)
+  - 'message': Error message (if failed)
+```
+
+#### Error Handling
+
+If an error is encountered, the function will raise an exception of one of the following types:
+```python
+ValueError            # If required parameters are missing or invalid
+ResourceNotFoundError # If source volume does not exist
+Exception             # If there is an error during the replication setup process
+```
+
+#### Key Differences: Cross-Zone vs Cross-Region Replication
+
+| Feature | Cross-Zone Replication (CZR) | Cross-Region Replication (CRR) |
+|---------|------------------------------|--------------------------------|
+| **Location** | Same Azure region, different zones | Different Azure regions |
+| **Latency** | Ultra-low (< 1ms) | Higher (depends on region distance) |
+| **Use Case** | High availability, local DR | Disaster recovery, geo-redundancy |
+| **Cost** | Lower (same region) | Higher (cross-region bandwidth) |
+| **Zone Parameter** | `destination_zones` required | `destination_zones` optional |
+
+#### Example Usage
+
+**Example 1: Cross-Zone Replication for High Availability**
+
+Set up replication between zones in the same region (East US):
+
+```python
+from netapp_dataops.traditional import anf
+
+# Create cross-zone replication within East US
+czr_result = anf.create_replication(
+    # Source volume (East US - Zone 1)
+    volume_name="production-data-zone1",
+    
+    # Destination volume (East US - Zone 2) - will be created
+    destination_resource_group_name="prod-eastus-rg",
+    destination_account_name="prod-netapp-account", 
+    destination_pool_name="ha-capacity-pool-zone2",
+    destination_volume_name="production-data-zone2",
+    destination_location="eastus",  # Same region as source
+    destination_creation_token="prod-data-zone2-path",
+    destination_usage_threshold=214748364800,  # 200 GiB
+    destination_protocol_types=["NFSv3"],
+    destination_virtual_network_name="prod-vnet",
+    destination_subnet_name="netapp-zone2-subnet",
+    destination_zones=["2"],  # Availability Zone 2
+    
+    # Source volume location (optional - uses config defaults)
+    resource_group_name="prod-eastus-rg",
+    account_name="prod-netapp-account",
+    pool_name="primary-capacity-pool-zone1",
+    
+    print_output=True
+)
+```
+
+**Expected Output:**
+```json
+{
+  "status": "success",
+  "details": {
+    "replication_id": "/subscriptions/.../replicationVolumeReplication",
+    "source_volume": "production-data-zone1",
+    "destination_volume": "production-data-zone2",
+    "replication_schedule": "_10minutely",
+    "mirror_state": "Mirrored",
+    "relationship_status": "Idle",
+    "destination_location": "eastus",
+    "destination_zone": "2",
+    "replication_type": "cross_zone"
+  }
+}
+```
+
+#### Requirements for Cross-Zone Replication
+
+- Source and destination volumes must be in the **same Azure region**
+- Source volume must be in one availability zone
+- Destination volume must be in a **different** availability zone
+- Both volumes must use the same protocol types
+- Region must support availability zones for Azure NetApp Files
+- Proper network connectivity between zones (typically automatic within VNet)
 
 <a name="reference-links"></a>
 
@@ -1220,7 +1344,7 @@ replication_result = anf.create_replication(
 Report any issues via GitHub: https://github.com/NetApp/netapp-data-science-toolkit/issues.
 
 **Common Issues:**
-- **Authentication failures**: Ensure Azure CLI is logged in or service principal credentials are correct
+- **Authentication failures**: Ensure `az login` has been run for local development, or a Managed Identity is assigned in production
 - **Permission denied**: Verify NetApp Contributor role is assigned to your account/service principal
 - **Resource not found**: Check that NetApp Account, Capacity Pool, and delegated subnet exist
 - **Region limitations**: Verify Azure NetApp Files is available in your target region

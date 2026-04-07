@@ -1,4 +1,11 @@
 from google.cloud import netapp_v1
+from google.cloud.netapp_v1.types import (
+    SnapshotPolicy,
+    HourlySchedule,
+    DailySchedule,
+    WeeklySchedule,
+    MonthlySchedule,
+)
 from typing import Dict, Any
 from .base import _serialize, create_client, validate_required_params
 
@@ -242,7 +249,7 @@ def create_volume(
 
         # Build SnapshotPolicy if provided
         if snapshot_policy:
-            volume.snapshot_policy = netapp_v1.SnapshotPolicy(**snapshot_policy)
+            volume.snapshot_policy = _build_snapshot_policy(snapshot_policy)
 
         # Build TieringPolicy if provided
         if tiering_enabled:
@@ -539,7 +546,7 @@ def clone_volume(
     
         # Build SnapshotPolicy if provided
         if snapshot_policy:
-            volume.snapshot_policy = netapp_v1.SnapshotPolicy(**snapshot_policy)
+            volume.snapshot_policy = _build_snapshot_policy(snapshot_policy)
     
         # Build TieringPolicy if provided
         if tiering_enabled:
@@ -714,3 +721,37 @@ def list_volumes(
         if print_output:
             logger.error(f"An error occurred while listing volumes: {e}")
         return {"status": "error", "message": str(e)}
+    
+
+def _build_snapshot_policy(snapshot_policy: dict) -> SnapshotPolicy:
+    """
+    Build a SnapshotPolicy object from a dictionary.
+
+    Expected snapshot_policy structure::
+
+        {
+            'enabled': True,                          # optional, default True
+            'hourly_schedule':  { 'snapshots_to_keep': 2, 'minute': 0 },
+            'daily_schedule':   { 'snapshots_to_keep': 7, 'minute': 0, 'hour': 0 },
+            'weekly_schedule':  { 'snapshots_to_keep': 4, 'minute': 0, 'hour': 0, 'day': 'Sunday' },
+            'monthly_schedule': { 'snapshots_to_keep': 12, 'minute': 0, 'hour': 0, 'days_of_month': '1' },
+        }
+
+    Raises:
+        ValueError: If any schedule sub-dict contains invalid or missing fields.
+    """
+    hourly = snapshot_policy.get('hourly_schedule')
+    daily = snapshot_policy.get('daily_schedule')
+    weekly = snapshot_policy.get('weekly_schedule')
+    monthly = snapshot_policy.get('monthly_schedule')
+    try:
+        return SnapshotPolicy(
+            enabled=snapshot_policy.get('enabled', True),
+            hourly_schedule=HourlySchedule(**hourly) if hourly else None,
+            daily_schedule=DailySchedule(**daily) if daily else None,
+            weekly_schedule=WeeklySchedule(**weekly) if weekly else None,
+            monthly_schedule=MonthlySchedule(**monthly) if monthly else None,
+        )
+    except TypeError as e:
+        raise ValueError(f"Malformed snapshot_policy: {e}")
+

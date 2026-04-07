@@ -19,8 +19,7 @@ Built on the [Google Cloud NetApp Python SDK](https://cloud.google.com/python/do
   - [Prerequisites](#prerequisites)
   - [Installation Instructions](#installation-instructions)
 - [Authentication](#authentication)
-  - [Option 1: Application Default Credentials (Recommended)](#option-1-application-default-credentials-recommended)
-  - [Option 2: Service Account JSON](#option-2-service-account-json)
+  - [Secure Authentication](#secure-authentication-setup)
 - [Available Functions](#available-functions)
   - [Function Categories](#function-categories)
 - [API Reference](#api-reference)
@@ -98,39 +97,173 @@ python3 -m pip install 'netapp-dataops-traditional[gcp]'
 
 ## Authentication
 
-Choose one of the following authentication methods:
+The GCNV module uses **Application Default Credentials (ADC)** with **service account impersonation**, Google's recommended secure authentication approach.
 
-<a name="option-1-application-default-credentials-recommended"></a>
+<a name="secure-authentication-setup"></a>
 
-### Option 1: Application Default Credentials (Recommended)
+### Secure Authentication
+
+This approach eliminates the need for service account key files, which can be leaked or never expire.
+
+---
+
+### Option 1: Manual Setup
+
+#### Step 1: User Authentication
 
 ```bash
+# Disable any existing impersonation before starting
+gcloud config unset auth/impersonate_service_account
+
 # Authenticate with your Google account
 gcloud auth login
+```
 
-# Set your default project
+#### Step 2: Set Project
+
+```bash
 gcloud config set project YOUR_PROJECT_ID
+```
 
-# Authenticate application default credentials
-gcloud auth application-default login
+#### Step 3: Enable Required APIs
 
-# Enable the NetApp API
-gcloud services enable netapp.googleapis.com
+> **📝 Note:** Must run as your user account, before impersonation is configured.
 
-# Verify API is enabled
+```bash
+gcloud services enable netapp.googleapis.com iamcredentials.googleapis.com
+
+# Verify APIs are enabled
 gcloud services list --enabled --filter="name:netapp.googleapis.com"
 ```
 
-<a name="option-2-service-account-json"></a>
-
-### Option 2: Service Account JSON
+#### Step 4: Application Default Credentials
 
 ```bash
-# Set the path to your service account key
-export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service_account.json"
+# Authenticate application default credentials
+gcloud auth application-default login
+
+# Secure the credentials file
+chmod 600 ~/.config/gcloud/application_default_credentials.json
 ```
 
-> **💡 Tip:** For production environments, use Option 2 with a dedicated service account.
+#### Step 5: Create Service Account
+
+```bash
+gcloud iam service-accounts create YOUR_SERVICE_ACCOUNT_NAME \
+    --display-name="YOUR_DISPLAY_NAME"
+```
+
+#### Step 6: Grant NetApp Permissions
+
+```bash
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+    --member="serviceAccount:YOUR_SERVICE_ACCOUNT_NAME@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+    --role="roles/netappcloudvolumes.admin"
+```
+
+#### Step 7: Grant Impersonation Permission
+
+```bash
+gcloud iam service-accounts add-iam-policy-binding \
+    YOUR_SERVICE_ACCOUNT_NAME@YOUR_PROJECT_ID.iam.gserviceaccount.com \
+    --member="user:YOUR_EMAIL@YOUR_DOMAIN.com" \
+    --role="roles/iam.serviceAccountTokenCreator"
+```
+
+#### Step 8: Configure Auto-Impersonation
+
+```bash
+gcloud config set auth/impersonate_service_account \
+    YOUR_SERVICE_ACCOUNT_NAME@YOUR_PROJECT_ID.iam.gserviceaccount.com
+
+# Verify configuration
+gcloud config get-value auth/impersonate_service_account
+```
+
+---
+
+### Option 2: Automated Setup Script
+
+Run the provided setup script to configure all steps automatically:
+
+```bash
+python3 -m netapp_dataops.traditional.gcnv.setup_gcnv_auth
+```
+
+The script will prompt for:
+- **Project ID** – Your GCP project (e.g., `my-project`)
+- **Your email** – Your Google Cloud user account email
+- **Service account name** – Name for the service account (default: `gcnv-dataops`)
+
+It will then execute all 8 setup steps automatically:
+
+```
+NetApp DataOps Toolkit - GCNV Authentication Setup
+====================================================
+
+gcloud CLI exists: Google Cloud SDK 548.0.0
+
+Configuration
+-------------
+  Enter Project ID: my-project
+  Enter Your email: user@example.com
+  Enter Service account name [gcnv-dataops]:
+
+Continue? (yes/no): yes
+
+Step 1/8  User authentication (browser will open)...
+Authenticated
+
+Step 2/8  Set project...
+Project set to 'my-project'
+
+Step 3/8  Enable APIs (running as your user account)...
+netapp.googleapis.com enabled
+iamcredentials.googleapis.com enabled
+
+Step 4/8  Application Default Credentials (browser will open)...
+ADC configured and credentials secured (chmod 600)
+
+Step 5/8  Create service account...
+Created: gcnv-dataops@my-project.iam.gserviceaccount.com
+
+Step 6/8  Grant NetApp permissions...
+roles/netappcloudvolumes.admin granted
+
+Step 7/8  Grant impersonation permission...
+user@example.com can impersonate gcnv-dataops@my-project.iam.gserviceaccount.com
+
+Step 8/8  Configure impersonation...
+Impersonation active: gcnv-dataops@my-project.iam.gserviceaccount.com
+
+====================================================
+Setup Complete!
+====================================================
+```
+
+> **📝 Note:** The browser will open twice - once for user authentication (Step 1) and once for Application Default Credentials (Step 4).
+
+### Troubleshooting
+
+**Issue:** "Permission denied" errors
+```bash
+# Verify your impersonation is configured
+gcloud config get-value auth/impersonate_service_account
+
+# Check if you have the TokenCreator role
+gcloud iam service-accounts get-iam-policy \
+    YOUR_SERVICE_ACCOUNT_NAME@YOUR_PROJECT_ID.iam.gserviceaccount.com
+```
+
+**Issue:** Need to temporarily disable impersonation
+```bash
+# Disable impersonation
+gcloud config unset auth/impersonate_service_account
+
+# Re-enable when needed
+gcloud config set auth/impersonate_service_account \
+    YOUR_SERVICE_ACCOUNT_NAME@YOUR_PROJECT_ID.iam.gserviceaccount.com
+```
 
 <a name="available-functions"></a>
 
@@ -158,16 +291,16 @@ from netapp_dataops.traditional.gcnv import (
 ### Function Categories
 
 1. [Volume Management](#1-volume-management)
-    - [Create a New Data Volume](#create-a-new-data-volume)
-    - [Clone an Existing Data Volume](#clone-an-existing-data-volume)
-    - [Delete an Existing Data Volume](#delete-an-existing-data-volume)
-    - [List All Data Volumes](#list-all-data-volumes)
+    - [🚀 Create a New Data Volume](#create-a-new-data-volume)
+    - [🔄 Clone an Existing Data Volume](#clone-an-existing-data-volume)
+    - [🗑️ Delete an Existing Data Volume](#delete-an-existing-data-volume)
+    - [📋 List All Data Volumes](#list-all-data-volumes)
 2. [Snapshot Management](#2-snapshot-management)
-    - [Create a New Snapshot for a Data Volume](#create-a-new-snapshot-for-a-data-volume)
-    - [Delete an Existing Snapshot for a Data Volume](#delete-an-existing-snapshot-for-a-data-volume)
-    - [List All Snapshots for a Data Volume](#list-all-snapshots-for-a-data-volume)
+    - [📸 Create a New Snapshot for a Data Volume](#create-a-new-snapshot-for-a-data-volume)
+    - [🗑️ Delete an Existing Snapshot for a Data Volume](#delete-an-existing-snapshot-for-a-data-volume)
+    - [📋 List All Snapshots for a Data Volume](#list-all-snapshots-for-a-data-volume)
 3. [Replication Management](#3-replication-management)
-    - [Create a Replication of a Data Volume](#create-a-replication-of-a-data-volume)
+    - [🔗 Create a Replication of a Data Volume](#create-a-replication-of-a-data-volume)
 
 <a name="api-reference"></a>
 
@@ -179,7 +312,7 @@ from netapp_dataops.traditional.gcnv import (
 
 <a name="create-a-new-data-volume"></a>
 
-### Create a New Data Volume
+### 🚀 Create a New Data Volume
 
 Provision new NetApp volumes with customizable parameters including size, protocols (NFS/SMB), storage pools, and access policies.
 
@@ -269,7 +402,7 @@ response = gcnv.create_volume(
 
 <a name="clone-an-existing-data-volume"></a>
 
-### Clone an Existing Data Volume
+### 🔄 Clone an Existing Data Volume
 
 The module supports creating a new volume as a clone of an existing volume, using a specific snapshot as the source. This is useful for rapid environment duplication or testing.
 
@@ -348,7 +481,7 @@ clone_result = gcnv.clone_volume(
 
 <a name="delete-an-existing-data-volume"></a>
 
-### Delete an Existing Data Volume
+### 🗑️ Delete an Existing Data Volume
 
 Volumes can be deleted, with options for forced deletion if necessary.
 
@@ -396,7 +529,7 @@ delete_result = gcnv.delete_volume(
 
 <a name="list-all-data-volumes"></a>
 
-### List All Data volumes
+### 📋 List All Data volumes
 
 Retrieve all volumes in a project/location.
 
@@ -447,7 +580,7 @@ volumes = gcnv.list_volumes(
 
 <a name="create-a-new-snapshot-for-a-data-volume"></a>
 
-### Create a New Snapshot for a Data Volume
+### 📸 Create a New Snapshot for a Data Volume
 
 Snapshots capture the state of a volume at a point in time, enabling backup and recovery scenarios.
 
@@ -499,7 +632,7 @@ snapshot_result = gcnv.create_snapshot(
 
 <a name="delete-an-existing-snapshot-for-a-data-volume"></a>
 
-### Delete an Existing Snapshot for a Data Volume
+### 🗑️ Delete an Existing Snapshot for a Data Volume
 
 Snapshots can be removed when no longer needed.
 
@@ -549,7 +682,7 @@ delete_snap = gcnv.delete_snapshot(
 
 <a name="list-all-snapshots-for-a-data-volume"></a>
 
-### List All Snapshots for a Data Volume
+### 📋 List All Snapshots for a Data Volume
 
 Users can enumerate all snapshots associated with a particular volume.
 
@@ -600,7 +733,7 @@ snapshots = gcnv.list_snapshots(
 
 <a name="create-a-replication-of-a-data-volume"></a>
 
-### Create a Replication of a Data Volume
+### 🔗 Create a Replication of a Data Volume
 
 Set up cross-region replication for disaster recovery and high availability.
 

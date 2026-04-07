@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import logging
-import sys
 import asyncio
 from typing import Optional, Dict, Any, List
 from fastmcp import FastMCP
@@ -57,12 +55,12 @@ async def create_volume_tool(
     network_features: Optional[str] = None,
     encryption_key_source: Optional[str] = None,
     enable_subvolumes: Optional[str] = None,
-    subscription_id: Optional[str] = None,
     print_output: Optional[bool] = False
 ) -> Dict[str, Any]:
     """
     Use this tool to create a new Azure NetApp Files volume within the capacity pool.
 
+    Args:
         volume_name (str):
             Required. The name of the volume.
         creation_token (str):
@@ -88,7 +86,7 @@ async def create_volume_tool(
             Optional. The name of a delegated Azure subnet to construct the Azure Resource ID for a delegated subnet.
             Will use config default if not provided, otherwise defaults to "default".
         service_level (str):
-            Optional. Service level (Standard, Premium, Ultra, StandardZRS, Flexible).
+            Optional. Service level (Standard, Premium, Ultra, Flexible).
             Defaults to Premium.
         tags (Dict[str, str]):
             Optional. Resource tags.
@@ -176,8 +174,6 @@ async def create_volume_tool(
         enable_subvolumes (str):
             Optional. Flag indicating whether subvolume operations are enabled on the volume. Known values are: "Enabled" and "Disabled".
             Defaults to Disabled.
-        subscription_id (str):
-            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -226,7 +222,6 @@ async def create_volume_tool(
             network_features=network_features,
             encryption_key_source=encryption_key_source,
             enable_subvolumes=enable_subvolumes,
-            subscription_id=subscription_id,
             print_output=print_output
         )
         if result['status'] == 'error':
@@ -280,7 +275,6 @@ async def clone_volume_tool(
     network_features: Optional[str] = None,
     encryption_key_source: Optional[str] = None,
     enable_subvolumes: Optional[str] = None,
-    subscription_id: Optional[str] = None,
     print_output: Optional[bool] = False
 ) -> Dict[str, Any]:
     """
@@ -309,7 +303,7 @@ async def clone_volume_tool(
             Optional. The name of a delegated Azure subnet to construct the Azure Resource ID for a delegated subnet.
             Will use config default if not provided, otherwise defaults to "default".
         service_level (str):
-            Optional. Service level (Standard, Premium, Ultra, StandardZRS, Flexible).
+            Optional. Service level (Standard, Premium, Ultra, Flexible).
             Defaults to Premium.
         protocol_types (List[str]):
             Optional. List of protocol types (NFSv3, NFSv4.1, CIFS). Will use config default if not provided.
@@ -399,8 +393,6 @@ async def clone_volume_tool(
         enable_subvolumes (bool):
             Optional. Flag indicating whether subvolume operations are enabled on the volume. Known values are: "Enabled" and "Disabled".
             Defaults to Disabled.
-        subscription_id (str):
-            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -450,7 +442,6 @@ async def clone_volume_tool(
             network_features=network_features,
             encryption_key_source=encryption_key_source,
             enable_subvolumes=enable_subvolumes,
-            subscription_id=subscription_id,
             print_output=print_output
         )
         if result['status'] == 'error':
@@ -472,7 +463,6 @@ async def list_volumes_tool(
     resource_group_name: Optional[str] = None,
     account_name: Optional[str] = None,
     pool_name: Optional[str] = None,
-    subscription_id: Optional[str] = None,
     print_output: Optional[bool] = False
 ) -> Dict[str, Any]:
     """
@@ -485,8 +475,6 @@ async def list_volumes_tool(
             Optional. The name of the NetApp account. Will use config default if not provided.
         pool_name (str):
             Optional. The name of the capacity pool. Will use config default if not provided.
-        subscription_id (str):
-            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -503,7 +491,6 @@ async def list_volumes_tool(
             resource_group_name=resource_group_name,
             account_name=account_name,
             pool_name=pool_name,
-            subscription_id=subscription_id,
             print_output=print_output
         )
         if result['status'] == 'error':
@@ -528,7 +515,6 @@ async def create_snapshot_tool(
     account_name: Optional[str] = None,
     pool_name: Optional[str] = None,
     location: Optional[str] = None,
-    subscription_id: Optional[str] = None,
     print_output: Optional[bool] = False
 ) -> Dict[str, Any]:
     """
@@ -549,8 +535,6 @@ async def create_snapshot_tool(
             Optional. Azure region. Will use config default if not provided.
         tags (Dict[str, str]):
             Optional. Resource tags.
-        subscription_id (str):
-            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -572,7 +556,6 @@ async def create_snapshot_tool(
             account_name=account_name,
             pool_name=pool_name,
             location=location,
-            subscription_id=subscription_id,
             print_output=print_output
         )
         if result['status'] == 'error':
@@ -594,7 +577,6 @@ async def list_snapshots_tool(
     resource_group_name: Optional[str] = None,
     account_name: Optional[str] = None,
     pool_name: Optional[str] = None,
-    subscription_id: Optional[str] = None,
     print_output: Optional[bool] = False
 ) -> Dict[str, Any]:
     """
@@ -609,8 +591,6 @@ async def list_snapshots_tool(
             Optional. The name of the NetApp account. Will use config default if not provided.
         pool_name (str):
             Optional. The name of the capacity pool. Will use config default if not provided.
-        subscription_id (str):
-            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -629,7 +609,6 @@ async def list_snapshots_tool(
             resource_group_name=resource_group_name,
             account_name=account_name,
             pool_name=pool_name,
-            subscription_id=subscription_id,
             print_output=print_output
         )
         if result['status'] == 'error':
@@ -668,7 +647,6 @@ async def create_replication_tool(
     account_name: Optional[str] = None,
     pool_name: Optional[str] = None,
     # Common parameters
-    subscription_id: Optional[str] = None,
     print_output: Optional[bool] = False
 ) -> Dict[str, Any]:
     """
@@ -702,8 +680,9 @@ async def create_replication_tool(
         destination_subnet_name (str):
             Optional. Destination subnet name. Defaults to "default".
         destination_service_level (str):
-            Optional. Destination service level (Standard/Premium/Ultra).
-            Defaults to "Premium".
+            Optional. Destination service level (Standard/Premium/Ultra/Flexible).
+            If not provided, it will be retrieved from the destination capacity pool.
+            Must be one of: Standard, Premium, Ultra, Flexible.
         destination_zones (list):
             Optional. Availability zones for destination volume. If None, defaults to ["1"].
         
@@ -714,9 +693,6 @@ async def create_replication_tool(
             Optional. Source volume NetApp account name. Will use config default if not provided.
         pool_name (str):
             Optional. Source volume capacity pool name. Will use config default if not provided.
-
-        subscription_id (str):
-            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -752,7 +728,6 @@ async def create_replication_tool(
             resource_group_name=resource_group_name,
             account_name=account_name,
             pool_name=pool_name,
-            subscription_id=subscription_id,
             print_output=print_output
         )
         if result['status'] == 'error':
@@ -770,7 +745,6 @@ async def create_replication_tool(
 
 @mcp.tool(name="Create_ANF_Config")
 async def create_anf_config_tool(
-    subscription_id: str,
     resource_group_name: str,
     account_name: str,
     pool_name: str,
@@ -784,8 +758,6 @@ async def create_anf_config_tool(
     Use this tool to create an ANF configuration file to avoid repetitive parameters.
     
     Args:
-        subscription_id (str):
-            Required. Azure subscription ID.
         resource_group_name (str):
             Required. The name of the resource group.
         account_name (str):
@@ -816,7 +788,6 @@ async def create_anf_config_tool(
             protocol_types = ["NFSv3"]
             
         result = create_anf_config(
-            subscription_id=subscription_id,
             resource_group_name=resource_group_name,
             account_name=account_name,
             pool_name=pool_name,

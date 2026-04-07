@@ -4,12 +4,12 @@ NetApp DataOps Toolkit - Azure NetApp Files (ANF) Snapshot Management
 This module provides snapshot management operations for Azure NetApp Files.
 """
 
-from typing import Dict, Optional, Any
+from typing import Dict, Any
 from azure.mgmt.netapp.models import Snapshot
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 from .client import get_anf_client
-from .base import _serialize, validate_required_params
-from .config import _retrieve_anf_config, get_config_value, InvalidConfigError
+from .base import _serialize, _validate_required_params, _get_clean_error_message
+from .config import _retrieve_anf_config, _get_config_value, InvalidConfigError
 
 from netapp_dataops.logging_utils import setup_logger
 
@@ -22,7 +22,6 @@ def create_snapshot(
     account_name: str = None,
     pool_name: str = None,
     location: str = None,
-    subscription_id: str = None,
     print_output: bool = False
 ) -> Dict[str, Any]:
     """
@@ -41,8 +40,6 @@ def create_snapshot(
             Optional. The name of the capacity pool. Will use config default if not provided.
         location (str):
             Optional. Azure region. Will use config default if not provided.
-        subscription_id (str):
-            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -65,16 +62,15 @@ def create_snapshot(
 
     # Resolve parameters from function arguments or config
     try:
-        resolved_subscription_id = get_config_value('subscription_id', subscription_id, config, print_output)
-        resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
-        resolved_account_name = get_config_value('account_name', account_name, config, print_output)
-        resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
-        resolved_location = get_config_value('location', location, config, print_output)
+        resolved_resource_group_name = _get_config_value('resource_group_name', resource_group_name, config, print_output)
+        resolved_account_name = _get_config_value('account_name', account_name, config, print_output)
+        resolved_pool_name = _get_config_value('pool_name', pool_name, config, print_output)
+        resolved_location = _get_config_value('location', location, config, print_output)
     except InvalidConfigError:
         raise
 
     # Validate input parameters (now using resolved values)
-    validate_required_params(
+    _validate_required_params(
         resource_group_name=resolved_resource_group_name,
         account_name=resolved_account_name,
         pool_name=resolved_pool_name,
@@ -84,8 +80,8 @@ def create_snapshot(
     )
 
     try:
-        # Get ANF client and subscription ID (using resolved value)
-        client, final_subscription_id = get_anf_client(resolved_subscription_id, print_output=print_output)
+        # Get ANF client
+        client, _ = get_anf_client(print_output=print_output)
 
         # Build snapshot properties (using resolved values)
         snapshot_properties = {
@@ -120,23 +116,17 @@ def create_snapshot(
         return {"status": "success", "details": _serialize(result)}
         
     except ResourceExistsError as e:
-        error_message = f"Snapshot '{snapshot_name}' already exists: {str(e)}"
-        logger.error(error_message)
-        if print_output:
-            print(error_message)
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Snapshot '{snapshot_name}' already exists: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
     except ResourceNotFoundError as e:
-        error_message = f"Source volume '{volume_name}' not found: {str(e)}"
-        logger.error(error_message)
-        if print_output:
-            print(error_message)
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Source volume '{volume_name}' not found: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
     except Exception as e:
-        error_message = f"Failed to create snapshot: {str(e)}"
-        logger.error(error_message)
-        if print_output:
-            print(error_message)
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Failed to create snapshot: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
 
 
 def delete_snapshot(
@@ -145,7 +135,6 @@ def delete_snapshot(
     resource_group_name: str = None,
     account_name: str = None,
     pool_name: str = None,
-    subscription_id: str = None,
     print_output: bool = False
 ) -> Dict[str, Any]:
     """
@@ -162,8 +151,6 @@ def delete_snapshot(
             Optional. The name of the NetApp account. Will use config default if not provided.
         pool_name (str):
             Optional. The name of the capacity pool. Will use config default if not provided.
-        subscription_id (str):
-            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -185,15 +172,14 @@ def delete_snapshot(
 
     # Resolve parameters from function arguments or config
     try:
-        resolved_subscription_id = get_config_value('subscription_id', subscription_id, config, print_output)
-        resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
-        resolved_account_name = get_config_value('account_name', account_name, config, print_output)
-        resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
+        resolved_resource_group_name = _get_config_value('resource_group_name', resource_group_name, config, print_output)
+        resolved_account_name = _get_config_value('account_name', account_name, config, print_output)
+        resolved_pool_name = _get_config_value('pool_name', pool_name, config, print_output)
     except InvalidConfigError:
         raise
 
     # Validate input parameters (now using resolved values)
-    validate_required_params(
+    _validate_required_params(
         resource_group_name=resolved_resource_group_name,
         account_name=resolved_account_name,
         pool_name=resolved_pool_name,
@@ -202,8 +188,8 @@ def delete_snapshot(
     )
 
     try:
-        # Get ANF client and subscription ID (using resolved value)
-        client, _ = get_anf_client(resolved_subscription_id, print_output=print_output)
+        # Get ANF client
+        client, _ = get_anf_client(print_output=print_output)
 
         # Check if snapshot exists before attempting deletion
         try:
@@ -218,8 +204,6 @@ def delete_snapshot(
         except ResourceNotFoundError:
             error_message = f"Snapshot '{snapshot_name}' not found"
             logger.error(error_message)
-            if print_output:
-                print(error_message)
             return {"status": "error", "details": f"Snapshot '{snapshot_name}' does not exist"}
 
         # Delete the snapshot (using resolved values)
@@ -243,17 +227,13 @@ def delete_snapshot(
         return {"status": "success", "details": f"Snapshot '{snapshot_name}' deleted successfully"}
 
     except ResourceNotFoundError as e:
-        error_message = f"Snapshot '{snapshot_name}' not found"
-        logger.error(error_message)
-        if print_output:
-            print(error_message)
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Snapshot '{snapshot_name}' not found: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
     except Exception as e:
-        error_message = f"Failed to delete snapshot: {str(e)}"
-        logger.error(error_message)
-        if print_output:
-            print(error_message)
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Failed to delete snapshot: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
 
 
 def list_snapshots(
@@ -261,7 +241,6 @@ def list_snapshots(
     resource_group_name: str = None,
     account_name: str = None,
     pool_name: str = None,
-    subscription_id: str = None,
     print_output: bool = False
 ) -> Dict[str, Any]:
     """
@@ -276,8 +255,6 @@ def list_snapshots(
             Optional. The name of the NetApp account. Will use config default if not provided.
         pool_name (str):
             Optional. The name of the capacity pool. Will use config default if not provided.
-        subscription_id (str):
-            Optional. Azure subscription ID. Will use config default if not provided.
         print_output (bool):
             Optional. If set to True, prints log messages to the console.
             Defaults to False.
@@ -299,15 +276,14 @@ def list_snapshots(
 
     # Resolve parameters from function arguments or config
     try:
-        resolved_subscription_id = get_config_value('subscription_id', subscription_id, config, print_output)
-        resolved_resource_group_name = get_config_value('resource_group_name', resource_group_name, config, print_output)
-        resolved_account_name = get_config_value('account_name', account_name, config, print_output)
-        resolved_pool_name = get_config_value('pool_name', pool_name, config, print_output)
+        resolved_resource_group_name = _get_config_value('resource_group_name', resource_group_name, config, print_output)
+        resolved_account_name = _get_config_value('account_name', account_name, config, print_output)
+        resolved_pool_name = _get_config_value('pool_name', pool_name, config, print_output)
     except InvalidConfigError:
         raise
 
     # Validate input parameters (now using resolved values)
-    validate_required_params(
+    _validate_required_params(
         resource_group_name=resolved_resource_group_name,
         account_name=resolved_account_name,
         pool_name=resolved_pool_name,
@@ -315,8 +291,8 @@ def list_snapshots(
     )
 
     try:
-        # Get ANF client and subscription ID (using resolved value)
-        client, final_subscription_id = get_anf_client(resolved_subscription_id, print_output=print_output)
+        # Get ANF client
+        client, _ = get_anf_client(print_output=print_output)
 
         # List all snapshots for the volume (using resolved values)
         snapshots = client.snapshots.list(
@@ -342,15 +318,11 @@ def list_snapshots(
         return {"status": "success", "details": serialized_snapshots}
 
     except ResourceNotFoundError as e:
-        error_message = f"Volume '{volume_name}' not found"
-        logger.error(error_message)
-        if print_output:
-            print(error_message)
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Volume '{volume_name}' not found: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
     except Exception as e:
-        error_message = f"Failed to list snapshots: {str(e)}"
-        logger.error(error_message)
-        if print_output:
-            print(error_message)
-        return {"status": "error", "details": str(e)}
+        clean_msg = _get_clean_error_message(e)
+        logger.error(f"Failed to list snapshots: {clean_msg}")
+        return {"status": "error", "details": clean_msg}
         

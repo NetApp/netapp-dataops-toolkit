@@ -29,7 +29,7 @@ replicate_data_snapmirror_dag = DAG(
 
 # Destination ONTAP system details
 airflowConnectionName = 'ontap_ai'  # Name of the Airflow connection that contains connection details for the destination ONTAP system's cluster or SVM admin account
-verifySSLCert = False   # Denotes whether or not to verify the SSL cert when calling the ONTAP API
+sslCertPath = ""  # Path to a custom CA certificate file for ONTAP API SSL verification. Leave empty to use the system CA bundle.
 
 # SnapMirror relationship details (existing SnapMirroer relationship for which you want to trigger an update)
 snapMirrorRelationshipUuid = "1525e0b5-6b24-11eb-896a-00505693dfde"
@@ -55,8 +55,8 @@ def netappSnapMirrorUpdate(**kwargs) -> int :
             destinationSvm = value
         elif key == 'snapMirrorRelationshipUuid' :
             snapMirrorRelationshipUuid = value
-        elif key == 'verifySSLCert' :
-            verifySSLCert = value
+        elif key == 'sslCertPath' :
+            sslCertPath = value
         elif key == 'airflowConnectionName' :
             airflowConnectionName = value
         elif key == 'printResponse' :
@@ -80,7 +80,7 @@ def netappSnapMirrorUpdate(**kwargs) -> int :
         "svm": destinationSvm, 
         "username": ontapAdminUsername, 
         "password": ontapAdminPasswordBase64Bytes.decode("ascii"),
-        "verifySSLCert": verifySSLCert
+        "sslCertPath": sslCertPath
     }
 
     configDirPath = os.path.expanduser("~/.netapp_dataops")
@@ -113,7 +113,7 @@ with replicate_data_snapmirror_dag as dag :
         python_callable=netappSnapMirrorUpdate,
         op_kwargs={
             'airflowConnectionName': airflowConnectionName,
-            'verifySSLCert': verifySSLCert,
+            'sslCertPath': sslCertPath,
             'snapMirrorRelationshipUuid': snapMirrorRelationshipUuid,
             'destinationSvm': destinationSvm
         },

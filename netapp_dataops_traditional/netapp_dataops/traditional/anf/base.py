@@ -7,7 +7,31 @@ This module contains base utilities and helper functions for ANF operations.
 from typing import Any, Dict
 
 
-def validate_required_params(**params) -> None:
+def _calculate_min_throughput_mibps(service_level: str, usage_threshold_bytes: int) -> float:
+    """
+    Calculate the minimum throughput in MiB/s for a manual QoS volume based on
+    service level and size.
+
+    Args:
+        service_level (str): One of Standard, Premium, Ultra, Flexible.
+        usage_threshold_bytes (int): Volume quota in bytes.
+
+    Returns:
+        float: Minimum throughput in MiB/s.
+    """
+    size_gib = usage_threshold_bytes / (1024 * 1024 * 1024)
+    level = service_level.lower()
+    if level == "standard":
+        return max(16.0, size_gib * 0.016)
+    elif level == "premium":
+        return max(64.0, size_gib * 0.064)
+    elif level == "ultra":
+        return max(128.0, size_gib * 0.128)
+    else:
+        return 64.0
+
+
+def _validate_required_params(**params) -> None:
     """Validate that all required parameters are provided.
     
     Args:
@@ -75,3 +99,45 @@ def _serialize(obj: Any) -> Any:
     except (TypeError, ValueError):
         # If not serializable, convert to string
         return str(obj)
+
+
+def _get_clean_error_message(exception: Exception) -> str:
+    """
+    Extract clean error message from Azure SDK exceptions.
+    
+    Azure SDK exceptions contain Code and Message fields that duplicate information
+    when converted to string. This function extracts just the core error message
+    without the Code/Message duplication.
+    
+    Args:
+        exception: The exception object
+        
+    Returns:
+        str: Clean error message without Code/Message duplication
+        
+    Example:
+        Instead of:
+            (ResourceNotFound) Resource not found
+            Code: ResourceNotFound
+            Message: Resource not found
+        
+        Returns:
+            (ResourceNotFound) Resource not found
+    """
+    # For Azure SDK exceptions, the full string has multiple lines with Code/Message
+    # Extract just the first line which contains the main error message
+    error_str = str(exception)
+    if '\nCode:' in error_str or '\nMessage:' in error_str:
+        # Return only the first line (before the Code: field)
+        return error_str.split('\n')[0]
+    
+    # Try to get the message attribute from Azure SDK exceptions as fallback
+    if hasattr(exception, 'message'):
+        msg = exception.message
+        # Check if message itself has Code/Message duplication
+        if isinstance(msg, str) and ('\nCode:' in msg or '\nMessage:' in msg):
+            return msg.split('\n')[0]
+        return str(msg)
+    
+    # Fallback to full string representation for other exceptions
+    return error_str

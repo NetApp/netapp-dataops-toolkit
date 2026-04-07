@@ -46,14 +46,16 @@ def create_jupyter_lab_tool(
     request_nvidia_gpu: Optional[str] = None, 
     allocate_resource: Optional[str] = None, 
     print_output: bool = False, 
-    pvc_already_exists: bool = False
+    pvc_already_exists: bool = False,
+    enable_https: bool = True
 ) -> str:
     """
     Create a new JupyterLab workspace.
 
     This function sets up and deploys a JupyterLab workspace in a Kubernetes cluster.
     It handles the creation of necessary resources such as Persistent Volume Claims (PVCs),
-    services, and deployments.
+    services, and deployments. By default, HTTPS is enabled using a self-signed TLS
+    certificate to prevent password sniffing over the network.
 
     Parameters:
     - workspace_name (str): Name of the new workspace.
@@ -70,6 +72,7 @@ def create_jupyter_lab_tool(
     - allocate_resource (str, optional): Additional resource allocation in the format "resource=limit".
     - print_output (bool, optional): Whether to print output messages. Default is False.
     - pvc_already_exists (bool, optional): Whether the PVC already exists. Default is False.
+    - enable_https (bool, optional): Whether to enable HTTPS with a self-signed TLS certificate. Default is True.
 
     Returns:
     - str: URL of the newly created JupyterLab workspace.
@@ -93,8 +96,9 @@ def create_jupyter_lab_tool(
             request_memory, 
             request_nvidia_gpu, 
             allocate_resource, 
-            print_output, 
-            pvc_already_exists
+            print_output=print_output, 
+            pvc_already_exists=pvc_already_exists,
+            enable_https=enable_https
         )
         return url
     except Exception as e:
@@ -114,13 +118,15 @@ def clone_jupyter_lab_tool(
     request_memory: Optional[str] = None,
     request_nvidia_gpu: Optional[str] = None, 
     allocate_resource: Optional[str] = None, 
-    print_output: bool = False
+    print_output: bool = False,
+    enable_https: bool = True
 ) -> str:
     """
     Clone an existing JupyterLab workspace.
 
     This function creates a new JupyterLab workspace by cloning an existing workspace or its snapshot.
     It handles the creation of necessary resources such as Persistent Volume Claims (PVCs) and deployments.
+    By default, HTTPS is enabled using a self-signed TLS certificate to prevent password sniffing.
 
     Parameters:
     - new_workspace_name (str): Name of the new workspace.
@@ -135,6 +141,7 @@ def clone_jupyter_lab_tool(
     - request_nvidia_gpu (str, optional): NVIDIA GPU request for the new workspace.
     - allocate_resource (str, optional): Additional resource allocation in the format "resource=limit".
     - print_output (bool, optional): Whether to print output messages. Default is False.
+    - enable_https (bool, optional): Whether to enable HTTPS with a self-signed TLS certificate. Default is True.
 
     Returns:
     - str: URL of the newly created JupyterLab workspace.
@@ -155,7 +162,8 @@ def clone_jupyter_lab_tool(
             request_memory,
             request_nvidia_gpu,
             allocate_resource,
-            print_output
+            print_output=print_output,
+            enable_https=enable_https
         )
         return url
     except Exception as e:
