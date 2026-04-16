@@ -28,6 +28,20 @@ The [NetApp DataOps Toolkit MCP Server for ONTAP](netapp_dataops_traditional/doc
 - **Get Qtree**: Retrieve detailed properties for a specific qtree including security settings and permissions.
 - **Get Qtree Metrics**: Retrieve historical performance metrics for a qtree including IOPS, latency, and throughput.
 
+## NetApp DataOps Toolkit MCP Server for Azure NetApp Files
+
+The [NetApp DataOps Toolkit MCP Server for Azure NetApp Files](netapp_dataops_traditional/docs/anf_mcp_server_readme.md) is an MCP Server that enables AI agents to manage volumes and snapshots using Azure NetApp Files.
+
+### Available Tools
+
+- **Create Volume**: Rapidly provision new Azure NetApp Files volumes with comprehensive configuration options including protocols (NFS/SMB), performance tiers, export policies, and advanced features like encryption and tiering.
+- **Clone Volume**: Create near-instantaneous, space-efficient clones of existing volumes from snapshots using NetApp's FlexClone technology.
+- **List Volumes**: Retrieve a list of all existing data volumes in a specified capacity pool within your Azure NetApp Files account.
+- **Create Snapshot**: Create space-efficient, read-only point-in-time copies of data volumes for versioning, backup, and recovery scenarios.
+- **List Snapshots**: Retrieve a list of all snapshots for a specific Azure NetApp Files volume.
+- **Create Replication**: Set up cross-region replication relationships for disaster recovery and high availability between Azure regions.
+- **Create ANF Config**: Create an ANF configuration file to avoid repetitive parameters and simplify tool usage.
+
 ## NetApp DataOps Toolkit MCP Server for Google Cloud NetApp Volumes
 
 The [NetApp DataOps Toolkit MCP Server for Google Cloud NetApp Volumes](netapp_dataops_traditional/docs/gcnv_mcp_server_readme.md) is an MCP Server that enables AI agents to manage volumes and snapshots using Google Cloud NetApp Volumes.
