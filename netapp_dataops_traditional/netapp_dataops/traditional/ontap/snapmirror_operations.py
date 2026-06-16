@@ -88,7 +88,7 @@ def list_snap_mirror_relationships(print_output: bool = False, cluster_name: Opt
                 
                 relationshipDict = {
                     "UUID": relationship.uuid,
-                    "Type": policy.type,
+                    "Type": policy_type,
                     "Healthy": healthy,
                     "Current Transfer Status": transferState,
                     "Source Cluster": sourceCluster,
