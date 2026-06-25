@@ -1,0 +1,120 @@
+# JupyterLab Deployment with Dataset Manager root volume and toolkit config mounted.
+# Prerequisites:
+#   - Custom image built from ../Dockerfile pushed to your registry
+#   - dataset-mgr-root PVC bound
+#   - netapp-dataops-config Secret created
+#   - jupyterlab-access Secret created (optional, for JUPYTER_TOKEN)
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jupyterlab-workspace
+  namespace: data-science
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  #storageClassName: <your-trident-storage-class>
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jupyterlab-dataset-manager
+  namespace: data-science
+  labels:
+    app: jupyterlab-dataset-manager
+spec:
+  type: NodePort
+  selector:
+    app: jupyterlab-dataset-manager
+  ports:
+    - name: http
+      port: 8888
+      targetPort: 8888
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jupyterlab-dataset-manager
+  namespace: data-science
+  labels:
+    app: jupyterlab-dataset-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jupyterlab-dataset-manager
+  template:
+    metadata:
+      labels:
+        app: jupyterlab-dataset-manager
+    spec:
+      containers:
+        - name: jupyterlab
+          image: <REGISTRY>/jupyterlab-dataset-manager:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8888
+              name: http
+          env:
+            - name: JUPYTER_ENABLE_LAB
+              value: "yes"
+            - name: NETAPP_DATAOPS_SECRET_DIR
+              value: /etc/netapp-dataops
+            # Memory-backed keyring storage (emptyDir medium: Memory mounted below)
+            - name: XDG_DATA_HOME
+              value: /run/netapp-keyring
+            # Temporary: startup script loads into the keyring, then unsets ONTAP_USERNAME
+            - name: ONTAP_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: netapp-dataops-config
+                  key: username
+            # Temporary: startup script loads this into the keyring, then unsets ONTAP_PASSWORD
+            - name: ONTAP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: netapp-dataops-config
+                  key: password
+            - name: JUPYTER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: jupyterlab-access
+                  key: token
+                  optional: true
+          volumeMounts:
+            - name: workspace
+              mountPath: /home/jovyan/work
+            - name: datasets
+              mountPath: /home/jovyan/work/datasets
+            - name: netapp-dataops-config
+              mountPath: /etc/netapp-dataops
+              readOnly: true
+            - name: keyring-tmpfs
+              mountPath: /run/netapp-keyring
+          resources:
+            requests:
+              cpu: "2"
+              memory: 8Gi
+            limits:
+              cpu: "4"
+              memory: 16Gi
+      volumes:
+        - name: workspace
+          persistentVolumeClaim:
+            claimName: jupyterlab-workspace
+        - name: datasets
+          persistentVolumeClaim:
+            claimName: dataset-mgr-root
+        - name: netapp-dataops-config
+          secret:
+            secretName: netapp-dataops-config
+            items:
+              - key: config.json
+                path: config.json
+        - name: keyring-tmpfs
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi

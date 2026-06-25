@@ -1,0 +1,37 @@
+# Static NFS PV/PVC for the Dataset Manager root ONTAP volume.
+# Replace <ONTAP_DATA_LIF> and the NFS path before applying.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-dataset-mgr-root
+  labels:
+    app: dataset-manager
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  nfs:
+    server: <ONTAP_DATA_LIF>
+    path: /dataset_mgr_root
+  claimRef:
+    namespace: data-science
+    name: dataset-mgr-root
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dataset-mgr-root
+  namespace: data-science
+  labels:
+    app: dataset-manager
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  volumeName: pv-dataset-mgr-root
+  resources:
+    requests:
+      storage: 1Gi
