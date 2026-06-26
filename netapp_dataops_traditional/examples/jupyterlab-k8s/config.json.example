@@ -13,5 +13,5 @@
     "defaultAggregate": "",
     "datasetManagerEnabled": true,
     "datasetManagerRootVolume": "dataset_mgr_root",
-    "datasetManagerRootMountpoint": "/home/jovyan/work/datasets"
+    "datasetManagerRootMountpoint": "/home/jovyan/datasets"
 }

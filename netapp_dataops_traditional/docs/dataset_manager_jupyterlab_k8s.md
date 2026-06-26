@@ -19,8 +19,8 @@ The root volume is mounted into the pod by Kubernetes (PVC). Dataset Manager cre
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  Pod (custom JupyterLab image)                                          │
 │                                                                         │
-│  /home/jovyan/work           ← workspace PVC (notebooks)                │
-│    └── datasets/             ← Dataset Manager root PVC (nested mount)  │
+│  /home/jovyan/work      ← workspace PVC (notebooks)                     │
+│  /home/jovyan/datasets  ← Dataset Manager root PVC                      │
 │  /etc/netapp-dataops    ← Secret tmpfs (config.json only)               │
 │  /run/netapp-keyring    ← emptyDir medium:Memory (keyring file in RAM)  │
 │                                                                         │
@@ -168,7 +168,7 @@ Edit [`config.json.example`](../examples/jupyterlab-k8s/config.json.example) for
 | `dataLif` | NFS data LIF |
 | `defaultUnixUID` / `defaultUnixGID` | Match the container user (`1000` / `100` for Jupyter Docker Stacks `jovyan`) |
 | `datasetManagerRootVolume` | Root volume name from Step 1 |
-| `datasetManagerRootMountpoint` | Path where the root PVC is mounted in the pod (`/home/jovyan/work/datasets`) |
+| `datasetManagerRootMountpoint` | Path where the root PVC is mounted in the pod (`/home/jovyan/datasets`) |
 
 Create the Secret from local files (recommended — avoids committing secrets to git). The `username` and `password` literals become temporary `ONTAP_USERNAME` and `ONTAP_PASSWORD` environment variables at pod startup; both are unset once the keyring is populated:
 
@@ -280,7 +280,7 @@ spec:
             - name: workspace
               mountPath: /home/jovyan/work
             - name: datasets
-              mountPath: /home/jovyan/work/datasets
+              mountPath: /home/jovyan/datasets
             - name: netapp-dataops-config
               mountPath: /etc/netapp-dataops
               readOnly: true
@@ -326,9 +326,7 @@ For production, use an Ingress or `LoadBalancer` Service type instead of NodePor
 
 ### JupyterLab file browser
 
-The Dataset Manager root PVC is mounted at `/home/jovyan/work/datasets` — a **nested mount** inside the workspace PVC (`/home/jovyan/work`). Kubernetes overlays the datasets volume on that path, so I/O under `datasets/` goes to the shared Dataset Manager root volume, not the workspace PVC.
-
-This keeps the default `NOTEBOOK_DIR` of `/home/jovyan/work`, so `datasets/` appears in the JupyterLab file browser without any extra Jupyter configuration. Ensure `datasetManagerRootMountpoint` in `config.json` matches the mount path (`/home/jovyan/work/datasets`).
+The Dataset Manager root PVC is mounted at `/home/jovyan/datasets`. The JupyterLab file browser root is `/home/jovyan` by default, so `datasets/` appears alongside `work/` without nested mounts or extra Jupyter configuration. Ensure `datasetManagerRootMountpoint` in `config.json` matches the mount path (`/home/jovyan/datasets`).
 
 ## Step 6: Use Dataset Manager in notebooks
 
@@ -347,7 +345,7 @@ from netapp_dataops.traditional.datasets import Dataset
 import pandas as pd
 
 training = Dataset(name="training_v1", max_size="500GB")
-print(f"Dataset path: {training.local_file_path}")  # /home/jovyan/work/datasets/training_v1
+print(f"Dataset path: {training.local_file_path}")  # /home/jovyan/datasets/training_v1
 
 df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
 df.to_parquet(f"{training.local_file_path}/data.parquet")
@@ -416,7 +414,7 @@ Credentials are still visible to anyone with `kubectl exec` access (`printenv`, 
 
 ### Separate workspace and dataset storage
 
-Mount the workspace PVC at `/home/jovyan/work` and the Dataset Manager root PVC at `/home/jovyan/work/datasets` (nested inside `work`). Notebooks and `datasets/` both appear under the default JupyterLab file browser root. Dataset data still lives on the separate root PVC — deleting the workspace PVC does not remove datasets.
+Mount the workspace PVC at `/home/jovyan/work` and the Dataset Manager root PVC at `/home/jovyan/datasets`. Both appear under the default JupyterLab file browser root (`/home/jovyan`). Dataset data lives on the separate root PVC — deleting the workspace PVC does not remove datasets.
 
 ### Rotate credentials without rebuilding the image
 
@@ -428,9 +426,9 @@ kubectl rollout restart deployment/jupyterlab-dataset-manager -n data-science
 
 ## Troubleshooting
 
-### `DatasetConfigError: Root mountpoint '/home/jovyan/work/datasets' is not accessible`
+### `DatasetConfigError: Root mountpoint '/home/jovyan/datasets' is not accessible`
 
-The root PVC is not mounted or `datasetManagerRootMountpoint` in `config.json` does not match the Deployment `volumeMount` path. Confirm both use `/home/jovyan/work/datasets` and the PVC is `Bound`.
+The root PVC is not mounted or `datasetManagerRootMountpoint` in `config.json` does not match the Deployment `volumeMount` path. Confirm both use `/home/jovyan/datasets` and the PVC is `Bound`.
 
 ### `Error: Missing username/password in credential manager`
 
@@ -446,13 +444,13 @@ Also confirm `XDG_DATA_HOME` is set to `/run/netapp-keyring` and the `keyring-tm
 
 ONTAP export policy or volume UNIX permissions do not match UID `1000`. Run `id` inside the pod and align `defaultUnixUID` / `defaultUnixGID` in `config.json`.
 
-### New datasets not visible under `/home/jovyan/work/datasets`
+### New datasets not visible under `/home/jovyan/datasets`
 
 Dataset Manager refreshes the NFS namespace after creating volumes. List the directory manually if needed:
 
 ```python
 import os
-os.listdir("/home/jovyan/work/datasets")
+os.listdir("/home/jovyan/datasets")
 ```
 
 Verify the child volume junction in ONTAP is `/<root_volume>/<dataset_name>`.
