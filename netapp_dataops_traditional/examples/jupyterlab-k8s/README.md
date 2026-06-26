@@ -1,6 +1,6 @@
 # Using Dataset Manager in a JupyterLab Container on Kubernetes
 
-This guide shows how to run [Dataset Manager](dataset_manager_readme.md) inside JupyterLab on Kubernetes using:
+This guide shows how to run [Dataset Manager](../../docs/dataset_manager_readme.md) inside JupyterLab on Kubernetes using:
 
 - A **custom container image** with `netapp-dataops-traditional` pre-installed
 - A **Kubernetes Secret** for toolkit configuration and ONTAP credentials (no interactive `netapp_dataops_cli.py config`)
@@ -8,11 +8,11 @@ This guide shows how to run [Dataset Manager](dataset_manager_readme.md) inside 
 - A **Deployment manifest** that mounts the Dataset Manager root volume and starts JupyterLab
 - **Memory-backed keyring + env-var injection** so ONTAP credentials are not written to persistent disk (`ONTAP_USERNAME` and `ONTAP_PASSWORD` are temporary and unset after the keyring is populated)
 
-Example files live in [`examples/jupyterlab-k8s/`](../examples/jupyterlab-k8s/).
+Unless noted otherwise, commands in this guide are run from this directory (`netapp_dataops_traditional/examples/jupyterlab-k8s`).
 
 ## Overview
 
-Dataset Manager presents ONTAP-backed datasets as directories under a single **root volume**. Inside a Kubernetes pod, **you cannot NFS-mount volumes from within the container** — unprivileged containers cannot run `mount`. See [Mounting within Container](../troubleshooting.md#mounting-within-container).
+Dataset Manager presents ONTAP-backed datasets as directories under a single **root volume**. Inside a Kubernetes pod, **you cannot NFS-mount volumes from within the container** — unprivileged containers cannot run `mount`. See [Mounting within Container](../../troubleshooting.md#mounting-within-container).
 
 The root volume is mounted into the pod by Kubernetes (PVC). Dataset Manager creates child datasets through the ONTAP REST API; new datasets appear as subdirectories under the mounted root path.
 
@@ -42,7 +42,7 @@ A startup script runs before JupyterLab: it symlinks `config.json` from `/etc/ne
 
 - Kubernetes 1.20+ with a CSI driver that can provision or statically bind NFS volumes ([Trident](https://netapp.io/persistent-storage-provisioner-for-kubernetes/) recommended for ONTAP).
 - ONTAP 9.7+ with NFS enabled and an export policy allowing Kubernetes worker nodes.
-- An ONTAP API account with Dataset Manager permissions — see [ONTAP least-privilege role](ontap_least_privilege_role.md#dataset-manager).
+- An ONTAP API account with Dataset Manager permissions — see [ONTAP least-privilege role](../../docs/ontap_least_privilege_role.md#dataset-manager).
 - Pod network access to the ONTAP **management** LIF (REST API) and **data** LIF (file I/O).
 - A container registry to push your custom image.
 
@@ -76,11 +76,11 @@ Child datasets are separate ONTAP volumes junctioned under this root.
 
 Create a static NFS PersistentVolume and PVC that point at the ONTAP root volume. Use **ReadWriteMany** so multiple JupyterLab pods can share datasets.
 
-See [`examples/jupyterlab-k8s/k8s/dataset-mgr-root-pv.yaml`](../examples/jupyterlab-k8s/k8s/dataset-mgr-root-pv.yaml). Replace `<ONTAP_DATA_LIF>` with your SVM data LIF IP or hostname.
+See [`k8s/dataset-mgr-root-pv.yaml`](k8s/dataset-mgr-root-pv.yaml). Replace `<ONTAP_DATA_LIF>` with your SVM data LIF IP or hostname.
 
 ```bash
 kubectl create namespace data-science
-kubectl apply -f examples/jupyterlab-k8s/k8s/dataset-mgr-root-pv.yaml
+kubectl apply -f k8s/dataset-mgr-root-pv.yaml
 kubectl get pvc dataset-mgr-root -n data-science
 ```
 
@@ -94,7 +94,7 @@ The image extends the [Jupyter Docker Stacks](https://jupyter-docker-stacks.read
 
 Modify the Dockerfile as needed (change the base image, add Python packages, etc.).
 
-[`examples/jupyterlab-k8s/Dockerfile`](../examples/jupyterlab-k8s/Dockerfile):
+[`Dockerfile`](Dockerfile):
 
 ```dockerfile
 FROM quay.io/jupyter/scipy-notebook:python-3.11
@@ -118,7 +118,6 @@ ENV PYTHON_KEYRING_BACKEND=keyrings.alt.file.PlaintextKeyring
 ### Build and push
 
 ```bash
-cd examples/jupyterlab-k8s
 docker build -t <REGISTRY>/jupyterlab-dataset-manager:latest .
 docker push <REGISTRY>/jupyterlab-dataset-manager:latest
 ```
@@ -135,7 +134,7 @@ The toolkit stores ONTAP connection settings in `config.json` and credentials in
 
 ### Toolkit config and ONTAP credentials
 
-Edit [`config.json.example`](../examples/jupyterlab-k8s/config.json.example) for your environment. Key fields:
+Edit [`config.json.example`](config.json.example) for your environment. Key fields:
 
 | Field | Description |
 |-------|-------------|
@@ -152,7 +151,7 @@ Create the Secret from local files (recommended — avoids committing secrets to
 ```bash
 kubectl create secret generic netapp-dataops-config \
   --namespace=data-science \
-  --from-file=config.json=examples/jupyterlab-k8s/config.json \
+  --from-file=config.json=./config.json \
   --from-literal=username=vsadmin \
   --from-literal=password='YOUR_ONTAP_PASSWORD'
 ```
@@ -160,7 +159,7 @@ kubectl create secret generic netapp-dataops-config \
 Or apply the template manifest after editing placeholder values:
 
 ```bash
-kubectl apply -f examples/jupyterlab-k8s/k8s/netapp-dataops-secret.yaml
+kubectl apply -f k8s/netapp-dataops-secret.yaml
 ```
 
 ### ONTAP TLS certificate (ConfigMap)
@@ -168,7 +167,6 @@ kubectl apply -f examples/jupyterlab-k8s/k8s/netapp-dataops-secret.yaml
 Most ONTAP clusters use a self-signed certificate for the management LIF. Download it and create a ConfigMap (replace `<ONTAP_MGMT_LIF>` with your management LIF hostname or IP):
 
 ```bash
-cd examples/jupyterlab-k8s
 echo | openssl s_client -connect <ONTAP_MGMT_LIF>:443 -showcerts 2>/dev/null \
   | openssl x509 > ontap_cert.pem
 openssl x509 -in ontap_cert.pem -noout -subject -issuer
@@ -189,7 +187,7 @@ The Deployment mounts `config.json` (Secret) and `ontap_cert.pem` (ConfigMap) to
 
 > **Public CA certificates:** If your ONTAP management LIF uses a certificate signed by a well-known public CA, leave `sslCertPath` blank in `config.json` and omit the ConfigMap (remove the `configMap` source from the projected volume in the Deployment).
 
-See [SSL Certificate Configuration](ontap_readme.md#ssl-certificate-configuration) for more detail.
+See [SSL Certificate Configuration](../../docs/ontap_readme.md#ssl-certificate-configuration) for more detail.
 
 ### JupyterLab access token
 
@@ -197,7 +195,7 @@ Create another Secret for the JupyterLab access token.
 
 ```bash
 # Edit the token value in the example secret file and then apply
-kubectl apply -f examples/jupyterlab-k8s/k8s/jupyterlab-access-secret.yaml
+kubectl apply -f k8s/jupyterlab-access-secret.yaml
 # ...or create with:
 kubectl create secret generic jupyterlab-access \
   --namespace=data-science \
@@ -208,7 +206,7 @@ kubectl create secret generic jupyterlab-access \
 
 Apply the Deployment manifest. It creates a workspace PVC, Service, and Deployment.
 
-[`examples/jupyterlab-k8s/k8s/jupyterlab-deployment.yaml`](../examples/jupyterlab-k8s/k8s/jupyterlab-deployment.yaml):
+[`k8s/jupyterlab-deployment.yaml`](k8s/jupyterlab-deployment.yaml):
 
 ```yaml
 apiVersion: v1
@@ -321,7 +319,7 @@ spec:
 Replace `<REGISTRY>` with your image registry, then deploy:
 
 ```bash
-kubectl apply -f examples/jupyterlab-k8s/k8s/jupyterlab-deployment.yaml
+kubectl apply -f k8s/jupyterlab-deployment.yaml
 kubectl rollout status deployment/jupyterlab-dataset-manager -n data-science
 ```
 
@@ -371,7 +369,7 @@ training.snapshot(name="before_tuning")
 experiment = training.clone(name="tuning_branch")
 ```
 
-See the [Dataset Manager README](dataset_manager_readme.md) for the full API.
+See the [Dataset Manager README](../../docs/dataset_manager_readme.md) for the full API.
 
 ## End-to-end checklist
 
@@ -382,10 +380,9 @@ See the [Dataset Manager README](dataset_manager_readme.md) for the full API.
 
 # 2. Kubernetes namespace and storage
 kubectl create namespace data-science
-kubectl apply -f examples/jupyterlab-k8s/k8s/dataset-mgr-root-pv.yaml
+kubectl apply -f k8s/dataset-mgr-root-pv.yaml
 
 # 3. Build and push image
-cd examples/jupyterlab-k8s
 docker build -t <REGISTRY>/jupyterlab-dataset-manager:latest .
 docker push <REGISTRY>/jupyterlab-dataset-manager:latest
 
@@ -428,7 +425,7 @@ Credentials must exist in the running pod for ONTAP API calls, but they do not n
 - Set `XDG_DATA_HOME` to an `emptyDir` volume with `medium: Memory` so the keyring file is stored in RAM.
 - Symlink `config.json` from the Secret mount instead of copying it to persistent storage.
 
-Credentials are still visible to anyone with `kubectl exec` access (`printenv`, or reading the tmpfs keyring file). Complement this pattern with RBAC, network policies, etcd encryption at rest, and a [least-privilege ONTAP account](ontap_least_privilege_role.md).
+Credentials are still visible to anyone with `kubectl exec` access (`printenv`, or reading the tmpfs keyring file). Complement this pattern with RBAC, network policies, etcd encryption at rest, and a [least-privilege ONTAP account](../../docs/ontap_least_privilege_role.md).
 
 ### Separate workspace and dataset storage
 
@@ -506,11 +503,10 @@ Confirm the pod can reach the management LIF on port 443. Check `hostname` in `c
    ```
 4. If the ONTAP management LIF changed or the cluster certificate was rotated, re-download `ontap_cert.pem`, update the ConfigMap, and restart the pod (no image rebuild required).
 
-See [SSL Certificate Configuration](ontap_readme.md#ssl-certificate-configuration) and [troubleshooting](../troubleshooting.md).
+See [SSL Certificate Configuration](../../docs/ontap_readme.md#ssl-certificate-configuration) and [troubleshooting](../../troubleshooting.md).
 
 ## Related documentation
 
-- [Dataset Manager README](dataset_manager_readme.md) — API reference, snapshots, clones, best practices
-- [ONTAP Module README](ontap_readme.md) — ONTAP configuration details
-- [Mounting within Container (troubleshooting)](../troubleshooting.md#mounting-within-container) — why in-container NFS mounts are not supported
-- [Example files](../examples/jupyterlab-k8s/) — Dockerfile, startup script, and Kubernetes manifests
+- [Dataset Manager README](../../docs/dataset_manager_readme.md) — API reference, snapshots, clones, best practices
+- [ONTAP Module README](../../docs/ontap_readme.md) — ONTAP configuration details
+- [Mounting within Container](../../troubleshooting.md#mounting-within-container) — why in-container NFS mounts are not supported

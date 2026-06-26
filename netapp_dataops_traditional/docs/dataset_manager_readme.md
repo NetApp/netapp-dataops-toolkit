@@ -23,8 +23,6 @@
 - [Troubleshooting](#troubleshooting)
 - [API Reference](#api-reference)
 
-> **Running in Kubernetes?** See [Using Dataset Manager in a JupyterLab Container on Kubernetes](dataset_manager_jupyterlab_k8s.md) for mounting the root volume via PVC and configuring the toolkit inside a pod.
-
 ---
 
 ## Introduction
@@ -120,6 +118,8 @@ Root Volume (e.g., "dataset_mgr_root")
 - Compatible with FlexVol and FlexGroup volumes
 
 ## Prerequisites
+
+> **Running in Kubernetes?** See [Using Dataset Manager in a JupyterLab Container on Kubernetes](../examples/jupyterlab-k8s/README.md) for mounting the root volume via PVC and configuring the toolkit inside a pod.
 
 ### System Requirements
 

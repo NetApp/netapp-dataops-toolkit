@@ -4,7 +4,7 @@
 #   docker build -t <registry>/jupyterlab-dataset-manager:latest .
 #
 # ONTAP TLS certificate is supplied at runtime via ConfigMap (not baked into the image).
-# See docs/dataset_manager_jupyterlab_k8s.md.
+# See README.md in this directory.
 FROM quay.io/jupyter/scipy-notebook:python-3.11
 
 USER root
