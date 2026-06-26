@@ -17,16 +17,16 @@ Dataset Manager presents ONTAP-backed datasets as directories under a single **r
 The root volume is mounted into the pod by Kubernetes (PVC). Dataset Manager creates child datasets through the ONTAP REST API; new datasets appear as subdirectories under the mounted root path.
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│  Pod (custom JupyterLab image)                                          │
-│                                                                         │
-│  /home/jovyan/work      ← workspace PVC (notebooks)                     │
-│  /home/jovyan/datasets  ← Dataset Manager root PVC                      │
+┌───────────────────────────────────────────────────────────────────────────┐
+│  Pod (custom JupyterLab image)                                            │
+│                                                                           │
+│  /home/jovyan/work      ← workspace PVC (notebooks)                       │
+│  /home/jovyan/datasets  ← Dataset Manager root PVC                        │
 │  /etc/netapp-dataops    ← projected volume (config.json + ontap_cert.pem) │
-│  /run/netapp-keyring    ← emptyDir medium:Memory (keyring file in RAM)  │
-│                                                                         │
-│  netapp-dataops-traditional  →  ONTAP REST API                          │
-└─────────────────────────────────────────────────────────────────────────┘
+│  /run/netapp-keyring    ← emptyDir medium:Memory (keyring file in RAM)    │
+│                                                                           │
+│  netapp-dataops-traditional  →  ONTAP REST API                            │
+└───────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Credential handling
