@@ -4,6 +4,7 @@ This guide shows how to run [Dataset Manager](dataset_manager_readme.md) inside 
 
 - A **custom container image** with `netapp-dataops-traditional` pre-installed
 - A **Kubernetes Secret** for toolkit configuration and ONTAP credentials (no interactive `netapp_dataops_cli.py config`)
+- A **ConfigMap** for the ONTAP management LIF TLS certificate (rotated without rebuilding the image)
 - A **Deployment manifest** that mounts the Dataset Manager root volume and starts JupyterLab
 - **Memory-backed keyring + env-var injection** so ONTAP credentials are not written to persistent disk (`ONTAP_USERNAME` and `ONTAP_PASSWORD` are temporary and unset after the keyring is populated)
 
@@ -21,7 +22,7 @@ The root volume is mounted into the pod by Kubernetes (PVC). Dataset Manager cre
 │                                                                         │
 │  /home/jovyan/work      ← workspace PVC (notebooks)                     │
 │  /home/jovyan/datasets  ← Dataset Manager root PVC                      │
-│  /etc/netapp-dataops    ← Secret tmpfs (config.json only)               │
+│  /etc/netapp-dataops    ← projected volume (config.json + ontap_cert.pem) │
 │  /run/netapp-keyring    ← emptyDir medium:Memory (keyring file in RAM)  │
 │                                                                         │
 │  netapp-dataops-traditional  →  ONTAP REST API                          │
@@ -35,7 +36,7 @@ The toolkit reads ONTAP credentials from the system keyring, not from `config.js
 1. **Env-var injection** — Temporary `ONTAP_USERNAME` and `ONTAP_PASSWORD` are set from the Kubernetes Secret via `secretKeyRef`. They are not mounted as files in the container. The startup script copies both values into the keyring, then **unsets both environment variables** so they do not remain in the shell environment after the keyring is populated.
 2. **Memory-backed keyring** — An `emptyDir` volume with `medium: Memory` is mounted at `/run/netapp-keyring`. `XDG_DATA_HOME` points the keyring backend there, so the keyring file lives in RAM (tmpfs) rather than on the workspace PVC or container writable layer.
 
-A startup script runs before JupyterLab: it symlinks `config.json` from the Secret mount, reads the temporary `ONTAP_USERNAME` and `ONTAP_PASSWORD` from the environment, loads them into the keyring, then unsets both.
+A startup script runs before JupyterLab: it symlinks `config.json` from `/etc/netapp-dataops`, reads the temporary `ONTAP_USERNAME` and `ONTAP_PASSWORD` from the environment, loads them into the keyring, then unsets both. The ONTAP TLS certificate is mounted at `/etc/netapp-dataops/ontap_cert.pem` from a ConfigMap.
 
 ## Prerequisites
 
@@ -83,34 +84,11 @@ Wait until the PVC status is `Bound`.
 
 ## Step 3: Build the container image
 
-The image extends the [Jupyter Docker Stacks](https://jupyter-docker-stacks.readthedocs.io/) `scipy-notebook` image, installs the toolkit, bakes in the ONTAP management LIF TLS certificate, and registers a startup script that loads config from mounted Secrets.
-
-### Obtain the ONTAP TLS certificate
-
-Most ONTAP clusters use a self-signed certificate for the management LIF. Download it on your build host before `docker build` (replace `<ONTAP_MGMT_LIF>` with your management LIF hostname or IP):
-
-```bash
-cd examples/jupyterlab-k8s
-echo | openssl s_client -connect <ONTAP_MGMT_LIF>:443 -showcerts 2>/dev/null \
-  | openssl x509 > ontap_cert.pem
-openssl x509 -in ontap_cert.pem -noout -subject -issuer
-```
-
-`ontap_cert.pem` must be in the build context directory. It is listed in `.gitignore` — do not commit it to git.
-
-> **Public CA certificates:** If your ONTAP management LIF uses a certificate signed by a well-known public CA, you can leave `sslCertPath` blank in `config.json` instead. In that case, either skip copying a cert in the Dockerfile or supply any valid PEM file and set `"sslCertPath": ""`.
-
-The certificate is installed in the image at `/usr/local/share/netapp-dataops/ontap_cert.pem`. Set `sslCertPath` in `config.json` to match:
-
-```json
-"sslCertPath": "/usr/local/share/netapp-dataops/ontap_cert.pem"
-```
-
-See [SSL Certificate Configuration](ontap_readme.md#ssl-certificate-configuration) for more detail.
+The image extends the [Jupyter Docker Stacks](https://jupyter-docker-stacks.readthedocs.io/) `scipy-notebook` image, installs the toolkit, and registers a startup script that loads config from mounted Kubernetes volumes.
 
 ### Optional: Modify Dockerfile
 
-Modify the Dockerfile as needed (change the base image to your desired image, add additional Python packages to the `pip install` command, etc.).
+Modify the Dockerfile as needed (change the base image, add Python packages, etc.).
 
 [`examples/jupyterlab-k8s/Dockerfile`](../examples/jupyterlab-k8s/Dockerfile):
 
@@ -122,10 +100,6 @@ USER root
 RUN pip install --no-cache-dir \
     netapp-dataops-traditional \
     keyrings.alt
-
-RUN mkdir -p /usr/local/share/netapp-dataops
-COPY ontap_cert.pem /usr/local/share/netapp-dataops/ontap_cert.pem
-RUN chmod 644 /usr/local/share/netapp-dataops/ontap_cert.pem
 
 COPY netapp-dataops-start.sh /usr/local/bin/start-notebook.d/netapp-dataops.sh
 RUN chmod +x /usr/local/bin/start-notebook.d/netapp-dataops.sh
@@ -141,7 +115,6 @@ ENV PYTHON_KEYRING_BACKEND=keyrings.alt.file.PlaintextKeyring
 
 ```bash
 cd examples/jupyterlab-k8s
-# ontap_cert.pem must exist in this directory (see above)
 docker build -t <REGISTRY>/jupyterlab-dataset-manager:latest .
 docker push <REGISTRY>/jupyterlab-dataset-manager:latest
 ```
@@ -163,7 +136,7 @@ Edit [`config.json.example`](../examples/jupyterlab-k8s/config.json.example) for
 | Field | Description |
 |-------|-------------|
 | `hostname` | ONTAP management LIF |
-| `sslCertPath` | Path to ONTAP cert in the image (`/usr/local/share/netapp-dataops/ontap_cert.pem`) — must match the Dockerfile `COPY` destination |
+| `sslCertPath` | Path to mounted ONTAP cert (`/etc/netapp-dataops/ontap_cert.pem`) — supplied via ConfigMap |
 | `svm` | Storage VM name |
 | `dataLif` | NFS data LIF |
 | `defaultUnixUID` / `defaultUnixGID` | Match the container user (`1000` / `100` for Jupyter Docker Stacks `jovyan`) |
@@ -185,6 +158,34 @@ Or apply the template manifest after editing placeholder values:
 ```bash
 kubectl apply -f examples/jupyterlab-k8s/k8s/netapp-dataops-secret.yaml
 ```
+
+### ONTAP TLS certificate (ConfigMap)
+
+Most ONTAP clusters use a self-signed certificate for the management LIF. Download it and create a ConfigMap (replace `<ONTAP_MGMT_LIF>` with your management LIF hostname or IP):
+
+```bash
+cd examples/jupyterlab-k8s
+echo | openssl s_client -connect <ONTAP_MGMT_LIF>:443 -showcerts 2>/dev/null \
+  | openssl x509 > ontap_cert.pem
+openssl x509 -in ontap_cert.pem -noout -subject -issuer
+
+kubectl create configmap netapp-dataops-ontap-cert \
+  --namespace=data-science \
+  --from-file=ontap_cert.pem=./ontap_cert.pem \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+`ontap_cert.pem` is listed in `.gitignore` — do not commit it to git. The certificate is a **trust anchor**, not a secret; a ConfigMap is appropriate.
+
+The Deployment mounts `config.json` (Secret) and `ontap_cert.pem` (ConfigMap) together at `/etc/netapp-dataops/` using a **projected volume**. Set `sslCertPath` in `config.json` to:
+
+```json
+"sslCertPath": "/etc/netapp-dataops/ontap_cert.pem"
+```
+
+> **Public CA certificates:** If your ONTAP management LIF uses a certificate signed by a well-known public CA, leave `sslCertPath` blank in `config.json` and omit the ConfigMap (remove the `configMap` source from the projected volume in the Deployment).
+
+See [SSL Certificate Configuration](ontap_readme.md#ssl-certificate-configuration) for more detail.
 
 ### JupyterLab access token
 
@@ -294,11 +295,19 @@ spec:
           persistentVolumeClaim:
             claimName: dataset-mgr-root
         - name: netapp-dataops-config
-          secret:
-            secretName: netapp-dataops-config
-            items:
-              - key: config.json
-                path: config.json
+          projected:
+            defaultMode: 0444
+            sources:
+              - secret:
+                  name: netapp-dataops-config
+                  items:
+                    - key: config.json
+                      path: config.json
+              - configMap:
+                  name: netapp-dataops-ontap-cert
+                  items:
+                    - key: ontap_cert.pem
+                      path: ontap_cert.pem
         - name: keyring-tmpfs
           emptyDir:
             medium: Memory
@@ -372,18 +381,22 @@ kubectl apply -f examples/jupyterlab-k8s/k8s/dataset-mgr-root-pv.yaml
 
 # 3. Build and push image
 cd examples/jupyterlab-k8s
-echo | openssl s_client -connect <ONTAP_MGMT_LIF>:443 -showcerts 2>/dev/null \
-  | openssl x509 > ontap_cert.pem
 docker build -t <REGISTRY>/jupyterlab-dataset-manager:latest .
 docker push <REGISTRY>/jupyterlab-dataset-manager:latest
 
-# 4. Secrets (→ temporary ONTAP_USERNAME / ONTAP_PASSWORD env vars, unset after keyring load)
+# 4. Secrets and ConfigMap
 cp config.json.example config.json   # edit for your environment
 kubectl create secret generic netapp-dataops-config \
   --namespace=data-science \
   --from-file=config.json=config.json \
   --from-literal=username=vsadmin \
   --from-literal=password='...'
+echo | openssl s_client -connect <ONTAP_MGMT_LIF>:443 -showcerts 2>/dev/null \
+  | openssl x509 > ontap_cert.pem
+kubectl create configmap netapp-dataops-ontap-cert \
+  --namespace=data-science \
+  --from-file=ontap_cert.pem=./ontap_cert.pem \
+  --dry-run=client -o yaml | kubectl apply -f -
 kubectl create secret generic jupyterlab-access \
   --namespace=data-science \
   --from-literal=token="$(openssl rand -hex 32)"
@@ -400,7 +413,7 @@ Jupyter Docker Stacks runs as `jovyan` (UID `1000`, GID `100`). Set `defaultUnix
 
 ### Keep secrets out of the image and git
 
-Store `config.json`, ONTAP credentials, and the Jupyter token in Kubernetes Secrets. Use `kubectl create secret --from-file` or a secrets manager (External Secrets Operator, Sealed Secrets, etc.) rather than committing plaintext values.
+Store `config.json`, ONTAP credentials, and the Jupyter token in Kubernetes Secrets. Store the ONTAP TLS certificate in a ConfigMap. Use `kubectl create ... --from-file` or a secrets manager rather than committing files to git or baking certs into the image.
 
 ### Limit credential exposure on disk
 
@@ -416,13 +429,19 @@ Credentials are still visible to anyone with `kubectl exec` access (`printenv`, 
 
 Mount the workspace PVC at `/home/jovyan/work` and the Dataset Manager root PVC at `/home/jovyan/datasets`. Both appear under the default JupyterLab file browser root (`/home/jovyan`). Dataset data lives on the separate root PVC — deleting the workspace PVC does not remove datasets.
 
-### Rotate credentials without rebuilding the image
+### Rotate credentials or certificates without rebuilding the image
 
-Update the `netapp-dataops-config` Secret and restart the pod. On each container start, the startup script reloads credentials from the Secret into the keyring (using temporary `ONTAP_USERNAME` and `ONTAP_PASSWORD` env vars that are unset after loading).
+Update the `netapp-dataops-config` Secret and/or `netapp-dataops-ontap-cert` ConfigMap, then restart the pod:
 
 ```bash
+kubectl create configmap netapp-dataops-ontap-cert \
+  --namespace=data-science \
+  --from-file=ontap_cert.pem=./ontap_cert.pem \
+  --dry-run=client -o yaml | kubectl apply -f -
 kubectl rollout restart deployment/jupyterlab-dataset-manager -n data-science
 ```
+
+On each container start, the startup script reloads credentials from the Secret into the keyring (using temporary `ONTAP_USERNAME` and `ONTAP_PASSWORD` env vars that are unset after loading).
 
 ## Troubleshooting
 
@@ -463,20 +482,24 @@ Confirm the pod can reach the management LIF on port 443. Check `hostname` in `c
 
 **Error examples:** `CERTIFICATE_VERIFY_FAILED`, `self-signed certificate`, `no appropriate subjectAltName fields were found`
 
-**Cause:** `sslCertPath` in `config.json` is blank or does not point to the certificate baked into the image.
+**Cause:** `sslCertPath` in `config.json` is blank, incorrect, or the ConfigMap is not mounted.
 
 **Resolution:**
 
 1. Confirm the cert exists in the running container:
    ```bash
    kubectl exec -n data-science deployment/jupyterlab-dataset-manager -- \
-     ls -la /usr/local/share/netapp-dataops/ontap_cert.pem
+     ls -la /etc/netapp-dataops/ontap_cert.pem
    ```
 2. Ensure `config.json` contains:
    ```json
-   "sslCertPath": "/usr/local/share/netapp-dataops/ontap_cert.pem"
+   "sslCertPath": "/etc/netapp-dataops/ontap_cert.pem"
    ```
-3. If the ONTAP management LIF changed or the cluster certificate was rotated, re-download `ontap_cert.pem`, rebuild the image, and redeploy.
+3. Verify the ConfigMap exists:
+   ```bash
+   kubectl get configmap netapp-dataops-ontap-cert -n data-science
+   ```
+4. If the ONTAP management LIF changed or the cluster certificate was rotated, re-download `ontap_cert.pem`, update the ConfigMap, and restart the pod (no image rebuild required).
 
 See [SSL Certificate Configuration](ontap_readme.md#ssl-certificate-configuration) and [troubleshooting](../troubleshooting.md).
 
