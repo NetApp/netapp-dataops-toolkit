@@ -1,0 +1,2 @@
+# ONTAP management LIF certificate — obtain locally before creating the ConfigMap (not committed)
+ontap_cert.pem

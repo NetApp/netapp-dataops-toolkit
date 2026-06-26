@@ -1,0 +1,13 @@
+# ONTAP management LIF TLS certificate (trust anchor — not a secret).
+#
+# Create from a local PEM file (recommended — do not commit ontap_cert.pem to git):
+#   cd examples/jupyterlab-k8s
+#   echo | openssl s_client -connect <ONTAP_MGMT_LIF>:443 -showcerts 2>/dev/null \
+#     | openssl x509 > ontap_cert.pem
+#   kubectl create configmap netapp-dataops-ontap-cert \
+#     --namespace=data-science \
+#     --from-file=ontap_cert.pem=./ontap_cert.pem \
+#     --dry-run=client -o yaml | kubectl apply -f -
+#
+# Mounted with config.json at /etc/netapp-dataops/ via a projected volume in
+# jupyterlab-deployment.yaml. Set sslCertPath to /etc/netapp-dataops/ontap_cert.pem.

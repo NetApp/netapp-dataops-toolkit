@@ -84,7 +84,7 @@ mount: /workspace/project: permission denied.
 Error: Error running mount command:  Command '['mount', '10.61.188.49:/project', '/workspace/project']' returned non-zero exit status 32.
 ```
 
-You will receive this or a similar error if you attempt to locally mount a data volume while operating within a container. It is not possible to mount a volume using the NetApp Data Science Toolkit while operating within a container. Mount operations are generally not permitted wtihin unprivileged containers.
+You will receive this or a similar error if you attempt to locally mount a data volume while operating within a container. It is not possible to mount a volume using the NetApp DataOps Toolkit while operating within a container. Mount operations are generally not permitted wtihin unprivileged containers.
 
 #### Resolution
 

@@ -1,0 +1,17 @@
+{
+    "connectionType": "ONTAP",
+    "hostname": "10.0.0.10",
+    "svm": "svm1",
+    "dataLif": "10.0.0.11",
+    "sslCertPath": "/etc/netapp-dataops/ontap_cert.pem",
+    "defaultVolumeType": "flexgroup",
+    "defaultExportPolicy": "default",
+    "defaultSnapshotPolicy": "none",
+    "defaultUnixUID": "1000",
+    "defaultUnixGID": "100",
+    "defaultUnixPermissions": "0770",
+    "defaultAggregate": "",
+    "datasetManagerEnabled": true,
+    "datasetManagerRootVolume": "dataset_mgr_root",
+    "datasetManagerRootMountpoint": "/home/jovyan/datasets"
+}
