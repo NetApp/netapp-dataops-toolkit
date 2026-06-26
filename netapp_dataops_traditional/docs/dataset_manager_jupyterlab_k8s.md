@@ -54,8 +54,10 @@ Using the ONTAP CLI:
 
 ```bash
 volume create -vserver svm1 -volume dataset_mgr_root -aggregate aggr1 -size 1g \
-  -junction-path /dataset_mgr_root -unix-permissions 0444
+  -junction-path /dataset_mgr_root -user 1000 -group 100 -unix-permissions 700
 ```
+
+Set owner and permissions to match the JupyterLab container user (`jovyan` is UID `1000`, GID `100`). The toolkit validates that the root mountpoint is readable and writable at startup.
 
 Or using any other ONTAP management tool (System Manager, REST API, etc.). Requirements:
 
@@ -63,6 +65,8 @@ Or using any other ONTAP management tool (System Manager, REST API, etc.). Requi
 |----------|-------|
 | Volume name | `dataset_mgr_root` (or your chosen name) |
 | Junction path | `/<volume_name>` (e.g. `/dataset_mgr_root`) |
+| UNIX owner / group | `1000` / `100` (matches `jovyan` in Jupyter Docker Stacks) |
+| UNIX permissions | `700` (or looser if your export policy requires it) |
 | Export policy | Must allow NFS from your Kubernetes nodes |
 | Size | Small (1 GB is sufficient — it holds directory entries, not dataset data) |
 
@@ -373,7 +377,8 @@ See the [Dataset Manager README](dataset_manager_readme.md) for the full API.
 
 ```bash
 # 1. Create ONTAP root volume (once)
-#    volume create ... -volume dataset_mgr_root -junction-path /dataset_mgr_root
+#    volume create ... -volume dataset_mgr_root -junction-path /dataset_mgr_root \
+#      -user 1000 -group 100 -unix-permissions 700
 
 # 2. Kubernetes namespace and storage
 kubectl create namespace data-science
