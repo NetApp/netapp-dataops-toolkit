@@ -191,8 +191,9 @@ kubectl apply -f examples/jupyterlab-k8s/k8s/netapp-dataops-secret.yaml
 Create another Secret for the JupyterLab access token.
 
 ```bash
+# Edit the token value in the example secret file and then apply
 kubectl apply -f examples/jupyterlab-k8s/k8s/jupyterlab-access-secret.yaml
-# Edit the token value first, or create with:
+# ...or create with:
 kubectl create secret generic jupyterlab-access \
   --namespace=data-science \
   --from-literal=token="$(openssl rand -hex 32)"
