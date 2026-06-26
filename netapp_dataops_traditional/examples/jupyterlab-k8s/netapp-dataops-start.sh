@@ -5,7 +5,9 @@
 # - Loads ONTAP credentials from environment variables into the keyring
 # - Keyring data is stored on a memory-backed tmpfs via XDG_DATA_HOME
 
-set -euo pipefail
+# Do not use `set -u` (nounset): this script is sourced by Jupyter Docker Stacks'
+# start.sh, and nounset would leak into that shell and break optional vars like GRANT_SUDO.
+set -eo pipefail
 
 SECRET_DIR="${NETAPP_DATAOPS_SECRET_DIR:-/etc/netapp-dataops}"
 CONFIG_DEST="${HOME}/.netapp_dataops/config.json"
