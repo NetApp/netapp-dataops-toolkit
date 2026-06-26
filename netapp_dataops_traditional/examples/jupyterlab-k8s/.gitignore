@@ -1,0 +1,2 @@
+# ONTAP management LIF certificate — obtain locally before docker build (not committed)
+ontap_cert.pem
