@@ -5,7 +5,7 @@ This directory contains different examples including Jupyter Notebooks, YAML fil
 
 ## Dataset Manager in JupyterLab on Kubernetes
 
-[jupyterlab-k8s/README.md](jupyterlab-k8s/README.md)
+[jupyterlab-k8s/README.md](jupyterlab-k8s)
 
 Deploy JupyterLab on Kubernetes with Dataset Manager pre-installed. The guide covers building a custom container image, mounting the Dataset Manager root volume via PVC, injecting ONTAP credentials through a memory-backed keyring, and supplying the ONTAP TLS certificate via ConfigMap.
 
